@@ -7,12 +7,13 @@ interface Props {
   onRewind: () => void;
   onPass: () => void;
   onLike: () => void;
+  onSuperLike: () => void;
   disabled?: boolean;
 }
 
 const BTN = 58;
 
-export default function CardActionButtons({ onRewind, onPass, onLike, disabled }: Props) {
+export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLike, disabled }: Props) {
   const { colors: th } = useTheme();
   return (
     <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.20)' }]}>
@@ -50,6 +51,17 @@ export default function CardActionButtons({ onRewind, onPass, onLike, disabled }
           <Text style={[styles.icon, styles.likeIcon]}>♥</Text>
           <Text style={styles.sparkle}>✦</Text>
         </TouchableOpacity>
+
+        {/* SuperLike */}
+        <TouchableOpacity
+          style={[styles.button, styles.superLikeButton, { backgroundColor: th.surface }]}
+          onPress={onSuperLike}
+          disabled={disabled}
+          activeOpacity={0.75}
+          accessibilityLabel="Super like profile"
+        >
+          <Text style={[styles.icon, styles.superLikeIcon]}>★</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -81,6 +93,9 @@ const styles = StyleSheet.create({
   likeButton: {
     backgroundColor: '#F5EEFF',
   },
+  superLikeButton: {
+    backgroundColor: '#EBF5FF',
+  },
   icon: {
     fontSize: 22,
     fontWeight: '700',
@@ -95,6 +110,10 @@ const styles = StyleSheet.create({
   },
   likeIcon: {
     color: colors.primary,
+    fontSize: 22,
+  },
+  superLikeIcon: {
+    color: '#0096FF',
     fontSize: 22,
   },
   sparkle: {

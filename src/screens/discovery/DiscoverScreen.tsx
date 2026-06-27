@@ -3,8 +3,8 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
   Dimensions,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import QaliyeLogo from '@/components/common/QaliyeLogo';
 import CardActionButtons from '@/components/discovery/CardActionButtons';
 import CardStack, { CardStackHandle } from '@/components/discovery/CardStack';
 import LocationFilterDropdown, { LocationFilter, locationFilterLabel } from '@/components/discovery/LocationFilterDropdown';
@@ -28,6 +29,9 @@ import MorePhotosSection from '@/components/discovery/MorePhotosSection';
 import { CardDto } from '@/components/discovery/ProfileCard';
 import ProfileDetailsSection from '@/components/discovery/ProfileDetailsSection';
 import { colors, radius, spacing } from '@/constants/theme';
+import { mapProfileToCard, useDiscoveryProfiles } from '@/hooks/discovery/useDiscoveryProfiles';
+import { useRewind } from '@/hooks/discovery/useRewind';
+import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
 import { useTheme } from '@/hooks/use-theme';
 
 // ---------------------------------------------------------------------------
@@ -37,128 +41,6 @@ const { height: SCREEN_H } = Dimensions.get('window');
 const HEADER_H = 56;
 const TAB_BAR_PADDING = 18;
 const TAB_BAR_H = 68;
-
-// ---------------------------------------------------------------------------
-// Mock data — replace with useDiscoveryProfiles hook when API is ready
-// ---------------------------------------------------------------------------
-const MOCK_CARDS: CardDto[] = [
-  {
-    user_id: '1',
-    display_name: 'Leslie',
-    age: 28,
-    distance_km: 9,
-    is_verified: true,
-    relationship_intention: 'Looking casually',
-    residency_type: 'Diaspora',
-    city: 'Galway',
-    country_name: 'Ireland',
-    bio: 'Creative, warm-hearted, and always ready for a meaningful conversation. I love coffee, weekend walks, music, and discovering beautiful places.',
-    gender: 'Female',
-    height_cm: 168,
-    ethnicity: 'Tigrinya',
-    nationality: 'Ethiopian',
-    religion: 'Orthodox Christian',
-    education_level: "Bachelor's Degree",
-    occupation: 'Product Designer',
-    marital_status: 'Never Married',
-    has_children: false,
-    wants_children: true,
-    smoking: false,
-    drinking: false,
-    photos: [
-      { image_url: 'https://picsum.photos/seed/leslie1/480/800' },
-      { image_url: 'https://picsum.photos/seed/leslie2/480/800' },
-      { image_url: 'https://picsum.photos/seed/leslie3/480/800' },
-      { image_url: 'https://picsum.photos/seed/leslie4/480/800' },
-    ],
-  },
-  {
-    user_id: '2',
-    display_name: 'Mekdes',
-    age: 26,
-    distance_km: 3,
-    is_verified: true,
-    relationship_intention: 'Serious relationship',
-    residency_type: 'Ethiopia',
-    city: 'Addis Ababa',
-    country_name: 'Ethiopia',
-    bio: 'I enjoy quiet evenings, traditional food, and deep conversations. Looking for someone genuine to build a future with.',
-    gender: 'Female',
-    height_cm: 162,
-    ethnicity: 'Amhara',
-    nationality: 'Ethiopian',
-    religion: 'Orthodox Christian',
-    education_level: "Master's Degree",
-    occupation: 'Nurse',
-    marital_status: 'Never Married',
-    has_children: false,
-    wants_children: true,
-    smoking: false,
-    drinking: false,
-    photos: [
-      { image_url: 'https://picsum.photos/seed/mekdes1/480/800' },
-      { image_url: 'https://picsum.photos/seed/mekdes2/480/800' },
-      { image_url: 'https://picsum.photos/seed/mekdes3/480/800' },
-    ],
-  },
-  {
-    user_id: '3',
-    display_name: 'Sara',
-    age: 24,
-    distance_km: 5,
-    is_verified: false,
-    relationship_intention: 'Open to dating',
-    residency_type: 'Diaspora',
-    city: 'London',
-    country_name: 'UK',
-    bio: 'Adventurous spirit who loves art, travel, and trying new cuisines. Currently studying and open to meaningful connections.',
-    gender: 'Female',
-    height_cm: 170,
-    ethnicity: 'Oromo',
-    nationality: 'Ethiopian',
-    religion: 'Muslim',
-    education_level: "Bachelor's Degree",
-    occupation: 'Student',
-    marital_status: 'Never Married',
-    has_children: false,
-    wants_children: true,
-    smoking: false,
-    drinking: false,
-    photos: [
-      { image_url: 'https://picsum.photos/seed/sara1/480/800' },
-      { image_url: 'https://picsum.photos/seed/sara2/480/800' },
-      { image_url: 'https://picsum.photos/seed/sara3/480/800' },
-    ],
-  },
-  {
-    user_id: '4',
-    display_name: 'Hiwot',
-    age: 27,
-    distance_km: 1,
-    is_verified: true,
-    relationship_intention: 'Marriage',
-    residency_type: 'Ethiopia',
-    city: 'Addis Ababa',
-    country_name: 'Ethiopia',
-    bio: 'Family-oriented, kind and hardworking. I value honesty and loyalty above all else.',
-    gender: 'Female',
-    height_cm: 160,
-    ethnicity: 'Gurage',
-    nationality: 'Ethiopian',
-    religion: 'Protestant',
-    education_level: "Bachelor's Degree",
-    occupation: 'Teacher',
-    marital_status: 'Never Married',
-    has_children: false,
-    wants_children: true,
-    smoking: false,
-    drinking: false,
-    photos: [
-      { image_url: 'https://picsum.photos/seed/hiwot1/480/800' },
-      { image_url: 'https://picsum.photos/seed/hiwot2/480/800' },
-    ],
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Animated scroll-hint chevron
@@ -194,69 +76,166 @@ export default function DiscoverScreen() {
   const isDark = mode === 'dark';
   const { bottom: safeBottom } = useSafeAreaInsets();
 
-  const cardStackRef    = useRef<CardStackHandle>(null);
-  const scrollRef       = useRef<ScrollView>(null);
-  const scrollY         = useRef(0);
-  const dismissedRef    = useRef<{ card: CardDto; direction: 'LIKE' | 'PASS' }[]>([]);
-  const isRewindingRef  = useRef(false);
-  const [cards, setCards] = useState<CardDto[]>(MOCK_CARDS);
-  const [dismissed, setDismissed] = useState<{ card: CardDto; direction: 'LIKE' | 'PASS' }[]>([]);
+  const cardStackRef        = useRef<CardStackHandle>(null);
+  const scrollRef            = useRef<ScrollView>(null);
+  const scrollY              = useRef(0);
+  const isRewindingRef       = useRef(false);
+  const pendingSuperLikeRef  = useRef(false);
+  const shownIdsRef          = useRef<Set<string>>(new Set());
+  const lastSwipedCardRef    = useRef<CardDto | null>(null);
+  const lastSwipedDirRef     = useRef<'LIKE' | 'PASS'>('LIKE');
+
+  const [displayQueue, setDisplayQueue] = useState<CardDto[]>([]);
   const [rewindIncoming, setRewindIncoming] = useState<'LIKE' | 'PASS' | false>(false);
   const [matchVisible, setMatchVisible] = useState(false);
   const [matchName, setMatchName] = useState('');
   const [modeVisible, setModeVisible] = useState(false);
-  const [locationFilter, setLocationFilter] = useState<LocationFilter>('NEARBY');
+  const [locationFilter, setLocationFilter] = useState<LocationFilter>('ANYWHERE');
 
-  // Keep ref in sync so async handlers always read latest dismissed
-  useEffect(() => { dismissedRef.current = dismissed; }, [dismissed]);
   const router = useRouter();
 
-  // Card area fills the viewport minus header, tab bar, and breathing room
+  // ── API hooks ──────────────────────────────────────────────────────────────
+  const {
+    cards: apiCards,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    cursorReset,
+  } = useDiscoveryProfiles(locationFilter);
+
+  const { mutate: swipe } = useSwipeAction();
+  const { mutate: rewind } = useRewind();
+
+  // ── Queue management ───────────────────────────────────────────────────────
+
+  // Reset display queue when location filter changes
+  useEffect(() => {
+    setDisplayQueue([]);
+    shownIdsRef.current = new Set();
+  }, [locationFilter]);
+
+  // If API signals cursor was reset, clear local state
+  useEffect(() => {
+    if (cursorReset) {
+      shownIdsRef.current = new Set();
+      setDisplayQueue([]);
+    }
+  }, [cursorReset]);
+
+  // Append newly loaded cards (skip already-seen ids)
+  useEffect(() => {
+    const newCards = apiCards.filter((c) => !shownIdsRef.current.has(c.user_id));
+    if (newCards.length > 0) {
+      newCards.forEach((c) => shownIdsRef.current.add(c.user_id));
+      setDisplayQueue((prev) => [...prev, ...newCards]);
+    }
+  }, [apiCards]);
+
+  // Debug: log top card location fields
+  useEffect(() => {
+    if (displayQueue.length > 0) {
+      const top = displayQueue[0];
+      console.log('[DiscoverScreen] top card location debug:', {
+        user_id: top.user_id,
+        display_name: top.display_name,
+        city: top.city,
+        country_name: top.country_name,
+        residency_type: top.residency_type,
+        distance_km: top.distance_km,
+      });
+    }
+  }, [displayQueue[0]?.user_id]);
+
+  // Pre-fetch next page when queue is running low
+  useEffect(() => {
+    if (displayQueue.length <= 3 && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [displayQueue.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // ── Layout constants ────────────────────────────────────────────────────────
   const TOTAL_TAB = TAB_BAR_PADDING + TAB_BAR_H + Math.max(safeBottom, 12);
   const CARD_AREA_H = SCREEN_H - HEADER_H - TOTAL_TAB - 12;
 
-  const topCard = cards[0] ?? null;
+  const topCard = displayQueue[0] ?? null;
 
-  const handleSwipe = useCallback((direction: 'LIKE' | 'PASS', card: CardDto) => {
-    setDismissed((prev) => [{ card, direction }, ...prev]);
-    setCards((prev) => prev.filter((c) => c.user_id !== card.user_id));
-    if (direction === 'LIKE' && Math.random() < 0.3) {
-      setMatchName(card.display_name);
-      setMatchVisible(true);
-    }
-  }, []);
-
-  // Scroll to top and resolve. Skips the wait when already at top.
+  // ── Scroll helper ───────────────────────────────────────────────────────────
   const scrollToTop = useCallback(
     () =>
       new Promise<void>((resolve) => {
-        if (scrollY.current <= 2) {
-          resolve();
-          return;
-        }
+        if (scrollY.current <= 2) { resolve(); return; }
         scrollRef.current?.scrollTo({ y: 0, animated: true });
         setTimeout(resolve, 320);
       }),
     [],
   );
 
+  // ── Swipe handler ───────────────────────────────────────────────────────────
+  const handleSwipe = useCallback(
+    (direction: 'LIKE' | 'PASS', card: CardDto) => {
+      const isSuperLike = direction === 'LIKE' && pendingSuperLikeRef.current;
+      pendingSuperLikeRef.current = false;
+      lastSwipedCardRef.current = card;
+      lastSwipedDirRef.current  = direction;
+      setDisplayQueue((prev) => prev.filter((c) => c.user_id !== card.user_id));
+      swipe(
+        { type: isSuperLike ? 'SUPER_LIKE' : direction, targetUserId: card.user_id },
+        {
+          onSuccess: (response) => {
+            if (response.isMatch && response.match) {
+              setMatchName(response.match.otherUser.displayName);
+              setMatchVisible(true);
+            }
+          },
+        },
+      );
+    },
+    [swipe],
+  );
+
+  // ── Rewind handler ──────────────────────────────────────────────────────────
   const handleRewind = useCallback(async () => {
-    if (dismissedRef.current.length === 0 || isRewindingRef.current) return;
+    if (isRewindingRef.current) return;
     isRewindingRef.current = true;
     await scrollToTop();
-    const current = dismissedRef.current;
-    if (current.length === 0) { isRewindingRef.current = false; return; }
-    const [last, ...rest] = current;
-    dismissedRef.current = rest;
-    setDismissed(rest);
-    setRewindIncoming(last.direction);
-    setCards((prev) => [last.card, ...prev]);
-    setTimeout(() => {
-      setRewindIncoming(false);
-      isRewindingRef.current = false;
-    }, 600);
-  }, [scrollToTop]);
+    rewind(undefined, {
+      onSuccess: (response) => {
+        const res = response as any;
+        const rawProfile    = res.restoredProfile ?? res.restored_profile;
+        const actionType    = res.reversedActionType ?? res.reversed_action_type;
+        const dir: 'LIKE' | 'PASS' = actionType === 'PASS' ? 'PASS' : 'LIKE';
 
+        const restoredCard: CardDto | null = rawProfile
+          ? mapProfileToCard(rawProfile)
+          : lastSwipedCardRef.current;
+
+        const effectiveDir: 'LIKE' | 'PASS' = rawProfile
+          ? dir
+          : lastSwipedDirRef.current;
+
+        if (restoredCard) {
+          setRewindIncoming(effectiveDir);
+          shownIdsRef.current.delete(restoredCard.user_id);
+          setDisplayQueue((prev) => [restoredCard, ...prev]);
+          shownIdsRef.current.add(restoredCard.user_id);
+          setTimeout(() => {
+            setRewindIncoming(false);
+            isRewindingRef.current = false;
+          }, 600);
+        } else {
+          isRewindingRef.current = false;
+        }
+      },
+      onError: () => {
+        isRewindingRef.current = false;
+      },
+    });
+  }, [rewind, scrollToTop]);
+
+  // ── Button handlers ─────────────────────────────────────────────────────────
   const handlePass = useCallback(async () => {
     await scrollToTop();
     cardStackRef.current?.triggerSwipe('PASS');
@@ -267,27 +246,27 @@ export default function DiscoverScreen() {
     cardStackRef.current?.triggerSwipe('LIKE');
   }, [scrollToTop]);
 
-  const isEmpty = cards.length === 0;
+  const handleSuperLike = useCallback(async () => {
+    pendingSuperLikeRef.current = true;
+    await scrollToTop();
+    cardStackRef.current?.triggerSwipe('LIKE');
+  }, [scrollToTop]);
 
-  // Gradient-ring colours for avatar
-  const ringOuter = isDark ? colors.primaryLight : colors.primary;
+  const isEmpty = !isLoading && !isError && displayQueue.length === 0;
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: th.background }]} edges={['top']}>
       {/* ── Header ─────────────────────────────────── */}
       <View style={styles.header}>
-        {/* Avatar with gradient-style ring */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          accessibilityLabel={t('discovery.openProfile')}
+        {/* Qaliye logo */}
+        <View
+          style={[
+            styles.logoContainer,
+            { backgroundColor: isDark ? th.backgroundElement : th.surface, borderColor: th.border },
+          ]}
         >
-          <View style={[styles.avatarRing, { borderColor: ringOuter }]}>
-            <Image
-              source={{ uri: 'https://picsum.photos/seed/myavatar/100/100' }}
-              style={styles.avatar}
-            />
-          </View>
-        </TouchableOpacity>
+          <QaliyeLogo />
+        </View>
 
         {/* Location filter pill */}
         <TouchableOpacity
@@ -330,7 +309,30 @@ export default function DiscoverScreen() {
         >
           {/* Card zone — fixed height filling available space */}
           <View style={[styles.cardArea, { height: CARD_AREA_H }]}>
-            {isEmpty ? (
+            {isLoading ? (
+              <View style={styles.emptyWrap}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.emptySubtitle, { color: th.textSecondary }]}>
+                  {t('discovery.loadingProfiles', { defaultValue: 'Finding great matches for you…' })}
+                </Text>
+              </View>
+            ) : isError ? (
+              <View style={styles.emptyWrap}>
+                <View style={[styles.emptyIconCircle, { backgroundColor: isDark ? th.backgroundElement : colors.backgroundLavender }]}>
+                  <Ionicons name="cloud-offline-outline" size={48} color={colors.danger} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: th.text }]}>
+                  {t('common.errorTitle', { defaultValue: 'Something went wrong' })}
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: th.textSecondary }]}>
+                  {t('common.errorRetryHint', { defaultValue: 'Check your connection and try again.' })}
+                </Text>
+                <TouchableOpacity style={styles.emptyBtn} activeOpacity={0.85} onPress={() => refetch()}>
+                  <Ionicons name="refresh-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.emptyBtnText}>{t('common.retry', { defaultValue: 'Retry' })}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : isEmpty ? (
               <View style={styles.emptyWrap}>
                 <View style={[styles.emptyIconCircle, { backgroundColor: isDark ? th.backgroundElement : colors.backgroundLavender }]}>
                   <Ionicons name="heart-dislike-outline" size={48} color={colors.primary} />
@@ -353,7 +355,7 @@ export default function DiscoverScreen() {
             ) : (
               <CardStack
                 ref={cardStackRef}
-                cards={cards}
+                cards={displayQueue}
                 onSwipe={handleSwipe}
                 animateTopCardIn={rewindIncoming}
               />
@@ -373,12 +375,13 @@ export default function DiscoverScreen() {
         </ScrollView>
 
         {/* Fixed action buttons — float on the right edge over content */}
-        {!isEmpty && (
+        {!isLoading && !isError && !isEmpty && (
           <View style={[styles.actionOverlay, { bottom: TOTAL_TAB + 8 }]}>
             <CardActionButtons
               onRewind={handleRewind}
               onPass={handlePass}
               onLike={handleLike}
+              onSuperLike={handleSuperLike}
             />
           </View>
         )}
@@ -417,22 +420,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
   },
-  avatarRing: {
-    width: 44,
+  logoContainer: {
     height: 44,
-    borderRadius: 22,
-    borderWidth: 2.5,
-    borderColor: colors.primary,
-    overflow: 'hidden',
-    shadowColor: colors.primary,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
+    elevation: 3,
   },
   locationPill: {
     flexDirection: 'row',

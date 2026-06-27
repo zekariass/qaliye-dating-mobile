@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { memo, useCallback } from 'react';
-import { Pressable, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Switch, Text, View } from 'react-native';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import { type DiscoveryPrefDraft, RESIDENCY_OPTIONS } from '../mockEditProfile';
@@ -11,35 +11,13 @@ type Props = {
   prefs: DiscoveryPrefDraft;
   onPrefsChange: (update: Partial<DiscoveryPrefDraft>) => void;
   onReset: () => void;
+  onSave: () => void;
+  isSaving?: boolean;
+  userGender?: string;
   sem: SemanticTheme;
 };
 
-const DISTANCE_MARKS = [5, 25, 50, 100, 250];
-const DISCOVERY_MODES = ['STANDARD', 'GLOBAL', 'INCOGNITO'] as const;
-const GENDER_OPTIONS = ['MALE', 'FEMALE'] as const;
-
-const MODE_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-  STANDARD: 'globe-outline',
-  GLOBAL: 'globe',
-  INCOGNITO: 'glasses-outline',
-};
-
-const MODE_LABELS: Record<string, string> = {
-  STANDARD: 'Standard',
-  GLOBAL: 'Global',
-  INCOGNITO: 'Incognito',
-};
-
-const MODE_HELPERS: Record<string, string> = {
-  STANDARD: 'Standard mode shows you people near you.',
-  GLOBAL: 'Global mode shows people from anywhere.',
-  INCOGNITO: 'Incognito mode hides you from discovery.',
-};
-
-const GENDER_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-  MALE: 'male-outline',
-  FEMALE: 'female-outline',
-};
+const DISTANCE_MARKS = [1, 100, 250, 400, 500];
 
 const RESIDENCY_DISPLAY: Record<string, string> = {
   ETHIOPIA: 'Ethiopia',
@@ -53,10 +31,7 @@ const RESIDENCY_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['nam
   DIASPORA: 'earth-outline',
 };
 
-export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChange, onReset, sem }: Props) {
-  const handleSave = useCallback(() => {
-    console.log('Save Preferences:', JSON.stringify(prefs, null, 2));
-  }, [prefs]);
+export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChange, onReset, onSave, isSaving = false, userGender, sem }: Props) {
 
   const handleToggleResidency = useCallback((type: string) => {
     const current = prefs.residencyTypes;
@@ -76,98 +51,34 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
           Control who you see and how discovery works.
         </Text>
 
-        {/* ─── Discovery Mode ─── */}
+        {/* ─── Interested In (locked — auto-derived from gender) ─── */}
         <View className="mb-5">
-          <View className="flex-row items-center mb-2">
+          <View className="flex-row items-center gap-1 mb-1.5">
             <Text className="text-sm font-semibold" style={{ color: sem.textPrimary }}>
-              Discovery mode
+              Interested in
             </Text>
-            <Ionicons name="information-circle-outline" size={14} color={sem.textMuted} style={{ marginLeft: 6 }} />
+            <Ionicons name="lock-closed-outline" size={12} color={sem.textMuted} />
           </View>
-
           <View
-            className="flex-row rounded-xl overflow-hidden border"
-            style={{ borderColor: sem.border }}
+            className="flex-row items-center rounded-xl px-3 py-3 border"
+            style={{ backgroundColor: sem.surfaceMuted, borderColor: sem.border }}
           >
-            {DISCOVERY_MODES.map((mode) => {
-              const isActive = prefs.discoveryMode === mode;
-              return (
-                <Pressable
-                  key={mode}
-                  onPress={() => onPrefsChange({ discoveryMode: mode })}
-                  className="flex-1 flex-row items-center justify-center py-3 gap-1.5"
-                  style={{
-                    backgroundColor: isActive ? sem.accentSoft : 'transparent',
-                    borderWidth: isActive ? 1 : 0,
-                    borderColor: isActive ? sem.accent : 'transparent',
-                    borderRadius: isActive ? 10 : 0,
-                  }}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isActive }}
-                  accessibilityLabel={MODE_LABELS[mode]}
-                >
-                  <Ionicons
-                    name={MODE_ICONS[mode]}
-                    size={16}
-                    color={isActive ? sem.accent : sem.textMuted}
-                  />
-                  <Text
-                    className="text-xs font-semibold"
-                    style={{ color: isActive ? sem.accent : sem.textMuted }}
-                  >
-                    {MODE_LABELS[mode]}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            <Ionicons
+              name={prefs.interestedIn === 'MALE' ? 'male-outline' : 'female-outline'}
+              size={16}
+              color={sem.accent}
+              style={{ marginRight: 8 }}
+            />
+            <Text className="flex-1 text-sm font-medium" style={{ color: sem.textPrimary }}>
+              {prefs.interestedIn === 'MALE' ? 'Male' : 'Female'}
+            </Text>
+            <Text className="text-xs" style={{ color: sem.textMuted }}>Auto</Text>
           </View>
-
-          <Text className="text-xs mt-2" style={{ color: sem.textMuted }}>
-            {MODE_HELPERS[prefs.discoveryMode]}
+          <Text className="text-xs mt-1.5 ml-1" style={{ color: sem.textMuted }}>
+            {userGender
+              ? `Set automatically based on your gender (${userGender === 'MALE' ? 'Man' : 'Woman'}).`
+              : 'Automatically set based on your profile gender.'}
           </Text>
-        </View>
-
-        {/* ─── Interested In ─── */}
-        <View className="mb-5">
-          <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
-            Interested in
-          </Text>
-          <View
-            className="flex-row rounded-xl overflow-hidden border"
-            style={{ borderColor: sem.border }}
-          >
-            {GENDER_OPTIONS.map((g) => {
-              const isActive = prefs.interestedIn === g;
-              return (
-                <Pressable
-                  key={g}
-                  onPress={() => onPrefsChange({ interestedIn: g })}
-                  className="flex-1 flex-row items-center justify-center py-3 gap-1.5"
-                  style={{
-                    backgroundColor: isActive ? sem.accentSoft : 'transparent',
-                    borderWidth: isActive ? 1 : 0,
-                    borderColor: isActive ? sem.accent : 'transparent',
-                    borderRadius: isActive ? 10 : 0,
-                  }}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isActive }}
-                  accessibilityLabel={g === 'MALE' ? 'Male' : 'Female'}
-                >
-                  <Ionicons
-                    name={GENDER_ICONS[g]}
-                    size={16}
-                    color={isActive ? sem.accent : sem.textMuted}
-                  />
-                  <Text
-                    className="text-xs font-semibold"
-                    style={{ color: isActive ? sem.accent : sem.textMuted }}
-                  >
-                    {g === 'MALE' ? 'Male' : 'Female'}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
         </View>
 
         {/* ─── Preferred Residency Types ─── */}
@@ -175,7 +86,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
           <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
             Preferred residency types
           </Text>
-          <View className="flex-row gap-2">
+          <View className="flex-row flex-wrap gap-2">
             {RESIDENCY_OPTIONS.map((type) => {
               const isActive = prefs.residencyTypes.includes(type);
               return (
@@ -249,7 +160,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
               />
               <Slider
                 minimumValue={prefs.minAge + 1}
-                maximumValue={80}
+                maximumValue={100}
                 value={prefs.maxAge}
                 step={1}
                 onValueChange={(v: number) => onPrefsChange({ maxAge: Math.round(v) })}
@@ -285,10 +196,10 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
             </Text>
           </View>
           <Slider
-            minimumValue={5}
-            maximumValue={250}
+            minimumValue={1}
+            maximumValue={500}
             value={prefs.maximumDistanceKm}
-            step={5}
+            step={1}
             onValueChange={(v: number) => onPrefsChange({ maximumDistanceKm: Math.round(v) })}
             minimumTrackTintColor={sem.accent}
             maximumTrackTintColor={sem.accentSoft}
@@ -302,7 +213,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
                 className="text-xs font-medium"
                 style={{ color: d === prefs.maximumDistanceKm ? sem.accent : sem.textMuted }}
               >
-                {d === 250 ? '250+ km' : `${d} km`}
+                {d === 500 ? '500 km' : `${d} km`}
               </Text>
             ))}
           </View>
@@ -336,20 +247,25 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
 
         {/* ─── Actions ─── */}
         <Pressable
-          onPress={handleSave}
+          onPress={isSaving ? undefined : onSave}
+          disabled={isSaving}
           className="rounded-full py-4 items-center mb-3"
-          style={{ backgroundColor: sem.accent }}
+          style={{ backgroundColor: sem.accent, opacity: isSaving ? 0.75 : 1 }}
           accessibilityRole="button"
           accessibilityLabel="Save Preferences"
         >
-          {({ pressed }) => (
-            <Text
-              className="text-base font-bold"
-              style={{ color: '#FFFFFF', opacity: pressed ? 0.8 : 1 }}
-            >
-              Save Preferences
-            </Text>
-          )}
+          {({ pressed }) =>
+            isSaving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text
+                className="text-base font-bold"
+                style={{ color: '#FFFFFF', opacity: pressed ? 0.8 : 1 }}
+              >
+                Save Preferences
+              </Text>
+            )
+          }
         </Pressable>
 
         <Pressable

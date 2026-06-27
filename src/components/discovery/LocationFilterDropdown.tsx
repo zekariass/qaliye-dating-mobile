@@ -10,8 +10,9 @@ import {
 
 import { colors, fontSize, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import type { LocationFilter } from '@/types/discovery';
 
-export type LocationFilter = 'NEARBY' | 'ETHIOPIA' | 'ERITREA' | 'DIASPORA';
+export type { LocationFilter };
 
 interface Props {
   visible: boolean;
@@ -26,6 +27,7 @@ export function locationFilterLabel(filter: LocationFilter, t: (k: string) => st
     case 'ETHIOPIA': return t('discovery.locationFilter.ethiopia');
     case 'ERITREA':  return t('discovery.locationFilter.eritrea');
     case 'DIASPORA': return t('discovery.locationFilter.diaspora');
+    case 'ANYWHERE': return t('discovery.locationFilter.anywhere');
   }
 }
 
@@ -41,6 +43,7 @@ export default function LocationFilterDropdown({ visible, current, onSelect, onC
     labelKey: string;
     descKey: string;
   }[] = [
+    { key: 'ANYWHERE', iconName: 'globe-outline',     labelKey: 'discovery.locationFilter.anywhere',  descKey: 'discovery.locationFilter.anywhereDesc' },
     { key: 'NEARBY',   iconName: 'location-outline', labelKey: 'discovery.locationFilter.nearby',    descKey: 'discovery.locationFilter.nearbyDesc' },
     { key: 'ETHIOPIA', emoji: '\u{1F1EA}\u{1F1F9}',   labelKey: 'discovery.locationFilter.ethiopia',  descKey: 'discovery.locationFilter.ethiopiaDesc' },
     { key: 'ERITREA',  emoji: '\u{1F1EA}\u{1F1F7}',   labelKey: 'discovery.locationFilter.eritrea',   descKey: 'discovery.locationFilter.eritreaDesc' },

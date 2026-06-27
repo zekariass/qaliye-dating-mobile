@@ -130,6 +130,18 @@ export default function ProfileDetailsSection({ card }: Props) {
         </View>
       ) : null}
 
+      {/* ── Prompt answers ── */}
+      {card.prompt_answers && card.prompt_answers.length > 0 ? (
+        <View style={styles.section}>
+          {card.prompt_answers.map((pa, idx) => (
+            <View key={idx} style={[styles.bioCard, { backgroundColor: detailSurface, borderColor: th.border }]}>
+              <Text style={[styles.promptQuestion, { color: th.textMuted }]}>{pa.promptText}</Text>
+              <Text style={[styles.bioText, { color: th.text }]}>{pa.answerText}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {/* ── Profile details grid ── */}
       {details.length > 0 ? (
         <View style={styles.section}>
@@ -199,6 +211,12 @@ const styles = StyleSheet.create({
   bioText: {
     fontSize: 14,
     lineHeight: 22,
+  },
+  promptQuestion: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+    marginBottom: 6,
   },
 
   // Grid

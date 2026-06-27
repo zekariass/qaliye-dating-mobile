@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 
 import { radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -23,7 +24,9 @@ export default function MorePhotosSection({ photos }: Props) {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
 
-  if (photos.length <= 1) return null;
+  const safePhotos = photos ?? [];
+  const extraPhotos = safePhotos.slice(1);
+  if (extraPhotos.length === 0) return null;
 
   const cardBg = isDark ? th.backgroundElement : th.surface;
 
@@ -31,7 +34,7 @@ export default function MorePhotosSection({ photos }: Props) {
     <View style={styles.container}>
       <Text style={[styles.title, { color: th.text }]}>{t('discovery.morePhotos')}</Text>
       <View style={styles.stack}>
-        {photos.map((photo, idx) => (
+        {extraPhotos.map((photo, idx) => (
           <View
             key={idx}
             style={[
@@ -42,8 +45,10 @@ export default function MorePhotosSection({ photos }: Props) {
             <Image
               source={{ uri: photo.image_url }}
               style={styles.photo}
-              resizeMode="cover"
-              accessibilityLabel={`Photo ${idx + 1}`}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+              accessibilityLabel={`Photo ${idx + 2}`}
             />
           </View>
         ))}

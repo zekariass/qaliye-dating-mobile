@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import {
-    Image,
     StyleSheet,
     Text,
     useWindowDimensions,
@@ -17,8 +17,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { colors, radius, spacing } from '@/constants/theme';
+import type { ActivityStatus } from '@/types/activity';
 
 const SWIPE_THRESHOLD = 120;
 
@@ -26,7 +28,7 @@ export type CardDto = {
   user_id: string;
   display_name: string;
   age: number;
-  distance_km: number;
+  distance_km: number | null;
   is_verified: boolean;
   relationship_intention: string;
   residency_type: string;
@@ -47,6 +49,8 @@ export type CardDto = {
   wants_children?: boolean;
   smoking?: boolean;
   drinking?: boolean;
+  prompt_answers?: { promptText: string; answerText: string }[];
+  activity_status?: ActivityStatus;
 };
 
 export interface ProfileCardHandle {
@@ -78,7 +82,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
       translateX.value = withTiming(0, { duration: 420, easing: Easing.out(Easing.cubic) });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // only on mount
+  }, [animateIn]); // re-run if animateIn changes (handles batching race on mount)
 
   // Programmatic swipe for action buttons
   useImperativeHandle(ref, () => ({
@@ -99,9 +103,12 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
     Math.max(0, Math.min(1, -translateX.value / SWIPE_THRESHOLD))
   );
 
+  const safePhotos = card.photos ?? [];
+
   const cyclePhoto = useCallback(() => {
-    setPhotoIndex((i) => (i + 1) % card.photos.length);
-  }, [card.photos.length]);
+    if (safePhotos.length === 0) return;
+    setPhotoIndex((i) => (i + 1) % safePhotos.length);
+  }, [safePhotos.length]);
 
   const panGesture = Gesture.Pan()
     .enabled(isTop)
@@ -149,26 +156,38 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
     transform: [{ rotateZ: '20deg' }],
   }));
 
-  const distanceText =
-    card.distance_km < 10
-      ? `0${card.distance_km} kilometers away`
-      : `${card.distance_km} kilometers away`;
+  const locationText = (() => {
+    const parts = [card.city, card.country_name].filter(Boolean);
+    const place = parts.length > 0 ? parts.join(', ') : card.residency_type;
+    if (card.distance_km != null && card.distance_km > 0) {
+      return `${place} · ${card.distance_km} km`;
+    }
+    return place;
+  })();
 
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View style={[styles.swipeWrap, animatedStyle]}>
         <View style={styles.imageCard}>
           {/* Photo */}
-          <Image
-            source={{ uri: card.photos[photoIndex]?.image_url }}
-            style={styles.photo}
-            resizeMode="cover"
-            accessibilityLabel={`Profile photo of ${card.display_name}`}
-          />
+          {safePhotos.length > 0 ? (
+            <Image
+              source={{ uri: safePhotos[photoIndex]?.image_url }}
+              style={styles.photo}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+              accessibilityLabel={`Profile photo of ${card.display_name}`}
+            />
+          ) : (
+            <View style={[styles.photo, styles.photoPlaceholder]}>
+              <Ionicons name="person" size={64} color="#FFFFFF" />
+            </View>
+          )}
 
           {/* Photo dots — top right */}
           <View style={styles.dotsRow}>
-            {card.photos.map((_, i) => (
+            {safePhotos.map((_, i) => (
               <View
                 key={i}
                 style={[styles.dot, i === photoIndex ? styles.dotActive : styles.dotInactive]}
@@ -194,10 +213,17 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
                 </View>
               )}
               <Text style={styles.age}>{card.age}</Text>
+              {card.activity_status && card.activity_status !== 'HIDDEN' && card.activity_status !== 'OFFLINE' && (
+                <ActivityStatusIndicator
+                  status={card.activity_status}
+                  size={10}
+                  style={styles.statusDot}
+                />
+              )}
             </View>
             <View style={styles.distanceRow}>
               <Ionicons name="location" size={14} color="rgba(255,255,255,0.85)" />
-              <Text style={styles.distance}>{distanceText}</Text>
+              <Text style={styles.distance}>{locationText}</Text>
             </View>
             <View style={styles.pillRow}>
               <View style={styles.pill}>
@@ -238,6 +264,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  photoPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundLavender,
   },
   dotsRow: {
     position: 'absolute',
@@ -356,5 +387,8 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
+  },
+  statusDot: {
+    marginBottom: 2,
   },
 });

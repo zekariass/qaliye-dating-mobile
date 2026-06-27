@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+    ActivityIndicator,
     Alert,
     ScrollView,
     StyleSheet,
@@ -16,18 +17,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, fontSize, radius, spacing } from '@/constants/theme';
+import {
+    useProfilePreferences,
+    useUpdateProfilePreferences,
+} from '@/hooks/profile/useProfilePreferences';
 import { useTheme } from '@/hooks/use-theme';
 import { useMeStore } from '@/stores/me-store';
 
 // ---------------------------------------------------------------------------
 // Types matching discovery_preferences schema
 // ---------------------------------------------------------------------------
-type DiscoveryMode = 'STANDARD' | 'GLOBAL' | 'INCOGNITO';
 type InterestedInGender = 'MALE' | 'FEMALE';
 type ResidencyType = 'ETHIOPIA' | 'ERITREA' | 'DIASPORA';
 
 interface Preferences {
-  discovery_mode: DiscoveryMode;
   interested_in_gender: InterestedInGender;
   min_age: number;
   max_age: number;
@@ -39,11 +42,10 @@ interface Preferences {
 }
 
 const DEFAULT_PREFS: Preferences = {
-  discovery_mode: 'STANDARD',
   interested_in_gender: 'FEMALE',
   min_age: 18,
   max_age: 45,
-  max_distance_km: 10000,
+  max_distance_km: 500,
   preferred_residency_types: [],
   open_to_long_distance: false,
   open_to_relocation: false,
@@ -141,6 +143,27 @@ export default function DiscoveryPreferencesScreen() {
   const userGender = (meStore.data?.profile?.gender as string | undefined) ?? null;
 
   const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFS);
+  const [hydrated, setHydrated] = useState(false);
+
+  const { data: apiPrefs, isLoading: isLoadingPrefs } = useProfilePreferences();
+  const { mutate: savePrefs, isPending: isSaving } = useUpdateProfilePreferences();
+
+  // Hydrate local state from API once loaded
+  useEffect(() => {
+    if (apiPrefs && !hydrated) {
+      setPrefs({
+        interested_in_gender: (apiPrefs.interested_in_gender as InterestedInGender) ?? 'FEMALE',
+        min_age: apiPrefs.min_age,
+        max_age: apiPrefs.max_age,
+        max_distance_km: apiPrefs.max_distance_km,
+        preferred_residency_types: (apiPrefs.preferred_residency_types as ResidencyType[]) ?? [],
+        open_to_long_distance: apiPrefs.open_to_long_distance,
+        open_to_relocation: apiPrefs.open_to_relocation,
+        show_verified_only: apiPrefs.show_verified_only,
+      });
+      setHydrated(true);
+    }
+  }, [apiPrefs, hydrated]);
 
   // Auto-lock opposite gender based on user's profile
   useEffect(() => {
@@ -162,22 +185,54 @@ export default function DiscoveryPreferencesScreen() {
   };
 
   const handleSave = () => {
-    // TODO: call PATCH /api/v1/discovery-preferences with prefs
-    Alert.alert('', t('discovery.preferences.saved'));
-    router.back();
+    savePrefs(
+      {
+        interested_in_gender: prefs.interested_in_gender,
+        min_age: prefs.min_age,
+        max_age: prefs.max_age,
+        max_distance_km: Math.min(prefs.max_distance_km, 500),
+        preferred_residency_types: prefs.preferred_residency_types,
+        open_to_long_distance: prefs.open_to_long_distance,
+        open_to_relocation: prefs.open_to_relocation,
+        show_verified_only: prefs.show_verified_only,
+      },
+      {
+        onSuccess: () => {
+          Alert.alert('', t('discovery.preferences.saved'));
+          router.back();
+        },
+        onError: () => {
+          Alert.alert(
+            t('common.errorTitle', { defaultValue: 'Something went wrong' }),
+            t('common.errorRetryHint', { defaultValue: 'Please try again.' }),
+          );
+        },
+      },
+    );
   };
-
-  const modeOptions: { key: DiscoveryMode; label: string }[] = [
-    { key: 'STANDARD', label: t('discovery.preferences.standard') },
-    { key: 'GLOBAL',   label: t('discovery.preferences.global') },
-    { key: 'INCOGNITO',label: t('discovery.preferences.incognito') },
-  ];
 
   const residencyOptions: { key: ResidencyType; label: string }[] = [
     { key: 'ETHIOPIA', label: t('discovery.preferences.residencyEthiopia') },
     { key: 'ERITREA',  label: t('discovery.preferences.residencyEritrea') },
     { key: 'DIASPORA', label: t('discovery.preferences.residencyDiaspora') },
   ];
+
+  if (isLoadingPrefs) {
+    return (
+      <SafeAreaView style={[styles.screen, { backgroundColor: th.backgroundElement }]} edges={['top', 'bottom']}>
+        <View style={[styles.header, { backgroundColor: th.surface, borderBottomColor: th.border }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: th.text }]}>{t('discovery.preferences.title')}</Text>
+          <View style={styles.saveBtn} />
+        </View>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: th.backgroundElement }]} edges={['top', 'bottom']}>
@@ -187,8 +242,11 @@ export default function DiscoveryPreferencesScreen() {
           <Ionicons name="arrow-back" size={20} color={colors.primary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: th.text }]}>{t('discovery.preferences.title')}</Text>
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-          <Text style={styles.saveBtnText}>Save</Text>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8} disabled={isSaving}>
+          {isSaving
+            ? <ActivityIndicator size="small" color={colors.surface} />
+            : <Text style={styles.saveBtnText}>Save</Text>
+          }
         </TouchableOpacity>
       </View>
 
@@ -198,44 +256,6 @@ export default function DiscoveryPreferencesScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Discovery Mode ── */}
-        <SectionCard surface={th.surface} border={th.border}>
-          <SectionTitle label={t('discovery.preferences.discoveryMode')} />
-          <View style={styles.modeGrid}>
-            {modeOptions.map((opt) => {
-              const active = prefs.discovery_mode === opt.key;
-              const modeIcons: Record<DiscoveryMode, React.ComponentProps<typeof Ionicons>['name']> = {
-                STANDARD: 'location-outline',
-                GLOBAL: 'globe-outline',
-                INCOGNITO: 'eye-off-outline',
-              };
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.modeCard, { backgroundColor: th.backgroundElement, borderColor: th.border }, active && styles.modeCardActive]}
-                  onPress={() => set('discovery_mode', opt.key)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={modeIcons[opt.key]}
-                    size={22}
-                    color={active ? colors.surface : colors.textSecondary}
-                  />
-                  <Text style={[styles.modeCardText, active && styles.modeCardTextActive]}>
-                    {opt.label}
-                  </Text>
-                  {active && <View style={styles.modeActiveDot} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <Text style={[styles.modeDesc, { color: th.textSecondary }]}>
-            {prefs.discovery_mode === 'STANDARD' && t('discovery.preferences.standardDesc')}
-            {prefs.discovery_mode === 'GLOBAL'   && t('discovery.preferences.globalDesc')}
-            {prefs.discovery_mode === 'INCOGNITO'&& t('discovery.preferences.incognitoDesc')}
-          </Text>
-        </SectionCard>
-
         {/* ── Interested In (locked) ── */}
         <SectionCard surface={th.surface} border={th.border}>
           <View style={styles.lockedGenderHeader}>
@@ -332,10 +352,10 @@ export default function DiscoveryPreferencesScreen() {
               style={styles.distanceInput}
               value={String(prefs.max_distance_km)}
               keyboardType="number-pad"
-              maxLength={5}
+              maxLength={3}
               onChangeText={(text) => {
                 const n = parseInt(text, 10);
-                if (!isNaN(n) && n > 0 && n <= 20000) set('max_distance_km', n);
+                if (!isNaN(n) && n > 0 && n <= 500) set('max_distance_km', n);
               }}
               selectTextOnFocus
             />
@@ -344,9 +364,9 @@ export default function DiscoveryPreferencesScreen() {
           <Slider
             style={styles.slider}
             minimumValue={1}
-            maximumValue={20000}
-            step={50}
-            value={prefs.max_distance_km}
+            maximumValue={500}
+            step={5}
+            value={Math.min(prefs.max_distance_km, 500)}
             onValueChange={(v: number) => set('max_distance_km', Math.round(v))}
             minimumTrackTintColor={colors.secondary}
             maximumTrackTintColor={colors.border}
@@ -354,7 +374,7 @@ export default function DiscoveryPreferencesScreen() {
           />
           <View style={styles.sliderEndLabels}>
             <Text style={styles.sliderEndText}>1 km</Text>
-            <Text style={styles.sliderEndText}>20,000 km</Text>
+            <Text style={styles.sliderEndText}>500 km</Text>
           </View>
         </SectionCard>
 
@@ -407,9 +427,15 @@ export default function DiscoveryPreferencesScreen() {
         </SectionCard>
 
         {/* ── Save button ── */}
-        <TouchableOpacity style={styles.saveFull} onPress={handleSave} activeOpacity={0.85}>
-          <Ionicons name="checkmark-circle-outline" size={20} color={colors.surface} style={{ marginRight: 8 }} />
-          <Text style={styles.saveFullText}>{t('discovery.preferences.save')}</Text>
+        <TouchableOpacity style={styles.saveFull} onPress={handleSave} activeOpacity={0.85} disabled={isSaving}>
+          {isSaving ? (
+            <ActivityIndicator size="small" color={colors.surface} />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle-outline" size={20} color={colors.surface} style={{ marginRight: 8 }} />
+              <Text style={styles.saveFullText}>{t('discovery.preferences.save')}</Text>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -419,6 +445,7 @@ export default function DiscoveryPreferencesScreen() {
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4EFFE' },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   // ── Header
   header: {

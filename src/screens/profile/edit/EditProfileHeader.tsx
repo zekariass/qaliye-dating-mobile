@@ -1,16 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { memo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
 
 type Props = {
   sem: SemanticTheme;
   onSave: () => void;
+  isSaving?: boolean;
 };
 
-export const EditProfileHeader = memo(function EditProfileHeader({ sem, onSave }: Props) {
+export const EditProfileHeader = memo(function EditProfileHeader({ sem, onSave, isSaving = false }: Props) {
   const router = useRouter();
 
   const handleBack = () => {
@@ -29,6 +30,7 @@ export const EditProfileHeader = memo(function EditProfileHeader({ sem, onSave }
         style={{ backgroundColor: sem.surfaceMuted }}
         accessibilityLabel="Go back"
         accessibilityRole="button"
+        disabled={isSaving}
       >
         {({ pressed }) => (
           <Ionicons
@@ -44,19 +46,24 @@ export const EditProfileHeader = memo(function EditProfileHeader({ sem, onSave }
       </Text>
 
       <Pressable
-        onPress={onSave}
-        className="px-4 py-2 rounded-full"
+        onPress={isSaving ? undefined : onSave}
+        className="px-4 py-2 rounded-full min-w-[56px] items-center"
         accessibilityLabel="Save profile changes"
         accessibilityRole="button"
+        disabled={isSaving}
       >
-        {({ pressed }) => (
-          <Text
-            className="text-base font-bold"
-            style={{ color: pressed ? sem.accentStrong : sem.accent }}
-          >
-            Save
-          </Text>
-        )}
+        {({ pressed }) =>
+          isSaving ? (
+            <ActivityIndicator size="small" color={sem.accent} />
+          ) : (
+            <Text
+              className="text-base font-bold"
+              style={{ color: pressed ? sem.accentStrong : sem.accent }}
+            >
+              Save
+            </Text>
+          )
+        }
       </Pressable>
     </View>
   );

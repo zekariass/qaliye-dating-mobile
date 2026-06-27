@@ -1,159 +1,49 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
-  Dimensions,
-  FlatList,
-  Image,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
+import { useMatches } from '@/hooks/discovery/useMatches';
 import { useTheme } from '@/hooks/use-theme';
+import type { ActivityStatus } from '@/types/activity';
+import type { MatchItemDto } from '@/types/discovery';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-type Match = {
-  id: string;
-  name: string;
-  age: number;
-  location: string;
-  distance: string;
-  intention: string;
-  image: string;
-  verified: boolean;
-};
+function formatLocation(item: MatchItemDto): string | null {
+  const parts: string[] = [];
+  if (item.city) parts.push(item.city);
+  if (item.region) parts.push(item.region);
+  if (item.country_name) parts.push(item.country_name);
+  return parts.length > 0 ? parts.join(', ') : null;
+}
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const MOCK_MATCHES: Match[] = [
-  {
-    id: '1',
-    name: 'Emma',
-    age: 24,
-    location: 'Ireland, Dublin',
-    distance: '4 km',
-    intention: 'Long-term relationship',
-    image: 'https://randomuser.me/api/portraits/women/1.jpg',
-    verified: true,
-  },
-  {
-    id: '2',
-    name: 'Liam',
-    age: 27,
-    location: 'Ireland, Galway',
-    distance: '8 km',
-    intention: 'Serious relationship',
-    image: 'https://randomuser.me/api/portraits/men/1.jpg',
-    verified: true,
-  },
-  {
-    id: '3',
-    name: 'Sophie',
-    age: 26,
-    location: 'Ireland, Cork',
-    distance: '15 km',
-    intention: 'Open to dating',
-    image: 'https://randomuser.me/api/portraits/women/2.jpg',
-    verified: true,
-  },
-  {
-    id: '4',
-    name: 'Noah',
-    age: 29,
-    location: 'Ireland, Limerick',
-    distance: '22 km',
-    intention: 'Casual, see where it goes',
-    image: 'https://randomuser.me/api/portraits/men/2.jpg',
-    verified: true,
-  },
-  {
-    id: '5',
-    name: 'Aoife',
-    age: 23,
-    location: 'Ireland, Kilkenny',
-    distance: '5 km',
-    intention: 'Long-term relationship',
-    image: 'https://randomuser.me/api/portraits/women/3.jpg',
-    verified: true,
-  },
-  {
-    id: '6',
-    name: 'Conor',
-    age: 31,
-    location: 'Ireland, Waterford',
-    distance: '11 km',
-    intention: 'Open to dating',
-    image: 'https://randomuser.me/api/portraits/men/3.jpg',
-    verified: false,
-  },
-  {
-    id: '7',
-    name: 'Niamh',
-    age: 25,
-    location: 'Ireland, Sligo',
-    distance: '7 km',
-    intention: 'Serious relationship',
-    image: 'https://randomuser.me/api/portraits/women/4.jpg',
-    verified: true,
-  },
-  {
-    id: '8',
-    name: 'Finn',
-    age: 28,
-    location: 'Ireland, Wexford',
-    distance: '19 km',
-    intention: 'Casual, see where it goes',
-    image: 'https://randomuser.me/api/portraits/men/4.jpg',
-    verified: false,
-  },
-  {
-    id: '9',
-    name: 'Ciara',
-    age: 22,
-    location: 'Ireland, Tralee',
-    distance: '3 km',
-    intention: 'Long-term relationship',
-    image: 'https://randomuser.me/api/portraits/women/5.jpg',
-    verified: true,
-  },
-  {
-    id: '10',
-    name: 'Donal',
-    age: 33,
-    location: 'Ireland, Athlone',
-    distance: '26 km',
-    intention: 'Open to dating',
-    image: 'https://randomuser.me/api/portraits/men/5.jpg',
-    verified: true,
-  },
-  {
-    id: '11',
-    name: 'Roisin',
-    age: 27,
-    location: 'Ireland, Derry',
-    distance: '14 km',
-    intention: 'Serious relationship',
-    image: 'https://randomuser.me/api/portraits/women/6.jpg',
-    verified: true,
-  },
-  {
-    id: '12',
-    name: 'Tadhg',
-    age: 30,
-    location: 'Ireland, Ennis',
-    distance: '9 km',
-    intention: 'Casual, see where it goes',
-    image: 'https://randomuser.me/api/portraits/men/6.jpg',
-    verified: false,
-  },
-];
+function formatRelativeTime(iso: string): string {
+  const diffMs  = Date.now() - new Date(iso).getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1)  return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24)   return `${diffH}h ago`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD < 7)    return `${diffD}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
@@ -192,7 +82,7 @@ const MSG_BTN_SHADOW = Platform.select({
 
 // ─── MatchesHeader ──────────────────────────────────────────────────────────
 
-function MatchesHeader({ count }: { count: number }) {
+function MatchesHeader({ count }: { count: number; }) {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   return (
@@ -251,10 +141,11 @@ const headerStyles = StyleSheet.create({
 // ─── MatchCard ──────────────────────────────────────────────────────────────
 
 interface MatchCardProps {
-  item:           Match;
+  item:           MatchItemDto;
   index:          number;
   onPress:        () => void;
   onMessagePress: () => void;
+  activityStatus?: ActivityStatus | null;
 }
 
 const MatchCard = React.memo(function MatchCard({
@@ -262,11 +153,13 @@ const MatchCard = React.memo(function MatchCard({
   index,
   onPress,
   onMessagePress,
+  activityStatus,
 }: MatchCardProps) {
   const { colors: th, mode } = useTheme();
-  const isDark = mode === 'dark';
-  const chipBg = isDark ? '#2E1F50' : colors.backgroundLavender;
+  const isDark    = mode === 'dark';
+  const chipBg    = isDark ? '#2E1F50' : colors.backgroundLavender;
   const enterDelay = Math.min(index * 60, 360);
+  const location   = formatLocation(item);
 
   return (
     <Animated.View entering={FadeInDown.delay(enterDelay).duration(400)}>
@@ -275,15 +168,33 @@ const MatchCard = React.memo(function MatchCard({
         onPress={onPress}
         activeOpacity={0.92}
         accessibilityRole="button"
-        accessibilityLabel={`View ${item.name}'s profile`}
+        accessibilityLabel={`View ${item.display_name}'s profile`}
       >
         {/* ── Portrait image ── */}
         <View style={styles.imageWrap}>
-          <Image
-            source={{ uri: item.image }}
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
+          {item.primary_photo_url ? (
+            <Image
+              source={{ uri: item.primary_photo_url }}
+              style={styles.cardImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.cardImage, styles.photoPlaceholder]}>
+              <Ionicons name="person" size={40} color="#999" />
+            </View>
+          )}
+
+          {/* Activity status dot */}
+          {(activityStatus === 'ONLINE' || activityStatus === 'RECENTLY_ACTIVE') && (
+            <ActivityStatusIndicator
+              status={activityStatus}
+              size={11}
+              style={styles.statusDot}
+            />
+          )}
+
+          {/* Unread dot */}
+          {item.is_unread && <View style={styles.unreadDot} />}
 
           {/* Floating message button */}
           <TouchableOpacity
@@ -291,7 +202,7 @@ const MatchCard = React.memo(function MatchCard({
             onPress={onMessagePress}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel={`Message ${item.name}`}
+            accessibilityLabel={`Message ${item.display_name}`}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
             <Ionicons name="chatbubble-ellipses" size={15} color="#FFF" />
@@ -303,10 +214,17 @@ const MatchCard = React.memo(function MatchCard({
 
           {/* Name + verified badge */}
           <View style={styles.nameRow}>
-            <Text style={[styles.nameText, { color: th.text }]} numberOfLines={1}>
-              {item.name}, {item.age}
+            <Text
+              style={[
+                styles.nameText,
+                { color: th.text },
+                item.is_unread && styles.nameTextBold,
+              ]}
+              numberOfLines={1}
+            >
+              {item.display_name}, {item.age}
             </Text>
-            {item.verified && (
+            {item.is_verified && (
               <Ionicons
                 name="checkmark-circle"
                 size={16}
@@ -317,30 +235,47 @@ const MatchCard = React.memo(function MatchCard({
           </View>
 
           {/* Location + distance */}
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={13} color={colors.primary} />
-            <Text style={[styles.locationText, { color: th.textSecondary }]} numberOfLines={1}>
-              {item.location}
-            </Text>
-            <View
-              style={[
-                styles.distancePill,
-                { backgroundColor: isDark ? th.backgroundElement : colors.backgroundLavender },
-              ]}
-            >
-              <Text style={[styles.distanceText, { color: colors.primary }]}>
-                {item.distance}
+          {(location || item.distance_km !== null) && (
+            <View style={styles.locationRow}>
+              <Ionicons name="location" size={13} color={colors.primary} />
+              <Text style={[styles.locationText, { color: th.textSecondary }]} numberOfLines={1}>
+                {location ?? 'Location unknown'}
+              </Text>
+              {item.distance_km !== null && (
+                <View
+                  style={[
+                    styles.distancePill,
+                    { backgroundColor: isDark ? th.backgroundElement : colors.backgroundLavender },
+                  ]}
+                >
+                  <Text style={[styles.distanceText, { color: colors.primary }]}>
+                    {item.distance_km} km
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Status chip: New Match! / last message time */}
+          {item.has_conversation && item.last_message_at ? (
+            <View style={[styles.chip, { backgroundColor: chipBg }]}>
+              <Ionicons
+                name={item.is_unread ? 'chatbubble' : 'chatbubble-outline'}
+                size={11}
+                color={colors.primary}
+              />
+              <Text style={[styles.chipText, { color: colors.primary }]} numberOfLines={1}>
+                {formatRelativeTime(item.last_message_at)}
               </Text>
             </View>
-          </View>
-
-          {/* Intention chip */}
-          <View style={[styles.chip, { backgroundColor: chipBg }]}>
-            <Ionicons name="heart" size={11} color={colors.heartPink} />
-            <Text style={[styles.chipText, { color: colors.primary }]} numberOfLines={1}>
-              {item.intention}
-            </Text>
-          </View>
+          ) : (
+            <View style={[styles.chip, { backgroundColor: isDark ? '#1F3020' : '#E8F5E9' }]}>
+              <Ionicons name="heart" size={11} color="#4CAF50" />
+              <Text style={[styles.chipText, { color: '#4CAF50' }]} numberOfLines={1}>
+                New Match!
+              </Text>
+            </View>
+          )}
 
         </View>
       </TouchableOpacity>
@@ -401,6 +336,56 @@ const emptyStyles = StyleSheet.create({
   },
 });
 
+// ─── ErrorState ──────────────────────────────────────────────────────────────
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { colors: th } = useTheme();
+  return (
+    <Animated.View entering={FadeInDown.duration(400)} style={errorStyles.wrap}>
+      <Ionicons name="alert-circle-outline" size={48} color={colors.primary} />
+      <Text style={[errorStyles.title, { color: th.text }]}>Something went wrong</Text>
+      <Text style={[errorStyles.subtitle, { color: th.textSecondary }]}>
+        We couldn't load your matches. Pull down to retry.
+      </Text>
+      <TouchableOpacity style={errorStyles.retryBtn} onPress={onRetry} activeOpacity={0.8}>
+        <Text style={errorStyles.retryText}>Retry</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+const errorStyles = StyleSheet.create({
+  wrap: {
+    alignItems:        'center',
+    justifyContent:    'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical:   spacing.xxxl,
+    gap:               12,
+  },
+  title: {
+    fontSize:   18,
+    fontWeight: '700',
+    textAlign:  'center',
+  },
+  subtitle: {
+    fontSize:   14,
+    textAlign:  'center',
+    lineHeight: 20,
+  },
+  retryBtn: {
+    marginTop:         8,
+    paddingHorizontal: 24,
+    paddingVertical:   10,
+    borderRadius:      radius.full,
+    backgroundColor:   colors.primary,
+  },
+  retryText: {
+    color:      '#FFF',
+    fontSize:   14,
+    fontWeight: '700',
+  },
+});
+
 // ─── MatchesListScreen ────────────────────────────────────────────────────────
 
 export default function MatchesListScreen() {
@@ -408,33 +393,103 @@ export default function MatchesListScreen() {
   const { colors: th } = useTheme();
   const router = useRouter();
 
+  const [visibleIds, setVisibleIds] = useState<string[]>([]);
+  const { getStatus } = useActivityStatuses(visibleIds);
+
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ item: MatchItemDto }> }) => {
+      setVisibleIds(viewableItems.map((v) => v.item.user_id));
+    },
+  );
+
+  const {
+    items, totalElements,
+    isLoading, isError, isFetching,
+    fetchNextPage, hasNextPage, isFetchingNextPage, refetch,
+  } = useMatches();
+
   const handleCardPress = useCallback(
-    (_id: string) => router.push('/(app)/user-profile' as any),
+    (userId: string, matchId?: string) => {
+      router.push({ pathname: '/(app)/user-profile', params: { userId, matchId } } as any);
+    },
     [router],
   );
 
   const handleMessagePress = useCallback(
-    (id: string) => console.log('Message', id),
-    [],
+    (item: MatchItemDto) => {
+      router.push({
+        pathname: '/(app)/chat' as any,
+        params: {
+          matchId:     item.match_id,
+          displayName: item.display_name,
+          avatarUrl:   item.primary_photo_url ?? '',
+          isVerified:  item.is_verified ? '1' : '0',
+        },
+      });
+    },
+    [router],
   );
 
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const renderItem = useCallback(
-    ({ item, index }: { item: Match; index: number }) => (
+    ({ item, index }: { item: MatchItemDto; index: number }) => (
       <MatchCard
         item={item}
         index={index}
-        onPress={() => handleCardPress(item.id)}
-        onMessagePress={() => handleMessagePress(item.id)}
+        onPress={() => handleCardPress(item.user_id, item.match_id)}
+        onMessagePress={() => handleMessagePress(item)}
+        activityStatus={getStatus(item.user_id, item.activity_status)}
       />
     ),
-    [handleCardPress, handleMessagePress],
+    [handleCardPress, handleMessagePress, getStatus],
   );
+
+  const renderFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    );
+  }, [isFetchingNextPage]);
+
+  const listHeader = <MatchesHeader count={totalElements} />;
+
+  // Initial loading
+  if (isLoading && items.length === 0) {
+    return (
+      <View style={[styles.screen, { backgroundColor: th.background }]}>
+        <View style={[styles.listContent, { paddingTop: insets.top + 16 }]}>
+          {listHeader}
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  // Error (no cached data)
+  if (isError && items.length === 0) {
+    return (
+      <View style={[styles.screen, { backgroundColor: th.background }]}>
+        <View style={[styles.listContent, { paddingTop: insets.top + 16 }]}>
+          {listHeader}
+        </View>
+        <ErrorState onRetry={refetch} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.screen, { backgroundColor: th.background }]}>
       <FlatList
-        data={MOCK_MATCHES}
-        keyExtractor={(item) => item.id}
+        data={items}
+        keyExtractor={(item) => item.match_id}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={[
@@ -444,10 +499,20 @@ export default function MatchesListScreen() {
             paddingBottom: Math.max(insets.bottom, 16) + 120,
           },
         ]}
-        ListHeaderComponent={<MatchesHeader count={MOCK_MATCHES.length} />}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={<EmptyState />}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
+        onViewableItemsChanged={onViewableItemsChanged.current}
+        viewabilityConfig={viewabilityConfig.current}
         showsVerticalScrollIndicator={false}
         renderItem={renderItem}
+        initialNumToRender={8}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === 'android'}
+        refreshing={isFetching && !isFetchingNextPage}
+        onRefresh={refetch}
       />
     </View>
   );
@@ -486,6 +551,15 @@ const styles = StyleSheet.create({
   cardImage: {
     width:  CARD_W,
     height: IMG_H,
+  },
+
+  statusDot: {
+    position: 'absolute',
+    bottom:   8,
+    left:     8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 9,
+    padding: 2,
   },
 
   msgBtn: {
@@ -565,5 +639,38 @@ const styles = StyleSheet.create({
     fontSize:   11,
     fontWeight: '600',
     flexShrink: 1,
+  },
+
+  nameTextBold: {
+    fontWeight: '800',
+  },
+
+  photoPlaceholder: {
+    alignItems:      'center',
+    justifyContent:  'center',
+    backgroundColor: '#E5E5E5',
+  },
+
+  unreadDot: {
+    position:        'absolute',
+    top:             8,
+    left:            8,
+    width:           10,
+    height:          10,
+    borderRadius:    5,
+    backgroundColor: colors.primary,
+    borderWidth:     2,
+    borderColor:     '#FFF',
+  },
+
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems:      'center',
+  },
+
+  centered: {
+    flex:           1,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
 });

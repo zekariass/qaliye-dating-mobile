@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Dimensions,
     FlatList,
     Image,
@@ -13,10 +14,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { colors } from '@/constants/theme';
+import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
+import { useLikes } from '@/hooks/discovery/useLikes';
 import { useTheme } from '@/hooks/use-theme';
-
-import { LikeProfile, RECEIVED_LIKES, SENT_LIKES } from './likesData';
+import type { ActivityStatus } from '@/types/activity';
+import type { LikeDirection, LikeItemDto } from '@/types/discovery';
 
 // ─── Layout constants (identical to MatchesListScreen) ────────────────────────
 // NOTE: useWindowDimensions causes a runtime error in this RN version.
@@ -30,6 +34,20 @@ const IMG_H     = Math.round(CARD_H * 0.60);
 const ROW_GAP   = 20;
 
 type Tab = 'received' | 'sent';
+
+function tabToDirection(tab: Tab): LikeDirection {
+  return tab === 'received' ? 'RECEIVED' : 'SENT';
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatLocation(item: LikeItemDto): string | null {
+  const parts: string[] = [];
+  if (item.city) parts.push(item.city);
+  if (item.region) parts.push(item.region);
+  if (item.country_name) parts.push(item.country_name);
+  return parts.length > 0 ? parts.join(', ') : null;
+}
 
 // ─── Theme helper (mirrors MatchesListScreen's useMatchesTheme) ───────────────
 
@@ -176,12 +194,15 @@ const segStyles = StyleSheet.create({
 // Mirrors MatchCard from MatchesListScreen; adds heart-back btn + dislike btn.
 
 interface LikeCardProps {
-  item:    LikeProfile;
-  onPress: () => void;
+  item:           LikeItemDto;
+  isReceived:     boolean;
+  onPress:        () => void;
+  activityStatus?: ActivityStatus | null;
 }
 
-function LikeCard({ item, onPress }: LikeCardProps) {
+function LikeCard({ item, isReceived, onPress, activityStatus }: LikeCardProps) {
   const { card, textPrimary, textMuted, purple, chipBg } = useLikesTheme();
+  const location = formatLocation(item);
 
   return (
     <TouchableOpacity
@@ -189,25 +210,47 @@ function LikeCard({ item, onPress }: LikeCardProps) {
       onPress={onPress}
       activeOpacity={0.88}
       accessibilityRole="button"
-      accessibilityLabel={`View ${item.name}'s profile`}
+      accessibilityLabel={`View ${item.display_name}'s profile`}
     >
 
       {/* ── Portrait image ── */}
       <View style={styles.imageWrap}>
-        <Image
-          source={{ uri: item.image }}
-          style={styles.cardImage}
-          resizeMode="cover"
-        />
+        {item.primary_photo_url ? (
+          <Image
+            source={{ uri: item.primary_photo_url }}
+            style={styles.cardImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.cardImage, styles.photoPlaceholder]}>
+            <Ionicons name="person" size={36} color="#999" />
+          </View>
+        )}
+
+        {/* Activity status dot */}
+        {(activityStatus === 'ONLINE' || activityStatus === 'RECENTLY_ACTIVE') && (
+          <ActivityStatusIndicator
+            status={activityStatus}
+            size={11}
+            style={styles.statusDot}
+          />
+        )}
+
+        {/* Super-like star badge */}
+        {item.action_type === 'SUPERLIKE' && (
+          <View style={[styles.superBadge, { backgroundColor: purple }]}>
+            <Ionicons name="star" size={12} color="#FFF" />
+          </View>
+        )}
 
         {/* Heart (like-back) button — received likes only */}
-        {item.type === 'received' && (
+        {isReceived && (
           <TouchableOpacity
             style={[styles.overlayBtn, overlayBtnShadow, { backgroundColor: card }]}
-            onPress={() => console.log(`Like back: ${item.id} (${item.name})`)}
+            onPress={() => console.log(`Like back: ${item.action_id} (${item.display_name})`)}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel={`Like back ${item.name}`}
+            accessibilityLabel={`Like back ${item.display_name}`}
             hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
           >
             <Ionicons name="heart" size={17} color={purple} />
@@ -222,9 +265,9 @@ function LikeCard({ item, onPress }: LikeCardProps) {
         <View style={styles.nameRow}>
           <View style={styles.nameLeft}>
             <Text style={[styles.nameText, { color: textPrimary }]} numberOfLines={1}>
-              {item.name}, {item.age}
+              {item.display_name}, {item.age}
             </Text>
-            {item.verified && (
+            {item.is_verified && (
               <Ionicons
                 name="checkmark-circle"
                 size={16}
@@ -234,32 +277,40 @@ function LikeCard({ item, onPress }: LikeCardProps) {
             )}
           </View>
           <TouchableOpacity
-            onPress={() => console.log(`Dislike: ${item.id} (${item.name})`)}
+            onPress={() => console.log(`Dislike: ${item.action_id} (${item.display_name})`)}
             activeOpacity={0.7}
             hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
             accessibilityRole="button"
-            accessibilityLabel={`Dislike ${item.name}`}
+            accessibilityLabel={`Dislike ${item.display_name}`}
           >
             <Ionicons name="heart-dislike-outline" size={17} color={textMuted} />
           </TouchableOpacity>
         </View>
 
         {/* Location + distance */}
-        <View style={styles.locationRow}>
-          <Ionicons name="location-outline" size={13} color={purple} />
-          <Text style={[styles.locationText, { color: textMuted }]} numberOfLines={1}>
-            {item.location}
-          </Text>
-          <Text style={[styles.distanceText, { color: textMuted }]} numberOfLines={1}>
-            {item.distance}
-          </Text>
-        </View>
+        {(location || item.distance_km !== null) ? (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={13} color={purple} />
+            <Text style={[styles.locationText, { color: textMuted }]} numberOfLines={1}>
+              {location ?? 'Location unknown'}
+            </Text>
+            {item.distance_km !== null && (
+              <Text style={[styles.distanceText, { color: textMuted }]} numberOfLines={1}>
+                {item.distance_km} km
+              </Text>
+            )}
+          </View>
+        ) : null}
 
-        {/* Intention chip */}
+        {/* Action type chip */}
         <View style={[styles.chip, { backgroundColor: chipBg }]}>
-          <Ionicons name="heart" size={11} color={purple} />
+          <Ionicons
+            name={item.action_type === 'SUPERLIKE' ? 'star' : 'heart'}
+            size={11}
+            color={purple}
+          />
           <Text style={[styles.chipText, { color: purple }]} numberOfLines={2}>
-            {item.intention}
+            {item.action_type === 'SUPERLIKE' ? 'Super Like' : 'Like'}
           </Text>
         </View>
 
@@ -268,22 +319,204 @@ function LikeCard({ item, onPress }: LikeCardProps) {
   );
 }
 
+// ─── EmptyState ───────────────────────────────────────────────────────────────
+
+function EmptyState({ tab }: { tab: Tab }) {
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
+  const title    = tab === 'received' ? 'No likes yet' : 'No sent likes';
+  const subtitle = tab === 'received'
+    ? "No one has liked you yet. Keep your profile active and we'll notify you when someone does!"
+    : "You haven't liked anyone yet. Start exploring and find your match!";
+
+  return (
+    <View style={emptyStyles.wrap}>
+      <View
+        style={[
+          emptyStyles.iconCircle,
+          { backgroundColor: isDark ? th.backgroundElement : '#F2E7FF' },
+        ]}
+      >
+        <Ionicons name="heart-dislike-outline" size={48} color={colors.primary} />
+      </View>
+      <Text style={[emptyStyles.title, { color: th.text }]}>{title}</Text>
+      <Text style={[emptyStyles.subtitle, { color: th.textSecondary }]}>{subtitle}</Text>
+    </View>
+  );
+}
+
+const emptyStyles = StyleSheet.create({
+  wrap: {
+    alignItems:        'center',
+    justifyContent:    'center',
+    paddingHorizontal: 28,
+    paddingVertical:   60,
+    gap:               14,
+  },
+  iconCircle: {
+    width:          96,
+    height:         96,
+    borderRadius:   48,
+    alignItems:     'center',
+    justifyContent: 'center',
+    marginBottom:   8,
+  },
+  title: {
+    fontSize:      22,
+    fontWeight:    '800',
+    textAlign:     'center',
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    fontSize:   14,
+    textAlign:  'center',
+    lineHeight: 20,
+  },
+});
+
+// ─── ErrorState ───────────────────────────────────────────────────────────────
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { colors: th } = useTheme();
+  return (
+    <View style={errorStyles.wrap}>
+      <Ionicons name="alert-circle-outline" size={48} color={colors.primary} />
+      <Text style={[errorStyles.title, { color: th.text }]}>Something went wrong</Text>
+      <Text style={[errorStyles.subtitle, { color: th.textSecondary }]}>
+        We couldn't load your likes. Pull down to retry.
+      </Text>
+      <TouchableOpacity style={errorStyles.retryBtn} onPress={onRetry} activeOpacity={0.8}>
+        <Text style={errorStyles.retryText}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const errorStyles = StyleSheet.create({
+  wrap: {
+    alignItems:        'center',
+    justifyContent:    'center',
+    paddingHorizontal: 28,
+    paddingVertical:   60,
+    gap:               12,
+  },
+  title: {
+    fontSize:   18,
+    fontWeight: '700',
+    textAlign:  'center',
+  },
+  subtitle: {
+    fontSize:   14,
+    textAlign:  'center',
+    lineHeight: 20,
+  },
+  retryBtn: {
+    marginTop:         8,
+    paddingHorizontal: 24,
+    paddingVertical:   10,
+    borderRadius:      24,
+    backgroundColor:   colors.primary,
+  },
+  retryText: {
+    color:      '#FFF',
+    fontSize:   14,
+    fontWeight: '700',
+  },
+});
+
 // ─── LikesListScreen ──────────────────────────────────────────────────────────
 
 export default function LikesListScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('received');
-  const insets = useSafeAreaInsets();
-  const { bg } = useLikesTheme();
-  const router = useRouter();
+  const direction = tabToDirection(activeTab);
+  const insets    = useSafeAreaInsets();
+  const { bg }    = useLikesTheme();
+  const router    = useRouter();
 
-  const data = activeTab === 'received' ? RECEIVED_LIKES : SENT_LIKES;
+  const [visibleIds, setVisibleIds] = useState<string[]>([]);
+  const { getStatus } = useActivityStatuses(visibleIds);
+
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ item: LikeItemDto }> }) => {
+      setVisibleIds(viewableItems.map((v) => v.item.user_id));
+    },
+  );
+
+  const {
+    items, totalElements,
+    isLoading, isError, isFetching,
+    fetchNextPage, hasNextPage, isFetchingNextPage, refetch,
+  } = useLikes(direction);
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const handleCardPress = useCallback(
+    (userId: string) => {
+      router.push({ pathname: '/(app)/user-profile', params: { userId } } as any);
+    },
+    [router],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: LikeItemDto }) => (
+      <LikeCard
+        item={item}
+        isReceived={activeTab === 'received'}
+        onPress={() => handleCardPress(item.user_id)}
+        activityStatus={getStatus(item.user_id, item.activity_status)}
+      />
+    ),
+    [activeTab, handleCardPress, getStatus],
+  );
+
+  const renderFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    );
+  }, [isFetchingNextPage]);
+
+  const listHeader = (
+    <View style={styles.segHeader}>
+      <SegmentedControl active={activeTab} onChange={setActiveTab} />
+    </View>
+  );
+
+  // Initial loading state
+  if (isLoading && items.length === 0) {
+    return (
+      <View style={[styles.screen, { backgroundColor: bg, paddingTop: insets.top + 16, paddingHorizontal: OUTER_PAD }]}>
+        {listHeader}
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  // Error state (no cached data)
+  if (isError && items.length === 0) {
+    return (
+      <View style={[styles.screen, { backgroundColor: bg, paddingTop: insets.top + 16, paddingHorizontal: OUTER_PAD }]}>
+        {listHeader}
+        <ErrorState onRetry={refetch} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.screen, { backgroundColor: bg }]}>
       <FlatList
         key={activeTab}
-        data={data}
-        keyExtractor={(item) => item.id}
+        data={items}
+        keyExtractor={(item) => item.action_id}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={[
@@ -293,24 +526,20 @@ export default function LikesListScreen() {
             paddingBottom: Math.max(insets.bottom, 16) + 120,
           },
         ]}
-        ListHeaderComponent={
-          <View style={styles.segHeader}>
-            <SegmentedControl active={activeTab} onChange={setActiveTab} />
-          </View>
-        }
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={<EmptyState tab={activeTab} />}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
+        onViewableItemsChanged={onViewableItemsChanged.current}
+        viewabilityConfig={viewabilityConfig.current}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <LikeCard
-            item={item}
-            onPress={() => {
-              router.push('/(app)/user-profile' as any);
-              console.log(`Open profile: ${item.id} (${item.name})`);
-            }}
-          />
-        )}
+        renderItem={renderItem}
         initialNumToRender={8}
         windowSize={7}
         removeClippedSubviews={Platform.OS === 'android'}
+        refreshing={isFetching && !isFetchingNextPage}
+        onRefresh={refetch}
       />
     </View>
   );
@@ -355,6 +584,15 @@ const styles = StyleSheet.create({
   cardImage: {
     width:  CARD_W,
     height: IMG_H,
+  },
+
+  statusDot: {
+    position: 'absolute',
+    bottom:   8,
+    left:     8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 9,
+    padding: 2,
   },
 
   overlayBtn: {
@@ -432,5 +670,33 @@ const styles = StyleSheet.create({
     fontSize:   11,
     fontWeight: '500',
     flexShrink: 1,
+  },
+
+  photoPlaceholder: {
+    alignItems:      'center',
+    justifyContent:  'center',
+    backgroundColor: '#E5E5E5',
+  },
+
+  superBadge: {
+    position:     'absolute',
+    top:          8,
+    left:         8,
+    width:        24,
+    height:       24,
+    borderRadius: 12,
+    alignItems:   'center',
+    justifyContent: 'center',
+  },
+
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems:      'center',
+  },
+
+  centered: {
+    flex:           1,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
 });

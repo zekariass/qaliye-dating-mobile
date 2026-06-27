@@ -1,8 +1,110 @@
+// {
+//   "expo": {
+//     "name": "Qaliye",
+//     "slug": "qaliye-mobile",
+//     "scheme": "qaliyemobile",
+//     "version": "1.0.0",
+//     "orientation": "portrait",
+//     "icon": "./assets/images/icon.png",
+//     "userInterfaceStyle": "automatic",
+//     "ios": {
+//       "bundleIdentifier": "com.qaliye.app",
+//       "supportsTablet": false,
+//       "infoPlist": {
+//         "ITSAppUsesNonExemptEncryption": false
+//       }
+//     },
+//     "android": {
+//       "package": "com.qaliye.app",
+//       "adaptiveIcon": {
+//         "backgroundColor": "#E6F4FE",
+//         "foregroundImage": "./assets/images/android-icon-foreground.png",
+//         "backgroundImage": "./assets/images/android-icon-background.png",
+//         "monochromeImage": "./assets/images/android-icon-monochrome.png"
+//       },
+//       "predictiveBackGestureEnabled": false,
+//       "permissions": [
+//         "android.permission.RECORD_AUDIO",
+//         "android.permission.ACCESS_COARSE_LOCATION",
+//         "android.permission.ACCESS_FINE_LOCATION"
+//       ]
+//     },
+//     "web": {
+//       "output": "static",
+//       "bundler": "metro",
+//       "favicon": "./assets/images/favicon.png"
+//     },
+//     "plugins": [
+//       "expo-router",
+//       "expo-secure-store",
+//       "expo-localization",
+//       "expo-apple-authentication",
+//       [
+//         "expo-notifications",
+//         {
+//           "icon": "./assets/images/android-icon-monochrome.png",
+//           "color": "#8A2CFF",
+//           "defaultChannel": "qaliye-default"
+//         }
+//       ],
+//       [
+//         "expo-splash-screen",
+//         {
+//           "backgroundColor": "#208AEF",
+//           "image": "./assets/images/splash-icon.png",
+//           "resizeMode": "contain",
+//           "android": {
+//             "image": "./assets/images/splash-icon.png",
+//             "imageWidth": 76
+//           },
+//           "ios": {
+//             "image": "./assets/images/splash-icon.png",
+//             "resizeMode": "contain"
+//           }
+//         }
+//       ],
+//       [
+//         "@react-native-google-signin/google-signin",
+//         {
+//           "iosUrlScheme": "com.googleusercontent.apps.dummy"
+//         }
+//       ],
+//       [
+//         "expo-image-picker",
+//         {
+//           "photosPermission": "Qaliye needs access to your photos to let you add a profile photo."
+//         }
+//       ],
+//       [
+//         "expo-location",
+//         {
+//           "locationWhenInUsePermission": "Qaliye uses your location to show you better matches nearby."
+//         }
+//       ]
+//     ],
+//     "experiments": {
+//       "typedRoutes": true,
+//       "reactCompiler": true
+//     },
+//     "extra": {
+//       "router": {},
+//       "eas": {
+//         "projectId": "9d04f735-1300-4ef9-ad68-1325fd6d43ff"
+//       }
+//     },
+//     "owner": "zekariasn"
+//   }
+// }
+
+
+
+
+
 {
   "expo": {
     "name": "Qaliye",
     "slug": "qaliye-mobile",
-    "scheme": "qaliyemobile",
+    "scheme": "qaliyedating",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -16,13 +118,19 @@
     },
     "android": {
       "package": "com.qaliye.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -34,6 +142,14 @@
       "expo-secure-store",
       "expo-localization",
       "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#8A2CFF",
+          "defaultChannel": "qaliye-default"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -74,9 +190,11 @@
       "reactCompiler": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "REPLACE_WITH_YOUR_EAS_PROJECT_ID"
+        "projectId": "9d04f735-1300-4ef9-ad68-1325fd6d43ff"
       }
-    }
+    },
+    "owner": "zekariasn"
   }
 }

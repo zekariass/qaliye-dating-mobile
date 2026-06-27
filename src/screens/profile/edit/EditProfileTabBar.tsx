@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
 
-export type TabKey = 'basics' | 'personal' | 'lifestyle' | 'preferences' | 'photos';
+export type TabKey = 'bio' | 'details' | 'photo' | 'lifestyle' | 'preferences' | 'location';
 
 type TabDef = {
   key: TabKey;
@@ -13,11 +13,12 @@ type TabDef = {
 };
 
 const TABS: TabDef[] = [
-  { key: 'basics', label: 'Basics', icon: 'person-outline' },
-  { key: 'personal', label: 'Personal', icon: 'people-outline' },
+  { key: 'bio', label: 'Bio', icon: 'reader-outline' },
+  { key: 'details', label: 'Details', icon: 'person-outline' },
+  { key: 'photo', label: 'Photo', icon: 'camera-outline' },
   { key: 'lifestyle', label: 'Lifestyle', icon: 'git-network-outline' },
   { key: 'preferences', label: 'Preferences', icon: 'options-outline' },
-  { key: 'photos', label: 'Photos', icon: 'camera-outline' },
+  { key: 'location', label: 'Location', icon: 'location-outline' },
 ];
 
 type Props = {

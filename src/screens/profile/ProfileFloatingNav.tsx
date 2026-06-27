@@ -9,7 +9,7 @@ import { useTheme } from '@/hooks/use-theme';
 // Mirrors AppTabBar constants exactly
 const ACTIVE_COLOR = colors.primary;
 const BAR_H = 68;
-const C = 64;
+const C = 32;
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 

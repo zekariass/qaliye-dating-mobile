@@ -43,7 +43,7 @@ export type EditProfileDraft = {
 };
 
 export type DiscoveryPrefDraft = {
-  discoveryMode: 'STANDARD' | 'GLOBAL' | 'INCOGNITO';
+  discoveryMode: 'PUBLIC' | 'INCOGNITO';
   interestedIn: 'MALE' | 'FEMALE';
   residencyTypes: string[];
   minAge: number;
@@ -134,7 +134,7 @@ export const INITIAL_DRAFT: EditProfileDraft = {
 };
 
 export const INITIAL_PREFS: DiscoveryPrefDraft = {
-  discoveryMode: 'STANDARD',
+  discoveryMode: 'PUBLIC',
   interestedIn: 'MALE',
   residencyTypes: ['ETHIOPIA', 'DIASPORA'],
   minAge: 24,

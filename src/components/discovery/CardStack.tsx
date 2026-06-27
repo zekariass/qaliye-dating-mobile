@@ -31,10 +31,18 @@ const CardStack = forwardRef<CardStackHandle, Props>(
       triggerSwipe: (dir) => topCardRef.current?.swipeOut(dir),
     }));
 
-    // Guard undefined entries; keep top MAX_VISIBLE; reverse so top card
-    // renders last and therefore sits above the others in the z-order.
+    // Guard undefined/invalid entries; keep top MAX_VISIBLE; reverse so top
+    // card renders last and therefore sits above the others in the z-order.
     const visible = cards
-      .filter((c): c is CardDto => c != null)
+      .filter((c): c is CardDto => {
+        if (c == null || typeof c.user_id !== 'string' || !c.user_id) {
+          if (__DEV__) {
+            console.warn('[CardStack] skipping invalid card', c);
+          }
+          return false;
+        }
+        return true;
+      })
       .slice(0, MAX_VISIBLE)
       .reverse();
 
@@ -45,7 +53,7 @@ const CardStack = forwardRef<CardStackHandle, Props>(
 
           return (
             <View
-              key={card.user_id}
+              key={card.user_id || `card-${idx}`}
               style={[
                 styles.cardWrap,
                 { zIndex: idx },

@@ -88,7 +88,9 @@
       "nearbyDesc": "Profiles closest to you first",
       "ethiopiaDesc": "Only profiles based in Ethiopia",
       "eritreaDesc": "Only profiles based in Eritrea",
-      "diasporaDesc": "Profiles in the diaspora"
+      "diasporaDesc": "Profiles in the diaspora",
+      "anywhere": "Anywhere",
+      "anywhereDesc": "Show profiles from all regions"
     },
     "preferences": {
       "title": "Preferences",
@@ -247,5 +249,58 @@
       "highlightNearby": "People near you or anywhere in the diaspora",
       "highlightVerified": "Verified profiles for a safer experience"
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Choose how Qaliye notifies you.",
+    "deviceEnabled": "Notifications enabled on this device",
+    "deviceDisabled": "Notifications disabled in device settings",
+    "openSettings": "Open Settings",
+    "pushEnabled": "Push notifications",
+    "pushPaused": "Normal push notifications are paused for this account",
+    "masterOffNote": "Category settings are preserved but notifications will not be sent.",
+    "messages": "Messages",
+    "matches": "New matches",
+    "likes": "Likes and superlikes",
+    "messagePreview": "Message previews",
+    "messagePreviewSub": "Show message content in notification banners",
+    "marketing": "Offers and updates",
+    "marketingSub": "Promotions and feature announcements",
+    "previewTitle": "Message Previews",
+    "previewBody": "Message previews may show message text in notification banners or on the lock screen. Are you sure you want to enable this?",
+    "marketingConsentTitle": "Offers and Updates",
+    "marketingConsentBody": "Qaliye may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.",
+    "agree": "I Agree",
+    "errorTitle": "Update failed",
+    "errorMessage": "Could not save your preference. Please try again.",
+    "loadError": "Could not load notification preferences."
+  },
+  "settings": {
+    "discovery": "Discovery",
+    "revisitPassedProfiles": "Review passed profiles",
+    "revisitPassedProfilesSub": "Bring back profiles you previously passed that are still eligible.",
+    "revisitSheetTitle": "Review passed profiles",
+    "revisitSheetSubtitle": "Choose how many recent profiles you want to reconsider. Only profiles that are still eligible will return to Discovery.",
+    "revisitLast": "Last {{count}}",
+    "revisitHint": "Up to {{count}} eligible profiles may return to Discovery.",
+    "revisitReopenProfiles": "Reopen profiles",
+    "revisitReopening": "Reopening profiles…",
+    "revisitSuccessTitle": "Profiles reopened",
+    "revisitSuccessOne": "1 previously passed profile is available in Discovery again.",
+    "revisitSuccess": "{{count}} previously passed profiles are available in Discovery again.",
+    "revisitSuccessZero": "No eligible previously passed profiles are available right now.",
+    "revisitGoToDiscovery": "Go to Discovery",
+    "revisitStay": "Stay in Settings",
+    "revisitErrorTitle": "Could not reopen",
+    "revisitErrorValidation": "This request isn't valid right now.",
+    "revisitErrorForbidden": "You can't use Discovery right now.",
+    "revisitErrorGeneric": "Something went wrong. Please try again."
+  },
+  "common": {
+    "cancel": "Cancel",
+    "enable": "Enable",
+    "save": "Save",
+    "retry": "Try again",
+    "ok": "OK"
   }
 }

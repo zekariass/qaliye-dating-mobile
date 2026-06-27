@@ -1,28 +1,47 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { memo, useState } from 'react';
-import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { AppTheme, colors, radius, spacing } from '@/constants/theme';
+import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
+import { useUnmatch } from '@/hooks/matches/useUnmatch';
+import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  mapOtherUserProfileDtoToView,
+  OtherUserDetailItem,
+  OtherUserRelationStatus,
+} from '@/utils/profileMappers';
 
-import { MOCK_OTHER_USER, ProfileDetail, RelationStatus } from './mockOtherUserProfile';
-import ProfileFloatingNav from './ProfileFloatingNav';
+import AppTabBar from '@/components/layout/AppTabBar';
 import ProfileHeroGallery from './ProfileHeroGallery';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const STATUS_META: Record<NonNullable<RelationStatus>, { label: string; icon: IoniconName; chipBg: string; chipColor: string }> = {
+const STATUS_META: Record<NonNullable<OtherUserRelationStatus>, { label: string; icon: IoniconName; chipBg: string; chipColor: string }> = {
   matched:       { label: 'Matched',   icon: 'heart-circle',  chipBg: '#EFE4FF', chipColor: colors.primary },
   like_sent:     { label: 'Like Sent', icon: 'heart',         chipBg: '#FFE8F3', chipColor: colors.heartPink },
   like_received: { label: 'Likes You', icon: 'heart',         chipBg: '#E8FFF0', chipColor: colors.success },
 };
 
-const ACTION_META: Record<NonNullable<RelationStatus>, { label: string; icon: IoniconName }> = {
-  matched:       { label: 'Unmatch',       icon: 'heart-dislike-outline' },
-  like_sent:     { label: 'Withdraw Like', icon: 'heart-dislike-outline' },
-  like_received: { label: 'Decline',       icon: 'close-circle-outline' },
+const ACTION_META: Record<NonNullable<OtherUserRelationStatus>, { primary: { icon: IoniconName; color: string; label: string }; secondary?: { icon: IoniconName; color: string; label: string } }> = {
+  matched:       { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: 'Unmatch' } },
+  like_sent:     { primary: { icon: 'close-circle', color: colors.danger, label: 'Cancel Like' }, secondary: { icon: 'chatbubble-outline', color: colors.primary, label: 'Message' } },
+  like_received: { primary: { icon: 'close-circle', color: colors.danger, label: 'Decline' }, secondary: { icon: 'heart', color: colors.heartPink, label: 'Like Back' } },
 };
 
 const { width: W } = Dimensions.get('window');
@@ -39,24 +58,103 @@ const SHEET_SHADOW = {
 
 export default function OtherUserProfileScreen() {
   const router = useRouter();
+  const { userId, matchId } = useLocalSearchParams<{ userId: string; matchId?: string }>();
   const { colors: th, mode } = useTheme();
-  const { top: safeTop } = useSafeAreaInsets();
+  const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
   const isDark = mode === 'dark';
 
-  const profile = MOCK_OTHER_USER;
+  const { data: dto, isLoading, isError, refetch } = useOtherUserProfile(userId ?? '');
+  const profile = dto ? mapOtherUserProfileDtoToView(dto) : null;
+  const resolvedMatchId = matchId ?? profile?.matchId ?? '';
 
-  const detailPairs: [ProfileDetail, ProfileDetail | null][] = [];
+  if (__DEV__) {
+    console.log('[OtherUserProfile] status:', profile?.status, 'matchId:', resolvedMatchId);
+  }
+
+  const { getStatus } = useActivityStatuses(userId ? [userId] : []);
+  const activityStatus = userId ? getStatus(userId, dto?.activity_status) : undefined;
+
+  const { mutate: unmatch, isPending: isUnmatching } = useUnmatch();
+
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const handleUnmatch = () => {
+    if (!resolvedMatchId) {
+      Alert.alert('Cannot unmatch', 'Match information is missing. Try opening this profile from the matches list or chat.');
+      return;
+    }
+    Alert.alert(
+      'Unmatch?',
+      'This conversation will be removed and you will no longer see each other.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unmatch',
+          style: 'destructive',
+          onPress: () => {
+            unmatch(resolvedMatchId, {
+              onSuccess: () => {
+                router.push('/(app)/(tabs)/messages' as any);
+              },
+              onError: (error: any) => {
+                const status = error?.response?.status;
+                let message = 'Could not unmatch right now. Please try again later.';
+                if (status === 403) {
+                  message = 'You are not a participant in this match.';
+                } else if (status === 404) {
+                  message = 'Match not found.';
+                }
+                Alert.alert('Unmatch failed', message);
+              },
+            });
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
+  const addressCardBg     = isDark ? th.backgroundSelected : '#F3EEFF';
+  const addressCardBorder = isDark ? th.border : '#DDD0F8';
+
+  if (isLoading) {
+    return (
+      <View style={[styles.screen, styles.centered, { backgroundColor: th.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (isError || !profile) {
+    return (
+      <View style={[styles.screen, styles.centered, { backgroundColor: th.background }]}>
+        <Ionicons name="person-circle-outline" size={56} color={th.textMuted} />
+        <Text style={[styles.errorText, { color: th.textSecondary }]}>Profile not available</Text>
+        <TouchableOpacity
+          style={styles.retryBtn}
+          onPress={() => refetch()}
+          activeOpacity={0.75}
+        >
+          <Text style={[styles.retryBtnText, { color: colors.primary }]}>Try again</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.75}
+        >
+          <Text style={[styles.backBtnText, { color: th.textMuted }]}>Go back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const detailPairs: [OtherUserDetailItem, OtherUserDetailItem | null][] = [];
   for (let i = 0; i < profile.details.length; i += 2) {
     detailPairs.push([profile.details[i], profile.details[i + 1] ?? null]);
   }
 
-  const [menuVisible, setMenuVisible] = useState(false);
-
   const statusMeta = profile.status ? STATUS_META[profile.status] : null;
   const actionMeta = profile.status ? ACTION_META[profile.status] : null;
-
-  const addressCardBg     = isDark ? th.backgroundSelected : '#F3EEFF';
-  const addressCardBorder = isDark ? th.border : '#DDD0F8';
 
   return (
     <View style={[styles.screen, { backgroundColor: th.background }]}>
@@ -82,7 +180,9 @@ export default function OtherUserProfileScreen() {
             <Text style={[styles.nameText, { color: th.text }]}>
               {profile.name},
             </Text>
-            <Text style={[styles.ageText, { color: th.text }]}> {profile.age}</Text>
+            {profile.age != null && (
+              <Text style={[styles.ageText, { color: th.text }]}> {profile.age}</Text>
+            )}
             {profile.verified && (
               <Ionicons
                 name="checkmark-circle"
@@ -93,6 +193,15 @@ export default function OtherUserProfileScreen() {
               />
             )}
           </View>
+          {!!activityStatus && activityStatus !== 'HIDDEN' && activityStatus !== 'OFFLINE' && (
+            <ActivityStatusIndicator
+              status={activityStatus}
+              showLabel
+              size={9}
+              labelColor={isDark ? '#9CA3AF' : '#7C6EA0'}
+              style={styles.activityStatus}
+            />
+          )}
 
           {/* Status badge */}
           {statusMeta && (
@@ -103,67 +212,107 @@ export default function OtherUserProfileScreen() {
           )}
 
           {/* Location */}
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={15} color={colors.primary} />
-            <Text style={[styles.locationText, { color: th.textSecondary }]} numberOfLines={1}>
-              {profile.location}
-            </Text>
-            <Text style={[styles.distanceBadge, { color: th.textMuted }]}>
-              · {profile.distanceKm} km
-            </Text>
-          </View>
+          {!!profile.location && (
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={15} color={colors.primary} />
+              <Text style={[styles.locationText, { color: th.textSecondary }]} numberOfLines={1}>
+                {profile.location}
+              </Text>
+            </View>
+          )}
 
           {/* Bio */}
-          <Text style={[styles.bio, { color: th.textSecondary }]}>{profile.bio}</Text>
-
-          {/* Action button */}
-          {actionMeta && (
-            <TouchableOpacity
-              style={[styles.actionBtn, { borderColor: colors.danger }]}
-              onPress={() => console.log(actionMeta.label, profile.name)}
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityLabel={actionMeta.label}
-            >
-              <Ionicons name={actionMeta.icon} size={17} color={colors.danger} />
-              <Text style={[styles.actionBtnText, { color: colors.danger }]}>{actionMeta.label}</Text>
-            </TouchableOpacity>
+          {!!profile.bio && (
+            <Text style={[styles.bio, { color: th.textSecondary }]}>{profile.bio}</Text>
           )}
 
           {/* Address card */}
-          <View
-            style={[
-              styles.addressCard,
-              { backgroundColor: addressCardBg, borderColor: addressCardBorder },
-            ]}
-          >
-            <View style={[styles.addressIconWrap, { backgroundColor: colors.primary }]}>
-              <Ionicons name="location" size={16} color="#FFF" />
+          {!!profile.address && (
+            <View
+              style={[
+                styles.addressCard,
+                { backgroundColor: addressCardBg, borderColor: addressCardBorder },
+              ]}
+            >
+              <View style={[styles.addressIconWrap, { backgroundColor: colors.primary }]}>
+                <Ionicons name="location" size={16} color="#FFF" />
+              </View>
+              <View style={styles.addressBody}>
+                <Text style={[styles.addressLabel, { color: th.textMuted }]}>Address</Text>
+                <Text style={[styles.addressValue, { color: th.text }]}>{profile.address}</Text>
+              </View>
             </View>
-            <View style={styles.addressBody}>
-              <Text style={[styles.addressLabel, { color: th.textMuted }]}>Address</Text>
-              <Text style={[styles.addressValue, { color: th.text }]}>{profile.address}</Text>
-            </View>
-          </View>
+          )}
 
           {/* Details grid */}
-          <View style={styles.grid}>
-            {detailPairs.map(([left, right], i) => (
-              <View key={i} style={styles.gridRow}>
-                <DetailCard item={left} th={th} />
-                {right ? (
-                  <DetailCard item={right} th={th} />
-                ) : (
-                  <View style={{ width: CARD_W }} />
-                )}
-              </View>
-            ))}
-          </View>
+          {detailPairs.length > 0 && (
+            <View style={styles.grid}>
+              {detailPairs.map(([left, right], i) => (
+                <View key={i} style={styles.gridRow}>
+                  <DetailCard item={left} th={th} />
+                  {right ? (
+                    <DetailCard item={right} th={th} />
+                  ) : (
+                    <View style={{ width: CARD_W }} />
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
 
+      {/* Fixed floating action buttons */}
+      {actionMeta && (
+        <View style={[styles.fixedActionButtonsRow, { bottom: safeBottom + 72 }]}>
+          {profile?.status === 'matched' ? (
+            <TouchableOpacity
+              style={[
+                styles.actionTextButton,
+                { backgroundColor: colors.danger, opacity: isUnmatching ? 0.6 : 1 },
+              ]}
+              onPress={handleUnmatch}
+              disabled={isUnmatching}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Unmatch"
+            >
+              {isUnmatching ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.actionTextButtonLabel}>Unmatch</Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.actionIconButton, { backgroundColor: th.surface, borderColor: th.border }]}
+              onPress={() => console.log(actionMeta.primary.label, profile.name)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={actionMeta.primary.label}
+            >
+              <Ionicons name={actionMeta.primary.icon} size={28} color={actionMeta.primary.color} />
+            </TouchableOpacity>
+          )}
+          {actionMeta.secondary && (() => {
+            const secondary = actionMeta.secondary;
+            return (
+              <TouchableOpacity
+                style={[styles.actionIconButton, { backgroundColor: th.surface, borderColor: th.border }]}
+                onPress={() => console.log(secondary.label, profile.name)}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={secondary.label}
+              >
+                <Ionicons name={secondary.icon} size={28} color={secondary.color} />
+              </TouchableOpacity>
+            );
+          })()}
+        </View>
+      )}
+
       {/* Fixed floating bottom nav */}
-      <ProfileFloatingNav activeTab="profile" />
+      <AppTabBar activeTab="profile" />
 
       {/* Dropdown menu */}
       <Modal
@@ -206,7 +355,7 @@ export default function OtherUserProfileScreen() {
 }
 
 interface DetailCardProps {
-  item: ProfileDetail;
+  item: OtherUserDetailItem;
   th: AppTheme;
 }
 
@@ -236,6 +385,31 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 150 },
+  centered: { alignItems: 'center', justifyContent: 'center' },
+
+  errorText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 20,
+  },
+  retryBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    marginBottom: 8,
+  },
+  retryBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  backBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+  },
+  backBtnText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
 
   sheet: {
     marginTop: -30,
@@ -263,6 +437,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   verifiedIcon: { marginLeft: 6 },
+
+  activityStatus: {
+    marginBottom: 8,
+    marginTop: -2,
+  },
 
   locationRow: {
     flexDirection: 'row',
@@ -351,25 +530,46 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  distanceBadge: {
-    fontSize: 13,
-    flexShrink: 0,
-  },
-
-  actionBtn: {
+  fixedActionButtonsRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    borderWidth: 1.5,
-    borderRadius: radius.full,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    alignSelf: 'flex-start',
-    marginBottom: 16,
+    justifyContent: 'center',
+    gap: 16,
+    paddingHorizontal: spacing.md,
+    marginBottom: 8,
   },
-  actionBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+  actionIconButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 12,
+  },
+  actionTextButton: {
+    minWidth: 140,
+    height: 48,
+    borderRadius: 24,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 12,
+  },
+  actionTextButtonLabel: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#FFF',
   },
 
   modalOverlay: {

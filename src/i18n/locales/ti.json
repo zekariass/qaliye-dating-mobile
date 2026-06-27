@@ -205,5 +205,58 @@
       "highlightNearby": "ኣብ ጎንኻ ወይ ኣብ ዲያስፖራ ዘለዉ ሰባት",
       "highlightVerified": "ንበደህነት ዝተረጋገጹ መገለጽታት"
     }
+  },
+  "notifications": {
+    "title": "ምልክታት",
+    "subtitle": "ቃሊይ ብኸመይ ክሕብረካ ምረጽ።",
+    "deviceEnabled": "ምልክታት ኣብዚ ሳዕቤን ነቒሎም ኣለዉ",
+    "deviceDisabled": "ምልክታት ኣብ ምቅናዕ ሳዕቤን ጠፊኦም ኣለዉ",
+    "openSettings": "ምቅናዕ ክፈት",
+    "pushEnabled": "ናይ ፑሽ ምልክታት",
+    "pushPaused": "ናይዚ ሕሳብ መደበኛ ናይ ፑሽ ምልክታት ተቋሪጾም ኣለዉ",
+    "masterOffNote": "ናይ ምድብ ቅምጥ ይቅጽሉ ግን ምልክታት ኣይልኣኩን።",
+    "messages": "መልእኽቲ",
+    "matches": "ሓደሽቲ ምትዕምቃፍ",
+    "likes": "ላይኮች ን ሱፐርላይኮችን",
+    "messagePreview": "ናይ መልእኽቲ ቅድሚ ምርኣይ",
+    "messagePreviewSub": "ትሕዝቶ መልእኽቲ ኣብ ናይ ምልክታት ሳጹን ኣርኢ",
+    "marketing": "ቅናሽን ዝተሓደሰ ነገርን",
+    "marketingSub": "ኣዋጅን ናይ ባህሪ ምልክታትን",
+    "previewTitle": "ናይ መልእኽቲ ቅድሚ ምርኣይ",
+    "previewBody": "ናይ መልእኽቲ ቅድሚ ምርኣይ ጽሑፍ ናይ መልእኽቲ ኣብ ናይ ምልክታት ሳጹን ወይ ሸቀጠ ምርኣይ ክረኣይ ይኽእል። ምንቃቕ ደሊኻ ኢኻ?",
+    "marketingConsentTitle": "ቅናሽን ዝተሓደሰ ነገርን",
+    "marketingConsentBody": "ቃሊይ ማስተዋወቂታት፣ ፕሪሚዩም ቅናሽን፣ ናይ ምስርሒ ምሕዳስን ከምኡ ምምለስ ዘዋጽእ መልእኽቲ ክሰድ ይኽእል። ነዚ ምቅናዕ ኣብ ዝደለኻዮ ግዜ ኣጥፍኦ።",
+    "agree": "ይሰማማዕ",
+    "errorTitle": "ዝምዕባል ኣይሰርሐን",
+    "errorMessage": "ምርጫ ምዕቃብ ኣይተኻኣለን። ብኽብረትካ ደጊምካ ፈትን።",
+    "loadError": "ናይ ምልክታት ምርጫ ምጽዓን ኣይተኻኣለን።"
+  },
+  "settings": {
+    "discovery": "Discovery",
+    "revisitPassedProfiles": "ናብ ዝሓለፉ መገለጽታት ተመለስ",
+    "revisitPassedProfilesSub": "እቶም ክሳብ ሐዚ ብቑዕ ዝኾኑ ዝሓለፍካዮም መገለጽታት ናብ Discovery ክምለሱ ኣፍልጥ።",
+    "revisitSheetTitle": "ናብ ዝሓለፉ መገለጽታት ተመለስ",
+    "revisitSheetSubtitle": "ክንደይ ዝቐረቡ መገለጽታት ክትመርሽ መፈለግካ ምረጽ። እቶም ክሳብ ሐዚ ብቑዕ ዝኾኑ ብቁዕ ናብ Discovery ክምለሱ እዮም።",
+    "revisitLast": "ናብ መጨረሻ {{count}}",
+    "revisitHint": "ክሳብ {{count}} ብቑዕ መገለጽታት ናብ Discovery ክምለሱ ይኽእሉ።",
+    "revisitReopenProfiles": "መገለጽታት ክፈት",
+    "revisitReopening": "መገለጽታት ኣብ ምኽፋት...",
+    "revisitSuccessTitle": "መገለጽታት ተኸፍተን",
+    "revisitSuccessOne": "1 ዝሓለፍካዮ መገለጺ ናብ Discovery ተመሊሱ ኣሎ።",
+    "revisitSuccess": "{{count}} ዝሓለፍካዮም መገለጽታት ናብ Discovery ተመሊሰም ኣለዉ።",
+    "revisitSuccessZero": "ክሳብ ሐዚ ብቑዕ ዝሓለፍካዮም መገለጽታት የለዉን።",
+    "revisitGoToDiscovery": "ናብ Discovery ኪድ",
+    "revisitStay": "ኣብ ቅንብራት ኣዕሩኽ",
+    "revisitErrorTitle": "ክንፍት ኣይከኣለን",
+    "revisitErrorValidation": "እዚ ጥረቕ ኣብዚ ግዜ ትኽክል ኣይኮነን።",
+    "revisitErrorForbidden": "ሐዚ Discovery ክጥቀመሉ ኣይትኽእልን።",
+    "revisitErrorGeneric": "ጸገም ተረኺቡ። እባኽኹም ደጊምኩም ፈትኑ።"
+  },
+  "common": {
+    "cancel": "ሰርዝ",
+    "enable": "ነቕል",
+    "save": "ቅዐ",
+    "retry": "ደጊምካ ፈትን",
+    "ok": "እሺ"
   }
 }

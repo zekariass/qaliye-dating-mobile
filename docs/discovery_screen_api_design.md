@@ -184,7 +184,7 @@ Authorization: Bearer <supabase_jwt>
   "match": null,
   "daily_likes_remaining": 47,
   "created_at": "2025-06-20T12:00:00Z",
-  "_idempotent": true
+  "idempotent": true
 }
 ```
 
@@ -375,7 +375,8 @@ public record DiscoveryProfilesResponse(
     boolean hasMore,
     int totalEligible,
     String locationFilter,
-    int batchSize
+    int batchSize,
+    @Nullable Boolean cursorReset    // true when a stale cursor was reset to offset 0
 ) {}
 ```
 
@@ -625,6 +626,8 @@ The database stores `relationship_intention` as an uppercase enum value. The API
 - Signed URLs are generated per-request and are never cached or persisted.
 - **Raw `storage_path` values are never returned to the client.**
 
+> **Client mapping note:** `DiscoveryPhotoDto` serialises the photo URL as `"signed_url"` in JSON. The mobile `CardDto` currently uses `"image_url"` as the field name; the API integration hook/mapper must rename `signed_url → image_url` when constructing the local DTO.
+
 ### 4.10 Age Calculation
 
 Age is calculated server-side using the `calculate_age(date_of_birth)` database function (or its Java equivalent). The client never sends or receives `date_of_birth`. The `age` field in the response is an integer (years).
@@ -643,6 +646,8 @@ SELECT EXTRACT(YEAR FROM age(CURRENT_DATE, p.date_of_birth))::INTEGER AS age
 - The returned `distance_km` is rounded to the nearest whole kilometre using `ROUND()`.
 - Minimum returned value: `1` km (distances < 500 m are reported as 1 km to prevent triangulation).
 - For non-NEARBY location filters, `distance_km` is `null`.
+
+> **Client note:** `CardDto.distance_km` must be typed as `number | null` (not `number`) to avoid `NaN` rendering when `location_filter` is not `NEARBY`.
 
 ### 4.12 Boost Prioritisation
 
@@ -737,7 +742,8 @@ candidate_distances AS (
             SELECT 1 FROM active_boosts ab
             WHERE ab.user_id = p.user_id
               AND NOW() BETWEEN ab.started_at AND ab.expires_at
-        )                                                            AS is_boosted
+        )                                                            AS is_boosted,
+        au.last_active_at
     FROM profiles p
     JOIN app_users au    ON au.id = p.user_id
     JOIN addresses a     ON a.id  = au.address_id
@@ -768,7 +774,7 @@ SELECT
     -- Ranking score: boosted profiles first, then recency/activity
     (
         CASE WHEN cd.is_boosted THEN 1000.0 ELSE 0.0 END
-        + (EXTRACT(EPOCH FROM au.last_active_at) / 1e9)
+        + (EXTRACT(EPOCH FROM cd.last_active_at) / 1e9)
         -- NEARBY: penalise by distance
         + CASE
             WHEN :locationFilter = 'NEARBY' AND cd.distance_km IS NOT NULL
@@ -777,7 +783,6 @@ SELECT
           END
     )                                                                AS discovery_score
 FROM candidate_distances cd
-JOIN app_users au ON au.id = cd.user_id
 -- NEARBY distance gate: exclude profiles beyond max_distance_km
 -- (unless open_to_long_distance is TRUE, in which case no distance gate applies)
 WHERE (
@@ -897,28 +902,40 @@ FOR UPDATE;
 
 ```sql
 WITH user_plan AS (
-    SELECT sp.plan_code, sp.plan_kind, spl.limit_type, spl.limit_value
+    -- Paid plan (if any active subscription)
+    SELECT
+        sp.plan_code,
+        sp.plan_kind,
+        spl.limit_type,
+        spl.limit_value,
+        0 AS plan_priority    -- paid wins over free
     FROM user_subscriptions us
     JOIN subscription_plans sp  ON sp.id  = us.plan_id
     JOIN subscription_plan_limits spl ON spl.plan_id = sp.id
     WHERE us.user_id = :userId
       AND us.status IN ('ACTIVE', 'PENDING_VERIFICATION')
       AND sp.is_active = TRUE
+
     UNION ALL
-    -- Fallback to FREE plan (country-specific first, then GLOBAL)
-    SELECT sp.plan_code, sp.plan_kind, spl.limit_type, spl.limit_value
+
+    -- FREE plan fallback (country-specific beats GLOBAL)
+    SELECT
+        sp.plan_code,
+        sp.plan_kind,
+        spl.limit_type,
+        spl.limit_value,
+        CASE WHEN sp.country_code = :userCountryCode THEN 1 ELSE 2 END AS plan_priority
     FROM subscription_plans sp
     JOIN subscription_plan_limits spl ON spl.plan_id = sp.id
     WHERE sp.plan_kind = 'FREE'
       AND sp.is_active = TRUE
-    ORDER BY
-        -- Country-specific first
-        CASE WHEN sp.country_code = :userCountryCode THEN 0 ELSE 1 END
-    LIMIT 3   -- one row per limit_type from the free plan
 )
-SELECT limit_type, limit_value
+-- Take the highest-priority row per limit_type (lowest plan_priority wins).
+-- This ensures a paid plan always overrides the FREE fallback.
+SELECT DISTINCT ON (limit_type) limit_type, limit_value
 FROM user_plan
-WHERE limit_type IN ('DAILY_LIKES', 'DAILY_SUPERLIKES', 'DAILY_REWINDS');
+WHERE limit_type IN ('DAILY_LIKES', 'DAILY_SUPERLIKES', 'DAILY_REWINDS')
+ORDER BY limit_type, plan_priority;
 ```
 
 ### 5.8 Rewind — Find Most Recent Eligible Action

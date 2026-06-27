@@ -205,5 +205,58 @@
       "highlightNearby": "በአቅራቢያ ወይም በዲያስፖራ ያሉ ሰዎች",
       "highlightVerified": "ለበለጠ ደህንነት የተረጋገጡ መገለጫዎች"
     }
+  },
+  "notifications": {
+    "title": "ማሳወቂያዎች",
+    "subtitle": "ቃሊይ እንዴት እንዲያስታውቅዎ ይምረጡ።",
+    "deviceEnabled": "ማሳወቂያዎች በዚህ መሳሪያ ላይ ነቅተዋል",
+    "deviceDisabled": "ማሳወቂያዎች በመሳሪያ ቅንብሮች ውስጥ ጠፍተዋል",
+    "openSettings": "ቅንብሮችን ክፈት",
+    "pushEnabled": "የፑሽ ማሳወቂያዎች",
+    "pushPaused": "ለዚህ መለያ መደበኛ የፑሽ ማሳወቂያዎች ተቋርጠዋል",
+    "masterOffNote": "የምድብ ቅንብሮች ይቆያሉ ነገር ግን ማሳወቂያዎች አይላኩም።",
+    "messages": "መልዕክቶች",
+    "matches": "አዲስ ምርጫዎች",
+    "likes": "ላይኮች እና ሱፐርላይኮች",
+    "messagePreview": "የመልዕክት ቅድሚያ እይታ",
+    "messagePreviewSub": "የመልዕክት ይዘትን በማሳወቂያ ሳጥን ላይ አሳይ",
+    "marketing": "ቅናሾች እና ዝመናዎች",
+    "marketingSub": "ማስታወቂያዎች እና ባህሪ ማስታወቂያዎች",
+    "previewTitle": "የመልዕክት ቅድሚያ እይታ",
+    "previewBody": "የመልዕክት ቅድሚያ እይታ የመልዕክት ጽሑፍ በማሳወቂያ ሳጥን ወይም ቁልፍ ማያ ገጽ ላይ ሊታይ ይችላል። ይህን ማንቃት ይፈልጋሉ?",
+    "marketingConsentTitle": "ቅናሾች እና ዝመናዎች",
+    "marketingConsentBody": "ቃሊይ ማስተዋወቂያዎችን፣ ፕሪሚየም ቅናሾችን፣ ባህሪ ዝመናዎችን እና አልፎ አልፎ መልስ ለመስጠት መልዕክቶችን ሊልክ ይችላል። ይህን ቅንብር በማንኛውም ጊዜ ማጥፋት ይችላሉ።",
+    "agree": "እስማማለሁ",
+    "errorTitle": "ዝማኔ አልተሳካም",
+    "errorMessage": "ምርጫዎን ማስቀመጥ አልተቻለም። እባክዎ ደግሞ ይሞክሩ።",
+    "loadError": "የማሳወቂያ ምርጫዎች መጫን አልተቻለም።"
+  },
+  "settings": {
+    "discovery": "Discovery",
+    "revisitPassedProfiles": "የበፊት የአልፋቸውን መገለጫዎች መልሰው ይመልከቱ",
+    "revisitPassedProfilesSub": "እስከ አሁን ድረስ ብቁ የሆኑትን በፊት የአልፋቸውን መገለጫዎች ወደ ግንኙነት ይመልሱ።",
+    "revisitSheetTitle": "የበፊት የአልፋቸውን መገለጫዎች መልሰው ይመልከቱ",
+    "revisitSheetSubtitle": "ምን ያህል የቅርብ መገለጫዎችን መመልከት መፈለግዎን ይምረጡ። እስከ አሁን ድረስ ብቁ የሆኑት ብቻ ወደ ግንኙነት ይመለሳሉ።",
+    "revisitLast": "የመጨረሻው {{count}}",
+    "revisitHint": "እስከ {{count}} ብቁ መገለጫዎች ወደ ግንኙነት ሊመለሱ ይችላሉ።",
+    "revisitReopenProfiles": "መገለጫዎችን እንደገና ክፈት",
+    "revisitReopening": "መገለጫዎችን በማስታረቅ ላይ…",
+    "revisitSuccessTitle": "መገለጫዎች ተከፈቱ",
+    "revisitSuccessOne": "1 በፊት የአልፍከው መገለጳ ወደ ግንኙነት በድጋሚ ተገኝቷል።",
+    "revisitSuccess": "{{count}} በፊት የአልፋቸው መገለጫዎች ወደ ግንኙነት በድጋሜ ተገኝተዋል።",
+    "revisitSuccessZero": "እስከ አሁን ድረስ ብቁ የሆኑ በፊት የአልፋቸው መገለጫዎች አይገኙም።",
+    "revisitGoToDiscovery": "ወደ ግንኙነት ይሂዱ",
+    "revisitStay": "በቅንብሮች ይቆዩ",
+    "revisitErrorTitle": "መገለጫዎችን መክፈት አልተቻለም",
+    "revisitErrorValidation": "ይህ ጥያቄ አሁን ትክክለኛ አይደለም።",
+    "revisitErrorForbidden": "አሁን ግንኙነት መጠቀም አይችሉም።",
+    "revisitErrorGeneric": "የሆነ ስህተት ተከስቷል። እባኮትን ደግሞ ይሞክሩ።"
+  },
+  "common": {
+    "cancel": "ሰርዝ",
+    "enable": "አንቃ",
+    "save": "አስቀምጥ",
+    "retry": "ደግሞ ሞክር",
+    "ok": "እሺ"
   }
 }

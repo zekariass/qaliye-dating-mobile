@@ -152,5 +152,58 @@
       "highlightNearby": "Sitti dhihoo ykn diyaasporaa keessatti argaman namoota",
       "highlightVerified": "Nageenyaaf beeksisa mirkaneessitan"
     }
+  },
+  "notifications": {
+    "title": "Beeksisota",
+    "subtitle": "Qaliye akkamitti akka sibeeksisu filadhu.",
+    "deviceEnabled": "Beeksisoti meeshaa kana irratti deebi'aniiru",
+    "deviceDisabled": "Beeksisoti sirna meeshaa keessatti dhaabbataniiru",
+    "openSettings": "Sirna Bana",
+    "pushEnabled": "Beeksisota push",
+    "pushPaused": "Beeksisoti push kan baay'ee herrega kanaaf dhaabbataniiru",
+    "masterOffNote": "Qindaa'inni gosa ni eeggama garuu beeksisoti hin ergamu.",
+    "messages": "Ergaalee",
+    "matches": "Walitti dhufeenya haaraa",
+    "likes": "Jaalala fi superlikes",
+    "messagePreview": "Mul'ata ergaa",
+    "messagePreviewSub": "Qabiyyee ergaa beeksisa irratti agarsiisi",
+    "marketing": "Dhiyeessii fi haaromsa",
+    "marketingSub": "Beeksisota fi haaromsa amaloota",
+    "previewTitle": "Mul'ata Ergaa",
+    "previewBody": "Mul'anni ergaa barruu ergaa beeksisa irratti ykn screen cufaa irratti mul'achuu danda'a. Kana deebi'siisuu barbaaddaa?",
+    "marketingConsentTitle": "Dhiyeessii fi Haaromsa",
+    "marketingConsentBody": "Qaliye beeksisota, dhiyeessii premium, haaromsa amaloota fi yeroo yerotti ergaalee deebi'insaa erguu danda'a. Qindaa'insi kun yeroo barbaaddetti dhaabsifachuu dandeessa.",
+    "agree": "Waliigala",
+    "errorTitle": "Haaromsi hin milkoofne",
+    "errorMessage": "Filannoo kee olkaa'uu hin dandeenye. Maaloo irra deebi'i.",
+    "loadError": "Filannoo beeksisaa fe'uu hin dandeenye."
+  },
+  "settings": {
+    "discovery": "Discovery",
+    "revisitPassedProfiles": "Itti fufii dura darbe",
+    "revisitPassedProfilesSub": "Dura dhiibban keessan irra deebi'i qoradhu. Ammaaf qulqullina qaban Discovery irratti deebi'uu danda'u.",
+    "revisitSheetTitle": "Itti fufii dura darbe",
+    "revisitSheetSubtitle": "Meqaa beeksisa dhiyoo akka irratti deebi'u barbaaddu filadhu. Ammaaf qulqullina qaban qofa Discovery irratti deebi'u.",
+    "revisitLast": "Itti fufii {{count}}",
+    "revisitHint": "Hanga {{count}} beeksisa qulqullina qaban Discovery irratti deebi'uu danda'u.",
+    "revisitReopenProfiles": "Beeksisa deebi'ii bani",
+    "revisitReopening": "Beeksisa deebi'ii banamaa jira…",
+    "revisitSuccessTitle": "Beeksisa deebi'ii baname",
+    "revisitSuccessOne": "Beeksisa 1 dura dhiibban Discovery irratti deebi'ee jira.",
+    "revisitSuccess": "Beeksisa {{count}} dura dhiibban Discovery irratti deebi'aniiru.",
+    "revisitSuccessZero": "Ammaaf beeksisa dura dhiibban qulqullina qaban Discovery irratti hin jiru.",
+    "revisitGoToDiscovery": "Discovery itti dhufi",
+    "revisitStay": "Ammuma itti fufi",
+    "revisitErrorTitle": "Banuu hin dandeenye",
+    "revisitErrorValidation": "Gaafii kun amma sirrii miti.",
+    "revisitErrorForbidden": "Ammuma Discovery fayyaduu hin dandeessan.",
+    "revisitErrorGeneric": "Rakkoon tokko uumame. Maaloo irra deebi'ii yaali."
+  },
+  "common": {
+    "cancel": "Haqi",
+    "enable": "Deebi'siisi",
+    "save": "Olkaa'i",
+    "retry": "Irra deebi'i",
+    "ok": "Tole"
   }
 }

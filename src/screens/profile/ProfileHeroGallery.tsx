@@ -42,7 +42,7 @@ function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
   );
 
   return (
-    <View style={{ width: SCREEN_W, height: GALLERY_H }}>
+    <View style={{ width: SCREEN_W, height: GALLERY_H, paddingTop: safeTop }}>
       {/* Paging gallery */}
       <ScrollView
         ref={scrollRef}
@@ -57,7 +57,7 @@ function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
             key={i}
             source={{ uri }}
             style={{ width: SCREEN_W, height: GALLERY_H }}
-            contentFit="cover"
+            contentFit="contain"
             transition={200}
             cachePolicy="memory-disk"
           />

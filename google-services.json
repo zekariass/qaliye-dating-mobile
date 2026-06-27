@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "92774223454",
+    "project_id": "qaliye-dating",
+    "storage_bucket": "qaliye-dating.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:92774223454:android:969c32cc2fb90584f4eecf",
+        "android_client_info": {
+          "package_name": "com.qaliye.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD21DVKsRhk2j-jqUJI3M1eLtcGOoYZFys"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
