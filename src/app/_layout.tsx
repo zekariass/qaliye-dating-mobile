@@ -62,15 +62,17 @@ export default function RootLayout() {
 
   const { mode } = useTheme();
   const isDark = mode === 'dark';
+  const splashBackground = '#2A0B4F';
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: splashBackground }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <QueryClientProvider client={queryClient}>
         <Stack
           screenOptions={{
             headerShown: false,
             animation: 'none',
+            contentStyle: { backgroundColor: splashBackground },
           }}
         />
       </QueryClientProvider>

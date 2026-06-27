@@ -89,7 +89,7 @@ function MatchesHeader({ count }: { count: number; }) {
     <Animated.View entering={FadeInDown.duration(350)} style={headerStyles.container}>
       <View style={headerStyles.titleRow}>
         <Ionicons name="heart-circle" size={30} color={colors.primary} />
-        <Text style={[headerStyles.title, { color: th.text }]}>Matches</Text>
+        <Text style={[headerStyles.title, { color: th.text }]}>Your Matches</Text>
         <View
           style={[
             headerStyles.badge,
@@ -101,9 +101,6 @@ function MatchesHeader({ count }: { count: number; }) {
           </Text>
         </View>
       </View>
-      <Text style={[headerStyles.subtitle, { color: th.textSecondary }]}>
-        People who liked you back
-      </Text>
     </Animated.View>
   );
 }
@@ -113,10 +110,10 @@ const headerStyles = StyleSheet.create({
     paddingBottom: 20,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           8,
-    marginBottom:  4,
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            8,
   },
   title: {
     fontSize:      26,
@@ -131,10 +128,6 @@ const headerStyles = StyleSheet.create({
   badgeText: {
     fontSize:   13,
     fontWeight: '700',
-  },
-  subtitle: {
-    fontSize:   13,
-    marginLeft: 38,
   },
 });
 

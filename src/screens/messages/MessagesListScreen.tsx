@@ -391,20 +391,11 @@ interface HeaderProps {
 function Header({ filter, onFilterChange, th }: HeaderProps) {
   return (
     <View style={styles.header}>
-      {/* Title row */}
+      {/* Title */}
       <View style={styles.titleRow}>
         <Text style={[styles.title, { color: th.text }]}>
-          Messages
+          Your Conversations
         </Text>
-        <Text style={styles.titleEmoji}>💗</Text>
-      </View>
-
-      {/* Subtitle */}
-      <View style={styles.subtitleRow}>
-        <Text style={[styles.subtitle, { color: th.text }]}>
-          Your conversations
-        </Text>
-        <Text style={styles.subtitleEmoji}> 💕</Text>
       </View>
 
       {/* Segmented filter */}
@@ -443,32 +434,15 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+    alignItems:     'center',
+    justifyContent: 'center',
+    marginBottom:   spacing.md,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
+    fontSize:      24,
+    fontWeight:    '800',
     letterSpacing: -0.8,
-  },
-  titleEmoji: {
-    fontSize: 24,
-    marginLeft: 6,
-    marginTop: -2,
-  },
-  subtitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  subtitle: {
-    fontSize: fontSize.sm,
-    fontWeight: '500',
-    opacity: 0.75,
-  },
-  subtitleEmoji: {
-    fontSize: 14,
+    textAlign:     'center',
   },
   segWrap: {
     // full-width segmented control

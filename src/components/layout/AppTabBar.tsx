@@ -400,7 +400,7 @@ function MatchesIcon({ active, inactiveColor }: { active: boolean; inactiveColor
 }
 
 function ChatBubblesIcon() {
-  return <Ionicons name="chatbubble-ellipses" size={22} color="#fff" />;
+  return <Ionicons name="chatbubbles" size={22} color="#fff" />;
 }
 
 function UnreadBadge({ count }: { count: number }) {
