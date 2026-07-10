@@ -74,7 +74,7 @@ describe('validatePayload', () => {
     });
     expect(result?.type).toBe('CHAT_MESSAGE');
     expect(result?.match_id).toBeUndefined();
-    expect(result?.navigation).toBeUndefined();
+    expect((result as Record<string, unknown>)?.navigation).toBeUndefined();
   });
 });
 

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { supabase } from '@/lib/supabase';
+import { normalizeEthiopianPhone } from '@/utils/phone';
 
 type AuthMutation<T> = {
   mutateAsync: (vars: T) => Promise<void>;
@@ -14,35 +15,52 @@ export function usePhoneOtp() {
   const [verifyPending, setVerifyPending] = useState(false);
   const [verifyError, setVerifyError] = useState<Error | null>(null);
 
+  /**
+   * Accepts any Ethiopian phone format (e.g. 0912345678 / 912345678 / +251912345678).
+   * Normalizes to E.164 before calling Supabase.
+   */
   const sendCode = useCallback(async (phone: string) => {
     setSendPending(true);
     setSendError(null);
     try {
-      const { error } = await supabase.auth.signInWithOtp({ phone: `+251${phone}` });
-      if (error) throw error;
+      const normalized = normalizeEthiopianPhone(phone);
+      if (!normalized) {
+        throw new Error('invalid_ethiopian_phone');
+      }
+      const { error } = await supabase.auth.signInWithOtp({ phone: normalized });
+      if (error) {
+        console.error('[usePhoneOtp] signInWithOtp error:', error.message, error);
+        throw error;
+      }
     } catch (e) {
-      console.error('[usePhoneOtp] sendCode error:', (e as Error).message);
       setSendError(e as Error);
-      /* error stays in state; UI shows it inline */
+      throw e;
     } finally {
       setSendPending(false);
     }
   }, []);
 
+  /**
+   * phone: raw input or already-normalized E.164 — both are accepted.
+   * code: the 6-digit OTP sent by Supabase.
+   */
   const verifyCode = useCallback(async ({ phone, code }: { phone: string; code: string }) => {
     setVerifyPending(true);
     setVerifyError(null);
     try {
+      const normalized = normalizeEthiopianPhone(phone);
+      if (!normalized) {
+        throw new Error('invalid_ethiopian_phone');
+      }
       const { error } = await supabase.auth.verifyOtp({
-        phone: `+251${phone}`,
+        phone: normalized,
         token: code,
         type: 'sms',
       });
       if (error) throw error;
     } catch (e) {
-      console.error('[usePhoneOtp] verifyCode error:', (e as Error).message);
       setVerifyError(e as Error);
-      /* error stays in state; UI shows it inline */
+      throw e;
     } finally {
       setVerifyPending(false);
     }

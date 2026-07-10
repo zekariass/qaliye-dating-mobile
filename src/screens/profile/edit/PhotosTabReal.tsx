@@ -4,7 +4,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { memo, useCallback, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     Dimensions,
     Modal,
     Pressable,
@@ -12,6 +11,7 @@ import {
     View,
 } from 'react-native';
 
+import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import { supabase } from '@/lib/supabase';
 import type { ProfilePhotoDto } from '@/types/profile';
@@ -60,7 +60,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
   const pickAndUpload = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please allow photo library access to add photos.');
+      themedError('Permission required', 'Please allow photo library access to add photos.');
       return;
     }
 
@@ -89,11 +89,11 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       const storageBucket = 'profile-photos';
 
       const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: uploadError } = await supabase.storage
         .from(storageBucket)
-        .upload(storagePath, blob, { contentType: `image/${ext}`, upsert: false });
+        .upload(storagePath, arrayBuffer, { contentType: `image/${ext}`, upsert: false });
 
       if (uploadError) throw uploadError;
 
@@ -101,7 +101,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       const isPrimary = photos.length === 0;
       await onRegisterPhoto(storageBucket, storagePath, nextOrder, isPrimary);
     } catch (err: unknown) {
-      Alert.alert('Upload failed', (err as Error)?.message ?? 'Could not upload photo.');
+      themedError('Upload failed', (err as Error)?.message ?? 'Could not upload photo.');
     } finally {
       setLocalLoading(false);
     }
@@ -164,10 +164,12 @@ export const PhotosTabReal = memo(function PhotosTabReal({
   }, [photos, onReorderPhotos]);
 
   const handleRemovePhoto = useCallback((id: string) => {
-    Alert.alert(
-      'Remove photo',
-      'Are you sure you want to remove this photo?',
-      [
+    themedAlert({
+      title: 'Remove photo',
+      message: 'Are you sure you want to remove this photo?',
+      icon: 'trash-outline',
+      iconColor: '#EF4444',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
@@ -178,14 +180,14 @@ export const PhotosTabReal = memo(function PhotosTabReal({
               setLocalLoading(true);
               await onDeletePhoto(id);
             } catch (err: unknown) {
-              Alert.alert('Error', (err as Error)?.message ?? 'Could not remove photo.');
+              themedError('Error', (err as Error)?.message ?? 'Could not remove photo.');
             } finally {
               setLocalLoading(false);
             }
           },
         },
       ],
-    );
+    });
   }, [onDeletePhoto]);
 
   const addSlotCount = Math.min(MAX_PHOTOS - photos.length, 2);
@@ -197,7 +199,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
           <SectionTitle title="Manage Photos" sem={sem} />
           {isBusy && <ActivityIndicator size="small" color={sem.accent} />}
         </View>
-        <Text className="text-xs mb-4" style={{ color: sem.textSecondary }}>
+        <Text className="text-sm mb-4" style={{ color: sem.textSecondary }}>
           Add up to {MAX_PHOTOS} photos. Your primary photo appears first on your profile.
         </Text>
 
@@ -230,19 +232,19 @@ export const PhotosTabReal = memo(function PhotosTabReal({
                       style={{ backgroundColor: sem.accent }}
                     >
                       <Ionicons name="star" size={10} color="#fff" />
-                      <Text className="text-xs font-bold text-white ml-1">Primary</Text>
+                      <Text className="text-sm font-bold text-white ml-1">Primary</Text>
                     </View>
                     {primaryPhoto.moderation_status === 'PENDING' && (
                       <View
                         className="absolute top-2 left-2 px-2 py-0.5 rounded-full"
                         style={{ backgroundColor: '#F59E0B' }}
                       >
-                        <Text className="text-xs font-bold text-white">Pending</Text>
+                        <Text className="text-sm font-bold text-white">Pending</Text>
                       </View>
                     )}
                   </View>
                 </Pressable>
-                <Text className="text-xs mt-2" style={{ color: sem.textMuted, width: PRIMARY_W }}>
+                <Text className="text-sm mt-2" style={{ color: sem.textMuted, width: PRIMARY_W }}>
                   Primary photo shown first on your profile.
                 </Text>
               </View>
@@ -287,14 +289,14 @@ export const PhotosTabReal = memo(function PhotosTabReal({
               width={PRIMARY_W}
               height={PRIMARY_H}
             />
-            <Text className="text-xs mt-3" style={{ color: sem.textMuted }}>
+            <Text className="text-sm mt-3" style={{ color: sem.textMuted }}>
               Add your first photo
             </Text>
           </View>
         )}
 
         {photos.length >= MAX_PHOTOS && (
-          <Text className="text-xs text-center mb-3" style={{ color: sem.textMuted }}>
+          <Text className="text-sm text-center mb-3" style={{ color: sem.textMuted }}>
             {MAX_PHOTOS} of {MAX_PHOTOS} photos added
           </Text>
         )}
@@ -307,10 +309,10 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       >
         <Ionicons name="bulb-outline" size={22} color={sem.accent} />
         <View className="flex-1">
-          <Text className="text-sm font-bold mb-0.5" style={{ color: sem.textPrimary }}>
+          <Text className="text-base font-bold mb-0.5" style={{ color: sem.textPrimary }}>
             Photo tips
           </Text>
-          <Text className="text-xs leading-4" style={{ color: sem.textSecondary }}>
+          <Text className="text-sm leading-4" style={{ color: sem.textSecondary }}>
             Use clear, well-lit photos that show your face. Avoid group photos as your primary photo.
           </Text>
         </View>
@@ -407,7 +409,7 @@ function AddPhotoTile({ sem, onPress, width, height }: AddPhotoTileProps) {
       {({ pressed }) => (
         <View className="items-center" style={{ opacity: pressed ? 0.6 : 1 }}>
           <Ionicons name="add" size={24} color={sem.accent} />
-          <Text className="text-xs font-medium mt-1" style={{ color: sem.accent }}>
+          <Text className="text-sm font-medium mt-1" style={{ color: sem.accent }}>
             Add photo
           </Text>
         </View>
@@ -473,7 +475,7 @@ function ActionSheetModal({
                   color={(a as { destructive?: boolean }).destructive ? sem.danger : sem.textPrimary}
                 />
                 <Text
-                  className="text-sm font-medium ml-3"
+                  className="text-base font-medium ml-3"
                   style={{ color: (a as { destructive?: boolean }).destructive ? sem.danger : sem.textPrimary }}
                 >
                   {a.label}

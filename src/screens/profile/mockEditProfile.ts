@@ -3,6 +3,8 @@
  * Field names align with schema.sql entities (profiles, discovery_preferences, profile_photos).
  */
 
+import type { EthnicityOption, LanguageOption } from '@/types/catalog';
+
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
 export type EditableProfilePhoto = {
@@ -23,7 +25,8 @@ export type EditProfileDraft = {
   };
   personal: {
     bio: string;
-    ethnicity: string;
+    ethnicities: EthnicityOption[];
+    ethnicityOtherText: string;
     nationality: string;
     religion: string;
     educationLevel: string;
@@ -38,20 +41,30 @@ export type EditProfileDraft = {
     drinking: string;
     activityLevel: string;
     interests: string[];
-    languages: string[];
+    languages: LanguageOption[];
   };
 };
+
+export type LocationMode = 'nearby' | 'diaspora' | 'specific_countries' | 'anywhere';
+export type HasChildrenPref = 'any' | 'yes' | 'no';
+export type WantsChildrenPref = 'any' | 'yes' | 'no' | 'not_sure' | 'open_to_discussion';
 
 export type DiscoveryPrefDraft = {
   discoveryMode: 'PUBLIC' | 'INCOGNITO';
   interestedIn: 'MALE' | 'FEMALE';
-  residencyTypes: string[];
+  locationMode: LocationMode;
+  specificCountryCodes: string[];
+  expandSearchWhenLimited: boolean;
   minAge: number;
   maxAge: number;
   maximumDistanceKm: number;
-  openToLongDistance: boolean;
-  openToRelocation: boolean;
   verifiedProfilesOnly: boolean;
+  hasChildrenPreference: HasChildrenPref;
+  wantsChildrenPreference: WantsChildrenPref;
+  religionPreferences: string[];
+  languagePreferences: LanguageOption[];
+  ethnicityPreferences: EthnicityOption[];
+  preferencesVersion: number;
 };
 
 // ─── Option arrays ──────────────────────────────────────────────────────────────
@@ -59,11 +72,6 @@ export type DiscoveryPrefDraft = {
 export const GENDER_OPTIONS = ['MALE', 'FEMALE'] as const;
 
 export const RESIDENCY_OPTIONS = ['ETHIOPIA', 'ERITREA', 'DIASPORA'] as const;
-
-export const ETHNICITY_OPTIONS = [
-  'Amhara', 'Oromo', 'Tigrinya', 'Somali', 'Sidama', 'Gurage',
-  'Wolayta', 'Afar', 'Hadiya', 'Gamo', 'Other',
-] as const;
 
 export const NATIONALITY_OPTIONS = [
   'Ethiopian', 'Eritrean', 'Dual Citizen', 'Other',
@@ -97,9 +105,6 @@ export const INTEREST_OPTIONS = [
   'Yoga', 'Gaming', 'Writing', 'Languages', 'Tech', 'Fashion',
 ] as const;
 
-export const LANGUAGE_OPTIONS = [
-  'Amharic', 'Tigrinya', 'Oromo', 'English', 'Arabic', 'French', 'Italian', 'Spanish',
-] as const;
 
 // ─── Initial mock data ──────────────────────────────────────────────────────────
 
@@ -114,7 +119,8 @@ export const INITIAL_DRAFT: EditProfileDraft = {
   },
   personal: {
     bio: 'Coffee lover ☕, travel enthusiast ✈️ and believer in meaningful conversations.',
-    ethnicity: 'Oromo',
+    ethnicities: [],
+    ethnicityOtherText: '',
     nationality: 'Ethiopian',
     religion: 'Orthodox Christian',
     educationLevel: "Bachelor's Degree",
@@ -129,20 +135,26 @@ export const INITIAL_DRAFT: EditProfileDraft = {
     drinking: 'Socially',
     activityLevel: 'Moderate',
     interests: ['Travel', 'Coffee', 'Reading', 'Fitness', 'Music'],
-    languages: ['Amharic', 'English', 'Oromo'],
+    languages: [],
   },
 };
 
 export const INITIAL_PREFS: DiscoveryPrefDraft = {
   discoveryMode: 'PUBLIC',
   interestedIn: 'MALE',
-  residencyTypes: ['ETHIOPIA', 'DIASPORA'],
+  locationMode: 'anywhere',
+  specificCountryCodes: [],
+  expandSearchWhenLimited: false,
   minAge: 24,
   maxAge: 34,
   maximumDistanceKm: 50,
-  openToLongDistance: true,
-  openToRelocation: false,
   verifiedProfilesOnly: true,
+  hasChildrenPreference: 'any',
+  wantsChildrenPreference: 'any',
+  religionPreferences: [],
+  languagePreferences: [],
+  ethnicityPreferences: [],
+  preferencesVersion: 0,
 };
 
 export const MOCK_PHOTOS: EditableProfilePhoto[] = [
@@ -179,7 +191,7 @@ export function computeCompletionPercent(draft: EditProfileDraft, prefs: Discove
   const p = draft.personal;
   total += 10;
   if (p.bio) filled++;
-  if (p.ethnicity) filled++;
+  if (p.ethnicities.length > 0) filled++;
   if (p.nationality) filled++;
   if (p.religion) filled++;
   if (p.educationLevel) filled++;
@@ -196,7 +208,7 @@ export function computeCompletionPercent(draft: EditProfileDraft, prefs: Discove
   if (l.drinking) filled++;
   if (l.activityLevel) filled++;
   if (l.interests.length > 0) filled++;
-  if (l.languages.length > 0) filled++;
+  if (l.languages.length > 0) filled++;  // LanguageOption[]
 
   // Preferences (treated as 1 segment)
   total += 1;

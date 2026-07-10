@@ -14,17 +14,21 @@ interface LifestyleItem {
 }
 
 function buildLifestyleItems(p: CurrentUserProfile): LifestyleItem[] {
-  return [
+  const items: LifestyleItem[] = [
     { icon: 'ban-outline', label: 'Smoking', value: p.smoking ? 'Yes' : 'No' },
     { icon: 'wine-outline', label: 'Drinking', value: p.drinking ? 'Yes' : 'No' },
   ];
+  if (p.languages && p.languages.length > 0) {
+    items.push({ icon: 'language-outline', label: 'Languages', value: p.languages.map((l) => l.name).join(', ') });
+  }
+  if (p.activityLevel) {
+    items.push({ icon: 'fitness-outline', label: 'Activity Level', value: p.activityLevel });
+  }
+  if (p.interests && p.interests.length > 0) {
+    items.push({ icon: 'color-palette-outline', label: 'Interests', value: p.interests.join(', ') });
+  }
+  return items;
 }
-
-const COMING_SOON: { icon: IoniconName; label: string }[] = [
-  { icon: 'fitness-outline', label: 'Activity Level' },
-  { icon: 'color-palette-outline', label: 'Interests' },
-  { icon: 'language-outline', label: 'Languages' },
-];
 
 interface LifestyleContentProps {
   profile: CurrentUserProfile;
@@ -51,22 +55,6 @@ export default function LifestyleContent({ profile }: LifestyleContentProps) {
             </View>
           </View>
         ))}
-
-        <View style={[styles.divider, { backgroundColor: th.border }]} />
-
-        {COMING_SOON.map((item) => (
-          <View key={item.label}>
-            <View style={styles.row}>
-              <View style={[styles.iconCircle, { backgroundColor: th.backgroundSelected, opacity: 0.5 }]}>
-                <Ionicons name={item.icon} size={18} color={colors.primary} />
-              </View>
-              <View style={styles.textCol}>
-                <Text style={[styles.label, { color: th.textSecondary }]}>{item.label}</Text>
-                <Text style={[styles.comingSoon, { color: th.textMuted }]}>Coming soon</Text>
-              </View>
-            </View>
-          </View>
-        ))}
       </View>
     </View>
   );
@@ -74,7 +62,7 @@ export default function LifestyleContent({ profile }: LifestyleContentProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 16,
   },
   card: {
@@ -113,12 +101,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#1B1340',
-  },
-  comingSoon: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#9CA3AF',
-    fontStyle: 'italic',
   },
   divider: {
     height: StyleSheet.hairlineWidth,

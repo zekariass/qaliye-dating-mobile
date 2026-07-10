@@ -18,6 +18,9 @@ apiClient.interceptors.request.use(async (config) => {
         `[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
         '| token:', session.access_token.slice(0, 20) + '…',
       );
+      if (config.data) {
+        console.log(`[API] request data:`, typeof config.data === 'string' ? config.data : JSON.stringify(config.data));
+      }
     }
   } else {
     console.warn('[API] No active session — request sent without Bearer token');

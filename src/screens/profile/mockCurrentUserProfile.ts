@@ -1,3 +1,5 @@
+import type { EthnicityOption, LanguageOption } from '@/types/catalog';
+
 export type ProfileDetail = {
   id: string;
   label: string;
@@ -29,7 +31,8 @@ export type CurrentUserProfile = {
   dateOfBirth: string;
   heightCm: number | null;
   residencyType: string;
-  ethnicity: string | null;
+  ethnicities: EthnicityOption[];
+  ethnicityOtherText: string | null;
   nationality: string | null;
   religion: string | null;
   educationLevel: string | null;
@@ -42,9 +45,12 @@ export type CurrentUserProfile = {
   // Photo tab — profile_photos
   photos: ProfilePhoto[];
 
-  // Lifestyle tab — profiles (smoking, drinking)
+  // Lifestyle tab — profiles (smoking, drinking, languages, activity, interests)
   smoking: boolean;
   drinking: boolean;
+  languages: LanguageOption[];
+  activityLevel: string | null;
+  interests: string[];
 
   // Status tab — profiles (is_visible, is_onboarded, is_verified, profile_completion_score)
   isVisible: boolean;
@@ -57,10 +63,15 @@ export type CurrentUserProfile = {
   minAge: number;
   maxAge: number;
   maxDistanceKm: number;
-  preferredResidencyTypes: string[];
-  openToLongDistance: boolean;
-  openToRelocation: boolean;
+  locationMode: string;
+  specificCountryCodes: string[];
+  expandSearchWhenLimited: boolean;
   showVerifiedOnly: boolean;
+  hasChildrenPreference: string;
+  wantsChildrenPreference: string;
+  religionPreferences: string[];
+  languagePreferences: LanguageOption[];
+  ethnicityPreferences: EthnicityOption[];
 };
 
 export const CURRENT_USER_PROFILE: CurrentUserProfile = {
@@ -78,7 +89,8 @@ export const CURRENT_USER_PROFILE: CurrentUserProfile = {
   dateOfBirth: '1998-06-12',
   heightCm: 180,
   residencyType: 'ETHIOPIA',
-  ethnicity: 'Tigrinya',
+  ethnicities: [],
+  ethnicityOtherText: null,
   nationality: 'Ethiopian',
   religion: 'Orthodox Christian',
   educationLevel: "Master's Degree",
@@ -97,6 +109,9 @@ export const CURRENT_USER_PROFILE: CurrentUserProfile = {
 
   smoking: false,
   drinking: false,
+  languages: [],
+  activityLevel: 'Moderate',
+  interests: ['Travel', 'Coffee', 'Reading', 'Fitness', 'Music'],
 
   isVisible: true,
   isOnboarded: true,
@@ -107,8 +122,13 @@ export const CURRENT_USER_PROFILE: CurrentUserProfile = {
   minAge: 22,
   maxAge: 35,
   maxDistanceKm: 50,
-  preferredResidencyTypes: ['ETHIOPIA', 'ERITREA', 'DIASPORA'],
-  openToLongDistance: false,
-  openToRelocation: false,
+  locationMode: 'anywhere',
+  specificCountryCodes: [],
+  expandSearchWhenLimited: false,
   showVerifiedOnly: false,
+  hasChildrenPreference: 'any',
+  wantsChildrenPreference: 'any',
+  religionPreferences: [],
+  languagePreferences: [],
+  ethnicityPreferences: [],
 };

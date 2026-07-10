@@ -1,6 +1,8 @@
 // ─── Profile API DTOs ──────────────────────────────────────────────────────────
 // All keys are snake_case to match the backend JSON.
 
+import type { EthnicityOption, LanguageOption } from './catalog';
+
 export type ProfileAddressDto = {
   id: string;
   city: string;
@@ -18,6 +20,7 @@ export type ProfilePhotoDto = {
   signed_url: string;
   expires_at: string;
   moderation_status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  rejection_reason: string | null;
 };
 
 export type ProfileDiscoveryPreferencesDto = {
@@ -26,9 +29,16 @@ export type ProfileDiscoveryPreferencesDto = {
   max_age: number;
   max_distance_km: number;
   preferred_residency_types: Array<'ETHIOPIA' | 'ERITREA' | 'DIASPORA'>;
-  open_to_long_distance: boolean;
-  open_to_relocation: boolean;
   show_verified_only: boolean;
+  location_mode: 'nearby' | 'diaspora' | 'specific_countries' | 'anywhere';
+  specific_country_codes: string[];
+  expand_search_when_limited: boolean;
+  has_children_preference: 'any' | 'yes' | 'no';
+  wants_children_preference: 'any' | 'yes' | 'no' | 'not_sure' | 'open_to_discussion';
+  religion_preferences: string[];
+  language_preferences: LanguageOption[];
+  ethnicity_preferences: EthnicityOption[];
+  preferences_version: number;
 };
 
 export type ProfileMeDto = {
@@ -41,7 +51,6 @@ export type ProfileMeDto = {
   height_cm: number | null;
   residency_type: 'ETHIOPIA' | 'ERITREA' | 'DIASPORA';
   address: ProfileAddressDto | null;
-  ethnicity: string | null;
   nationality: string | null;
   religion: string | null;
   education_level: string | null;
@@ -56,7 +65,9 @@ export type ProfileMeDto = {
   drinking_detail: string | null;
   activity_level: string | null;
   interests: string[];
-  languages: string[];
+  ethnicities: EthnicityOption[];
+  ethnicity_other_text: string | null;
+  languages: LanguageOption[];
   is_visible: boolean;
   discovery_mode: 'PUBLIC' | 'INCOGNITO';
   is_onboarded: boolean;
@@ -76,7 +87,6 @@ export type ProfileUpdateRequest = {
   height_cm?: number | null;
   residency_type?: string;
   bio?: string | null;
-  ethnicity?: string | null;
   nationality?: string | null;
   religion?: string | null;
   education_level?: string | null;
@@ -91,15 +101,21 @@ export type ProfileUpdateRequest = {
   drinking_detail?: string | null;
   activity_level?: string | null;
   interests?: string[];
-  languages?: string[];
+  language_ids?: string[];
+  ethnicity_ids?: string[];
+  ethnicity_other_text?: string | null;
   discovery_mode?: 'PUBLIC' | 'INCOGNITO';
 };
 
 export type PhotoRegistrationRequest = {
   storage_bucket: string;
   storage_path: string;
-  photo_order: number;
+  photo_order?: number;
   is_primary: boolean;
+};
+
+export type BatchPhotoRegistrationRequest = {
+  photos: PhotoRegistrationRequest[];
 };
 
 export type PhotoReorderItem = {
@@ -121,10 +137,23 @@ export type ProfilePreferencesUpdateRequest = {
   min_age: number;
   max_age: number;
   max_distance_km: number;
-  preferred_residency_types: string[];
-  open_to_long_distance: boolean;
-  open_to_relocation: boolean;
+  preferred_residency_types?: string[];
   show_verified_only: boolean;
+  location_mode?: string;
+  specific_country_codes?: string[];
+  expand_search_when_limited?: boolean;
+  has_children_preference?: string;
+  wants_children_preference?: string;
+  religion_preferences?: string[];
+  language_preference_ids?: string[];
+  ethnicity_preference_ids?: string[];
+  preferences_version?: number;
+};
+
+export type CulturalDetailsUpdateRequest = {
+  language_ids?: string[];
+  ethnicity_ids?: string[];
+  ethnicity_other_text?: string | null;
 };
 
 export type OtherUserProfileDto = {
@@ -136,7 +165,6 @@ export type OtherUserProfileDto = {
   height_cm: number | null;
   residency_type: string;
   address: ProfileAddressDto | null;
-  ethnicity: string | null;
   nationality: string | null;
   religion: string | null;
   education_level: string | null;
@@ -145,9 +173,13 @@ export type OtherUserProfileDto = {
   marital_status: string | null;
   has_children: boolean | null;
   wants_children: boolean | null;
+  smoking?: boolean | null;
+  drinking?: boolean | null;
   activity_level: string | null;
   interests: string[];
-  languages: string[];
+  ethnicities: EthnicityOption[];
+  ethnicity_other_text: string | null;
+  languages: LanguageOption[];
   is_verified: boolean;
   primary_photo_url: string | null;
   photos: ProfilePhotoDto[];

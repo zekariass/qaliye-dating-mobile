@@ -321,7 +321,7 @@ function LikeCard({ item, isReceived, onPress, activityStatus }: LikeCardProps) 
 
 // ─── EmptyState ───────────────────────────────────────────────────────────────
 
-function EmptyState({ tab }: { tab: Tab }) {
+function EmptyState({ tab, onRefresh }: { tab: Tab; onRefresh: () => void }) {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const title    = tab === 'received' ? 'No likes yet' : 'No sent likes';
@@ -341,6 +341,10 @@ function EmptyState({ tab }: { tab: Tab }) {
       </View>
       <Text style={[emptyStyles.title, { color: th.text }]}>{title}</Text>
       <Text style={[emptyStyles.subtitle, { color: th.textSecondary }]}>{subtitle}</Text>
+      <TouchableOpacity style={emptyStyles.refreshBtn} onPress={onRefresh} activeOpacity={0.8}>
+        <Ionicons name="refresh-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+        <Text style={emptyStyles.refreshText}>Refresh</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -371,6 +375,20 @@ const emptyStyles = StyleSheet.create({
     fontSize:   14,
     textAlign:  'center',
     lineHeight: 20,
+  },
+  refreshBtn: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    marginTop:         6,
+    paddingHorizontal: 22,
+    paddingVertical:   10,
+    borderRadius:      24,
+    backgroundColor:   colors.primary,
+  },
+  refreshText: {
+    color:      '#FFF',
+    fontSize:   14,
+    fontWeight: '700',
   },
 });
 
@@ -527,7 +545,7 @@ export default function LikesListScreen() {
           },
         ]}
         ListHeaderComponent={listHeader}
-        ListEmptyComponent={<EmptyState tab={activeTab} />}
+        ListEmptyComponent={<EmptyState tab={activeTab} onRefresh={refetch} />}
         ListFooterComponent={renderFooter}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}

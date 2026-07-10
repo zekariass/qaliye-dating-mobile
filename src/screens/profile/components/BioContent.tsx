@@ -42,7 +42,7 @@ export default function BioContent({ bio, onAddBio }: BioContentProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 16,
   },
   card: {

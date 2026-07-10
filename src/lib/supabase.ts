@@ -70,6 +70,28 @@ export const supabase = new Proxy({} as SupabaseClient, {
           persistSession: true,
           detectSessionInUrl: false,
         },
+        global: {
+          fetch: (input, init = {}) => {
+            // Normalize headers to a plain Record — React Native's fetch drops Headers instances
+            const raw = init.headers ?? {};
+            const plainHeaders: Record<string, string> =
+              raw instanceof Headers
+                ? Object.fromEntries((raw as Headers).entries())
+                : Array.isArray(raw)
+                ? Object.fromEntries(raw as [string, string][])
+                : { ...(raw as Record<string, string>) };
+
+            if (
+              init.body &&
+              typeof init.body === 'string' &&
+              !plainHeaders['Content-Type'] &&
+              !plainHeaders['content-type']
+            ) {
+              plainHeaders['Content-Type'] = 'application/json';
+            }
+            return fetch(input, { ...init, headers: plainHeaders });
+          },
+        },
       });
     }
     const value = (client as any)[prop];

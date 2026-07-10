@@ -3,12 +3,13 @@ import { useCallback } from 'react';
 import { Platform } from 'react-native';
 
 import { deactivateDevice } from '@/api/notifications/notificationsApi';
-import { readInstallationId } from '@/services/notifications/installationId';
+import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
+import { readInstallationId } from '@/services/notifications/installationId';
+import { useChatStore } from '@/stores/chat-store';
 import { useMeStore } from '@/stores/me-store';
 
 export function useSignOutWithDeactivation() {
-  const clearMe = useMeStore((s) => s.clearMe);
   const router = useRouter();
 
   const signOut = useCallback(async () => {
@@ -23,10 +24,14 @@ export function useSignOutWithDeactivation() {
       }
     }
 
-    await supabase.auth.signOut();
-    clearMe();
+    await supabase.auth.signOut({ scope: 'local' });
+
+    queryClient.clear();
+    useMeStore.getState().clearMe();
+    useChatStore.getState().reset();
+
     router.replace('/auth' as never);
-  }, [clearMe, router]);
+  }, [router]);
 
   return { signOut };
 }

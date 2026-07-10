@@ -31,10 +31,10 @@ export const ProfileCompletionBar = memo(function ProfileCompletionBar({ percent
         ))}
       </View>
       <View className="flex-row items-center justify-center">
-        <Text className="text-xs" style={{ color: sem.textMuted }}>
+        <Text className="text-sm" style={{ color: sem.textMuted }}>
           Profile completion:{' '}
         </Text>
-        <Text className="text-xs font-bold" style={{ color: sem.accent }}>
+        <Text className="text-sm font-bold" style={{ color: sem.accent }}>
           {percent}%
         </Text>
       </View>

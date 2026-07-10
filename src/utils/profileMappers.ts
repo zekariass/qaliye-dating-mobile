@@ -172,7 +172,7 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
     age: dto.age,
     isVerified: dto.is_verified,
     location: address,
-    avatarUri: dto.primary_photo_url ?? '',
+    avatarUri: dto.photos.find((p) => p.is_primary)?.signed_url ?? dto.primary_photo_url ?? '',
 
     bio: dto.bio ?? '',
 
@@ -181,7 +181,8 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
     dateOfBirth: dto.date_of_birth,
     heightCm: dto.height_cm,
     residencyType: dto.residency_type,
-    ethnicity: dto.ethnicity ? (ETHNICITY_API_TO_LABEL[dto.ethnicity] ?? dto.ethnicity) : null,
+    ethnicities: dto.ethnicities ?? [],
+    ethnicityOtherText: dto.ethnicity_other_text ?? null,
     nationality: dto.nationality ? (NATIONALITY_API_TO_LABEL[dto.nationality] ?? dto.nationality) : null,
     religion: dto.religion ? (RELIGION_API_TO_LABEL[dto.religion] ?? dto.religion) : null,
     educationLevel: dto.education_level ? (EDUCATION_API_TO_LABEL[dto.education_level] ?? dto.education_level) : null,
@@ -200,6 +201,9 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
 
     smoking: dto.smoking,
     drinking: dto.drinking,
+    languages: dto.languages ?? [],
+    activityLevel: dto.activity_level ? (ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level) : null,
+    interests: dto.interests ?? [],
 
     isVisible: dto.is_visible,
     isOnboarded: dto.is_onboarded,
@@ -210,10 +214,15 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
     minAge: dto.discovery_preferences.min_age,
     maxAge: dto.discovery_preferences.max_age,
     maxDistanceKm: dto.discovery_preferences.max_distance_km,
-    preferredResidencyTypes: dto.discovery_preferences.preferred_residency_types,
-    openToLongDistance: dto.discovery_preferences.open_to_long_distance,
-    openToRelocation: dto.discovery_preferences.open_to_relocation,
+    locationMode: dto.discovery_preferences.location_mode ?? 'anywhere',
+    specificCountryCodes: dto.discovery_preferences.specific_country_codes ?? [],
+    expandSearchWhenLimited: dto.discovery_preferences.expand_search_when_limited ?? false,
     showVerifiedOnly: dto.discovery_preferences.show_verified_only,
+    hasChildrenPreference: dto.discovery_preferences.has_children_preference ?? 'any',
+    wantsChildrenPreference: dto.discovery_preferences.wants_children_preference ?? 'any',
+    religionPreferences: dto.discovery_preferences.religion_preferences ?? [],
+    languagePreferences: dto.discovery_preferences.language_preferences ?? [],
+    ethnicityPreferences: dto.discovery_preferences.ethnicity_preferences ?? [],
   };
 }
 
@@ -244,7 +253,8 @@ export function mapProfileMeDtoToEditDraft(dto: ProfileMeDto): EditProfileDraft 
     },
     personal: {
       bio: dto.bio ?? '',
-      ethnicity: dto.ethnicity ? (ETHNICITY_API_TO_LABEL[dto.ethnicity] ?? dto.ethnicity) : '',
+      ethnicities: dto.ethnicities ?? [],
+      ethnicityOtherText: dto.ethnicity_other_text ?? '',
       nationality: dto.nationality ? (NATIONALITY_API_TO_LABEL[dto.nationality] ?? dto.nationality) : '',
       religion: dto.religion ? (RELIGION_API_TO_LABEL[dto.religion] ?? dto.religion) : '',
       educationLevel: dto.education_level ? (EDUCATION_API_TO_LABEL[dto.education_level] ?? dto.education_level) : '',
@@ -264,6 +274,7 @@ export function mapProfileMeDtoToEditDraft(dto: ProfileMeDto): EditProfileDraft 
   };
 }
 
+
 // ─── EditProfileDraft → ProfileUpdateRequest ───────────────────────────────────
 
 export function mapEditDraftToUpdateRequest(
@@ -281,7 +292,6 @@ export function mapEditDraftToUpdateRequest(
     height_cm: basics.heightCm ? Number(basics.heightCm) : null,
     residency_type: basics.residencyType || undefined,
     bio: personal.bio || null,
-    ethnicity: personal.ethnicity ? (ETHNICITY_LABEL_TO_API[personal.ethnicity] ?? personal.ethnicity) : null,
     nationality: personal.nationality ? (NATIONALITY_LABEL_TO_API[personal.nationality] ?? personal.nationality) : null,
     religion: personal.religion ? (RELIGION_LABEL_TO_API[personal.religion] ?? personal.religion) : null,
     education_level: personal.educationLevel ? (EDUCATION_LABEL_TO_API[personal.educationLevel] ?? personal.educationLevel) : null,
@@ -298,7 +308,9 @@ export function mapEditDraftToUpdateRequest(
     drinking: drinkingDetail ? drinkingDetail !== 'NO' : undefined,
     activity_level: lifestyle.activityLevel ? (ACTIVITY_LABEL_TO_API[lifestyle.activityLevel] ?? lifestyle.activityLevel) : null,
     interests: lifestyle.interests.length > 0 ? lifestyle.interests : undefined,
-    languages: lifestyle.languages.length > 0 ? lifestyle.languages : undefined,
+    language_ids: lifestyle.languages.length > 0 ? lifestyle.languages.map((l) => l.id) : undefined,
+    ethnicity_ids: personal.ethnicities.length > 0 ? personal.ethnicities.map((e) => e.id) : undefined,
+    ethnicity_other_text: personal.ethnicityOtherText || null,
   };
 }
 
@@ -316,13 +328,19 @@ export function mapApiPrefsToDiscoveryPrefDraft(
   return {
     discoveryMode,
     interestedIn,
-    residencyTypes: dto.preferred_residency_types,
+    locationMode: dto.location_mode ?? 'anywhere',
+    specificCountryCodes: dto.specific_country_codes ?? [],
+    expandSearchWhenLimited: dto.expand_search_when_limited ?? false,
     minAge: dto.min_age,
     maxAge: dto.max_age,
     maximumDistanceKm: dto.max_distance_km,
-    openToLongDistance: dto.open_to_long_distance,
-    openToRelocation: dto.open_to_relocation,
     verifiedProfilesOnly: dto.show_verified_only,
+    hasChildrenPreference: dto.has_children_preference ?? 'any',
+    wantsChildrenPreference: dto.wants_children_preference ?? 'any',
+    religionPreferences: dto.religion_preferences ?? [],
+    languagePreferences: dto.language_preferences ?? [],
+    ethnicityPreferences: dto.ethnicity_preferences ?? [],
+    preferencesVersion: dto.preferences_version ?? 0,
   };
 }
 
@@ -336,10 +354,16 @@ export function mapDiscoveryPrefDraftToUpdateRequest(
     min_age: prefs.minAge,
     max_age: prefs.maxAge,
     max_distance_km: prefs.maximumDistanceKm,
-    preferred_residency_types: prefs.residencyTypes,
-    open_to_long_distance: prefs.openToLongDistance,
-    open_to_relocation: prefs.openToRelocation,
     show_verified_only: prefs.verifiedProfilesOnly,
+    location_mode: prefs.locationMode,
+    specific_country_codes: prefs.specificCountryCodes,
+    expand_search_when_limited: prefs.expandSearchWhenLimited,
+    has_children_preference: prefs.hasChildrenPreference,
+    wants_children_preference: prefs.wantsChildrenPreference,
+    religion_preferences: prefs.religionPreferences,
+    language_preference_ids: prefs.languagePreferences.map((l) => l.id),
+    ethnicity_preference_ids: prefs.ethnicityPreferences.map((e) => e.id),
+    preferences_version: prefs.preferencesVersion,
   };
 }
 
@@ -350,6 +374,11 @@ export type OtherUserDetailItem = {
   label: string;
   value: string;
   icon: string;
+};
+
+export type OtherUserDetailGroup = {
+  title: string;
+  items: OtherUserDetailItem[];
 };
 
 export type OtherUserRelationStatus = 'matched' | 'like_sent' | 'like_received' | null;
@@ -366,6 +395,9 @@ export type OtherUserProfileView = {
   status: OtherUserRelationStatus;
   matchId: string | null;
   details: OtherUserDetailItem[];
+  detailGroups: OtherUserDetailGroup[];
+  interests: string[];
+  languages: string[];
 };
 
 function buildOtherUserLocation(address: ProfileAddressDto | null): string {
@@ -403,8 +435,8 @@ function buildOtherUserDetails(dto: OtherUserProfileDto): OtherUserDetailItem[] 
   if (dto.residency_type) {
     items.push({ id: 'residency', label: 'Residency Type', icon: 'home-outline', value: RESIDENCY_API_TO_LABEL[dto.residency_type] ?? dto.residency_type });
   }
-  if (dto.ethnicity) {
-    items.push({ id: 'ethnicity', label: 'Ethnicity', icon: 'people-outline', value: ETHNICITY_API_TO_LABEL[dto.ethnicity] ?? dto.ethnicity });
+  if (dto.ethnicities && dto.ethnicities.length > 0) {
+    items.push({ id: 'ethnicity', label: 'Ethnicity', icon: 'people-outline', value: dto.ethnicities.map((e) => e.name).join(', ') });
   }
   if (dto.nationality) {
     items.push({ id: 'nation', label: 'Nationality', icon: 'flag-outline', value: NATIONALITY_API_TO_LABEL[dto.nationality] ?? dto.nationality });
@@ -437,6 +469,52 @@ function buildOtherUserDetails(dto: OtherUserProfileDto): OtherUserDetailItem[] 
   return items;
 }
 
+function buildOtherUserDetailGroups(dto: OtherUserProfileDto): OtherUserDetailGroup[] {
+  const groups: OtherUserDetailGroup[] = [];
+
+  const basic: OtherUserDetailItem[] = [];
+  if (dto.gender)        basic.push({ id: 'gender',    label: 'Gender',    icon: 'person-outline',  value: GENDER_API_TO_LABEL[dto.gender] ?? dto.gender });
+  if (dto.height_cm != null) basic.push({ id: 'height', label: 'Height',  icon: 'resize-outline',  value: `${dto.height_cm} cm` });
+  if (dto.residency_type) basic.push({ id: 'residency', label: 'Residency', icon: 'home-outline',  value: RESIDENCY_API_TO_LABEL[dto.residency_type] ?? dto.residency_type });
+  if (basic.length > 0) groups.push({ title: 'Basic Information', items: basic });
+
+  const heritage: OtherUserDetailItem[] = [];
+  if (dto.ethnicities && dto.ethnicities.length > 0)
+    heritage.push({ id: 'ethnicity', label: 'Ethnicity',   icon: 'people-outline',   value: dto.ethnicities.map((e) => e.name).join(', ') });
+  if (dto.nationality)
+    heritage.push({ id: 'nation',    label: 'Nationality', icon: 'flag-outline',     value: NATIONALITY_API_TO_LABEL[dto.nationality] ?? dto.nationality });
+  if (dto.languages && dto.languages.length > 0)
+    heritage.push({ id: 'languages', label: 'Languages',   icon: 'language-outline', value: dto.languages.map((l) => l.name).join(', ') });
+  if (dto.religion)
+    heritage.push({ id: 'religion',  label: 'Religion',    icon: 'leaf-outline',     value: RELIGION_API_TO_LABEL[dto.religion] ?? dto.religion });
+  if (heritage.length > 0) groups.push({ title: 'Heritage', items: heritage });
+
+  const work: OtherUserDetailItem[] = [];
+  if (dto.education_level) work.push({ id: 'edu', label: 'Education', icon: 'school-outline',    value: EDUCATION_API_TO_LABEL[dto.education_level] ?? dto.education_level });
+  if (dto.occupation)      work.push({ id: 'occ', label: 'Work',      icon: 'briefcase-outline', value: dto.occupation });
+  if (work.length > 0) groups.push({ title: 'Education & Work', items: work });
+
+  const rel: OtherUserDetailItem[] = [];
+  if (dto.relationship_intention)
+    rel.push({ id: 'rel',      label: 'Intention',      icon: 'heart-outline',          value: RELATIONSHIP_API_TO_LABEL[dto.relationship_intention] ?? dto.relationship_intention });
+  if (dto.marital_status)
+    rel.push({ id: 'marital',  label: 'Marital status', icon: 'person-circle-outline',  value: MARITAL_API_TO_LABEL[dto.marital_status] ?? dto.marital_status });
+  if (dto.has_children != null)
+    rel.push({ id: 'children', label: 'Has children',   icon: 'people-circle-outline',  value: dto.has_children ? 'Yes' : 'No' });
+  if (dto.wants_children != null)
+    rel.push({ id: 'wchildren',label: 'Wants children', icon: 'happy-outline',          value: dto.wants_children ? 'Yes' : 'No' });
+  if (rel.length > 0) groups.push({ title: 'Relationship', items: rel });
+
+  const lifestyle: OtherUserDetailItem[] = [];
+  if (dto.activity_level)
+    lifestyle.push({ id: 'activity',  label: 'Activity level', icon: 'fitness-outline',       value: ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level });
+  if (dto.interests && dto.interests.length > 0)
+    lifestyle.push({ id: 'interests', label: 'Interests',      icon: 'color-palette-outline', value: '' });
+  if (lifestyle.length > 0) groups.push({ title: 'Lifestyle', items: lifestyle });
+
+  return groups;
+}
+
 export function mapOtherUserProfileDtoToView(dto: OtherUserProfileDto): OtherUserProfileView {
   const sortedPhotos = [...dto.photos].sort((a, b) => a.photo_order - b.photo_order);
   return {
@@ -451,5 +529,8 @@ export function mapOtherUserProfileDtoToView(dto: OtherUserProfileDto): OtherUse
     status: mapApiRelationStatus(dto.relation_status),
     matchId: dto.match_id ?? null,
     details: buildOtherUserDetails(dto),
+    detailGroups: buildOtherUserDetailGroups(dto),
+    interests: dto.interests ?? [],
+    languages: (dto.languages ?? []).map((l) => l.name),
   };
 }

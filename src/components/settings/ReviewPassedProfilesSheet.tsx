@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { isAxiosError } from 'axios';
+import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Alert,
     Modal,
     StyleSheet,
     Text,
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { themedAlert } from '@/components/common/ThemedAlert';
 import GradientButton from '@/components/ui/GradientButton';
 import { Routes } from '@/constants/routes';
 import { colors, fontSize, radius, shadows, spacing } from '@/constants/theme';
@@ -57,10 +57,12 @@ export function ReviewPassedProfilesSheet({ visible, onClose }: Props) {
                 { count: reopenedCount },
               );
 
-        Alert.alert(
-          t('settings.revisitSuccessTitle', 'Profiles reopened'),
+        themedAlert({
+          title: t('settings.revisitSuccessTitle', 'Profiles reopened'),
           message,
-          [
+          icon: 'checkmark-circle',
+          iconColor: colors.success,
+          buttons: [
             {
               text: t('settings.revisitStay', 'Stay in Settings'),
               style: 'cancel',
@@ -70,16 +72,18 @@ export function ReviewPassedProfilesSheet({ visible, onClose }: Props) {
               onPress: () => router.replace(Routes.DISCOVER as any),
             },
           ],
-        );
+        });
       } else {
-        Alert.alert(
-          t('settings.revisitSuccessTitle', 'Profiles reopened'),
-          t(
+        themedAlert({
+          title: t('settings.revisitSuccessTitle', 'Profiles reopened'),
+          message: t(
             'settings.revisitSuccessZero',
             'No eligible previously passed profiles are available right now.',
           ),
-          [{ text: t('common.ok', 'OK') }],
-        );
+          icon: 'information-circle-outline',
+          iconColor: colors.warning,
+          buttons: [{ text: t('common.ok', 'OK') }],
+        });
       }
     },
     [onClose, router, t],
@@ -105,11 +109,13 @@ export function ReviewPassedProfilesSheet({ visible, onClose }: Props) {
           );
         }
       }
-      Alert.alert(
-        t('settings.revisitErrorTitle', 'Could not reopen'),
+      themedAlert({
+        title: t('settings.revisitErrorTitle', 'Could not reopen'),
         message,
-        [{ text: t('common.retry', 'Try again') }],
-      );
+        icon: 'alert-circle',
+        iconColor: colors.danger,
+        buttons: [{ text: t('common.retry', 'Try again') }],
+      });
     },
     [t],
   );
@@ -208,7 +214,6 @@ export function ReviewPassedProfilesSheet({ visible, onClose }: Props) {
           </View>
 
           <GradientButton
-            testID="revisit-confirm"
             label={
               isPending
                 ? t('settings.revisitReopening', 'Reopening profiles…')

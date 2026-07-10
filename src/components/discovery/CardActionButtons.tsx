@@ -1,7 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+
+const TOTAL_STARS = 12;
+const STAR_RADIUS = 16; // distance from button center to star center
 
 interface Props {
   onRewind: () => void;
@@ -11,12 +15,12 @@ interface Props {
   disabled?: boolean;
 }
 
-const BTN = 58;
+const BTN = 48;
 
 export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLike, disabled }: Props) {
   const { colors: th } = useTheme();
   return (
-    <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.20)' }]}>
+    <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.28)' }]}>
       <View style={styles.container}>
         {/* Rewind */}
         <TouchableOpacity
@@ -48,8 +52,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Like profile"
         >
-          <Text style={[styles.icon, styles.likeIcon]}>♥</Text>
-          <Text style={styles.sparkle}>✦</Text>
+          <Ionicons name="heart" size={20} color="#FF2D55" />
         </TouchableOpacity>
 
         {/* SuperLike */}
@@ -60,7 +63,26 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Super like profile"
         >
-          <Text style={[styles.icon, styles.superLikeIcon]}>★</Text>
+          <Ionicons name="star" size={26} color="#FFFFFF" />
+          {Array.from({ length: TOTAL_STARS }).map((_, i) => {
+            const angle = (i / TOTAL_STARS) * 2 * Math.PI - Math.PI / 2;
+            const x = Math.cos(angle) * STAR_RADIUS;
+            const y = Math.sin(angle) * STAR_RADIUS;
+            return (
+              <Ionicons
+                key={i}
+                name="star"
+                size={5}
+                color={colors.primary}
+                style={[
+                  styles.star,
+                  {
+                    transform: [{ translateX: x }, { translateY: y }],
+                  },
+                ]}
+              />
+            );
+          })}
         </TouchableOpacity>
       </View>
     </View>
@@ -97,30 +119,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#EBF5FF',
   },
   icon: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
   },
   rewindIcon: {
     color: '#F97316',
-    fontSize: 24,
+    fontSize: 20,
   },
   passIcon: {
     color: colors.danger,
-    fontSize: 22,
+    fontSize: 18,
   },
-  likeIcon: {
-    color: colors.primary,
-    fontSize: 22,
-  },
-  superLikeIcon: {
-    color: '#0096FF',
-    fontSize: 22,
-  },
-  sparkle: {
+  star: {
     position: 'absolute',
-    top: 8,
-    right: 10,
-    fontSize: 9,
-    color: colors.primary,
   },
 });

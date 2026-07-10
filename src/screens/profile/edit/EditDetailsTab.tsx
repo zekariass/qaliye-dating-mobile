@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { EthnicityMultiSelectPicker } from '@/components/catalog/EthnicityMultiSelectPicker';
 import { type SemanticTheme } from '@/constants/semantic-colors';
+import type { EthnicityOption } from '@/types/catalog';
 import {
     type EditProfileDraft,
     EDUCATION_OPTIONS,
-    ETHNICITY_OPTIONS,
     GENDER_OPTIONS,
     MARITAL_STATUS_OPTIONS,
     NATIONALITY_OPTIONS,
@@ -27,9 +28,11 @@ import {
 type Props = {
   draft: EditProfileDraft;
   onChange: (path: string, value: string) => void;
+  onChangeEthnicities?: (items: EthnicityOption[]) => void;
   sem: SemanticTheme;
   discoveryMode?: 'PUBLIC' | 'INCOGNITO';
   onDiscoveryModeChange?: (mode: 'PUBLIC' | 'INCOGNITO') => void;
+  incognitoEnabled?: boolean;
 };
 
 const DISCOVERY_MODES = ['PUBLIC', 'INCOGNITO'] as const;
@@ -43,7 +46,7 @@ const MODE_HELPERS: Record<string, string> = {
   INCOGNITO: 'Your profile is hidden from discovery.',
 };
 
-export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, sem, discoveryMode = 'PUBLIC', onDiscoveryModeChange }: Props) {
+export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, onChangeEthnicities, sem, discoveryMode = 'PUBLIC', onDiscoveryModeChange, incognitoEnabled = false }: Props) {
   const { basics, personal } = draft;
 
   return (
@@ -82,13 +85,18 @@ export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, se
               placeholder="DD MMM YYYY"
             />
           </LabeledField>
-          <LabeledField label="Height (cm)" sem={sem}>
+          <LabeledField label="Height" sem={sem}>
             <TextInputField
-              value={basics.heightCm ? `${basics.heightCm} cm` : ''}
+              value={basics.heightCm ? String(basics.heightCm) : ''}
               onChangeText={(v) => onChange('basics.heightCm', v.replace(/[^0-9]/g, ''))}
               sem={sem}
               leftIcon="resize-outline"
               placeholder="Height"
+              rightElement={
+                <Text className="text-base ml-1" style={{ color: sem.textMuted }}>
+                  cm
+                </Text>
+              }
             />
           </LabeledField>
         </RowPair>
@@ -112,17 +120,19 @@ export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, se
       <SectionCard sem={sem}>
         <SectionTitle title="Heritage" sem={sem} />
 
+        <LabeledField label="Ethnicity / Background" sem={sem} flex={false}>
+          <EthnicityMultiSelectPicker
+            selected={personal.ethnicities}
+            onChange={onChangeEthnicities ?? (() => {})}
+            accentColor="#8A2CFF"
+            textColor={sem.textPrimary}
+            mutedColor={sem.textMuted}
+            borderColor={sem.border}
+            surfaceColor={sem.surface}
+          />
+        </LabeledField>
+
         <RowPair>
-          <LabeledField label="Ethnicity" sem={sem}>
-            <SelectField
-              value={personal.ethnicity}
-              options={ETHNICITY_OPTIONS}
-              onSelect={(v) => onChange('personal.ethnicity', v)}
-              sem={sem}
-              leftIcon="people-outline"
-              placeholder="Ethnicity"
-            />
-          </LabeledField>
           <LabeledField label="Nationality" sem={sem}>
             <SelectField
               value={personal.nationality}
@@ -133,10 +143,7 @@ export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, se
               placeholder="Nationality"
             />
           </LabeledField>
-        </RowPair>
-
-        <LabeledField label="Religion" sem={sem} flex={false}>
-          <View className="w-1/2 pr-1.5">
+          <LabeledField label="Religion" sem={sem}>
             <SelectField
               value={personal.religion}
               options={RELIGION_OPTIONS}
@@ -145,8 +152,8 @@ export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, se
               leftIcon="leaf-outline"
               placeholder="Religion"
             />
-          </View>
-        </LabeledField>
+          </LabeledField>
+        </RowPair>
       </SectionCard>
 
       {/* ─── Education & Work ─── */}
@@ -180,7 +187,7 @@ export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, se
       <SectionCard sem={sem}>
         <SectionTitle title="Profile Visibility" sem={sem} />
 
-        <Text className="text-xs font-medium mb-1.5" style={{ color: sem.textSecondary }}>
+        <Text className="text-sm font-medium mb-1.5" style={{ color: sem.textSecondary }}>
           Discovery mode
         </Text>
         <View
@@ -189,31 +196,35 @@ export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, se
         >
           {DISCOVERY_MODES.map((mode) => {
             const isActive = discoveryMode === mode;
+            const isLocked = mode === 'INCOGNITO' && !incognitoEnabled;
             return (
               <Pressable
                 key={mode}
-                onPress={() => onDiscoveryModeChange?.(mode)}
+                onPress={() => !isLocked && onDiscoveryModeChange?.(mode)}
                 className="flex-1 flex-row items-center justify-center py-3 gap-1.5"
                 style={{
                   backgroundColor: isActive ? sem.accentSoft : 'transparent',
                   borderWidth: isActive ? 1 : 0,
                   borderColor: isActive ? sem.accent : 'transparent',
                   borderRadius: isActive ? 10 : 0,
+                  opacity: isLocked ? 0.5 : 1,
                 }}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: isActive }}
                 accessibilityLabel={MODE_LABELS[mode]}
               >
-                <Ionicons name={MODE_ICONS[mode]} size={16} color={isActive ? sem.accent : sem.textMuted} />
-                <Text className="text-xs font-semibold" style={{ color: isActive ? sem.accent : sem.textMuted }}>
+                <Ionicons name={isLocked ? 'lock-closed-outline' : MODE_ICONS[mode]} size={16} color={isActive ? sem.accent : sem.textMuted} />
+                <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textMuted }}>
                   {MODE_LABELS[mode]}
                 </Text>
               </Pressable>
             );
           })}
         </View>
-        <Text className="text-xs mt-2 mb-1" style={{ color: sem.textMuted }}>
-          {MODE_HELPERS[discoveryMode]}
+        <Text className="text-sm mt-2 mb-1" style={{ color: sem.textMuted }}>
+          {discoveryMode === 'INCOGNITO' && !incognitoEnabled
+            ? 'Incognito is a premium feature. Upgrade to unlock.'
+            : MODE_HELPERS[discoveryMode]}
         </Text>
       </SectionCard>
 

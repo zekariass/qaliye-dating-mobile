@@ -1,11 +1,14 @@
 import type { GpsLocationPayload, ManualLocationPayload } from '@/types/api';
 import type {
+    BatchPhotoRegistrationRequest,
+    CulturalDetailsUpdateRequest,
     OtherUserProfileDto,
     PhotoRegistrationRequest,
     PhotoReorderRequest,
     ProfileDiscoveryPreferencesDto,
     ProfileLocationDto,
     ProfileMeDto,
+    ProfilePhotoDto,
     ProfilePhotosResponse,
     ProfilePreferencesUpdateRequest,
     ProfileUpdateRequest,
@@ -25,6 +28,13 @@ export async function updateProfileMe(payload: ProfileUpdateRequest): Promise<Pr
   return res.data;
 }
 
+export async function updateProfileCulturalDetails(
+  payload: CulturalDetailsUpdateRequest,
+): Promise<ProfileMeDto> {
+  const res = await apiClient.put<ProfileMeDto>('/api/v1/profile/me/cultural-details', payload);
+  return res.data;
+}
+
 export async function fetchOtherUserProfile(userId: string): Promise<OtherUserProfileDto> {
   const res = await apiClient.get<OtherUserProfileDto>(`/api/v1/profile/${userId}`);
   return res.data;
@@ -39,8 +49,15 @@ export async function fetchProfilePhotos(): Promise<ProfilePhotosResponse> {
 
 export async function registerProfilePhoto(
   payload: PhotoRegistrationRequest,
+): Promise<ProfilePhotoDto> {
+  const res = await apiClient.post<ProfilePhotoDto>('/api/v1/profile/me/photos', payload);
+  return res.data;
+}
+
+export async function batchRegisterProfilePhotos(
+  payload: BatchPhotoRegistrationRequest,
 ): Promise<ProfilePhotosResponse> {
-  const res = await apiClient.post<ProfilePhotosResponse>('/api/v1/profile/me/photos', payload);
+  const res = await apiClient.post<ProfilePhotosResponse>('/api/v1/profile/me/photos/batch', payload);
   return res.data;
 }
 

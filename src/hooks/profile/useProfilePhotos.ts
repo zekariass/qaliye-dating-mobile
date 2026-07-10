@@ -1,16 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
-  deleteProfilePhoto,
-  fetchProfilePhotos,
-  registerProfilePhoto,
-  reorderProfilePhotos,
+    deleteProfilePhoto,
+    fetchProfilePhotos,
+    registerProfilePhoto,
+    reorderProfilePhotos,
 } from '@/api/profile/profileApi';
 import type {
-  PhotoRegistrationRequest,
-  PhotoReorderRequest,
-  ProfileMeDto,
-  ProfilePhotosResponse,
+    PhotoRegistrationRequest,
+    PhotoReorderRequest,
+    ProfileMeDto,
+    ProfilePhotoDto,
+    ProfilePhotosResponse,
 } from '@/types/profile';
 
 import { PROFILE_ME_QUERY_KEY } from './useCurrentProfile';
@@ -32,13 +33,23 @@ function invalidateBoth(queryClient: ReturnType<typeof useQueryClient>) {
 
 export function useRegisterPhoto() {
   const queryClient = useQueryClient();
-  return useMutation<ProfilePhotosResponse, Error, PhotoRegistrationRequest>({
+  return useMutation<ProfilePhotoDto, Error, PhotoRegistrationRequest>({
     mutationFn: registerProfilePhoto,
-    onSuccess: (data) => {
-      queryClient.setQueryData<ProfilePhotosResponse>(PROFILE_PHOTOS_QUERY_KEY, data);
+    onSuccess: (newPhoto) => {
+      queryClient.setQueryData<ProfilePhotosResponse>(PROFILE_PHOTOS_QUERY_KEY, (prev) => {
+        const existing = prev?.photos ?? [];
+        const photos = [...existing.filter((p) => p.id !== newPhoto.id), newPhoto];
+        return { photos };
+      });
       queryClient.setQueryData<ProfileMeDto>(PROFILE_ME_QUERY_KEY, (prev) =>
-        prev ? { ...prev, photos: data.photos } : prev,
+        prev
+          ? {
+              ...prev,
+              photos: [...(prev.photos ?? []).filter((p) => p.id !== newPhoto.id), newPhoto],
+            }
+          : prev,
       );
+      invalidateBoth(queryClient);
     },
     onError: () => invalidateBoth(queryClient),
   });
@@ -53,6 +64,7 @@ export function useReorderPhotos() {
       queryClient.setQueryData<ProfileMeDto>(PROFILE_ME_QUERY_KEY, (prev) =>
         prev ? { ...prev, photos: data.photos } : prev,
       );
+      invalidateBoth(queryClient);
     },
     onError: () => invalidateBoth(queryClient),
   });
@@ -67,6 +79,7 @@ export function useDeletePhoto() {
       queryClient.setQueryData<ProfileMeDto>(PROFILE_ME_QUERY_KEY, (prev) =>
         prev ? { ...prev, photos: data.photos } : prev,
       );
+      invalidateBoth(queryClient);
     },
     onError: () => invalidateBoth(queryClient),
   });

@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     gap: 24,
   },
   tab: {

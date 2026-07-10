@@ -35,6 +35,7 @@ export function useUpdateDiscoveryPreferences() {
     mutationFn: putDiscoveryPreferences,
     onSuccess: (data) => {
       queryClient.setQueryData(DISCOVERY_PREFERENCES_KEY, data.preferences);
+      queryClient.invalidateQueries({ queryKey: ['discovery', 'profiles'] });
     },
   });
 }

@@ -21,7 +21,7 @@ function formatEnum(val: string): string {
 }
 
 function buildPreferences(p: CurrentUserProfile): PrefItem[] {
-  return [
+  const items: PrefItem[] = [
     {
       icon: 'compass-outline',
       label: 'Discovery Mode',
@@ -43,26 +43,39 @@ function buildPreferences(p: CurrentUserProfile): PrefItem[] {
       value: `${p.maxDistanceKm} km`,
     },
     {
-      icon: 'home-outline',
-      label: 'Preferred Residency',
-      value: p.preferredResidencyTypes.map(formatEnum).join(', '),
+      icon: 'location-outline',
+      label: 'Discover Profiles From',
+      value: formatEnum(p.locationMode),
     },
     {
-      icon: 'airplane-outline',
-      label: 'Open to Long Distance',
-      value: p.openToLongDistance ? 'Yes' : 'No',
-    },
-    {
-      icon: 'swap-horizontal-outline',
-      label: 'Open to Relocation',
-      value: p.openToRelocation ? 'Yes' : 'No',
+      icon: 'search-outline',
+      label: 'Expand Search When Limited',
+      value: p.expandSearchWhenLimited ? 'Yes' : 'No',
     },
     {
       icon: 'shield-checkmark-outline',
-      label: 'Show Verified Only',
+      label: 'Verified Profiles Only',
       value: p.showVerifiedOnly ? 'Yes' : 'No',
     },
   ];
+
+  if (p.hasChildrenPreference) {
+    items.push({ icon: 'people-outline', label: 'Has Children Pref', value: formatEnum(p.hasChildrenPreference) });
+  }
+  if (p.wantsChildrenPreference) {
+    items.push({ icon: 'heart-outline', label: 'Wants Children Pref', value: formatEnum(p.wantsChildrenPreference) });
+  }
+  if (p.religionPreferences?.length) {
+    items.push({ icon: 'moon-outline', label: 'Religion Preferences', value: p.religionPreferences.join(', ') });
+  }
+  if (p.languagePreferences?.length) {
+    items.push({ icon: 'chatbubble-outline', label: 'Language Preferences', value: p.languagePreferences.map((l) => l.name).join(', ') });
+  }
+  if (p.ethnicityPreferences?.length) {
+    items.push({ icon: 'globe-outline', label: 'Ethnicity Preferences', value: p.ethnicityPreferences.map((e) => e.name).join(', ') });
+  }
+
+  return items;
 }
 
 interface PreferencesContentProps {
@@ -99,7 +112,7 @@ export default function PreferencesContent({ profile }: PreferencesContentProps)
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 16,
   },
   card: {

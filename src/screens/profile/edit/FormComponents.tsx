@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { memo, useCallback, useState } from 'react';
 import {
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    Modal,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
@@ -46,7 +46,7 @@ type SectionTitleProps = {
 export const SectionTitle = memo(function SectionTitle({ title, sem }: SectionTitleProps) {
   return (
     <Text
-      className="text-lg font-bold mb-4"
+      className="text-xl font-bold mb-4"
       style={{ color: sem.textPrimary }}
     >
       {title}
@@ -77,7 +77,7 @@ export function LabeledField({ label, sem, children, flex = true }: LabeledField
   return (
     <View className={flex ? 'flex-1' : 'w-full'}>
       <Text
-        className="text-xs font-medium mb-1.5"
+        className="text-sm font-medium mb-1.5"
         style={{ color: sem.textSecondary }}
       >
         {label}
@@ -96,6 +96,7 @@ type TextInputFieldProps = {
   placeholder?: string;
   leftIcon?: React.ComponentProps<typeof Ionicons>['name'];
   editable?: boolean;
+  rightElement?: React.ReactNode;
 };
 
 export const TextInputField = memo(function TextInputField({
@@ -105,6 +106,7 @@ export const TextInputField = memo(function TextInputField({
   placeholder,
   leftIcon,
   editable = true,
+  rightElement,
 }: TextInputFieldProps) {
   return (
     <View
@@ -123,9 +125,10 @@ export const TextInputField = memo(function TextInputField({
         placeholder={placeholder}
         placeholderTextColor={sem.textMuted}
         editable={editable}
-        className="flex-1 text-sm"
+        className="flex-1 text-base"
         style={{ color: sem.textPrimary, padding: 0 }}
       />
+      {rightElement}
     </View>
   );
 });
@@ -172,7 +175,7 @@ export const SelectField = memo(function SelectField({
           <Ionicons name={leftIcon} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
         )}
         <Text
-          className="flex-1 text-sm"
+          className="flex-1 text-base"
           style={{ color: value ? sem.textPrimary : sem.textMuted }}
           numberOfLines={1}
         >
@@ -192,7 +195,7 @@ export const SelectField = memo(function SelectField({
               className="rounded-t-3xl px-5 pt-6 pb-10 max-h-96"
               style={{ backgroundColor: sem.surface }}
             >
-              <Text className="text-base font-bold mb-4" style={{ color: sem.textPrimary }}>
+              <Text className="text-lg font-bold mb-4" style={{ color: sem.textPrimary }}>
                 {placeholder || 'Select option'}
               </Text>
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -207,7 +210,7 @@ export const SelectField = memo(function SelectField({
                     accessibilityRole="menuitem"
                   >
                     <Text
-                      className="text-sm font-medium"
+                      className="text-base font-medium"
                       style={{ color: opt === value ? sem.accent : sem.textPrimary }}
                     >
                       {opt}
@@ -255,10 +258,10 @@ export const TextAreaField = memo(function TextAreaField({
         placeholderTextColor={sem.textMuted}
         multiline
         maxLength={maxLength}
-        className="text-sm min-h-[80px]"
+        className="text-base min-h-[80px]"
         style={{ color: sem.textPrimary, textAlignVertical: 'top', padding: 0 }}
       />
-      <Text className="text-xs text-right mt-2" style={{ color: sem.textMuted }}>
+      <Text className="text-sm text-right mt-2" style={{ color: sem.textMuted }}>
         {value.length}/{maxLength}
       </Text>
     </View>
@@ -269,7 +272,7 @@ export const TextAreaField = memo(function TextAreaField({
 
 export function HelperText({ text, sem }: { text: string; sem: SemanticTheme }) {
   return (
-    <Text className="text-xs mt-1.5 ml-1" style={{ color: sem.textMuted }}>
+    <Text className="text-sm mt-1.5 ml-1" style={{ color: sem.textMuted }}>
       {text}
     </Text>
   );
@@ -308,7 +311,7 @@ export const ChipSelector = memo(function ChipSelector({
             accessibilityLabel={opt}
           >
             <Text
-              className="text-xs font-semibold"
+              className="text-sm font-semibold"
               style={{ color: isActive ? sem.accent : sem.textSecondary }}
             >
               {opt}

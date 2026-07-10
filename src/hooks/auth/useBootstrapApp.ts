@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 
+import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
+import { useChatStore } from '@/stores/chat-store';
 import { useMeStore } from '@/stores/me-store';
 
 export type BootstrapResult = {
@@ -8,9 +10,13 @@ export type BootstrapResult = {
   hasActiveSession: boolean;
 };
 
-export function useBootstrapApp(): BootstrapResult {
-  const clearMe = useMeStore((s) => s.clearMe);
+function clearAllSessionState() {
+  queryClient.clear();
+  useMeStore.getState().clearMe();
+  useChatStore.getState().reset();
+}
 
+export function useBootstrapApp(): BootstrapResult {
   const [state, setState] = useState<BootstrapResult>({
     isBootstrapping: true,
     hasActiveSession: false,
@@ -24,10 +30,10 @@ export function useBootstrapApp(): BootstrapResult {
       setState({ isBootstrapping: false, hasActiveSession: !!session });
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      if (!session) {
-        clearMe();
+      if (event === 'SIGNED_OUT' || !session) {
+        clearAllSessionState();
       }
       setState((prev) => ({ ...prev, isBootstrapping: false, hasActiveSession: !!session }));
     });
@@ -36,7 +42,7 @@ export function useBootstrapApp(): BootstrapResult {
       mounted = false;
       listener.subscription.unsubscribe();
     };
-  }, [clearMe]);
+  }, []);
 
   return state;
 }

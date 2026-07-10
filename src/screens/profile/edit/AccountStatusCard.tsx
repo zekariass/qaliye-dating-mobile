@@ -33,10 +33,10 @@ export const AccountStatusCard = memo(function AccountStatusCard({
           />
         </View>
         <View className="flex-1">
-          <Text className="text-sm font-semibold" style={{ color: sem.textPrimary }}>
+          <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
             Onboarded
           </Text>
-          <Text className="text-xs" style={{ color: sem.textMuted }}>
+          <Text className="text-sm" style={{ color: sem.textMuted }}>
             {isOnboarded ? 'Onboarding completed' : 'Onboarding in progress'}
           </Text>
         </View>
@@ -46,7 +46,7 @@ export const AccountStatusCard = memo(function AccountStatusCard({
           accessibilityLabel={isOnboarded ? 'Completed' : 'In progress'}
         >
           <Text
-            className="text-xs font-bold"
+            className="text-sm font-bold"
             style={{ color: isOnboarded ? sem.success : sem.textMuted }}
           >
             {isOnboarded ? 'Completed' : 'In Progress'}
@@ -70,10 +70,10 @@ export const AccountStatusCard = memo(function AccountStatusCard({
           />
         </View>
         <View className="flex-1">
-          <Text className="text-sm font-semibold" style={{ color: sem.textPrimary }}>
+          <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
             Verified identity
           </Text>
-          <Text className="text-xs" style={{ color: sem.textMuted }}>
+          <Text className="text-sm" style={{ color: sem.textMuted }}>
             {isVerified ? 'Your identity has been verified' : 'Identity not yet verified'}
           </Text>
         </View>
@@ -83,7 +83,7 @@ export const AccountStatusCard = memo(function AccountStatusCard({
           accessibilityLabel={isVerified ? 'Verified' : 'Not verified'}
         >
           <Text
-            className="text-xs font-bold"
+            className="text-sm font-bold"
             style={{ color: isVerified ? sem.info : sem.textMuted }}
           >
             {isVerified ? 'Verified' : 'Not Verified'}
@@ -94,7 +94,7 @@ export const AccountStatusCard = memo(function AccountStatusCard({
       {/* Footer */}
       <View className="flex-row items-center mt-4 pt-3" style={{ borderTopWidth: 1, borderTopColor: sem.border }}>
         <Ionicons name="lock-closed" size={13} color={sem.textMuted} style={{ marginRight: 6 }} />
-        <Text className="text-xs flex-1" style={{ color: sem.textMuted }}>
+        <Text className="text-sm flex-1" style={{ color: sem.textMuted }}>
           These fields are read-only and cannot be changed.
         </Text>
       </View>

@@ -122,7 +122,7 @@ export const LocationPickerField = memo(function LocationPickerField({ value, on
       >
         <Ionicons name="location-outline" size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
         <Text
-          className="flex-1 text-sm"
+          className="flex-1 text-base"
           style={{ color: value ? sem.textPrimary : sem.textMuted }}
           numberOfLines={1}
         >
@@ -143,7 +143,7 @@ export const LocationPickerField = memo(function LocationPickerField({ value, on
       {value ? (
         <View className="flex-row items-center px-3 py-2" style={{ backgroundColor: sem.accentSoft }}>
           <Ionicons name="location" size={14} color={sem.accent} style={{ marginRight: 6 }} />
-          <Text className="flex-1 text-xs font-medium" style={{ color: sem.accent }} numberOfLines={1}>
+          <Text className="flex-1 text-sm font-medium" style={{ color: sem.accent }} numberOfLines={1}>
             {value}
           </Text>
           <Pressable onPress={() => setExpanded(false)} accessibilityLabel="Close">
@@ -172,7 +172,7 @@ export const LocationPickerField = memo(function LocationPickerField({ value, on
         ) : (
           <Ionicons name="locate" size={16} color={colors.primary} style={{ marginRight: 8 }} />
         )}
-        <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+        <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
           {isLocating ? 'Getting location…' : 'Use current location'}
         </Text>
       </Pressable>
@@ -180,7 +180,7 @@ export const LocationPickerField = memo(function LocationPickerField({ value, on
       {/* Divider */}
       <View className="flex-row items-center px-3 my-2">
         <View className="flex-1 h-px" style={{ backgroundColor: sem.border }} />
-        <Text className="text-xs mx-2" style={{ color: sem.textMuted }}>or search</Text>
+        <Text className="text-sm mx-2" style={{ color: sem.textMuted }}>or search</Text>
         <View className="flex-1 h-px" style={{ backgroundColor: sem.border }} />
       </View>
 
@@ -200,7 +200,7 @@ export const LocationPickerField = memo(function LocationPickerField({ value, on
           placeholderTextColor={sem.textMuted}
           autoCapitalize="words"
           autoFocus
-          className="flex-1 text-sm"
+          className="flex-1 text-base"
           style={{ color: sem.textPrimary, padding: 0 }}
         />
         {query.length > 0 && (
@@ -217,7 +217,7 @@ export const LocationPickerField = memo(function LocationPickerField({ value, on
 
       {/* No results */}
       {!isSearching && query.length >= 2 && results.length === 0 && (
-        <Text className="text-xs text-center py-2" style={{ color: sem.textMuted }}>
+        <Text className="text-sm text-center py-2" style={{ color: sem.textMuted }}>
           No cities found
         </Text>
       )}
@@ -240,10 +240,10 @@ export const LocationPickerField = memo(function LocationPickerField({ value, on
             >
               <Text style={{ marginRight: 8, fontSize: 16 }}>{isoToFlag(item.country_code)}</Text>
               <View className="flex-1">
-                <Text className="text-sm font-medium" style={{ color: sem.textPrimary }}>
+                <Text className="text-base font-medium" style={{ color: sem.textPrimary }}>
                   {item.city}
                 </Text>
-                <Text className="text-xs" style={{ color: sem.textMuted }}>
+                <Text className="text-sm" style={{ color: sem.textMuted }}>
                   {[item.region, item.country_name].filter(Boolean).join(', ')}
                 </Text>
               </View>
@@ -254,7 +254,7 @@ export const LocationPickerField = memo(function LocationPickerField({ value, on
 
       {/* Error */}
       {error && (
-        <Text className="text-xs text-center py-2 px-3" style={{ color: sem.danger }}>
+        <Text className="text-sm text-center py-2 px-3" style={{ color: sem.danger }}>
           {error}
         </Text>
       )}

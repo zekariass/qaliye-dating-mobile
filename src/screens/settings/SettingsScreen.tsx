@@ -1,25 +1,31 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Alert,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Switch,
     Text,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { themedAlert, themedError, themedSuccess } from '@/components/common/ThemedAlert';
 import { NotificationSettingsSection } from '@/components/notifications/NotificationSettingsSection';
 import { ReviewPassedProfilesSheet } from '@/components/settings/ReviewPassedProfilesSheet';
 import { colors } from '@/constants/theme';
 import { useActivityVisibility } from '@/hooks/activity/useActivityVisibility';
+import { useEntitlements } from '@/hooks/billing/useEntitlements';
+import { usePendingOrders } from '@/hooks/billing/useOrders';
+import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useSignOutWithDeactivation } from '@/hooks/notifications/useSignOutWithDeactivation';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemeMode, useThemeStore } from '@/stores/theme-store';
+import { isPremiumPlan } from '@/types/billing';
+import { getBoostStatus, getRewindsStatus, getSuperLikesStatus } from '@/utils/entitlements';
 
 const THEME_OPTIONS: { key: ThemeMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { key: 'light', label: 'Light', icon: 'sunny-outline' },
@@ -37,12 +43,46 @@ export default function SettingsScreen() {
   const { showActivityStatus, update: updateVisibility, isUpdating: isUpdatingVisibility } = useActivityVisibility();
   const { signOut } = useSignOutWithDeactivation();
   const [revisitSheetVisible, setRevisitSheetVisible] = useState(false);
+  const { entitlements } = useEntitlements();
+  const { requiresActionCount, pendingCount, refetch: refetchPending } = usePendingOrders(Platform.OS === 'android');
+  const { restore, restoreResult, isRestoring } = useRevenueCatRestore();
+
+  useEffect(() => {
+    if (restoreResult === 'success') {
+      themedSuccess(
+        t('billing.restoreSuccess', 'Restore Complete'),
+        t('billing.restoreSuccessMsg', 'Your premium subscription has been restored.'),
+      );
+    } else if (restoreResult === 'no_purchase') {
+      themedAlert({
+        title: t('billing.restoreNoPurchase', 'No Purchases Found'),
+        message: t('billing.restoreNoPurchaseMsg', 'No active purchases were found to restore.'),
+        icon: 'information-circle',
+        iconColor: colors.warning,
+      });
+    } else if (restoreResult === 'error') {
+      themedError(
+        t('billing.restoreError', 'Restore Failed'),
+        t('billing.restoreErrorMsg', 'Something went wrong while restoring purchases. Please try again.'),
+      );
+    }
+  }, [restoreResult, t]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS === 'android') {
+        refetchPending();
+      }
+    }, [refetchPending]),
+  );
 
   const handleSignOut = useCallback(() => {
-    Alert.alert(
-      t('settings.signOutTitle', 'Sign Out'),
-      t('settings.signOutConfirm', 'Are you sure you want to sign out?'),
-      [
+    themedAlert({
+      title: t('settings.signOutTitle', 'Sign Out'),
+      message: t('settings.signOutConfirm', 'Are you sure you want to sign out?'),
+      icon: 'log-out-outline',
+      iconColor: colors.danger,
+      buttons: [
         { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
           text: t('settings.signOut', 'Sign Out'),
@@ -50,7 +90,7 @@ export default function SettingsScreen() {
           onPress: signOut,
         },
       ],
-    );
+    });
   }, [t, signOut]);
 
   const handleBack = useCallback(() => {
@@ -147,6 +187,23 @@ export default function SettingsScreen() {
               thumbColor={showActivityStatus ? colors.primary : th.textMuted}
             />
           </View>
+          <Pressable
+            style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
+            onPress={() => router.push('/(app)/blocked-users' as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Blocked users"
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="ban-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>Blocked Users</Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                Manage users you've blocked
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
         </View>
 
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
@@ -184,6 +241,119 @@ export default function SettingsScreen() {
         />
 
         <NotificationSettingsSection />
+
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Text style={[styles.sectionTitle, { color: th.text }]}>
+            {t('billing.settingsSection', 'Subscription & Credits')}
+          </Text>
+          {entitlements && (
+            <View style={[styles.planRow, { backgroundColor: isPremiumPlan(entitlements.plan) ? colors.primary + '12' : th.backgroundElement }]}>
+              <Ionicons
+                name={isPremiumPlan(entitlements.plan) ? 'diamond' : 'person-outline'}
+                size={16}
+                color={isPremiumPlan(entitlements.plan) ? colors.primary : th.textSecondary}
+              />
+              <Text style={[styles.planLabel, { color: isPremiumPlan(entitlements.plan) ? colors.primary : th.text }]}>
+                {isPremiumPlan(entitlements.plan) ? t('billing.premiumActive', 'Premium') : t('billing.freePlan', 'Free Plan')}
+              </Text>
+              {entitlements.plan === 'FREE' && (
+                <Pressable
+                  style={styles.upgradePill}
+                  onPress={() => router.push('/(app)/premium' as any)}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.upgradePillText}>{t('billing.upgrade', 'Upgrade')}</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+          <Pressable
+            style={[styles.optionRow, { borderTopWidth: entitlements ? 1 : 0, borderTopColor: th.border }]}
+            onPress={() => router.push('/(app)/premium' as any)}
+            accessibilityRole="button"
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="diamond-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('billing.manageSubscription', 'Manage Subscription')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('billing.manageSubscriptionSub', 'View plans and upgrade')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+          <Pressable
+            style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
+            onPress={() => router.push('/(app)/credits-shop' as any)}
+            accessibilityRole="button"
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="cart-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('billing.creditsShop', 'Credits Shop')}
+              </Text>
+              {entitlements && (
+                <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                  {`${getBoostStatus(entitlements).isUnlimited ? '∞' : getBoostStatus(entitlements).totalAvailable} boosts · ${getSuperLikesStatus(entitlements).isUnlimited ? '∞' : getSuperLikesStatus(entitlements).totalAvailable} super likes · ${getRewindsStatus(entitlements).isUnlimited ? '∞' : getRewindsStatus(entitlements).totalAvailable} rewinds`}
+                </Text>
+              )}
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+          {Platform.OS === 'android' && (
+            <Pressable
+              style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
+              onPress={() => router.push('/(app)/payment-activity' as any)}
+              accessibilityRole="button"
+              accessibilityLabel={t('billing.paymentActivity', 'Payment Activity')}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="receipt-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.optionLabel, { color: th.text }]}>
+                  {t('billing.paymentActivity', 'Payment Activity')}
+                </Text>
+                <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                  {pendingCount > 0
+                    ? t('billing.pendingOrdersSub', '{{count}} pending order', { count: pendingCount })
+                    : t('billing.paymentActivitySub', 'View your payment history')}
+                </Text>
+              </View>
+              {requiresActionCount > 0 && (
+                <View style={[styles.badge, { backgroundColor: colors.warning }]}>
+                  <Text style={styles.badgeText}>{requiresActionCount}</Text>
+                </View>
+              )}
+              {pendingCount > 0 && requiresActionCount === 0 && (
+                <View style={[styles.badge, { backgroundColor: colors.textMuted }]}>
+                  <Text style={styles.badgeText}>{pendingCount}</Text>
+                </View>
+              )}
+              <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+            </Pressable>
+          )}
+          <Pressable
+            style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
+            onPress={() => restore()}
+            disabled={isRestoring}
+            accessibilityRole="button"
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="refresh-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={[styles.optionLabel, { color: th.text }]}>
+              {isRestoring
+                ? t('billing.restoring', 'Restoring…')
+                : t('billing.restorePurchases', 'Restore Purchases')}
+            </Text>
+          </Pressable>
+        </View>
 
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
           <Text style={[styles.sectionTitle, { color: th.text }]}>
@@ -275,5 +445,43 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 4,
+  },
+  planLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  upgradePill: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  upgradePillText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  badge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

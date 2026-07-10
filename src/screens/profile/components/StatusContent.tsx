@@ -78,7 +78,7 @@ export default function StatusContent({ profile }: StatusContentProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 16,
   },
   grid: {

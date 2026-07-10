@@ -161,7 +161,7 @@ export const LocationTab = memo(function LocationTab({
             style={{ marginRight: 8 }}
           />
           <Text
-            className="flex-1 text-sm font-medium"
+            className="flex-1 text-base font-medium"
             style={{ color: hasPending ? sem.accent : displayedAddress ? sem.textPrimary : sem.textMuted }}
             numberOfLines={2}
           >
@@ -172,7 +172,7 @@ export const LocationTab = memo(function LocationTab({
               className="rounded-full px-2 py-0.5 ml-2"
               style={{ backgroundColor: sem.accent }}
             >
-              <Text className="text-xs font-semibold" style={{ color: '#FFFFFF' }}>
+              <Text className="text-sm font-semibold" style={{ color: '#FFFFFF' }}>
                 Pending
               </Text>
             </View>
@@ -193,7 +193,7 @@ export const LocationTab = memo(function LocationTab({
           ) : (
             <Ionicons name="locate" size={16} color={colors.primary} style={{ marginRight: 8 }} />
           )}
-          <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
+          <Text className="text-base font-semibold" style={{ color: colors.primary }}>
             {isLocating ? 'Getting location…' : 'Use current GPS location'}
           </Text>
         </Pressable>
@@ -201,7 +201,7 @@ export const LocationTab = memo(function LocationTab({
         {/* Divider */}
         <View className="flex-row items-center my-3">
           <View className="flex-1 h-px" style={{ backgroundColor: sem.border }} />
-          <Text className="text-xs mx-3" style={{ color: sem.textMuted }}>
+          <Text className="text-sm mx-3" style={{ color: sem.textMuted }}>
             or search a city
           </Text>
           <View className="flex-1 h-px" style={{ backgroundColor: sem.border }} />
@@ -222,7 +222,7 @@ export const LocationTab = memo(function LocationTab({
             placeholder="Search city…"
             placeholderTextColor={sem.textMuted}
             autoCapitalize="words"
-            className="flex-1 text-sm"
+            className="flex-1 text-base"
             style={{ color: sem.textPrimary, padding: 0 }}
           />
           {query.length > 0 && (
@@ -239,7 +239,7 @@ export const LocationTab = memo(function LocationTab({
 
         {/* No results */}
         {!isSearching && query.length >= 2 && results.length === 0 && (
-          <Text className="text-xs text-center py-2" style={{ color: sem.textMuted }}>
+          <Text className="text-sm text-center py-2" style={{ color: sem.textMuted }}>
             No cities found
           </Text>
         )}
@@ -265,10 +265,10 @@ export const LocationTab = memo(function LocationTab({
               >
                 <Text style={{ marginRight: 8, fontSize: 16 }}>{isoToFlag(item.country_code)}</Text>
                 <View className="flex-1">
-                  <Text className="text-sm font-medium" style={{ color: sem.textPrimary }}>
+                  <Text className="text-base font-medium" style={{ color: sem.textPrimary }}>
                     {item.city}
                   </Text>
-                  <Text className="text-xs" style={{ color: sem.textMuted }}>
+                  <Text className="text-sm" style={{ color: sem.textMuted }}>
                     {[item.region, item.country_name].filter(Boolean).join(', ')}
                   </Text>
                 </View>
@@ -279,13 +279,13 @@ export const LocationTab = memo(function LocationTab({
 
         {/* Error */}
         {locationError && (
-          <Text className="text-xs text-center py-1 px-3" style={{ color: sem.danger }}>
+          <Text className="text-sm text-center py-1 px-3" style={{ color: sem.danger }}>
             {locationError}
           </Text>
         )}
 
         {/* Helper */}
-        <Text className="text-xs mt-1 mb-4" style={{ color: sem.textMuted }}>
+        <Text className="text-sm mt-1 mb-4" style={{ color: sem.textMuted }}>
           Your location helps show you closer matches and appear in local searches.
         </Text>
 
@@ -306,7 +306,7 @@ export const LocationTab = memo(function LocationTab({
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text
-                className="text-base font-bold"
+                className="text-lg font-bold"
                 style={{
                   color: hasPending ? '#FFFFFF' : sem.textMuted,
                   opacity: pressed ? 0.8 : 1,

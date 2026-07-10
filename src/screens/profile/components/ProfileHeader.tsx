@@ -46,21 +46,21 @@ export default function ProfileHeader({
 
         <View style={styles.topRight}>
           <Pressable
-            style={[styles.circleBtn, { backgroundColor: th.surface }]}
+            style={[styles.circleBtn, { backgroundColor: colors.primary }]}
             onPress={() => router.push('/(app)/edit-profile' as any)}
             accessibilityLabel="Edit Profile"
             accessibilityRole="button"
           >
-            <Ionicons name="create-outline" size={20} color={colors.primary} />
+            <Ionicons name="pencil" size={22} color="#FFFFFF" />
           </Pressable>
 
           <Pressable
-            style={[styles.circleBtn, { backgroundColor: th.surface }]}
+            style={[styles.circleBtn, { backgroundColor: colors.primary }]}
             onPress={() => router.push('/(app)/settings' as any)}
             accessibilityLabel="Settings"
             accessibilityRole="button"
           >
-            <Ionicons name="settings-outline" size={20} color={colors.primary} />
+            <Ionicons name="settings" size={22} color="#FFFFFF" />
           </Pressable>
         </View>
       </View>

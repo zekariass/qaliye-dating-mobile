@@ -278,7 +278,7 @@ const MatchCard = React.memo(function MatchCard({
 
 // ─── EmptyState ─────────────────────────────────────────────────────────────
 
-function EmptyState() {
+function EmptyState({ onRefresh }: { onRefresh: () => void }) {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   return (
@@ -296,6 +296,10 @@ function EmptyState() {
         Keep swiping to find your perfect match.{'\n'}We'll notify you when
         someone likes you back!
       </Text>
+      <TouchableOpacity style={emptyStyles.refreshBtn} onPress={onRefresh} activeOpacity={0.8}>
+        <Ionicons name="refresh-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+        <Text style={emptyStyles.refreshText}>Refresh</Text>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
@@ -326,6 +330,20 @@ const emptyStyles = StyleSheet.create({
     fontSize:   14,
     textAlign:  'center',
     lineHeight: 20,
+  },
+  refreshBtn: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    marginTop:         6,
+    paddingHorizontal: 22,
+    paddingVertical:   10,
+    borderRadius:      radius.full,
+    backgroundColor:   colors.primary,
+  },
+  refreshText: {
+    color:      '#FFF',
+    fontSize:   14,
+    fontWeight: '700',
   },
 });
 
@@ -493,7 +511,7 @@ export default function MatchesListScreen() {
           },
         ]}
         ListHeaderComponent={listHeader}
-        ListEmptyComponent={<EmptyState />}
+        ListEmptyComponent={<EmptyState onRefresh={refetch} />}
         ListFooterComponent={renderFooter}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}

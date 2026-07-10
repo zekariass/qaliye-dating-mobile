@@ -322,7 +322,8 @@
 // });
 
 
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -389,13 +390,13 @@ function tabIcon(routeName: string, active: boolean): IoniconName {
   }
 }
 
-function MatchesIcon({ active, inactiveColor }: { active: boolean; inactiveColor: string }) {
+function MatchesIcon({ active, color }: { active: boolean; color: string }) {
+  const name = active ? 'heart' : 'heart-outline';
   return (
-    <MaterialCommunityIcons
-      name={active ? 'heart-multiple' : 'heart-multiple-outline'}
-      size={24}
-      color={active ? ACTIVE_COLOR : inactiveColor}
-    />
+    <View style={styles.matchesIconWrap}>
+      <Ionicons name={name} size={23} color={color} style={styles.matchesHeartBack} />
+      <Ionicons name={name} size={23} color={color} style={styles.matchesHeartFront} />
+    </View>
   );
 }
 
@@ -421,6 +422,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
   const { colors: th, mode } = useTheme();
   const router = useRouter();
   const userId = useCurrentUserId();
+  const qc = useQueryClient();
 
   // Keep inbox fresh so the unread badge is always up to date
   useInboxChannel(userId, 'ALL');
@@ -472,6 +474,11 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
           const isCenter  = route.name === CENTER;
 
           const onPress = () => {
+            if (route.name === 'matches') {
+              qc.invalidateQueries({ queryKey: ['discovery', 'matches'] });
+            } else if (route.name === 'likes') {
+              qc.invalidateQueries({ queryKey: ['discovery', 'likes'] });
+            }
             if (isStandalone) {
               const routeMap: Record<string, string> = {
                 index:    '/(app)/(tabs)/',
@@ -539,7 +546,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
 
               <View style={styles.iconWrap}>
                 {route.name === 'matches' ? (
-                  <MatchesIcon active={isFocused} inactiveColor={inactiveColor} />
+                  <MatchesIcon active={isFocused} color={iconColor} />
                 ) : (
                   <Ionicons
                     name={tabIcon(route.name, isFocused)}
@@ -612,6 +619,23 @@ const styles = StyleSheet.create({
     height: 26,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  matchesIconWrap: {
+    width: 34,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  matchesHeartBack: {
+    position: 'absolute',
+    left: 0,
+    top: 2,
+    opacity: 0.55,
+  },
+  matchesHeartFront: {
+    position: 'absolute',
+    right: 0,
+    top: 2,
   },
   label: {
     fontSize: 11,

@@ -67,7 +67,7 @@ export const EditProfileTabBar = memo(function EditProfileTabBar({ activeTab, on
                 color={isActive ? sem.accent : sem.textMuted}
               />
               <Text
-                className="text-xs font-semibold mt-1"
+                className="text-sm font-semibold mt-1"
                 style={{ color: isActive ? sem.accent : sem.textMuted }}
               >
                 {tab.label}

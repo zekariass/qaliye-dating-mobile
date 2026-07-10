@@ -53,7 +53,9 @@ function buildDetails(p: CurrentUserProfile): DetailItem[] {
     items.push({ icon: 'resize-outline', label: 'Height', value: `${p.heightCm} cm` });
   }
   items.push({ icon: 'home-outline', label: 'Residency Type', value: formatEnum(p.residencyType) });
-  if (p.ethnicity) items.push({ icon: 'people-outline', label: 'Ethnicity', value: p.ethnicity });
+  if (p.ethnicities && p.ethnicities.length > 0) {
+    items.push({ icon: 'people-outline', label: 'Ethnicity', value: p.ethnicities.map((e) => e.name).join(', ') });
+  }
   if (p.nationality) items.push({ icon: 'globe-outline', label: 'Nationality', value: p.nationality });
   if (p.religion) items.push({ icon: 'leaf-outline', label: 'Religion', value: p.religion });
   if (p.educationLevel) items.push({ icon: 'school-outline', label: 'Education Level', value: p.educationLevel });
@@ -145,7 +147,7 @@ export default function DetailsContent({ profile }: DetailsContentProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 16,
   },
   grid: {

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="cd03ca61-e475-4269-95bb-e43fed278de7" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/screen_specs/profile_detail_logged_in_user/logged_in_user_profile_spec.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/screen_specs/profile_detail_logged_in_user/logged_in_user_profile_spec.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/screen_specs/profile_detail_other_users/profile-detail-other-users-design.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/screen_specs/profile_detail_other_users/profile-detail-other-users-design.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/google-services.json" beforeDir="false" afterPath="$PROJECT_DIR$/google-services.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jest.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/jest.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/discovery/discoveryApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/discovery/discoveryApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/photosApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/photosApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/profile/profileApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/profile/profileApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/(app)/_layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(app)/_layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/(onboarding)/_layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(onboarding)/_layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/_layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/_layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/explore.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/explore.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/discovery/CardActionButtons.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/discovery/CardActionButtons.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/discovery/MorePhotosSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/discovery/MorePhotosSection.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/discovery/ProfileCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/discovery/ProfileCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/discovery/ProfileDetailsSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/discovery/ProfileDetailsSection.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/settings/ReviewPassedProfilesSheet.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/settings/ReviewPassedProfilesSheet.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/themed-text.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/themed-text.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/themed-view.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/themed-view.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ui/collapsible.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui/collapsible.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/auth/useBootstrapApp.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/auth/useBootstrapApp.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/auth/useSocialAuth.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/auth/useSocialAuth.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/discovery/__tests__/useRevisitPassedProfiles.test.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/discovery/useDiscoveryPreferences.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/discovery/useDiscoveryPreferences.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/discovery/useDiscoveryProfiles.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/discovery/useDiscoveryProfiles.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/discovery/useRewind.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/discovery/useRewind.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/discovery/useSwipeAction.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/discovery/useSwipeAction.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/notifications/useSignOutWithDeactivation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/notifications/useSignOutWithDeactivation.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/profile/useProfilePhotos.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/profile/useProfilePhotos.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/profile/useProfilePreferences.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/profile/useProfilePreferences.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/i18n/locales/am.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/i18n/locales/am.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/i18n/locales/en.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/i18n/locales/en.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/i18n/locales/om.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/i18n/locales/om.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/i18n/locales/ti.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/i18n/locales/ti.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/discovery/DiscoverScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/discovery/DiscoverScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/discovery/DiscoveryPreferencesScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/discovery/DiscoveryPreferencesScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/onboarding/steps/PhotoStep.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/onboarding/steps/PhotoStep.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/EditProfileScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/EditProfileScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/OtherUserProfileScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/OtherUserProfileScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/ProfileHeroGallery.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/ProfileHeroGallery.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/components/BioContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/components/BioContent.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/components/DetailsContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/components/DetailsContent.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/components/LifestyleContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/components/LifestyleContent.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/components/PhotoContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/components/PhotoContent.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/components/PreferencesContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/components/PreferencesContent.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/components/ProfileTabBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/components/ProfileTabBar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/components/StatusContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/components/StatusContent.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/AccountStatusCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/AccountStatusCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/BasicsTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/BasicsTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/EditDetailsTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/EditDetailsTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/EditProfileHeader.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/EditProfileHeader.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/EditProfileTabBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/EditProfileTabBar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/FormComponents.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/FormComponents.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/LifestyleTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/LifestyleTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/LocationPickerField.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/LocationPickerField.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/LocationTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/LocationTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/PersonalTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/PersonalTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/PhotosTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/PhotosTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/PhotosTabReal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/PhotosTabReal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/PreferencesTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/PreferencesTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/edit/ProfileCompletionBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/edit/ProfileCompletionBar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/mockCurrentUserProfile.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/mockCurrentUserProfile.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/profile/mockEditProfile.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/mockEditProfile.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/settings/SettingsScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/settings/SettingsScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/settings/__tests__/SettingsScreen.test.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/settings/__tests__/SettingsScreen.test.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/notifications/__tests__/payloadValidator.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/notifications/__tests__/payloadValidator.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types/discovery.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/discovery.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types/profile.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/profile.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/profileMappers.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/profileMappers.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_C:/PROJECT/QALIYE/qaliye-mobile" value="3GBdnaZcU4ezYaSmWmxdHf8TcEt" />
+    </persistenceIdMap>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 4
+}]]></component>
+  <component name="ProjectId" id="3GBdnaZcU4ezYaSmWmxdHf8TcEt" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "copilot.chat.legacySessionMetadata.migrated": "true",
+    "git-widget-placeholder": "main"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="cd03ca61-e475-4269-95bb-e43fed278de7" name="Changes" comment="" />
+      <created>1783449066547</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1783449066547</updated>
+    </task>
+    <servers />
+  </component>
+</project>

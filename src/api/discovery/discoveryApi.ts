@@ -4,7 +4,6 @@ import type {
     DiscoveryPreferencesDto,
     LikeDirection,
     LikesPageResponse,
-    LocationFilter,
     MatchesPageResponse,
     RevisitCount,
     RevisitPassedProfilesResponse,
@@ -17,10 +16,9 @@ import type {
 const BASE = '/api/v1/discovery';
 
 export async function fetchDiscoveryProfiles(
-  locationFilter: LocationFilter = 'ANYWHERE',
   cursor?: string,
 ): Promise<DiscoveryFeedResponse> {
-  const params: Record<string, string> = { locationFilter };
+  const params: Record<string, string> = {};
   if (cursor) params.cursor = cursor;
   const res = await apiClient.get<DiscoveryFeedResponse>(`${BASE}/profiles`, { params });
   return res.data;

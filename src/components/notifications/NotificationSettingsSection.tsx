@@ -3,23 +3,23 @@ import * as Linking from 'expo-linking';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
+    ActivityIndicator,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Switch,
+    Text,
+    View,
 } from 'react-native';
 
+import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
-import {
-  useNotificationPreferences,
-  useUpdateNotificationPreferences,
-} from '@/hooks/notifications/useNotificationPreferences';
 import { useNotificationPermission } from '@/hooks/notifications/useNotificationPermission';
+import {
+    useNotificationPreferences,
+    useUpdateNotificationPreferences,
+} from '@/hooks/notifications/useNotificationPreferences';
+import { useTheme } from '@/hooks/use-theme';
 import type { NotificationPreferencesPatch } from '@/types/notifications';
 
 const MARKETING_CONSENT_VERSION = '1.0';
@@ -87,7 +87,7 @@ export function NotificationSettingsSection() {
       updatePrefs(patch, {
         onSettled: () => setPendingField(null),
         onError: () => {
-          Alert.alert(
+          themedError(
             t('notifications.errorTitle', 'Update failed'),
             t('notifications.errorMessage', 'Could not save your preference. Please try again.'),
           );
@@ -103,20 +103,22 @@ export function NotificationSettingsSection() {
         update({ messagePreviewEnabled: false });
         return;
       }
-      Alert.alert(
-        t('notifications.previewTitle', 'Message Previews'),
-        t(
+      themedAlert({
+        title: t('notifications.previewTitle', 'Message Previews'),
+        message: t(
           'notifications.previewBody',
           'Message previews may show message text in notification banners or on the lock screen. Are you sure you want to enable this?',
         ),
-        [
+        icon: 'eye-outline',
+        iconColor: colors.primary,
+        buttons: [
           { text: t('common.cancel', 'Cancel'), style: 'cancel' },
           {
             text: t('common.enable', 'Enable'),
             onPress: () => update({ messagePreviewEnabled: true }),
           },
         ],
-      );
+      });
     },
     [update, t],
   );
@@ -127,13 +129,15 @@ export function NotificationSettingsSection() {
         update({ marketingNotificationsEnabled: false });
         return;
       }
-      Alert.alert(
-        t('notifications.marketingConsentTitle', 'Offers and Updates'),
-        t(
+      themedAlert({
+        title: t('notifications.marketingConsentTitle', 'Offers and Updates'),
+        message: t(
           'notifications.marketingConsentBody',
           'Qaliye may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.',
         ),
-        [
+        icon: 'megaphone-outline',
+        iconColor: colors.primary,
+        buttons: [
           { text: t('common.cancel', 'Cancel'), style: 'cancel' },
           {
             text: t('notifications.agree', 'I Agree'),
@@ -144,7 +148,7 @@ export function NotificationSettingsSection() {
               }),
           },
         ],
-      );
+      });
     },
     [update, t],
   );

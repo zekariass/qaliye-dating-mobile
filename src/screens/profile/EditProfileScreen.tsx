@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -10,12 +9,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { themedError, themedSuccess } from '@/components/common/ThemedAlert';
+import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useDeletePhoto, useRegisterPhoto, useReorderPhotos } from '@/hooks/profile/useProfilePhotos';
 import { useUpdateProfilePreferences } from '@/hooks/profile/useProfilePreferences';
 import { useUpdateProfile } from '@/hooks/profile/useUpdateProfile';
 import { useUpdateProfileLocation } from '@/hooks/profile/useUpdateProfileLocation';
 import { useSemanticTheme } from '@/hooks/use-semantic-theme';
+import type { EthnicityOption, LanguageOption } from '@/types/catalog';
 import {
     mapApiPrefsToDiscoveryPrefDraft,
     mapDiscoveryPrefDraftToUpdateRequest,
@@ -39,6 +41,8 @@ import {
 export default function EditProfileScreen() {
   const { sem } = useSemanticTheme();
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
+  const { entitlements } = useEntitlements();
+  const canUseIncognito = entitlements?.features?.incognito_mode ?? false;
 
   const [activeTab, setActiveTab] = useState<TabKey>('bio');
   const [draft, setDraft] = useState<EditProfileDraft | null>(null);
@@ -56,12 +60,22 @@ export default function EditProfileScreen() {
   const deletePhotoMutation = useDeletePhoto();
 
   // ─── Initialise form state from API data ──────────────────────────────
+  const [draftVersion, setDraftVersion] = useState(0);
+
   useEffect(() => {
     if (profileDto && !draft) {
       setDraft(mapProfileMeDtoToEditDraft(profileDto));
       setPrefs(mapApiPrefsToDiscoveryPrefDraft(profileDto.discovery_preferences, profileDto.discovery_mode, profileDto.gender));
     }
   }, [profileDto, draft]);
+
+  // Re-sync draft from server after a successful save (draftVersion bump)
+  useEffect(() => {
+    if (profileDto && draftVersion > 0) {
+      setDraft(mapProfileMeDtoToEditDraft(profileDto));
+      setPrefs(mapApiPrefsToDiscoveryPrefDraft(profileDto.discovery_preferences, profileDto.discovery_mode, profileDto.gender));
+    }
+  }, [draftVersion, profileDto]);
 
   const completionPercent = profileDto?.profile_completion_score ?? 0;
   const apiPhotos = useMemo(() => profileDto?.photos ?? [], [profileDto]);
@@ -83,7 +97,16 @@ export default function EditProfileScreen() {
     });
   }, []);
 
-  // ─── Array toggle (interests, languages) ──────────────────────────────
+  // ─── Catalog item handlers (ethnicities, languages) ──────────────────────
+  const handleChangeEthnicities = useCallback((items: EthnicityOption[]) => {
+    setDraft((prev) => prev ? { ...prev, personal: { ...prev.personal, ethnicities: items } } : prev);
+  }, []);
+
+  const handleChangeLanguages = useCallback((items: LanguageOption[]) => {
+    setDraft((prev) => prev ? { ...prev, lifestyle: { ...prev.lifestyle, languages: items } } : prev);
+  }, []);
+
+  // ─── Array toggle (interests) ─────────────────────────────────────────────
   const handleToggleArrayItem = useCallback((path: string, value: string) => {
     setDraft((prev) => {
       if (!prev) return prev;
@@ -121,9 +144,10 @@ export default function EditProfileScreen() {
     try {
       const payload = mapEditDraftToUpdateRequest(draft);
       await updateProfileMutation.mutateAsync(payload);
-      Alert.alert('Saved', 'Your profile has been updated.');
+      setDraftVersion((v) => v + 1);
+      themedSuccess('Saved', 'Your profile has been updated.');
     } catch (err: unknown) {
-      Alert.alert('Error', (err as Error)?.message ?? 'Failed to save profile.');
+      themedError('Error', (err as Error)?.message ?? 'Failed to save profile.');
     }
   }, [draft, updateProfileMutation]);
 
@@ -133,10 +157,16 @@ export default function EditProfileScreen() {
     try {
       const payload = mapDiscoveryPrefDraftToUpdateRequest(prefs);
       await updatePrefsMutation.mutateAsync(payload);
-      await updateProfileMutation.mutateAsync({ discovery_mode: prefs.discoveryMode });
-      Alert.alert('Saved', 'Your preferences have been updated.');
+      // Best-effort discovery_mode update — don't fail the whole operation if this errors
+      try {
+        await updateProfileMutation.mutateAsync({ discovery_mode: prefs.discoveryMode });
+      } catch {
+        // non-fatal: preferences were saved successfully
+      }
+      setDraftVersion((v) => v + 1);
+      themedSuccess('Saved', 'Your preferences have been updated.');
     } catch (err: unknown) {
-      Alert.alert('Error', (err as Error)?.message ?? 'Failed to save preferences.');
+      themedError('Error', (err as Error)?.message ?? 'Failed to save preferences.');
     }
   }, [prefs, updatePrefsMutation, updateProfileMutation]);
 
@@ -177,9 +207,10 @@ export default function EditProfileScreen() {
     async (payload: Parameters<typeof updateLocationMutation.mutateAsync>[0]) => {
       try {
         await updateLocationMutation.mutateAsync(payload);
-        Alert.alert('Saved', 'Your location has been updated.');
+        setDraftVersion((v) => v + 1);
+        themedSuccess('Saved', 'Your location has been updated.');
       } catch (err: unknown) {
-        Alert.alert('Error', (err as Error)?.message ?? 'Failed to save location.');
+        themedError('Error', (err as Error)?.message ?? 'Failed to save location.');
       }
     },
     [updateLocationMutation],
@@ -209,7 +240,7 @@ export default function EditProfileScreen() {
         className="flex-1 items-center justify-center px-8"
         style={{ backgroundColor: sem.bg, paddingTop: safeTop }}
       >
-        <Text className="text-sm text-center" style={{ color: sem.textSecondary }}>
+        <Text className="text-base text-center" style={{ color: sem.textSecondary }}>
           {(error as Error)?.message ?? 'Failed to load profile. Please try again.'}
         </Text>
       </View>
@@ -230,9 +261,11 @@ export default function EditProfileScreen() {
           <EditDetailsTab
             draft={currentDraft}
             onChange={handleChange}
+            onChangeEthnicities={handleChangeEthnicities}
             sem={sem}
             discoveryMode={currentPrefs.discoveryMode}
             onDiscoveryModeChange={(mode) => handlePrefsChange({ discoveryMode: mode })}
+            incognitoEnabled={canUseIncognito}
           />
         );
       case 'photo':
@@ -254,6 +287,7 @@ export default function EditProfileScreen() {
             draft={currentDraft}
             onChange={handleChange}
             onToggleArrayItem={handleToggleArrayItem}
+            onChangeLanguages={handleChangeLanguages}
             sem={sem}
           />
         );
@@ -301,7 +335,7 @@ export default function EditProfileScreen() {
 
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ padding: 16, paddingBottom: safeBottom + 24 }}
+          contentContainerStyle={{ padding: 10, paddingBottom: safeBottom + 24 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >

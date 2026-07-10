@@ -12,6 +12,7 @@ export function useUpdateProfile() {
     mutationFn: updateProfileMe,
     onSuccess: (updated) => {
       queryClient.setQueryData<ProfileMeDto>(PROFILE_ME_QUERY_KEY, updated);
+      queryClient.invalidateQueries({ queryKey: PROFILE_ME_QUERY_KEY });
     },
   });
 }

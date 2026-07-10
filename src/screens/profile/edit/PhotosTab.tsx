@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { memo, useCallback, useState } from 'react';
 import {
-  Alert,
-  Dimensions,
-  Modal,
-  Pressable,
-  Text,
-  View,
+    Dimensions,
+    Modal,
+    Pressable,
+    Text,
+    View,
 } from 'react-native';
 
+import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import { type EditableProfilePhoto, EXTRA_MOCK_IMAGES } from '../mockEditProfile';
 import { AccountStatusCard } from './AccountStatusCard';
@@ -61,7 +61,7 @@ export const PhotosTab = memo(function PhotosTab({ photos, onPhotosChange, sem }
   const handleReplacePhoto = useCallback((id: string) => {
     const available = getAvailableMockImages();
     if (available.length === 0) {
-      Alert.alert('No images available', 'All mock images are already in use.');
+      themedError('No images available', 'All mock images are already in use.');
       return;
     }
     const newUri = available[0];
@@ -73,10 +73,12 @@ export const PhotosTab = memo(function PhotosTab({ photos, onPhotosChange, sem }
   }, [photos, onPhotosChange, getAvailableMockImages]);
 
   const handleRemovePhoto = useCallback((id: string) => {
-    Alert.alert(
-      'Remove photo',
-      'Are you sure you want to remove this photo?',
-      [
+    themedAlert({
+      title: 'Remove photo',
+      message: 'Are you sure you want to remove this photo?',
+      icon: 'trash-outline',
+      iconColor: '#EF4444',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
@@ -93,7 +95,7 @@ export const PhotosTab = memo(function PhotosTab({ photos, onPhotosChange, sem }
           },
         },
       ],
-    );
+    });
   }, [photos, onPhotosChange]);
 
   const handleAddPhoto = useCallback((uri: string) => {
@@ -148,12 +150,12 @@ export const PhotosTab = memo(function PhotosTab({ photos, onPhotosChange, sem }
             style={{ borderColor: sem.border, backgroundColor: sem.surfaceMuted }}
           >
             <Ionicons name="information-circle-outline" size={13} color={sem.textMuted} />
-            <Text className="text-xs ml-1" style={{ color: sem.textMuted }}>
+            <Text className="text-sm ml-1" style={{ color: sem.textMuted }}>
               Drag to reorder
             </Text>
           </View>
         </View>
-        <Text className="text-xs mb-4" style={{ color: sem.textSecondary }}>
+        <Text className="text-sm mb-4" style={{ color: sem.textSecondary }}>
           Reorder your photos by dragging and choose a primary photo.
         </Text>
 
@@ -188,11 +190,11 @@ export const PhotosTab = memo(function PhotosTab({ photos, onPhotosChange, sem }
                       style={{ backgroundColor: sem.accent }}
                     >
                       <Ionicons name="star" size={10} color="#fff" />
-                      <Text className="text-xs font-bold text-white ml-1">Primary</Text>
+                      <Text className="text-sm font-bold text-white ml-1">Primary</Text>
                     </View>
                   </View>
                 </Pressable>
-                <Text className="text-xs mt-2 w-[150px]" style={{ color: sem.textMuted }}>
+                <Text className="text-sm mt-2 w-[150px]" style={{ color: sem.textMuted }}>
                   This is your primary photo. It will be shown first on your profile.
                 </Text>
               </View>
@@ -239,14 +241,14 @@ export const PhotosTab = memo(function PhotosTab({ photos, onPhotosChange, sem }
               width={PRIMARY_W}
               height={PRIMARY_H}
             />
-            <Text className="text-xs mt-3" style={{ color: sem.textMuted }}>
+            <Text className="text-sm mt-3" style={{ color: sem.textMuted }}>
               Add your first photo
             </Text>
           </View>
         )}
 
         {photos.length >= MAX_PHOTOS && (
-          <Text className="text-xs text-center mb-3" style={{ color: sem.textMuted }}>
+          <Text className="text-sm text-center mb-3" style={{ color: sem.textMuted }}>
             {MAX_PHOTOS} of {MAX_PHOTOS} photos added
           </Text>
         )}
@@ -259,10 +261,10 @@ export const PhotosTab = memo(function PhotosTab({ photos, onPhotosChange, sem }
       >
         <Ionicons name="bulb-outline" size={22} color={sem.accent} />
         <View className="flex-1">
-          <Text className="text-sm font-bold mb-0.5" style={{ color: sem.textPrimary }}>
+          <Text className="text-base font-bold mb-0.5" style={{ color: sem.textPrimary }}>
             Photo tips
           </Text>
-          <Text className="text-xs leading-4" style={{ color: sem.textSecondary }}>
+          <Text className="text-sm leading-4" style={{ color: sem.textSecondary }}>
             Use clear, well-lit photos that show your face. Avoid group photos as your primary photo.
           </Text>
         </View>
@@ -360,7 +362,7 @@ function AddPhotoTile({ sem, onPress, width, height }: AddPhotoTileProps) {
       {({ pressed }) => (
         <View className="items-center" style={{ opacity: pressed ? 0.6 : 1 }}>
           <Ionicons name="add" size={24} color={sem.accent} />
-          <Text className="text-xs font-medium mt-1" style={{ color: sem.accent }}>
+          <Text className="text-sm font-medium mt-1" style={{ color: sem.accent }}>
             Add photo
           </Text>
         </View>
@@ -428,7 +430,7 @@ function ActionSheetModal({
                   color={(a as any).destructive ? sem.danger : sem.textPrimary}
                 />
                 <Text
-                  className="text-sm font-medium ml-3"
+                  className="text-base font-medium ml-3"
                   style={{ color: (a as any).destructive ? sem.danger : sem.textPrimary }}
                 >
                   {a.label}
@@ -466,11 +468,11 @@ function AddPhotoPickerModal({ visible, onClose, availableImages, onSelect, sem 
             style={{ backgroundColor: sem.surface }}
           >
             <View className="w-10 h-1 rounded-full self-center mb-4" style={{ backgroundColor: sem.border }} />
-            <Text className="text-base font-bold mb-4" style={{ color: sem.textPrimary }}>
+            <Text className="text-lg font-bold mb-4" style={{ color: sem.textPrimary }}>
               Choose a photo
             </Text>
             {availableImages.length === 0 ? (
-              <Text className="text-sm py-4 text-center" style={{ color: sem.textMuted }}>
+              <Text className="text-base py-4 text-center" style={{ color: sem.textMuted }}>
                 No more mock images available.
               </Text>
             ) : (

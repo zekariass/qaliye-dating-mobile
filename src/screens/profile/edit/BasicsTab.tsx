@@ -1,12 +1,11 @@
 import { memo } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import {
     type EditProfileDraft,
     DRINKING_OPTIONS,
     EDUCATION_OPTIONS,
-    ETHNICITY_OPTIONS,
     GENDER_OPTIONS,
     MARITAL_STATUS_OPTIONS,
     NATIONALITY_OPTIONS,
@@ -73,13 +72,18 @@ export const BasicsTab = memo(function BasicsTab({ draft, onChange, sem }: Props
               placeholder="DD MMM YYYY"
             />
           </LabeledField>
-          <LabeledField label="Height (cm)" sem={sem}>
+          <LabeledField label="Height" sem={sem}>
             <TextInputField
-              value={basics.heightCm ? `${basics.heightCm} cm` : ''}
+              value={basics.heightCm ? String(basics.heightCm) : ''}
               onChangeText={(v) => onChange('basics.heightCm', v.replace(/[^0-9]/g, ''))}
               sem={sem}
               leftIcon="resize-outline"
               placeholder="Height"
+              rightElement={
+                <Text className="text-base ml-1" style={{ color: sem.textMuted }}>
+                  cm
+                </Text>
+              }
             />
           </LabeledField>
         </RowPair>
@@ -128,9 +132,9 @@ export const BasicsTab = memo(function BasicsTab({ draft, onChange, sem }: Props
         <RowPair>
           <LabeledField label="Ethnicity" sem={sem}>
             <SelectField
-              value={personal.ethnicity}
-              options={ETHNICITY_OPTIONS}
-              onSelect={(v) => onChange('personal.ethnicity', v)}
+              value={personal.nationality}
+              options={NATIONALITY_OPTIONS}
+              onSelect={(v) => onChange('personal.nationality', v)}
               sem={sem}
               placeholder="Ethnicity"
             />

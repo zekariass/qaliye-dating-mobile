@@ -1,34 +1,41 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import { View } from 'react-native';
 
+import { EthnicityMultiSelectPicker } from '@/components/catalog/EthnicityMultiSelectPicker';
 import { type SemanticTheme } from '@/constants/semantic-colors';
+import type { EthnicityOption } from '@/types/catalog';
 import {
-  type EditProfileDraft,
-  EDUCATION_OPTIONS,
-  ETHNICITY_OPTIONS,
-  MARITAL_STATUS_OPTIONS,
-  NATIONALITY_OPTIONS,
-  RELATIONSHIP_INTENTION_OPTIONS,
-  RELIGION_OPTIONS,
-  YES_NO_OPTIONS,
+    type EditProfileDraft,
+    EDUCATION_OPTIONS,
+    MARITAL_STATUS_OPTIONS,
+    NATIONALITY_OPTIONS,
+    RELATIONSHIP_INTENTION_OPTIONS,
+    RELIGION_OPTIONS,
+    YES_NO_OPTIONS,
 } from '../mockEditProfile';
 import {
-  LabeledField,
-  RowPair,
-  SectionCard,
-  SectionTitle,
-  SelectField,
-  TextInputField,
+    LabeledField,
+    RowPair,
+    SectionCard,
+    SectionTitle,
+    SelectField,
+    TextInputField,
 } from './FormComponents';
 
 type Props = {
   draft: EditProfileDraft;
   onChange: (path: string, value: string) => void;
+  onChangeEthnicities: (items: EthnicityOption[]) => void;
   sem: SemanticTheme;
 };
 
-export const PersonalTab = memo(function PersonalTab({ draft, onChange, sem }: Props) {
+export const PersonalTab = memo(function PersonalTab({ draft, onChange, onChangeEthnicities, sem }: Props) {
   const { personal } = draft;
+
+  const handleEthnicitiesChange = useCallback(
+    (items: EthnicityOption[]) => onChangeEthnicities(items),
+    [onChangeEthnicities],
+  );
 
   return (
     <View>
@@ -36,17 +43,19 @@ export const PersonalTab = memo(function PersonalTab({ draft, onChange, sem }: P
       <SectionCard sem={sem}>
         <SectionTitle title="Heritage" sem={sem} />
 
+        <LabeledField label="Ethnicity / Background" sem={sem} flex={false}>
+          <EthnicityMultiSelectPicker
+            selected={personal.ethnicities}
+            onChange={handleEthnicitiesChange}
+            accentColor="#8A2CFF"
+            textColor={sem.textPrimary}
+            mutedColor={sem.textMuted}
+            borderColor={sem.border}
+            surfaceColor={sem.surface}
+          />
+        </LabeledField>
+
         <RowPair>
-          <LabeledField label="Ethnicity" sem={sem}>
-            <SelectField
-              value={personal.ethnicity}
-              options={ETHNICITY_OPTIONS}
-              onSelect={(v) => onChange('personal.ethnicity', v)}
-              sem={sem}
-              leftIcon="people-outline"
-              placeholder="Ethnicity"
-            />
-          </LabeledField>
           <LabeledField label="Nationality" sem={sem}>
             <SelectField
               value={personal.nationality}
@@ -57,10 +66,7 @@ export const PersonalTab = memo(function PersonalTab({ draft, onChange, sem }: P
               placeholder="Nationality"
             />
           </LabeledField>
-        </RowPair>
-
-        <LabeledField label="Religion" sem={sem} flex={false}>
-          <View className="w-1/2 pr-1.5">
+          <LabeledField label="Religion" sem={sem}>
             <SelectField
               value={personal.religion}
               options={RELIGION_OPTIONS}
@@ -69,8 +75,8 @@ export const PersonalTab = memo(function PersonalTab({ draft, onChange, sem }: P
               leftIcon="leaf-outline"
               placeholder="Religion"
             />
-          </View>
-        </LabeledField>
+          </LabeledField>
+        </RowPair>
       </SectionCard>
 
       {/* ─── Education & Work ─── */}

@@ -41,7 +41,7 @@ export const EditProfileHeader = memo(function EditProfileHeader({ sem, onSave, 
         )}
       </Pressable>
 
-      <Text className="text-lg font-bold" style={{ color: sem.textPrimary }}>
+      <Text className="text-xl font-bold" style={{ color: sem.textPrimary }}>
         Edit Profile
       </Text>
 
@@ -57,7 +57,7 @@ export const EditProfileHeader = memo(function EditProfileHeader({ sem, onSave, 
             <ActivityIndicator size="small" color={sem.accent} />
           ) : (
             <Text
-              className="text-base font-bold"
+              className="text-lg font-bold"
               style={{ color: pressed ? sem.accentStrong : sem.accent }}
             >
               Save

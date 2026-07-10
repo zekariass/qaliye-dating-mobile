@@ -3,19 +3,21 @@ import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Dimensions,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
-import { ProfilePhoto, deletePhoto, fetchMyPhotos, uploadPhoto } from '@/api/photosApi';
+import { batchRegisterProfilePhotos, deleteProfilePhoto, fetchProfilePhotos } from '@/api/profile/profileApi';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { supabase } from '@/lib/supabase';
+import type { ProfilePhotoDto } from '@/types/profile';
 import { ProcessedImage, processCardPhoto, processPrimaryPhoto } from '@/utils/imageProcessor';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -36,20 +38,45 @@ async function requestLibraryPermission(): Promise<boolean> {
   return status === 'granted';
 }
 
-function moderationLabel(status: ProfilePhoto['moderation_status']): string {
+function moderationLabel(status: ProfilePhotoDto['moderation_status']): string {
   switch (status) {
     case 'APPROVED': return 'Approved';
     case 'PENDING':  return 'Under review';
     case 'REJECTED': return 'Rejected';
+    default:         return 'Under review';
   }
 }
 
-function moderationColor(status: ProfilePhoto['moderation_status']): string {
+function moderationColor(status: ProfilePhotoDto['moderation_status']): string {
   switch (status) {
     case 'APPROVED': return '#22C55E';
     case 'PENDING':  return '#F59E0B';
     case 'REJECTED': return '#EF4444';
+    default:         return '#F59E0B';
   }
+}
+
+const STORAGE_BUCKET = 'profile-photos';
+
+async function uploadOneToSupabase(
+  userId: string,
+  uri: string,
+  fileName: string,
+  photoOrder: number,
+): Promise<{ storageBucket: string; storagePath: string; photoOrder: number }> {
+  const ext = fileName.split('.').pop()?.toLowerCase() ?? 'webp';
+  const storagePath = `${userId}/${Date.now()}_${photoOrder}.${ext}`;
+
+  const fileResponse = await fetch(uri);
+  const arrayBuffer = await fileResponse.arrayBuffer();
+
+  const { error: uploadError } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(storagePath, arrayBuffer, { contentType: `image/${ext}`, upsert: false });
+
+  if (uploadError) throw uploadError;
+
+  return { storageBucket: STORAGE_BUCKET, storagePath, photoOrder };
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -60,7 +87,7 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
   const screenW = Dimensions.get('window').width;
 
   // Primary photo
-  const [existingPrimary, setExistingPrimary] = useState<ProfilePhoto | null>(null);
+  const [existingPrimary, setExistingPrimary] = useState<ProfilePhotoDto | null>(null);
   const [newPrimary, setNewPrimary] = useState<ProcessedImage | null>(null);
   const [primaryProcessing, setPrimaryProcessing] = useState(false);
 
@@ -79,8 +106,8 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
 
   // Load existing photos on mount
   useEffect(() => {
-    fetchMyPhotos()
-      .then((photos) => {
+    fetchProfilePhotos()
+      .then(({ photos }) => {
         const primary = photos.find((p) => p.is_primary);
         if (primary) setExistingPrimary(primary);
         const cards = photos
@@ -90,7 +117,7 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
           setCardSlots((prev) => {
             const next = [...prev];
             cards.slice(0, MAX_CARDS).forEach((c, i) => {
-              next[i] = { kind: 'server', url: c.signed_url ?? '', id: c.id };
+              next[i] = { kind: 'server', url: c.signed_url, id: c.id };
             });
             return next;
           });
@@ -109,7 +136,7 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
@@ -133,7 +160,7 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [2, 3],
       quality: 1,
@@ -166,7 +193,7 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
     setIsDeletingPrimary(true);
     setError(null);
     try {
-      await deletePhoto(existingPrimary.id);
+      await deleteProfilePhoto(existingPrimary.id);
       setExistingPrimary(null);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string };
@@ -190,7 +217,7 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
     setDeletingCardId(slot.id);
     setError(null);
     try {
-      await deletePhoto(slot.id);
+      await deleteProfilePhoto(slot.id);
       setCardSlots((prev) => {
         const next = [...prev];
         next[slotIdx] = null;
@@ -218,20 +245,42 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
     setError(null);
     setIsSubmitting(true);
     try {
-      if (newPrimary) {
-        setUploadStatus('Uploading profile photo…');
-        await uploadPhoto(newPrimary.uri, newPrimary.fileName, newPrimary.mimeType, 0, true);
-      }
       const localCards = cardSlots
         .map((slot, i) => ({ slot, i }))
         .filter((x): x is { slot: { kind: 'local'; photo: ProcessedImage }; i: number } =>
           x.slot?.kind === 'local',
         );
-      for (let j = 0; j < localCards.length; j++) {
-        const { slot, i } = localCards[j];
-        setUploadStatus(`Uploading card photo ${j + 1} of ${localCards.length}…`);
-        await uploadPhoto(slot.photo.uri, slot.photo.fileName, slot.photo.mimeType, i + 1, false);
+
+      const hasNewPhotos = newPrimary !== null || localCards.length > 0;
+
+      if (hasNewPhotos) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) throw new Error('Not authenticated');
+        const userId = session.user.id;
+
+        setUploadStatus('Uploading photos…');
+        const uploads = await Promise.all([
+          ...(newPrimary
+            ? [uploadOneToSupabase(userId, newPrimary.uri, newPrimary.fileName, 0)]
+            : []),
+          ...localCards.map(({ slot, i }) =>
+            uploadOneToSupabase(userId, slot.photo.uri, slot.photo.fileName, i + 1),
+          ),
+        ]);
+
+        setUploadStatus('Registering photos…');
+        await batchRegisterProfilePhotos({
+          photos: uploads.map((u) => ({
+            storage_bucket: u.storageBucket,
+            storage_path: u.storagePath,
+            photo_order: u.photoOrder,
+            is_primary: u.photoOrder === 0,
+          })),
+        });
       }
+
       await onComplete();
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string };

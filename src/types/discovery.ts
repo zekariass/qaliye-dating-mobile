@@ -1,4 +1,5 @@
 import type { ActivityStatus } from './activity';
+import type { EthnicityOption, LanguageOption } from './catalog';
 
 export type LocationFilter = 'NEARBY' | 'ETHIOPIA' | 'ERITREA' | 'DIASPORA' | 'ANYWHERE';
 
@@ -30,7 +31,6 @@ export type DiscoveryProfileDto = {
   isVerified: boolean;
   relationshipIntention: string | null;
   heightCm: number | null;
-  ethnicity: string | null;
   nationality: string | null;
   religion: string | null;
   educationLevel: string | null;
@@ -40,6 +40,13 @@ export type DiscoveryProfileDto = {
   wantsChildren: boolean | null;
   smoking: boolean;
   drinking: boolean;
+  smokingDetail: string | null;
+  drinkingDetail: string | null;
+  activityLevel: string | null;
+  interests: string[];
+  ethnicities: EthnicityOption[];
+  ethnicityOtherText: string | null;
+  languages: LanguageOption[];
   photos: DiscoveryPhotoDto[];
   promptAnswers: DiscoveryPromptAnswerDto[];
   isBoosted: boolean;
@@ -95,14 +102,20 @@ export type RewindResponse = {
 };
 
 export type DiscoveryPreferencesDto = {
-  interested_in_gender: string;
-  min_age: number;
-  max_age: number;
-  max_distance_km: number;
-  preferred_residency_types: string[];
-  open_to_long_distance: boolean;
-  open_to_relocation: boolean;
-  show_verified_only: boolean;
+  interestedInGender: string;
+  minAge: number;
+  maxAge: number;
+  maxDistanceKm: number;
+  showVerifiedOnly: boolean;
+  locationMode: 'nearby' | 'diaspora' | 'specific_countries' | 'anywhere';
+  specificCountryCodes: string[];
+  expandSearchWhenLimited: boolean;
+  hasChildrenPreference: 'any' | 'yes' | 'no';
+  wantsChildrenPreference: 'any' | 'yes' | 'no' | 'not_sure' | 'open_to_discussion';
+  religionPreferences: string[];
+  languagePreferences: LanguageOption[];
+  ethnicityPreferences: EthnicityOption[];
+  preferencesVersion: number;
 };
 
 export type UpdateDiscoveryPreferencesPayload = {
@@ -110,10 +123,16 @@ export type UpdateDiscoveryPreferencesPayload = {
   minAge: number;
   maxAge: number;
   maxDistanceKm: number;
-  preferredResidencyTypes?: string[];
-  openToLongDistance?: boolean;
-  openToRelocation?: boolean;
   showVerifiedOnly?: boolean;
+  locationMode?: string;
+  specificCountryCodes?: string[];
+  expandSearchWhenLimited?: boolean;
+  hasChildrenPreference?: string;
+  wantsChildrenPreference?: string;
+  religionPreferences?: string[];
+  languagePreferenceIds?: string[];
+  ethnicityPreferenceIds?: string[];
+  preferencesVersion?: number;
 };
 
 export type UpdateDiscoveryPreferencesResponse = {

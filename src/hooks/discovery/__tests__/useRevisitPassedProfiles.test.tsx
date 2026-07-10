@@ -28,7 +28,7 @@ describe('useRevisitPassedProfiles', () => {
 
   it('calls the revisit endpoint with the selected count', async () => {
     mockRevisit.mockResolvedValue({ success: true, reopenedCount: 5 });
-    const { result } = renderHook(() => useRevisitPassedProfiles(), { wrapper });
+    const { result } = await renderHook(() => useRevisitPassedProfiles(), { wrapper });
 
     result.current.mutate(20);
 
@@ -40,7 +40,7 @@ describe('useRevisitPassedProfiles', () => {
   it('invalidates the discovery profiles query on success', async () => {
     mockRevisit.mockResolvedValue({ success: true, reopenedCount: 5 });
     const invalidateQueries = jest.spyOn(queryClient, 'invalidateQueries');
-    const { result } = renderHook(() => useRevisitPassedProfiles(), { wrapper });
+    const { result } = await renderHook(() => useRevisitPassedProfiles(), { wrapper });
 
     result.current.mutate(10);
 
@@ -52,7 +52,7 @@ describe('useRevisitPassedProfiles', () => {
   it('does not invalidate the discovery profiles query on failure', async () => {
     mockRevisit.mockRejectedValue(new Error('Network Error'));
     const invalidateQueries = jest.spyOn(queryClient, 'invalidateQueries');
-    const { result } = renderHook(() => useRevisitPassedProfiles(), { wrapper });
+    const { result } = await renderHook(() => useRevisitPassedProfiles(), { wrapper });
 
     result.current.mutate(30);
 
@@ -71,7 +71,7 @@ describe('useRevisitPassedProfiles', () => {
         }),
     );
 
-    const { result } = renderHook(() => useRevisitPassedProfiles(), { wrapper });
+    const { result } = await renderHook(() => useRevisitPassedProfiles(), { wrapper });
 
     result.current.mutate(10);
 

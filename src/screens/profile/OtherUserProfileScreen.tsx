@@ -1,30 +1,38 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { memo, useState } from 'react';
+import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ReportType } from '@/api/safety/safetyApi';
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
+import { themedAlert, themedError, themedSuccess } from '@/components/common/ThemedAlert';
 import { AppTheme, colors, radius, spacing } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
+import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
 import { useUnmatch } from '@/hooks/matches/useUnmatch';
 import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
+import { useBlockUser } from '@/hooks/safety/useBlockUser';
+import { useReportUser } from '@/hooks/safety/useReportUser';
 import { useTheme } from '@/hooks/use-theme';
 import {
-  mapOtherUserProfileDtoToView,
-  OtherUserDetailItem,
-  OtherUserRelationStatus,
+    mapOtherUserProfileDtoToView,
+    OtherUserDetailGroup,
+    OtherUserRelationStatus,
 } from '@/utils/profileMappers';
 
 import AppTabBar from '@/components/layout/AppTabBar';
@@ -40,13 +48,9 @@ const STATUS_META: Record<NonNullable<OtherUserRelationStatus>, { label: string;
 
 const ACTION_META: Record<NonNullable<OtherUserRelationStatus>, { primary: { icon: IoniconName; color: string; label: string }; secondary?: { icon: IoniconName; color: string; label: string } }> = {
   matched:       { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: 'Unmatch' } },
-  like_sent:     { primary: { icon: 'close-circle', color: colors.danger, label: 'Cancel Like' }, secondary: { icon: 'chatbubble-outline', color: colors.primary, label: 'Message' } },
+  like_sent:     { primary: { icon: 'close-circle', color: colors.danger, label: 'Pass' } },
   like_received: { primary: { icon: 'close-circle', color: colors.danger, label: 'Decline' }, secondary: { icon: 'heart', color: colors.heartPink, label: 'Like Back' } },
 };
-
-const { width: W } = Dimensions.get('window');
-const COL_GAP = 10;
-const CARD_W = (W - spacing.md * 2 - COL_GAP) / 2;
 
 const SHEET_SHADOW = {
   shadowColor: '#000',
@@ -55,6 +59,20 @@ const SHEET_SHADOW = {
   shadowOffset: { width: 0, height: -4 },
   elevation: 7,
 } as const;
+
+const REPORT_OPTIONS: { type: ReportType; label: string }[] = [
+  { type: 'FAKE_PROFILE',              label: 'Fake Profile' },
+  { type: 'HARASSMENT',                label: 'Harassment' },
+  { type: 'HATE_SPEECH',               label: 'Hate Speech' },
+  { type: 'INAPPROPRIATE_CONTENT',     label: 'Inappropriate Content' },
+  { type: 'SCAM',                      label: 'Scam' },
+  { type: 'UNDERAGE',                  label: 'Underage' },
+  { type: 'VIOLENCE_OR_THREATS',       label: 'Violence or Threats' },
+  { type: 'PRIVACY_VIOLATION',         label: 'Privacy Violation' },
+  { type: 'OFF_PLATFORM_SOLICITATION', label: 'Solicitation' },
+  { type: 'SPAM',                      label: 'Spam' },
+  { type: 'OTHER',                     label: 'Other' },
+];
 
 export default function OtherUserProfileScreen() {
   const router = useRouter();
@@ -75,18 +93,93 @@ export default function OtherUserProfileScreen() {
   const activityStatus = userId ? getStatus(userId, dto?.activity_status) : undefined;
 
   const { mutate: unmatch, isPending: isUnmatching } = useUnmatch();
+  const { mutate: blockUser, isPending: isBlocking } = useBlockUser();
+  const { mutate: reportUser, isPending: isReporting } = useReportUser();
+  const { mutateAsync: swipeAction, isPending: isSwiping } = useSwipeAction();
+  const qc = useQueryClient();
 
   const [menuVisible, setMenuVisible] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
+  const [selectedReportType, setSelectedReportType] = useState<ReportType | null>(null);
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportDropdownOpen, setReportDropdownOpen] = useState(false);
+
+  const invalidateLikesAndDiscovery = () => {
+    qc.invalidateQueries({ queryKey: ['discovery', 'likes'] });
+    qc.invalidateQueries({ queryKey: ['discovery', 'profiles'] });
+    qc.invalidateQueries({ queryKey: ['discovery', 'matches'] });
+    if (userId) {
+      qc.invalidateQueries({ queryKey: ['profile', 'user', userId] });
+    }
+  };
+
+  const handlePass = () => {
+    if (!userId) return;
+    const label = profile?.status === 'like_received' ? 'Decline' : 'Pass';
+    themedAlert({
+      title: `${label}?`,
+      message: profile?.status === 'like_received'
+        ? `Reject ${profile?.name ?? 'this user'}'s like?`
+        : `Pass on ${profile?.name ?? 'this user'}?`,
+      icon: 'close-circle-outline',
+      iconColor: colors.danger,
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: label,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await swipeAction({ type: 'PASS', targetUserId: userId });
+              invalidateLikesAndDiscovery();
+              router.back();
+            } catch (err: any) {
+              themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
+            }
+          },
+        },
+      ],
+    });
+  };
+
+  const handleLikeBack = async () => {
+    if (!userId) return;
+    try {
+      const result = await swipeAction({ type: 'LIKE', targetUserId: userId });
+      invalidateLikesAndDiscovery();
+      if (result.isMatch && result.match) {
+        themedAlert({
+          title: "It's a Match!",
+          message: `You and ${profile?.name ?? 'this user'} are now matched.`,
+          icon: 'heart',
+          iconColor: colors.secondary,
+          buttons: [{ text: 'OK', onPress: () => router.back() }],
+        });
+      } else {
+        themedAlert({
+          title: 'Like sent',
+          message: 'Your like has been sent.',
+          icon: 'heart-outline',
+          iconColor: colors.primary,
+          buttons: [{ text: 'OK', onPress: () => router.back() }],
+        });
+      }
+    } catch (err: any) {
+      themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
+    }
+  };
 
   const handleUnmatch = () => {
     if (!resolvedMatchId) {
-      Alert.alert('Cannot unmatch', 'Match information is missing. Try opening this profile from the matches list or chat.');
+      themedError('Cannot unmatch', 'Match information is missing. Try opening this profile from the matches list or chat.');
       return;
     }
-    Alert.alert(
-      'Unmatch?',
-      'This conversation will be removed and you will no longer see each other.',
-      [
+    themedAlert({
+      title: 'Unmatch?',
+      message: 'This conversation will be removed and you will no longer see each other.',
+      icon: 'heart-dislike-outline',
+      iconColor: colors.danger,
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Unmatch',
@@ -104,13 +197,92 @@ export default function OtherUserProfileScreen() {
                 } else if (status === 404) {
                   message = 'Match not found.';
                 }
-                Alert.alert('Unmatch failed', message);
+                themedError('Unmatch failed', message);
               },
             });
           },
         },
       ],
-      { cancelable: true },
+    });
+  };
+
+  const handleBlock = () => {
+    setMenuVisible(false);
+    themedAlert({
+      title: 'Block user?',
+      message: `${profile?.name ?? 'This user'} will no longer appear in your discovery and any active match will be ended.`,
+      icon: 'ban-outline',
+      iconColor: colors.danger,
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: () => {
+            if (!userId) return;
+            blockUser(
+              { userId },
+              {
+                onSuccess: () => {
+                  themedAlert({
+                    title: 'Blocked',
+                    message: 'User has been blocked.',
+                    icon: 'ban',
+                    iconColor: colors.danger,
+                    buttons: [{ text: 'OK', onPress: () => router.back() }],
+                  });
+                },
+                onError: (error: any) => {
+                  const msg = error?.response?.data?.message;
+                  themedError(
+                    'Could not block',
+                    msg === 'CANNOT_BLOCK_SELF'
+                      ? 'You cannot block yourself.'
+                      : 'Something went wrong. Please try again.',
+                  );
+                },
+              },
+            );
+          },
+        },
+      ],
+    });
+  };
+
+  const handleOpenReport = () => {
+    setMenuVisible(false);
+    setSelectedReportType(null);
+    setReportDescription('');
+    setReportDropdownOpen(false);
+    setReportVisible(true);
+  };
+
+  const handleSubmitReport = () => {
+    if (!userId || !selectedReportType) return;
+    const body: { report_type: ReportType; description?: string } = {
+      report_type: selectedReportType,
+    };
+    if (reportDescription.trim().length > 0) {
+      body.description = reportDescription.trim().slice(0, 2000);
+    }
+    reportUser(
+      { userId, body },
+      {
+        onSuccess: () => {
+          setReportVisible(false);
+          setReportDescription('');
+          themedSuccess('Report submitted', 'Thank you. Our team will review this report.');
+        },
+        onError: (error: any) => {
+          const msg = error?.response?.data?.message;
+          themedError(
+            'Could not submit report',
+            msg === 'CANNOT_REPORT_SELF'
+              ? 'You cannot report yourself.'
+              : 'Something went wrong. Please try again.',
+          );
+        },
+      },
     );
   };
 
@@ -146,11 +318,6 @@ export default function OtherUserProfileScreen() {
         </TouchableOpacity>
       </View>
     );
-  }
-
-  const detailPairs: [OtherUserDetailItem, OtherUserDetailItem | null][] = [];
-  for (let i = 0; i < profile.details.length; i += 2) {
-    detailPairs.push([profile.details[i], profile.details[i + 1] ?? null]);
   }
 
   const statusMeta = profile.status ? STATUS_META[profile.status] : null;
@@ -244,21 +411,16 @@ export default function OtherUserProfileScreen() {
             </View>
           )}
 
-          {/* Details grid */}
-          {detailPairs.length > 0 && (
-            <View style={styles.grid}>
-              {detailPairs.map(([left, right], i) => (
-                <View key={i} style={styles.gridRow}>
-                  <DetailCard item={left} th={th} />
-                  {right ? (
-                    <DetailCard item={right} th={th} />
-                  ) : (
-                    <View style={{ width: CARD_W }} />
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
+          {/* Grouped detail sections */}
+          {profile.detailGroups.map((group) => (
+            <DetailGroupSection
+              key={group.title}
+              group={group}
+              interests={profile.interests}
+              th={th}
+              isDark={isDark}
+            />
+          ))}
         </View>
       </ScrollView>
 
@@ -269,42 +431,56 @@ export default function OtherUserProfileScreen() {
             <TouchableOpacity
               style={[
                 styles.actionTextButton,
-                { backgroundColor: colors.danger, opacity: isUnmatching ? 0.6 : 1 },
+                { opacity: isUnmatching ? 0.6 : 1 },
               ]}
               onPress={handleUnmatch}
               disabled={isUnmatching}
-              activeOpacity={0.75}
+              activeOpacity={0.82}
               accessibilityRole="button"
               accessibilityLabel="Unmatch"
             >
               {isUnmatching ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text style={styles.actionTextButtonLabel}>Unmatch</Text>
+                <>
+                  <Ionicons name="heart-dislike" size={15} color="#FFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.actionTextButtonLabel}>Unmatch</Text>
+                </>
               )}
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.actionIconButton, { backgroundColor: th.surface, borderColor: th.border }]}
-              onPress={() => console.log(actionMeta.primary.label, profile.name)}
-              activeOpacity={0.75}
+              style={[styles.actionIconButton, { backgroundColor: colors.danger, opacity: isSwiping ? 0.6 : 1 }]}
+              onPress={handlePass}
+              disabled={isSwiping}
+              activeOpacity={0.82}
               accessibilityRole="button"
               accessibilityLabel={actionMeta.primary.label}
             >
-              <Ionicons name={actionMeta.primary.icon} size={28} color={actionMeta.primary.color} />
+              {isSwiping ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Ionicons name={actionMeta.primary.icon} size={22} color="#FFF" />
+              )}
             </TouchableOpacity>
           )}
           {actionMeta.secondary && (() => {
             const secondary = actionMeta.secondary;
+            const isPrimary = secondary.label === 'Like Back';
             return (
               <TouchableOpacity
-                style={[styles.actionIconButton, { backgroundColor: th.surface, borderColor: th.border }]}
-                onPress={() => console.log(secondary.label, profile.name)}
-                activeOpacity={0.75}
+                style={[styles.actionIconButton, { backgroundColor: isPrimary ? colors.primary : th.surface, opacity: isSwiping ? 0.6 : 1 }]}
+                onPress={handleLikeBack}
+                disabled={isSwiping}
+                activeOpacity={0.82}
                 accessibilityRole="button"
                 accessibilityLabel={secondary.label}
               >
-                <Ionicons name={secondary.icon} size={28} color={secondary.color} />
+                {isSwiping ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Ionicons name={secondary.icon} size={22} color="#FFF" />
+                )}
               </TouchableOpacity>
             );
           })()}
@@ -330,7 +506,7 @@ export default function OtherUserProfileScreen() {
           >
             <Pressable
               style={styles.dropdownItem}
-              onPress={() => { setMenuVisible(false); console.log('Report user', profile.name); }}
+              onPress={handleOpenReport}
               accessibilityRole="button"
               accessibilityLabel="Report user"
             >
@@ -339,47 +515,242 @@ export default function OtherUserProfileScreen() {
             </Pressable>
             <View style={[styles.dropdownDivider, { backgroundColor: th.border }]} />
             <Pressable
-              style={styles.dropdownItem}
-              onPress={() => { setMenuVisible(false); console.log('Block user', profile.name); }}
+              style={[styles.dropdownItem, isBlocking && { opacity: 0.5 }]}
+              onPress={handleBlock}
+              disabled={isBlocking}
               accessibilityRole="button"
               accessibilityLabel="Block user"
             >
-              <Ionicons name="ban-outline" size={18} color={th.text} />
+              {isBlocking ? (
+                <ActivityIndicator size="small" color={th.text} />
+              ) : (
+                <Ionicons name="ban-outline" size={18} color={th.text} />
+              )}
               <Text style={[styles.dropdownItemText, { color: th.text }]}>Block</Text>
             </Pressable>
           </View>
         </Pressable>
       </Modal>
+
+      {/* Report modal */}
+      <Modal
+        transparent
+        visible={reportVisible}
+        animationType="slide"
+        onRequestClose={() => setReportVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.reportKAV}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <Pressable
+            style={styles.reportBackdrop}
+            onPress={() => setReportVisible(false)}
+          />
+          <Pressable
+            style={[styles.reportSheet, { backgroundColor: th.surface }]}
+            onPress={() => {}}
+          >
+            {/* Handle bar */}
+            <View style={[styles.reportHandle, { backgroundColor: th.border }]} />
+
+            <Text style={[styles.reportTitle, { color: th.text }]}>Report Profile</Text>
+            <Text style={[styles.reportSubtitle, { color: th.textMuted }]}>
+              Select the reason for reporting {profile.name}
+            </Text>
+
+            {/* Dropdown trigger */}
+            <Pressable
+              style={[
+                styles.reportDropdownBtn,
+                {
+                  borderColor: reportDropdownOpen ? colors.primary : th.border,
+                  backgroundColor: isDark ? '#1A1525' : th.backgroundSelected,
+                },
+              ]}
+              onPress={() => {
+                Keyboard.dismiss();
+                setReportDropdownOpen((v) => !v);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Select report reason"
+            >
+              <Text
+                style={[
+                  styles.reportDropdownValue,
+                  { color: selectedReportType ? th.text : th.textMuted },
+                ]}
+                numberOfLines={1}
+              >
+                {selectedReportType
+                  ? REPORT_OPTIONS.find((o) => o.type === selectedReportType)?.label
+                  : 'Select a reason…'}
+              </Text>
+              <Ionicons
+                name={reportDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={th.textMuted}
+              />
+            </Pressable>
+
+            {/* Dropdown options list */}
+            {reportDropdownOpen && (
+              <ScrollView
+                style={[styles.reportOptionsList, { borderColor: th.border, backgroundColor: isDark ? '#1A1525' : th.surface }]}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+              >
+                {REPORT_OPTIONS.map(({ type, label }, idx) => {
+                  const selected = selectedReportType === type;
+                  return (
+                    <Pressable
+                      key={type}
+                      style={[
+                        styles.reportOption,
+                        idx < REPORT_OPTIONS.length - 1 && {
+                          borderBottomWidth: StyleSheet.hairlineWidth,
+                          borderBottomColor: th.border,
+                        },
+                        selected && { backgroundColor: isDark ? '#2A1A44' : '#F3EEFF' },
+                      ]}
+                      onPress={() => {
+                        setSelectedReportType(type);
+                        setReportDropdownOpen(false);
+                      }}
+                      accessibilityRole="menuitem"
+                    >
+                      <Text
+                        style={[
+                          styles.reportOptionLabel,
+                          { color: selected ? colors.primary : th.text },
+                          selected && { fontWeight: '700' },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                      {selected && (
+                        <Ionicons name="checkmark" size={16} color={colors.primary} />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            <TextInput
+              style={[
+                styles.reportInput,
+                {
+                  borderColor: th.border,
+                  color: th.text,
+                  backgroundColor: isDark ? '#1A1525' : th.backgroundSelected,
+                },
+              ]}
+              placeholder="Optional: add details (max 2000 characters)"
+              placeholderTextColor={th.textMuted}
+              multiline
+              numberOfLines={4}
+              maxLength={2000}
+              textAlignVertical="top"
+              value={reportDescription}
+              onChangeText={setReportDescription}
+              editable={!isReporting}
+              accessibilityLabel="Report description"
+            />
+            <Text style={[styles.reportCharCount, { color: th.textMuted }]}>
+              {reportDescription.length}/2000
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.reportSubmitBtn,
+                {
+                  backgroundColor: selectedReportType ? colors.danger : th.border,
+                  opacity: isReporting ? 0.6 : 1,
+                },
+              ]}
+              onPress={handleSubmitReport}
+              disabled={!selectedReportType || isReporting}
+              activeOpacity={0.82}
+              accessibilityRole="button"
+              accessibilityLabel="Submit report"
+            >
+              {isReporting ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.reportSubmitLabel}>Submit Report</Text>
+              )}
+            </TouchableOpacity>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
 
-interface DetailCardProps {
-  item: OtherUserDetailItem;
+// ---------------------------------------------------------------------------
+// Grouped detail section (full-width rows with dividers)
+// ---------------------------------------------------------------------------
+function DetailGroupSection({
+  group, interests, th, isDark,
+}: {
+  group: OtherUserDetailGroup;
+  interests: string[];
   th: AppTheme;
-}
+  isDark: boolean;
+}) {
+  const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';
+  const regularItems = group.items.filter((i) => i.id !== 'interests');
+  const hasInterests = group.items.some((i) => i.id === 'interests') && interests.length > 0;
 
-const DetailCard = memo(({ item, th }: DetailCardProps) => {
-  const iconName = item.icon as React.ComponentProps<typeof Ionicons>['name'];
+  if (regularItems.length === 0 && !hasInterests) return null;
+
   return (
-    <View
-      style={[
-        styles.detailCard,
-        { width: CARD_W, backgroundColor: th.surface, borderColor: th.border },
-      ]}
-    >
-      <View style={[styles.detailIconWrap, { backgroundColor: th.backgroundElement }]}>
-        <Ionicons name={iconName} size={17} color={colors.primary} />
-      </View>
-      <View style={styles.detailBody}>
-        <Text style={[styles.detailLabel, { color: th.textMuted }]} numberOfLines={1}>
-          {item.label}
-        </Text>
-        <Text style={[styles.detailValue, { color: th.text }]}>{item.value}</Text>
+    <View style={styles.groupSection}>
+      <Text style={[styles.groupLabel, { color: colors.primary }]}>{group.title}</Text>
+      <View style={[styles.listCard, { backgroundColor: th.surface, borderColor: th.border }]}>
+        {regularItems.map((item, idx) => {
+          const iconName = item.icon as React.ComponentProps<typeof Ionicons>['name'];
+          return (
+            <View key={item.id}>
+              {idx > 0 && <View style={[styles.rowDivider, { backgroundColor: th.border }]} />}
+              <View style={styles.listRow}>
+                <View style={[styles.rowIconWrap, { backgroundColor: iconBg }]}>
+                  <Ionicons name={iconName} size={16} color={colors.primary} />
+                </View>
+                <View style={styles.rowBody}>
+                  <Text style={[styles.rowLabel, { color: th.textMuted }]}>{item.label}</Text>
+                  <Text style={[styles.rowValue, { color: th.text }]}>{item.value}</Text>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+        {hasInterests && (
+          <View>
+            {regularItems.length > 0 && <View style={[styles.rowDivider, { backgroundColor: th.border }]} />}
+            <View style={styles.listRow}>
+              <View style={[styles.rowIconWrap, { backgroundColor: iconBg }]}>
+                <Ionicons name="color-palette-outline" size={16} color={colors.primary} />
+              </View>
+              <View style={[styles.rowBody, { gap: 6 }]}>
+                <Text style={[styles.rowLabel, { color: th.textMuted }]}>Interests</Text>
+                <View style={styles.chipWrap}>
+                  {interests.map((interest) => (
+                    <View key={interest} style={[styles.chip, { backgroundColor: iconBg, borderColor: th.border }]}>
+                      <Text style={[styles.chipText, { color: colors.primary }]}>{interest}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
-});
+}
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
@@ -483,19 +854,33 @@ const styles = StyleSheet.create({
   },
   addressValue: { fontSize: 15, fontWeight: '600' },
 
-  grid: { gap: 10 },
-  gridRow: { flexDirection: 'row', gap: COL_GAP },
-
-  detailCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  groupSection: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  groupLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  listCard: {
     borderRadius: radius.md,
     borderWidth: 1,
-    padding: 12,
-    gap: 10,
-    minHeight: 62,
+    overflow: 'hidden',
   },
-  detailIconWrap: {
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 12,
+  },
+  rowDivider: {
+    height: 1,
+    marginHorizontal: 14,
+  },
+  rowIconWrap: {
     width: 32,
     height: 32,
     borderRadius: 8,
@@ -503,16 +888,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  detailBody: { flex: 1 },
-  detailLabel: {
+  rowBody: { flex: 1 },
+  rowLabel: {
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.2,
     marginBottom: 3,
   },
-  detailValue: {
+  rowValue: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   statusChip: {
@@ -536,40 +936,42 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 16,
+    gap: 12,
     paddingHorizontal: spacing.md,
     marginBottom: 8,
   },
   actionIconButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 1.5,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
+    shadowOpacity: 0.32,
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 12,
+    elevation: 14,
   },
   actionTextButton: {
-    minWidth: 140,
-    height: 48,
-    borderRadius: 24,
-    paddingHorizontal: 28,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
+    minWidth: 120,
+    height: 40,
+    borderRadius: 20,
+    paddingHorizontal: 21,
+    backgroundColor: colors.danger,
+    shadowColor: colors.danger,
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 12,
+    elevation: 14,
   },
   actionTextButtonLabel: {
-    fontSize: 17,
-    fontWeight: '900',
+    fontSize: 12,
+    fontWeight: '800',
     color: '#FFF',
+    letterSpacing: 0.2,
   },
 
   modalOverlay: {
@@ -579,14 +981,14 @@ const styles = StyleSheet.create({
   dropdownCard: {
     position: 'absolute',
     right: 16,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    minWidth: 164,
+    minWidth: 180,
     shadowColor: '#000',
-    shadowOpacity: 0.14,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 14,
     overflow: 'hidden',
   },
   dropdownItem: {
@@ -602,5 +1004,109 @@ const styles = StyleSheet.create({
   },
   dropdownDivider: {
     height: StyleSheet.hairlineWidth,
+  },
+
+  reportKAV: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  reportBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.40)',
+  },
+  reportSheet: {
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.md,
+    paddingBottom: 36,
+    paddingTop: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 20,
+  },
+  reportHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  reportTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  reportSubtitle: {
+    fontSize: 13,
+    fontWeight: '400',
+    marginBottom: 16,
+  },
+  reportDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    marginBottom: 6,
+  },
+  reportDropdownValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 8,
+  },
+  reportOptionsList: {
+    maxHeight: 220,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  reportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  reportOptionLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  reportInput: {
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
+    fontSize: 14,
+    lineHeight: 20,
+    minHeight: 88,
+    maxHeight: 130,
+  },
+  reportCharCount: {
+    fontSize: 11,
+    fontWeight: '500',
+    alignSelf: 'flex-end',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  reportSubmitBtn: {
+    height: 52,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  reportSubmitLabel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFF',
   },
 });

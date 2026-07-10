@@ -16,10 +16,10 @@ const GALLERY_H = Math.round(SCREEN_H * 0.46);
 
 const BTN_SHADOW = {
   shadowColor: '#000',
-  shadowOpacity: 0.18,
-  shadowRadius: 8,
+  shadowOpacity: 0.35,
+  shadowRadius: 10,
   shadowOffset: { width: 0, height: 3 },
-  elevation: 6,
+  elevation: 8,
 } as const;
 
 interface Props {
@@ -70,9 +70,9 @@ function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
         onPress={onBack}
         accessibilityLabel="Go back"
         accessibilityRole="button"
-        android_ripple={{ color: 'rgba(0,0,0,0.1)', borderless: true }}
+        android_ripple={{ color: 'rgba(255,255,255,0.15)', borderless: true }}
       >
-        <Ionicons name="arrow-back" size={20} color="#111827" />
+        <Ionicons name="arrow-back" size={22} color="#FFF" />
       </Pressable>
 
       {/* More options button */}
@@ -81,9 +81,9 @@ function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
         onPress={onMore}
         accessibilityLabel="More profile options"
         accessibilityRole="button"
-        android_ripple={{ color: 'rgba(0,0,0,0.1)', borderless: true }}
+        android_ripple={{ color: 'rgba(255,255,255,0.15)', borderless: true }}
       >
-        <Ionicons name="ellipsis-horizontal" size={20} color="#8A2CFF" />
+        <Ionicons name="ellipsis-horizontal" size={22} color="#FFF" />
       </Pressable>
 
       {/* Pagination dots */}
@@ -102,10 +102,10 @@ function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
 const styles = StyleSheet.create({
   circleBtn: {
     position: 'absolute',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#FFFFFF',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.52)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,

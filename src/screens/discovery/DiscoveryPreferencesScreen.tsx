@@ -1,126 +1,117 @@
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
-    Alert,
+    Pressable,
     ScrollView,
     StyleSheet,
     Switch,
     Text,
-    TextInput,
-    TouchableOpacity,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CountryMultiSelectPicker } from '@/components/catalog/CountryMultiSelectPicker';
+import { EthnicityMultiSelectPicker } from '@/components/catalog/EthnicityMultiSelectPicker';
+import { LanguageMultiSelectPicker } from '@/components/catalog/LanguageMultiSelectPicker';
+import { themedAlert } from '@/components/common/ThemedAlert';
 import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import {
     useProfilePreferences,
     useUpdateProfilePreferences,
 } from '@/hooks/profile/useProfilePreferences';
 import { useTheme } from '@/hooks/use-theme';
+import {
+    type DiscoveryPrefDraft,
+    type HasChildrenPref,
+    type LocationMode,
+    type WantsChildrenPref,
+    RELIGION_OPTIONS,
+} from '@/screens/profile/mockEditProfile';
 import { useMeStore } from '@/stores/me-store';
+import type { EthnicityOption, LanguageOption } from '@/types/catalog';
+import {
+    mapApiPrefsToDiscoveryPrefDraft,
+    mapDiscoveryPrefDraftToUpdateRequest,
+} from '@/utils/profileMappers';
 
 // ---------------------------------------------------------------------------
-// Types matching discovery_preferences schema
+// Constants
 // ---------------------------------------------------------------------------
-type InterestedInGender = 'MALE' | 'FEMALE';
-type ResidencyType = 'ETHIOPIA' | 'ERITREA' | 'DIASPORA';
+const LOCATION_MODES: { key: LocationMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { key: 'nearby',             label: 'Near Me',   icon: 'locate-outline' },
+  { key: 'diaspora',           label: 'Diaspora',  icon: 'earth-outline' },
+  { key: 'specific_countries', label: 'Specific',  icon: 'flag-outline' },
+  { key: 'anywhere',           label: 'Anywhere',  icon: 'globe-outline' },
+];
 
-interface Preferences {
-  interested_in_gender: InterestedInGender;
-  min_age: number;
-  max_age: number;
-  max_distance_km: number;
-  preferred_residency_types: ResidencyType[];
-  open_to_long_distance: boolean;
-  open_to_relocation: boolean;
-  show_verified_only: boolean;
-}
+const HAS_CHILDREN_OPTS: { key: HasChildrenPref; label: string }[] = [
+  { key: 'any', label: 'Any' },
+  { key: 'yes', label: 'Has children' },
+  { key: 'no',  label: 'No children' },
+];
 
-const DEFAULT_PREFS: Preferences = {
-  interested_in_gender: 'FEMALE',
-  min_age: 18,
-  max_age: 45,
-  max_distance_km: 500,
-  preferred_residency_types: [],
-  open_to_long_distance: false,
-  open_to_relocation: false,
-  show_verified_only: false,
+const WANTS_CHILDREN_OPTS: { key: WantsChildrenPref; label: string }[] = [
+  { key: 'any',                label: 'Any' },
+  { key: 'yes',                label: 'Wants' },
+  { key: 'no',                 label: "Doesn't want" },
+  { key: 'not_sure',           label: 'Not sure' },
+  { key: 'open_to_discussion', label: 'Open to discuss' },
+];
+
+const DEFAULT_PREFS: DiscoveryPrefDraft = {
+  discoveryMode: 'PUBLIC',
+  interestedIn: 'FEMALE',
+  locationMode: 'anywhere',
+  specificCountryCodes: [],
+  expandSearchWhenLimited: false,
+  minAge: 18,
+  maxAge: 45,
+  maximumDistanceKm: 500,
+  verifiedProfilesOnly: false,
+  hasChildrenPreference: 'any',
+  wantsChildrenPreference: 'any',
+  religionPreferences: [],
+  languagePreferences: [],
+  ethnicityPreferences: [],
+  preferencesVersion: 0,
 };
 
 // ---------------------------------------------------------------------------
-// Sub-components
+// Sub-components (use useTheme internally)
 // ---------------------------------------------------------------------------
-function SectionCard({ children, surface, border }: { children: React.ReactNode; surface: string; border: string }) {
-  return <View style={[styles.card, { backgroundColor: surface, borderWidth: 1, borderColor: border }]}>{children}</View>;
+function Card({ children }: { children: React.ReactNode }) {
+  const { colors: th } = useTheme();
+  return <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>{children}</View>;
 }
 
-function SectionTitle({ label }: { label: string }) {
+function STitle({ label }: { label: string }) {
   return <Text style={styles.sectionTitle}>{label}</Text>;
 }
 
-function useT() { return useTheme(); }
-
-function CheckChip({
-  label,
-  checked,
-  onToggle,
-  surface = '#F7EEFF',
-  border = '#E9DDF8',
-  textColor = '#6B7280',
+function TRow({
+  label, desc, iconName, iconBg, value, onChange,
 }: {
-  label: string;
-  checked: boolean;
-  onToggle: () => void;
-  surface?: string;
-  border?: string;
-  textColor?: string;
-}) {
-  return (
-    <TouchableOpacity
-      style={[styles.chip, { backgroundColor: surface, borderColor: border }, checked && styles.chipActive]}
-      onPress={onToggle}
-      activeOpacity={0.7}
-    >
-      {checked && <Text style={styles.chipCheck}>&#10003; </Text>}
-      <Text style={[styles.chipLabel, { color: textColor }, checked && styles.chipLabelActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function ToggleRow({
-  label,
-  desc,
-  iconName,
-  iconBg,
-  value,
-  onChange,
-}: {
-  label: string;
-  desc: string;
-  iconName: React.ComponentProps<typeof Ionicons>['name'];
-  iconBg: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
+  label: string; desc?: string; iconName: React.ComponentProps<typeof Ionicons>['name'];
+  iconBg: string; value: boolean; onChange: (v: boolean) => void;
 }) {
   const { colors: th } = useTheme();
   return (
     <View style={styles.toggleRow}>
       <View style={[styles.toggleIconWrap, { backgroundColor: iconBg }]}>
-        <Ionicons name={iconName} size={18} color={colors.surface} />
+        <Ionicons name={iconName} size={18} color="#fff" />
       </View>
       <View style={styles.toggleText}>
-        <Text style={[styles.toggleLabel, { color: th.text }]}>{label}</Text>
-        <Text style={[styles.toggleDesc, { color: th.textSecondary }]}>{desc}</Text>
+        <Text style={styles.toggleLabel}>{label}</Text>
+        {desc ? <Text style={[styles.toggleDesc, { color: th.textSecondary }]}>{desc}</Text> : null}
       </View>
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: colors.border, true: colors.primaryLight }}
+        trackColor={{ false: th.border, true: colors.primaryLight }}
         thumbColor={value ? colors.primary : colors.textMuted}
       />
     </View>
@@ -130,19 +121,15 @@ function ToggleRow({
 // ---------------------------------------------------------------------------
 // Main screen
 // ---------------------------------------------------------------------------
-function getOppositeGender(userGender: string): InterestedInGender {
-  return userGender === 'FEMALE' ? 'MALE' : 'FEMALE';
-}
-
 export default function DiscoveryPreferencesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { colors: th } = useT();
+  const { colors: th } = useTheme();
   const meStore = useMeStore();
 
   const userGender = (meStore.data?.profile?.gender as string | undefined) ?? null;
 
-  const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFS);
+  const [prefs, setPrefs] = useState<DiscoveryPrefDraft>(DEFAULT_PREFS);
   const [hydrated, setHydrated] = useState(false);
 
   const { data: apiPrefs, isLoading: isLoadingPrefs } = useProfilePreferences();
@@ -151,79 +138,52 @@ export default function DiscoveryPreferencesScreen() {
   // Hydrate local state from API once loaded
   useEffect(() => {
     if (apiPrefs && !hydrated) {
-      setPrefs({
-        interested_in_gender: (apiPrefs.interested_in_gender as InterestedInGender) ?? 'FEMALE',
-        min_age: apiPrefs.min_age,
-        max_age: apiPrefs.max_age,
-        max_distance_km: apiPrefs.max_distance_km,
-        preferred_residency_types: (apiPrefs.preferred_residency_types as ResidencyType[]) ?? [],
-        open_to_long_distance: apiPrefs.open_to_long_distance,
-        open_to_relocation: apiPrefs.open_to_relocation,
-        show_verified_only: apiPrefs.show_verified_only,
-      });
+      setPrefs(mapApiPrefsToDiscoveryPrefDraft(apiPrefs, 'PUBLIC', userGender ?? undefined));
       setHydrated(true);
     }
-  }, [apiPrefs, hydrated]);
+  }, [apiPrefs, hydrated, userGender]);
 
-  // Auto-lock opposite gender based on user's profile
-  useEffect(() => {
-    if (userGender) {
-      setPrefs((p) => ({ ...p, interested_in_gender: getOppositeGender(userGender) }));
-    }
-  }, [userGender]);
-
-  const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
+  const update = useCallback(<K extends keyof DiscoveryPrefDraft>(key: K, value: DiscoveryPrefDraft[K]) => {
     setPrefs((p) => ({ ...p, [key]: value }));
+  }, []);
 
-  const toggleResidency = (type: ResidencyType) => {
+  const handleToggleReligion = useCallback((val: string) => {
     setPrefs((p) => ({
       ...p,
-      preferred_residency_types: p.preferred_residency_types.includes(type)
-        ? p.preferred_residency_types.filter((r) => r !== type)
-        : [...p.preferred_residency_types, type],
+      religionPreferences: p.religionPreferences.includes(val)
+        ? p.religionPreferences.filter((r) => r !== val)
+        : [...p.religionPreferences, val],
     }));
-  };
+  }, []);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
+    const payload = mapDiscoveryPrefDraftToUpdateRequest(prefs);
     savePrefs(
-      {
-        interested_in_gender: prefs.interested_in_gender,
-        min_age: prefs.min_age,
-        max_age: prefs.max_age,
-        max_distance_km: Math.min(prefs.max_distance_km, 500),
-        preferred_residency_types: prefs.preferred_residency_types,
-        open_to_long_distance: prefs.open_to_long_distance,
-        open_to_relocation: prefs.open_to_relocation,
-        show_verified_only: prefs.show_verified_only,
-      },
+      payload,
       {
         onSuccess: () => {
-          Alert.alert('', t('discovery.preferences.saved'));
+          themedAlert({ message: t('discovery.preferences.saved'), icon: 'checkmark-circle', iconColor: colors.success });
           router.back();
         },
         onError: () => {
-          Alert.alert(
-            t('common.errorTitle', { defaultValue: 'Something went wrong' }),
-            t('common.errorRetryHint', { defaultValue: 'Please try again.' }),
-          );
+          themedAlert({
+            title: t('common.errorTitle', { defaultValue: 'Something went wrong' }),
+            message: t('common.errorRetryHint', { defaultValue: 'Please try again.' }),
+            icon: 'alert-circle',
+            iconColor: colors.danger,
+          });
         },
       },
     );
-  };
-
-  const residencyOptions: { key: ResidencyType; label: string }[] = [
-    { key: 'ETHIOPIA', label: t('discovery.preferences.residencyEthiopia') },
-    { key: 'ERITREA',  label: t('discovery.preferences.residencyEritrea') },
-    { key: 'DIASPORA', label: t('discovery.preferences.residencyDiaspora') },
-  ];
+  }, [prefs, savePrefs, t, router]);
 
   if (isLoadingPrefs) {
     return (
       <SafeAreaView style={[styles.screen, { backgroundColor: th.backgroundElement }]} edges={['top', 'bottom']}>
         <View style={[styles.header, { backgroundColor: th.surface, borderBottomColor: th.border }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <Pressable style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={20} color={colors.primary} />
-          </TouchableOpacity>
+          </Pressable>
           <Text style={[styles.headerTitle, { color: th.text }]}>{t('discovery.preferences.title')}</Text>
           <View style={styles.saveBtn} />
         </View>
@@ -238,16 +198,16 @@ export default function DiscoveryPreferencesScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: th.backgroundElement }]} edges={['top', 'bottom']}>
       {/* ── Header ── */}
       <View style={[styles.header, { backgroundColor: th.surface, borderBottomColor: th.border }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={20} color={colors.primary} />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={[styles.headerTitle, { color: th.text }]}>{t('discovery.preferences.title')}</Text>
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8} disabled={isSaving}>
+        <Pressable style={styles.saveBtn} onPress={handleSave} disabled={isSaving}>
           {isSaving
             ? <ActivityIndicator size="small" color={colors.surface} />
             : <Text style={styles.saveBtnText}>Save</Text>
           }
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -256,178 +216,227 @@ export default function DiscoveryPreferencesScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Interested In (locked) ── */}
-        <SectionCard surface={th.surface} border={th.border}>
-          <View style={styles.lockedGenderHeader}>
-            <Ionicons name="lock-closed" size={12} color={colors.primary} />
-            <Text style={[styles.lockedGenderLabel, { color: th.textMuted }]}>
-              {t('discovery.preferences.interestedIn')}
-            </Text>
+        {/* ── Location Mode ── */}
+        <Card>
+          <STitle label="Where to discover people" />
+          <View style={styles.chipRow}>
+            {LOCATION_MODES.map(({ key, label, icon }) => {
+              const isActive = prefs.locationMode === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => update('locationMode', key)}
+                  style={[styles.chip, { borderColor: isActive ? colors.primary : th.border, backgroundColor: isActive ? '#F0E6FF' : 'transparent' }]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Ionicons name={icon} size={13} color={isActive ? colors.primary : th.textSecondary} />
+                  <Text style={[styles.chipLabel, { color: isActive ? colors.primary : th.textSecondary }]}>{label}</Text>
+                </Pressable>
+              );
+            })}
           </View>
-          <View style={styles.lockedGenderValue}>
-            <Text style={styles.lockedGenderIcon}>
-              {prefs.interested_in_gender === 'FEMALE' ? '\u2640\uFE0F' : '\u2642\uFE0F'}
-            </Text>
-            <Text style={[styles.lockedGenderText, { color: th.text }]}>
-              {prefs.interested_in_gender === 'FEMALE'
-                ? t('discovery.preferences.women')
-                : t('discovery.preferences.men')}
-            </Text>
-          </View>
-          <Text style={[styles.lockedGenderHint, { color: th.textMuted }]}>
-            Based on your profile ({userGender === 'MALE' ? 'Man' : userGender === 'FEMALE' ? 'Woman' : 'unknown'}) · Qaliye connects men with women only
-          </Text>
-        </SectionCard>
+          {prefs.locationMode === 'specific_countries' && (
+            <View style={{ marginTop: 12 }}>
+              <CountryMultiSelectPicker
+                selected={prefs.specificCountryCodes}
+                onChange={(codes) => update('specificCountryCodes', codes)}
+                accentColor={colors.primary}
+                textColor={th.text}
+                mutedColor={th.textMuted}
+                borderColor={th.border}
+                surfaceColor={th.surface}
+              />
+            </View>
+          )}
+        </Card>
 
         {/* ── Age Range ── */}
-        <SectionCard surface={th.surface} border={th.border}>
-          <SectionTitle label={t('discovery.preferences.ageRange')} />
-          <View style={styles.rangeValueRow}>
-            <View style={[styles.rangeValueBox, { backgroundColor: th.backgroundSelected }]}>
-              <Text style={styles.rangeValueLabel}>Min</Text>
-              <TextInput
-                style={styles.rangeInput}
-                value={String(prefs.min_age)}
-                keyboardType="number-pad"
-                maxLength={3}
-                onChangeText={(text) => {
-                  const n = parseInt(text, 10);
-                  if (!isNaN(n) && n >= 18 && n <= prefs.max_age) set('min_age', n);
-                }}
-                selectTextOnFocus
-              />
-              <Text style={styles.rangeValueUnit}>yrs</Text>
-            </View>
-            <View style={styles.rangeDash}>
-              <View style={styles.rangeDashLine} />
-            </View>
-            <View style={[styles.rangeValueBox, { backgroundColor: th.backgroundSelected }]}>
-              <Text style={styles.rangeValueLabel}>Max</Text>
-              <TextInput
-                style={styles.rangeInput}
-                value={String(prefs.max_age)}
-                keyboardType="number-pad"
-                maxLength={3}
-                onChangeText={(text) => {
-                  const n = parseInt(text, 10);
-                  if (!isNaN(n) && n >= prefs.min_age && n <= 100) set('max_age', n);
-                }}
-                selectTextOnFocus
-              />
-              <Text style={styles.rangeValueUnit}>yrs</Text>
+        <Card>
+          <View style={styles.ageRangeHeader}>
+            <STitle label={t('discovery.preferences.ageRange')} />
+            <View style={styles.rangeDisplay}>
+              <Text style={[styles.rangeValue, { color: colors.primary }]}>{prefs.minAge}</Text>
+              <Text style={[styles.rangeSep, { color: th.textMuted }]}>–</Text>
+              <Text style={[styles.rangeValue, { color: colors.primary }]}>{prefs.maxAge}</Text>
+              <Text style={[styles.rangeUnit, { color: th.textSecondary }]}>yrs</Text>
             </View>
           </View>
-          <Text style={[styles.sliderLabel, { color: th.textSecondary }]}>Min age</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={18}
-            maximumValue={100}
-            step={1}
-            value={prefs.min_age}
-            onValueChange={(v: number) => set('min_age', Math.min(Math.round(v), prefs.max_age))}
-            minimumTrackTintColor={colors.primary}
-            maximumTrackTintColor={colors.border}
-            thumbTintColor={colors.primary}
-          />
-          <Text style={[styles.sliderLabel, { color: th.textSecondary }]}>Max age</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={18}
-            maximumValue={100}
-            step={1}
-            value={prefs.max_age}
-            onValueChange={(v: number) => set('max_age', Math.max(Math.round(v), prefs.min_age))}
-            minimumTrackTintColor={colors.primary}
-            maximumTrackTintColor={colors.border}
-            thumbTintColor={colors.primary}
-          />
-        </SectionCard>
+          <View style={styles.ageSlidersRow}>
+            <View style={styles.ageSliderCol}>
+              <Text style={[styles.sliderLabel, { color: th.textSecondary }]}>Min</Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={18}
+                maximumValue={prefs.maxAge - 1}
+                step={1}
+                value={prefs.minAge}
+                onValueChange={(v: number) => update('minAge', Math.round(v))}
+                minimumTrackTintColor={colors.primary}
+                maximumTrackTintColor={th.border}
+                thumbTintColor={colors.primary}
+              />
+            </View>
+            <View style={styles.ageSliderCol}>
+              <Text style={[styles.sliderLabel, { color: th.textSecondary }]}>Max</Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={prefs.minAge + 1}
+                maximumValue={100}
+                step={1}
+                value={prefs.maxAge}
+                onValueChange={(v: number) => update('maxAge', Math.round(v))}
+                minimumTrackTintColor={colors.primary}
+                maximumTrackTintColor={th.border}
+                thumbTintColor={colors.primary}
+              />
+            </View>
+          </View>
+        </Card>
 
         {/* ── Max Distance ── */}
-        <SectionCard surface={th.surface} border={th.border}>
-          <SectionTitle label={t('discovery.preferences.maxDistance')} />
-          <View style={[styles.distanceValueRow, { backgroundColor: th.backgroundSelected }]}>
-            <Ionicons name="navigate-circle-outline" size={20} color={colors.primary} />
-            <TextInput
-              style={styles.distanceInput}
-              value={String(prefs.max_distance_km)}
-              keyboardType="number-pad"
-              maxLength={3}
-              onChangeText={(text) => {
-                const n = parseInt(text, 10);
-                if (!isNaN(n) && n > 0 && n <= 500) set('max_distance_km', n);
-              }}
-              selectTextOnFocus
-            />
-            <Text style={styles.distanceUnit}>km</Text>
+        <Card>
+          <View style={styles.distanceHeader}>
+            <STitle label={t('discovery.preferences.maxDistance')} />
+            <View style={[styles.distanceValueRow, { backgroundColor: th.backgroundSelected }]}>
+              <Ionicons name="navigate-circle-outline" size={18} color={colors.primary} />
+              <Text style={[styles.distanceInput, { color: colors.secondary }]}>{prefs.maximumDistanceKm} km</Text>
+            </View>
           </View>
           <Slider
             style={styles.slider}
             minimumValue={1}
             maximumValue={500}
             step={5}
-            value={Math.min(prefs.max_distance_km, 500)}
-            onValueChange={(v: number) => set('max_distance_km', Math.round(v))}
+            value={Math.min(prefs.maximumDistanceKm, 500)}
+            onValueChange={(v: number) => update('maximumDistanceKm', Math.round(v))}
             minimumTrackTintColor={colors.secondary}
-            maximumTrackTintColor={colors.border}
+            maximumTrackTintColor={th.border}
             thumbTintColor={colors.secondary}
           />
           <View style={styles.sliderEndLabels}>
             <Text style={styles.sliderEndText}>1 km</Text>
             <Text style={styles.sliderEndText}>500 km</Text>
           </View>
-        </SectionCard>
-
-        {/* ── Preferred Residency ── */}
-        <SectionCard surface={th.surface} border={th.border}>
-          <SectionTitle label={t('discovery.preferences.preferredResidency')} />
-          <View style={styles.chipRow}>
-            {residencyOptions.map((opt) => (
-              <CheckChip
-                key={opt.key}
-                label={opt.label}
-                checked={prefs.preferred_residency_types.includes(opt.key)}
-                onToggle={() => toggleResidency(opt.key)}
-                surface={th.backgroundElement}
-                border={th.border}
-                textColor={th.textSecondary}
-              />
-            ))}
-          </View>
-        </SectionCard>
+        </Card>
 
         {/* ── Toggles ── */}
-        <SectionCard surface={th.surface} border={th.border}>
-          <ToggleRow
-            label={t('discovery.preferences.openToLongDistance')}
-            desc={t('discovery.preferences.longDistanceDesc')}
-            iconName="globe-outline"
-            iconBg="#8A2CFF"
-            value={prefs.open_to_long_distance}
-            onChange={(v) => set('open_to_long_distance', v)}
+        <Card>
+          <TRow
+            label="Expand search when limited"
+            desc="Broaden discovery if few matches found"
+            iconName="search-outline"
+            iconBg="#F59E0B"
+            value={prefs.expandSearchWhenLimited}
+            onChange={(v) => update('expandSearchWhenLimited', v)}
           />
           <View style={[styles.divider, { backgroundColor: th.border }]} />
-          <ToggleRow
-            label={t('discovery.preferences.openToRelocation')}
-            desc={t('discovery.preferences.relocationDesc')}
-            iconName="home-outline"
-            iconBg="#FF4FA3"
-            value={prefs.open_to_relocation}
-            onChange={(v) => set('open_to_relocation', v)}
-          />
-          <View style={[styles.divider, { backgroundColor: th.border }]} />
-          <ToggleRow
+          <TRow
             label={t('discovery.preferences.showVerifiedOnly')}
             desc={t('discovery.preferences.verifiedDesc')}
             iconName="shield-checkmark-outline"
             iconBg="#2F80ED"
-            value={prefs.show_verified_only}
-            onChange={(v) => set('show_verified_only', v)}
+            value={prefs.verifiedProfilesOnly}
+            onChange={(v) => update('verifiedProfilesOnly', v)}
           />
-        </SectionCard>
+        </Card>
+
+        {/* ── Has Children Preference ── */}
+        <Card>
+          <STitle label="Preferred: has children" />
+          <View style={styles.chipRow}>
+            {HAS_CHILDREN_OPTS.map(({ key, label }) => {
+              const isActive = prefs.hasChildrenPreference === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => update('hasChildrenPreference', key)}
+                  style={[styles.chip, { borderColor: isActive ? colors.primary : th.border, backgroundColor: isActive ? '#F0E6FF' : 'transparent' }]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Text style={[styles.chipLabel, { color: isActive ? colors.primary : th.textSecondary }]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Card>
+
+        {/* ── Wants Children Preference ── */}
+        <Card>
+          <STitle label="Preferred: wants children" />
+          <View style={styles.chipRow}>
+            {WANTS_CHILDREN_OPTS.map(({ key, label }) => {
+              const isActive = prefs.wantsChildrenPreference === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => update('wantsChildrenPreference', key)}
+                  style={[styles.chip, { borderColor: isActive ? colors.primary : th.border, backgroundColor: isActive ? '#F0E6FF' : 'transparent' }]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Text style={[styles.chipLabel, { color: isActive ? colors.primary : th.textSecondary }]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Card>
+
+        {/* ── Religion Preferences ── */}
+        <Card>
+          <STitle label="Religion preferences" />
+          <Text style={[styles.helperText, { color: th.textMuted }]}>Leave empty to see all religions.</Text>
+          <View style={styles.chipRow}>
+            {RELIGION_OPTIONS.map((r) => {
+              const isActive = prefs.religionPreferences.includes(r);
+              return (
+                <Pressable
+                  key={r}
+                  onPress={() => handleToggleReligion(r)}
+                  style={[styles.chip, { borderColor: isActive ? colors.primary : th.border, backgroundColor: isActive ? '#F0E6FF' : 'transparent' }]}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isActive }}
+                >
+                  <Text style={[styles.chipLabel, { color: isActive ? colors.primary : th.textSecondary }]}>{r}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Card>
+
+        {/* ── Language Preferences ── */}
+        <Card>
+          <STitle label="Language preferences" />
+          <Text style={[styles.helperText, { color: th.textMuted }]}>Leave empty to see all languages.</Text>
+          <LanguageMultiSelectPicker
+            selected={prefs.languagePreferences}
+            onChange={(items: LanguageOption[]) => update('languagePreferences', items)}
+            accentColor={colors.primary}
+            textColor={th.text}
+            mutedColor={th.textMuted}
+            borderColor={th.border}
+            surfaceColor={th.surface}
+          />
+        </Card>
+
+        {/* ── Ethnicity Preferences ── */}
+        <Card>
+          <STitle label="Ethnicity preferences" />
+          <Text style={[styles.helperText, { color: th.textMuted }]}>Leave empty to see all backgrounds.</Text>
+          <EthnicityMultiSelectPicker
+            selected={prefs.ethnicityPreferences}
+            onChange={(items: EthnicityOption[]) => update('ethnicityPreferences', items)}
+            accentColor={colors.primary}
+            textColor={th.text}
+            mutedColor={th.textMuted}
+            borderColor={th.border}
+            surfaceColor={th.surface}
+          />
+        </Card>
 
         {/* ── Save button ── */}
-        <TouchableOpacity style={styles.saveFull} onPress={handleSave} activeOpacity={0.85} disabled={isSaving}>
+        <Pressable style={styles.saveFull} onPress={handleSave} disabled={isSaving}>
           {isSaving ? (
             <ActivityIndicator size="small" color={colors.surface} />
           ) : (
@@ -436,7 +445,7 @@ export default function DiscoveryPreferencesScreen() {
               <Text style={styles.saveFullText}>{t('discovery.preferences.save')}</Text>
             </>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -444,7 +453,7 @@ export default function DiscoveryPreferencesScreen() {
 
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F4EFFE' },
+  screen: { flex: 1 },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   // ── Header
@@ -453,9 +462,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
-    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     shadowColor: colors.primary,
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -475,7 +482,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: fontSize.lg,
     fontWeight: '800',
-    color: colors.textPrimary,
     letterSpacing: 0.2,
   },
   saveBtn: {
@@ -488,12 +494,12 @@ const styles = StyleSheet.create({
 
   // ── Scroll
   scroll: { flex: 1 },
-  scrollContent: { padding: spacing.md, gap: 12, paddingBottom: 40 },
+  scrollContent: { paddingHorizontal: spacing.sm, paddingTop: spacing.md, gap: 12, paddingBottom: 40 },
 
   // ── Card
   card: {
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
+    borderWidth: 1,
     padding: spacing.md,
     gap: spacing.md,
     shadowColor: '#8A2CFF',
@@ -509,148 +515,69 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  helperText: { fontSize: 12, marginTop: -4 },
 
-  // ── Discovery mode cards
-  modeGrid: { flexDirection: 'row', gap: spacing.sm },
-  modeCard: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.backgroundSoft,
-    gap: 6,
-    position: 'relative',
-  },
-  modeCardActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  modeCardText: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
-  modeCardTextActive: { color: colors.surface },
-  modeActiveDot: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.surface,
-    opacity: 0.8,
-  },
-  modeDesc: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
-
-  // ── Locked Gender
-  lockedGenderHeader: {
+  // ── Range display
+  ageRangeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
+    justifyContent: 'space-between',
   },
-  lockedGenderLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    color: colors.primary,
-  },
-  lockedGenderValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  lockedGenderIcon: { fontSize: 20 },
-  lockedGenderText: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-  },
-  lockedGenderHint: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-
-  // ── Range value display
-  rangeValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  rangeValueBox: {
-    flex: 1,
-    backgroundColor: colors.backgroundLavender,
-    borderRadius: radius.md,
-    padding: 12,
-    alignItems: 'center',
-    gap: 2,
-  },
-  rangeValueLabel: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
-  rangeInput: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.primary,
-    textAlign: 'center',
-    padding: 0,
-    minWidth: 50,
-  },
-  rangeValueUnit: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
-  rangeDash: { width: 24, alignItems: 'center' },
-  rangeDashLine: { width: 16, height: 2, backgroundColor: colors.border, borderRadius: 1 },
+  rangeDisplay: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  rangeValue: { fontSize: 22, fontWeight: '800' },
+  rangeSep: { fontSize: 18, fontWeight: '600' },
+  rangeUnit: { fontSize: 13, fontWeight: '600', marginLeft: 2 },
+  ageSlidersRow: { flexDirection: 'row', gap: spacing.md },
+  ageSliderCol: { flex: 1, gap: 2 },
 
   // ── Sliders
   slider: { width: '100%', height: 36 },
-  sliderLabel: { fontSize: 12, color: colors.textSecondary, fontWeight: '600', marginBottom: -8 },
+  sliderLabel: { fontSize: 12, fontWeight: '600', marginBottom: -8 },
   sliderEndLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
   sliderEndText: { fontSize: 11, color: colors.textMuted },
 
   // ── Distance
+  distanceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   distanceValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundLavender,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
     gap: spacing.sm,
   },
-  distanceInput: {
-    flex: 1,
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.secondary,
-    textAlign: 'center',
-    padding: 0,
-  },
-  distanceUnit: { fontSize: 15, color: colors.textSecondary, fontWeight: '700' },
+  distanceInput: { fontSize: 18, fontWeight: '800', textAlign: 'center' },
 
   // ── Chips
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 5,
     paddingVertical: 9,
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,
     borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.backgroundSoft,
   },
-  chipActive: { backgroundColor: colors.backgroundLavender, borderColor: colors.primary },
-  chipCheck: { color: colors.primary, fontWeight: '700', fontSize: 13 },
-  chipLabel: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
-  chipLabelActive: { color: colors.primary },
+  chipLabel: { fontSize: 13, fontWeight: '600' },
 
   // ── Toggle rows
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  toggleIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  toggleIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   toggleText: { flex: 1, gap: 2 },
-  toggleLabel: { fontSize: fontSize.md, fontWeight: '700', color: colors.textPrimary },
-  toggleDesc: { fontSize: 13, color: colors.textSecondary },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
+  toggleLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  toggleDesc: { fontSize: 13 },
+  divider: { height: 1, marginVertical: 2 },
 
   // ── Save
   saveFull: {
@@ -667,10 +594,5 @@ const styles = StyleSheet.create({
     elevation: 8,
     marginTop: 4,
   },
-  saveFullText: {
-    fontSize: fontSize.md,
-    fontWeight: '800',
-    color: colors.surface,
-    letterSpacing: 0.3,
-  },
+  saveFullText: { fontSize: fontSize.md, fontWeight: '800', color: colors.surface, letterSpacing: 0.3 },
 });

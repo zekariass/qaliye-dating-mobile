@@ -1,11 +1,39 @@
 import { Ionicons } from '@expo/vector-icons';
-import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { CardDto } from '@/components/discovery/ProfileCard';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+
+function formatLabel(value: string): string {
+  return value
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+const SMOKING_API_TO_LABEL: Record<string, string> = {
+  NO: 'No',
+  YES: 'Yes',
+  OCCASIONALLY: 'Occasionally',
+  TRYING_TO_QUIT: 'Trying to quit',
+};
+
+const DRINKING_API_TO_LABEL: Record<string, string> = {
+  NO: 'No',
+  SOCIALLY: 'Socially',
+  OCCASIONALLY: 'Occasionally',
+  YES: 'Yes',
+};
+
+const ACTIVITY_API_TO_LABEL: Record<string, string> = {
+  SEDENTARY: 'Sedentary',
+  LIGHT: 'Light',
+  MODERATE: 'Moderate',
+  ACTIVE: 'Active',
+  VERY_ACTIVE: 'Very active',
+};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -14,8 +42,13 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 interface DetailItem {
   icon: IoniconName;
-  labelKey: string;
+  label: string;
   value: string;
+}
+
+interface DetailGroup {
+  title: string;
+  items: DetailItem[];
 }
 
 interface Props {
@@ -23,59 +56,68 @@ interface Props {
 }
 
 // ---------------------------------------------------------------------------
-// Layout
+// Section renderer — full-width list with dividers inside a single card
 // ---------------------------------------------------------------------------
-const { width: W } = Dimensions.get('window');
-const COL_GAP = 10;
-const CARD_W = (W - spacing.md * 2 - COL_GAP) / 2;
-
-// ---------------------------------------------------------------------------
-// Icon mapping — matches CurrentUserProfileScreen style
-// ---------------------------------------------------------------------------
-const ICON_MAP: Record<string, IoniconName> = {
-  gender:       'person-outline',
-  height:       'resize-outline',
-  residency:    'home-outline',
-  ethnicity:    'people-outline',
-  nationality:  'flag-outline',
-  religion:     'leaf-outline',
-  education:    'school-outline',
-  occupation:   'briefcase-outline',
-  relationship: 'heart-outline',
-  marital:      'person-circle-outline',
-  children:     'people-circle-outline',
-  wchildren:    'happy-outline',
-  smoking:      'ban-outline',
-  drinking:     'wine-outline',
-};
-
-// ---------------------------------------------------------------------------
-// Detail card (matches CurrentUserProfileScreen.DetailCard)
-// ---------------------------------------------------------------------------
-const DetailCard = memo(function DetailCard({
-  icon, label, value, surfaceBg, iconBg, borderCol, textCol, mutedCol,
+function SectionGroup({
+  group, surfaceBg, iconBg, borderCol, textCol, mutedCol, card,
 }: {
-  icon: IoniconName;
-  label: string;
-  value: string;
+  group: DetailGroup;
   surfaceBg: string;
   iconBg: string;
   borderCol: string;
   textCol: string;
   mutedCol: string;
+  card: CardDto;
 }) {
+  const interests = card.interests ?? [];
+  const regularItems = group.items.filter((i) => i.label !== 'Interests');
+  const hasInterests = group.items.some((i) => i.label === 'Interests');
+  const hasContent = regularItems.length > 0 || (hasInterests && interests.length > 0);
+
+  if (!hasContent) return null;
+
   return (
-    <View style={[styles.detailCard, { width: CARD_W, backgroundColor: surfaceBg, borderColor: borderCol }]}>
-      <View style={[styles.detailIconWrap, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={16} color={colors.primary} />
-      </View>
-      <View style={styles.detailBody}>
-        <Text style={[styles.detailLabel, { color: mutedCol }]} numberOfLines={1}>{label}</Text>
-        <Text style={[styles.detailValue, { color: textCol }]} numberOfLines={2}>{value}</Text>
+    <View style={styles.section}>
+      <Text style={[styles.sectionLabel, { color: colors.primary }]}>{group.title}</Text>
+      <View style={[styles.listCard, { backgroundColor: surfaceBg, borderColor: borderCol }]}>
+        {regularItems.map((item, idx) => (
+          <View key={item.label}>
+            {idx > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
+            <View style={styles.listRow}>
+              <View style={[styles.detailIconWrap, { backgroundColor: iconBg }]}>
+                <Ionicons name={item.icon} size={16} color={colors.primary} />
+              </View>
+              <View style={styles.detailBody}>
+                <Text style={[styles.detailLabel, { color: mutedCol }]}>{item.label}</Text>
+                <Text style={[styles.detailValue, { color: textCol }]}>{item.value}</Text>
+              </View>
+            </View>
+          </View>
+        ))}
+        {hasInterests && interests.length > 0 && (
+          <View>
+            {regularItems.length > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
+            <View style={styles.listRow}>
+              <View style={[styles.detailIconWrap, { backgroundColor: iconBg }]}>
+                <Ionicons name="color-palette-outline" size={16} color={colors.primary} />
+              </View>
+              <View style={[styles.detailBody, { gap: 6 }]}>
+                <Text style={[styles.detailLabel, { color: mutedCol }]}>Interests</Text>
+                <View style={styles.chipWrap}>
+                  {interests.map((interest) => (
+                    <View key={interest} style={[styles.chip, { backgroundColor: iconBg, borderColor: borderCol }]}>
+                      <Text style={[styles.chipText, { color: colors.primary }]}>{interest}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
-});
+}
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -88,33 +130,59 @@ export default function ProfileDetailsSection({ card }: Props) {
   const detailSurface = isDark ? th.backgroundElement : th.surface;
   const detailIconBg  = isDark ? th.backgroundSelected : '#F3EEFF';
 
-  const boolLabel = (v: boolean | undefined): string | null =>
-    v == null ? null : v ? t('discovery.details.yes') : t('discovery.details.no');
+  const boolLabel = (v: boolean | undefined | null): string | null =>
+    v == null ? null : v ? 'Yes' : 'No';
 
-  const maybeItems: Array<DetailItem | null> = [
-    card.gender             ? { icon: ICON_MAP.gender,       labelKey: 'discovery.details.gender',                value: card.gender }           : null,
-    card.height_cm          ? { icon: ICON_MAP.height,       labelKey: 'discovery.details.height',                value: t('discovery.details.heightCm', { height: card.height_cm }) } : null,
-    card.residency_type     ? { icon: ICON_MAP.residency,    labelKey: 'discovery.details.residencyType',         value: card.residency_type }   : null,
-    card.ethnicity          ? { icon: ICON_MAP.ethnicity,    labelKey: 'discovery.details.ethnicity',             value: card.ethnicity }        : null,
-    card.nationality        ? { icon: ICON_MAP.nationality,  labelKey: 'discovery.details.nationality',           value: card.nationality }      : null,
-    card.religion           ? { icon: ICON_MAP.religion,     labelKey: 'discovery.details.religion',              value: card.religion }         : null,
-    card.education_level    ? { icon: ICON_MAP.education,    labelKey: 'discovery.details.educationLevel',        value: card.education_level }  : null,
-    card.occupation         ? { icon: ICON_MAP.occupation,   labelKey: 'discovery.details.occupation',            value: card.occupation }       : null,
-    card.relationship_intention ? { icon: ICON_MAP.relationship, labelKey: 'discovery.details.relationshipIntention', value: card.relationship_intention } : null,
-    card.marital_status     ? { icon: ICON_MAP.marital,      labelKey: 'discovery.details.maritalStatus',         value: card.marital_status }   : null,
-    boolLabel(card.has_children)   ? { icon: ICON_MAP.children,  labelKey: 'discovery.details.hasChildren',   value: boolLabel(card.has_children)! }  : null,
-    boolLabel(card.wants_children) ? { icon: ICON_MAP.wchildren, labelKey: 'discovery.details.wantsChildren', value: boolLabel(card.wants_children)! } : null,
-    boolLabel(card.smoking)  ? { icon: ICON_MAP.smoking,  labelKey: 'discovery.details.smoking',  value: boolLabel(card.smoking)! }  : null,
-    boolLabel(card.drinking) ? { icon: ICON_MAP.drinking, labelKey: 'discovery.details.drinking', value: boolLabel(card.drinking)! } : null,
+  const smokingLabel = card.smoking_detail
+    ? (SMOKING_API_TO_LABEL[card.smoking_detail.toUpperCase()] ?? formatLabel(card.smoking_detail))
+    : boolLabel(card.smoking);
+  const drinkingLabel = card.drinking_detail
+    ? (DRINKING_API_TO_LABEL[card.drinking_detail.toUpperCase()] ?? formatLabel(card.drinking_detail))
+    : boolLabel(card.drinking);
+
+  // ── Groups ──
+  const basicItems: DetailItem[] = [
+    card.gender    ? { icon: 'person-outline',  label: 'Gender',         value: formatLabel(card.gender) }                                              : null,
+    card.height_cm ? { icon: 'resize-outline',  label: 'Height',         value: `${card.height_cm} cm` }                                               : null,
+    card.residency_type ? { icon: 'home-outline', label: 'Residency',    value: formatLabel(card.residency_type) }                                      : null,
+  ].filter(Boolean) as DetailItem[];
+
+  const heritageItems: DetailItem[] = [
+    (card.ethnicities && card.ethnicities.length > 0) ? { icon: 'people-outline',   label: 'Ethnicity',   value: card.ethnicities.map((e) => e.name).join(', ') } : null,
+    card.nationality                                  ? { icon: 'flag-outline',     label: 'Nationality', value: formatLabel(card.nationality) }                   : null,
+    card.religion                                     ? { icon: 'leaf-outline',     label: 'Religion',    value: formatLabel(card.religion) }                      : null,
+  ].filter(Boolean) as DetailItem[];
+
+  const workItems: DetailItem[] = [
+    card.education_level ? { icon: 'school-outline',    label: 'Education', value: formatLabel(card.education_level) } : null,
+    card.occupation      ? { icon: 'briefcase-outline', label: 'Work',      value: card.occupation }                   : null,
+  ].filter(Boolean) as DetailItem[];
+
+  const relationshipItems: DetailItem[] = [
+    card.relationship_intention ? { icon: 'heart-outline',         label: 'Intention',      value: formatLabel(card.relationship_intention) }       : null,
+    card.marital_status         ? { icon: 'person-circle-outline', label: 'Marital status', value: formatLabel(card.marital_status) }                : null,
+    boolLabel(card.has_children)   ? { icon: 'people-circle-outline', label: 'Has children',   value: boolLabel(card.has_children)! }   : null,
+    boolLabel(card.wants_children) ? { icon: 'happy-outline',         label: 'Wants children', value: boolLabel(card.wants_children)! } : null,
+  ].filter(Boolean) as DetailItem[];
+
+  const activityLabel = card.activity_level
+    ? (ACTIVITY_API_TO_LABEL[card.activity_level.toUpperCase()] ?? formatLabel(card.activity_level))
+    : null;
+  const lifestyleItems: DetailItem[] = [
+    smokingLabel  ? { icon: 'ban-outline',           label: 'Smoking',         value: smokingLabel }  : null,
+    drinkingLabel ? { icon: 'wine-outline',          label: 'Drinking',        value: drinkingLabel } : null,
+    activityLabel ? { icon: 'fitness-outline',       label: 'Activity level',  value: activityLabel } : null,
+    (card.languages && card.languages.length > 0) ? { icon: 'language-outline', label: 'Languages', value: card.languages.map((l) => l.name).join(', ') } : null,
+    (card.interests && card.interests.length > 0) ? { icon: 'color-palette-outline', label: 'Interests', value: '' } : null,
+  ].filter(Boolean) as DetailItem[];
+
+  const groups: DetailGroup[] = [
+    { title: 'Basic Information', items: basicItems },
+    { title: 'Heritage',          items: heritageItems },
+    { title: 'Education & Work',  items: workItems },
+    { title: 'Relationship',      items: relationshipItems },
+    { title: 'Lifestyle',         items: lifestyleItems },
   ];
-
-  const details: DetailItem[] = maybeItems.filter((x): x is DetailItem => x !== null);
-
-  // Pair items into two-column rows (matches CurrentUserProfileScreen grid)
-  const pairs = details.reduce<[DetailItem, DetailItem | null][]>((acc, item, i) => {
-    if (i % 2 === 0) acc.push([item, details[i + 1] ?? null]);
-    return acc;
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -142,44 +210,19 @@ export default function ProfileDetailsSection({ card }: Props) {
         </View>
       ) : null}
 
-      {/* ── Profile details grid ── */}
-      {details.length > 0 ? (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: th.text }]}>
-            {t('discovery.profileDetails')}
-          </Text>
-          <View style={styles.grid}>
-            {pairs.map(([left, right], idx) => (
-              <View key={idx} style={styles.gridRow}>
-                <DetailCard
-                  icon={left.icon}
-                  label={t(left.labelKey)}
-                  value={left.value}
-                  surfaceBg={detailSurface}
-                  iconBg={detailIconBg}
-                  borderCol={th.border}
-                  textCol={th.text}
-                  mutedCol={th.textMuted}
-                />
-                {right ? (
-                  <DetailCard
-                    icon={right.icon}
-                    label={t(right.labelKey)}
-                    value={right.value}
-                    surfaceBg={detailSurface}
-                    iconBg={detailIconBg}
-                    borderCol={th.border}
-                    textCol={th.text}
-                    mutedCol={th.textMuted}
-                  />
-                ) : (
-                  <View style={{ width: CARD_W }} />
-                )}
-              </View>
-            ))}
-          </View>
-        </View>
-      ) : null}
+      {/* ── Grouped detail sections ── */}
+      {groups.map((group) => (
+        <SectionGroup
+          key={group.title}
+          group={group}
+          surfaceBg={detailSurface}
+          iconBg={detailIconBg}
+          borderCol={th.border}
+          textCol={th.text}
+          mutedCol={th.textMuted}
+          card={card}
+        />
+      ))}
     </View>
   );
 }
@@ -194,12 +237,18 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   section: {
-    gap: 10,
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '800',
     letterSpacing: -0.3,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 
   // Bio
@@ -219,24 +268,22 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
-  // Grid
-  grid: {
-    gap: 10,
-  },
-  gridRow: {
-    flexDirection: 'row',
-    gap: COL_GAP,
-  },
-
-  // Detail card — matches CurrentUserProfileScreen
-  detailCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // List card container
+  listCard: {
     borderRadius: radius.md,
     borderWidth: 1,
-    padding: 12,
-    gap: 9,
-    minHeight: 62,
+    overflow: 'hidden',
+  },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 12,
+  },
+  divider: {
+    height: 1,
+    marginHorizontal: 14,
   },
   detailIconWrap: {
     width: 32,
@@ -259,5 +306,21 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 13,
     fontWeight: '700',
+  },
+
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

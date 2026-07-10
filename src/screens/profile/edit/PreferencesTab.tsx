@@ -3,8 +3,18 @@ import Slider from '@react-native-community/slider';
 import { memo, useCallback } from 'react';
 import { ActivityIndicator, Pressable, Switch, Text, View } from 'react-native';
 
+import { CountryMultiSelectPicker } from '@/components/catalog/CountryMultiSelectPicker';
+import { EthnicityMultiSelectPicker } from '@/components/catalog/EthnicityMultiSelectPicker';
+import { LanguageMultiSelectPicker } from '@/components/catalog/LanguageMultiSelectPicker';
 import { type SemanticTheme } from '@/constants/semantic-colors';
-import { type DiscoveryPrefDraft, RESIDENCY_OPTIONS } from '../mockEditProfile';
+import type { EthnicityOption, LanguageOption } from '@/types/catalog';
+import {
+    type DiscoveryPrefDraft,
+    type HasChildrenPref,
+    type LocationMode,
+    type WantsChildrenPref,
+    RELIGION_OPTIONS,
+} from '../mockEditProfile';
 import { SectionCard, SectionTitle } from './FormComponents';
 
 type Props = {
@@ -19,42 +29,49 @@ type Props = {
 
 const DISTANCE_MARKS = [1, 100, 250, 400, 500];
 
-const RESIDENCY_DISPLAY: Record<string, string> = {
-  ETHIOPIA: 'Ethiopia',
-  ERITREA: 'Eritrea',
-  DIASPORA: 'Diaspora',
-};
+const LOCATION_MODES: { key: LocationMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { key: 'nearby',             label: 'Near Me',          icon: 'locate-outline' },
+  { key: 'diaspora',           label: 'Diaspora',         icon: 'earth-outline' },
+  { key: 'specific_countries', label: 'Specific',         icon: 'flag-outline' },
+  { key: 'anywhere',           label: 'Anywhere',         icon: 'globe-outline' },
+];
 
-const RESIDENCY_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-  ETHIOPIA: 'flag-outline',
-  ERITREA: 'flag-outline',
-  DIASPORA: 'earth-outline',
-};
+const HAS_CHILDREN_OPTIONS: { key: HasChildrenPref; label: string }[] = [
+  { key: 'any', label: 'Any' },
+  { key: 'yes', label: 'Has children' },
+  { key: 'no',  label: 'No children' },
+];
+
+const WANTS_CHILDREN_OPTIONS: { key: WantsChildrenPref; label: string }[] = [
+  { key: 'any',                label: 'Any' },
+  { key: 'yes',                label: 'Wants' },
+  { key: 'no',                 label: 'Does not want' },
+  { key: 'not_sure',           label: 'Not sure' },
+  { key: 'open_to_discussion', label: 'Open to discuss' },
+];
 
 export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChange, onReset, onSave, isSaving = false, userGender, sem }: Props) {
 
-  const handleToggleResidency = useCallback((type: string) => {
-    const current = prefs.residencyTypes;
-    const updated = current.includes(type)
-      ? current.filter((t) => t !== type)
-      : [...current, type];
-    if (updated.length > 0) {
-      onPrefsChange({ residencyTypes: updated });
-    }
-  }, [prefs.residencyTypes, onPrefsChange]);
+  const handleToggleReligion = useCallback((val: string) => {
+    const current = prefs.religionPreferences;
+    const updated = current.includes(val)
+      ? current.filter((r) => r !== val)
+      : [...current, val];
+    onPrefsChange({ religionPreferences: updated });
+  }, [prefs.religionPreferences, onPrefsChange]);
 
   return (
     <View>
       <SectionCard sem={sem}>
         <SectionTitle title="Discovery Preferences" sem={sem} />
-        <Text className="text-xs mb-5" style={{ color: sem.textSecondary }}>
+        <Text className="text-sm mb-5" style={{ color: sem.textSecondary }}>
           Control who you see and how discovery works.
         </Text>
 
         {/* ─── Interested In (locked — auto-derived from gender) ─── */}
         <View className="mb-5">
           <View className="flex-row items-center gap-1 mb-1.5">
-            <Text className="text-sm font-semibold" style={{ color: sem.textPrimary }}>
+            <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
               Interested in
             </Text>
             <Ionicons name="lock-closed-outline" size={12} color={sem.textMuted} />
@@ -69,72 +86,65 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
               color={sem.accent}
               style={{ marginRight: 8 }}
             />
-            <Text className="flex-1 text-sm font-medium" style={{ color: sem.textPrimary }}>
+            <Text className="flex-1 text-base font-medium" style={{ color: sem.textPrimary }}>
               {prefs.interestedIn === 'MALE' ? 'Male' : 'Female'}
             </Text>
-            <Text className="text-xs" style={{ color: sem.textMuted }}>Auto</Text>
+            <Text className="text-sm" style={{ color: sem.textMuted }}>Auto</Text>
           </View>
-          <Text className="text-xs mt-1.5 ml-1" style={{ color: sem.textMuted }}>
+          <Text className="text-sm mt-1.5 ml-1" style={{ color: sem.textMuted }}>
             {userGender
               ? `Set automatically based on your gender (${userGender === 'MALE' ? 'Man' : 'Woman'}).`
               : 'Automatically set based on your profile gender.'}
           </Text>
         </View>
 
-        {/* ─── Preferred Residency Types ─── */}
+        {/* ─── Location Mode ─── */}
         <View className="mb-5">
-          <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
-            Preferred residency types
+          <Text className="text-base font-semibold mb-2" style={{ color: sem.textPrimary }}>
+            Where to discover people
           </Text>
           <View className="flex-row flex-wrap gap-2">
-            {RESIDENCY_OPTIONS.map((type) => {
-              const isActive = prefs.residencyTypes.includes(type);
+            {LOCATION_MODES.map(({ key, label, icon }) => {
+              const isActive = prefs.locationMode === key;
               return (
                 <Pressable
-                  key={type}
-                  onPress={() => handleToggleResidency(type)}
+                  key={key}
+                  onPress={() => onPrefsChange({ locationMode: key })}
                   className="flex-row items-center rounded-full px-4 py-2.5 border gap-2"
                   style={{
                     backgroundColor: isActive ? sem.accentSoft : 'transparent',
                     borderColor: isActive ? sem.accent : sem.border,
                   }}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: isActive }}
-                  accessibilityLabel={RESIDENCY_DISPLAY[type]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isActive }}
+                  accessibilityLabel={label}
                 >
-                  <Ionicons name={RESIDENCY_ICONS[type]} size={14} color={isActive ? sem.accent : sem.textMuted} />
-                  <Text
-                    className="text-xs font-semibold"
-                    style={{ color: isActive ? sem.accent : sem.textSecondary }}
-                  >
-                    {RESIDENCY_DISPLAY[type]}
+                  <Ionicons name={icon} size={14} color={isActive ? sem.accent : sem.textMuted} />
+                  <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textSecondary }}>
+                    {label}
                   </Text>
-                  {isActive && (
-                    <View
-                      className="w-4 h-4 rounded-full items-center justify-center"
-                      style={{ backgroundColor: sem.accent }}
-                    >
-                      <Ionicons name="checkmark" size={10} color="#fff" />
-                    </View>
-                  )}
-                  {!isActive && (
-                    <View
-                      className="w-4 h-4 rounded-full border"
-                      style={{ borderColor: sem.border }}
-                    />
-                  )}
                 </Pressable>
               );
             })}
           </View>
-          <Text className="text-xs mt-2" style={{ color: sem.textMuted }}>
-            Select all that apply
-          </Text>
+          {prefs.locationMode === 'specific_countries' && (
+            <View className="mt-3">
+              <CountryMultiSelectPicker
+                selected={prefs.specificCountryCodes}
+                onChange={(codes) => onPrefsChange({ specificCountryCodes: codes })}
+                accentColor={sem.accent}
+                textColor={sem.textPrimary}
+                mutedColor={sem.textMuted}
+                borderColor={sem.border}
+                surfaceColor={sem.surface}
+              />
+            </View>
+          )}
         </View>
 
         {/* ─── Age Range ─── */}
         <View className="mb-5">
-          <Text className="text-sm font-semibold mb-3" style={{ color: sem.textPrimary }}>
+          <Text className="text-base font-semibold mb-3" style={{ color: sem.textPrimary }}>
             Age range
           </Text>
           <View className="flex-row items-center gap-3">
@@ -142,7 +152,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
               className="px-3 py-2 rounded-lg border min-w-[50px] items-center"
               style={{ borderColor: sem.border }}
             >
-              <Text className="text-sm font-bold" style={{ color: sem.textPrimary }}>
+              <Text className="text-base font-bold" style={{ color: sem.textPrimary }}>
                 {prefs.minAge}
               </Text>
             </View>
@@ -174,24 +184,24 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
               className="px-3 py-2 rounded-lg border min-w-[50px] items-center"
               style={{ borderColor: sem.border }}
             >
-              <Text className="text-sm font-bold" style={{ color: sem.textPrimary }}>
+              <Text className="text-base font-bold" style={{ color: sem.textPrimary }}>
                 {prefs.maxAge}
               </Text>
             </View>
           </View>
           <View className="flex-row justify-between mt-1 px-1">
-            <Text className="text-xs" style={{ color: sem.textMuted }}>Min age</Text>
-            <Text className="text-xs" style={{ color: sem.textMuted }}>Max age</Text>
+            <Text className="text-sm" style={{ color: sem.textMuted }}>Min age</Text>
+            <Text className="text-sm" style={{ color: sem.textMuted }}>Max age</Text>
           </View>
         </View>
 
         {/* ─── Maximum Distance ─── */}
         <View className="mb-5">
           <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-sm font-semibold" style={{ color: sem.textPrimary }}>
+            <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
               Maximum distance
             </Text>
-            <Text className="text-sm font-bold" style={{ color: sem.accent }}>
+            <Text className="text-base font-bold" style={{ color: sem.accent }}>
               {prefs.maximumDistanceKm} km
             </Text>
           </View>
@@ -210,7 +220,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
             {DISTANCE_MARKS.map((d) => (
               <Text
                 key={d}
-                className="text-xs font-medium"
+                className="text-sm font-medium"
                 style={{ color: d === prefs.maximumDistanceKm ? sem.accent : sem.textMuted }}
               >
                 {d === 500 ? '500 km' : `${d} km`}
@@ -220,19 +230,13 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
         </View>
 
         {/* ─── Toggles ─── */}
-        <View className="gap-1 mb-6">
+        <View className="gap-1 mb-5">
           <ToggleRow
-            icon="paper-plane-outline"
-            label="Open to long-distance"
-            value={prefs.openToLongDistance}
-            onToggle={(v) => onPrefsChange({ openToLongDistance: v })}
-            sem={sem}
-          />
-          <ToggleRow
-            icon="home-outline"
-            label="Open to relocation"
-            value={prefs.openToRelocation}
-            onToggle={(v) => onPrefsChange({ openToRelocation: v })}
+            icon="search-outline"
+            label="Expand search when limited"
+            helperText="Broaden discovery if few matches found."
+            value={prefs.expandSearchWhenLimited}
+            onToggle={(v) => onPrefsChange({ expandSearchWhenLimited: v })}
             sem={sem}
           />
           <ToggleRow
@@ -242,6 +246,125 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
             value={prefs.verifiedProfilesOnly}
             onToggle={(v) => onPrefsChange({ verifiedProfilesOnly: v })}
             sem={sem}
+          />
+        </View>
+
+        {/* ─── Has Children Preference ─── */}
+        <View className="mb-5">
+          <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
+            Preferred: has children
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {HAS_CHILDREN_OPTIONS.map(({ key, label }) => {
+              const isActive = prefs.hasChildrenPreference === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => onPrefsChange({ hasChildrenPreference: key })}
+                  className="rounded-full px-4 py-2 border"
+                  style={{ backgroundColor: isActive ? sem.accentSoft : 'transparent', borderColor: isActive ? sem.accent : sem.border }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textSecondary }}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ─── Wants Children Preference ─── */}
+        <View className="mb-5">
+          <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
+            Preferred: wants children
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {WANTS_CHILDREN_OPTIONS.map(({ key, label }) => {
+              const isActive = prefs.wantsChildrenPreference === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => onPrefsChange({ wantsChildrenPreference: key })}
+                  className="rounded-full px-4 py-2 border"
+                  style={{ backgroundColor: isActive ? sem.accentSoft : 'transparent', borderColor: isActive ? sem.accent : sem.border }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textSecondary }}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ─── Religion Preferences ─── */}
+        <View className="mb-5">
+          <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
+            Religion preferences
+          </Text>
+          <Text className="text-sm mb-2" style={{ color: sem.textMuted }}>
+            Leave empty to see all religions.
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {RELIGION_OPTIONS.map((r) => {
+              const isActive = prefs.religionPreferences.includes(r);
+              return (
+                <Pressable
+                  key={r}
+                  onPress={() => handleToggleReligion(r)}
+                  className="rounded-full px-4 py-2 border"
+                  style={{ backgroundColor: isActive ? sem.accentSoft : 'transparent', borderColor: isActive ? sem.accent : sem.border }}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isActive }}
+                >
+                  <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textSecondary }}>
+                    {r}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ─── Language Preferences ─── */}
+        <View className="mb-5">
+          <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
+            Language preferences
+          </Text>
+          <Text className="text-sm mb-2" style={{ color: sem.textMuted }}>
+            Leave empty to see all languages.
+          </Text>
+          <LanguageMultiSelectPicker
+            selected={prefs.languagePreferences}
+            onChange={(items: LanguageOption[]) => onPrefsChange({ languagePreferences: items })}
+            accentColor={sem.accent}
+            textColor={sem.textPrimary}
+            mutedColor={sem.textMuted}
+            borderColor={sem.border}
+            surfaceColor={sem.surface}
+          />
+        </View>
+
+        {/* ─── Ethnicity Preferences ─── */}
+        <View className="mb-6">
+          <Text className="text-base font-semibold mb-2" style={{ color: sem.textPrimary }}>
+            Ethnicity preferences
+          </Text>
+          <Text className="text-sm mb-2" style={{ color: sem.textMuted }}>
+            Leave empty to see all backgrounds.
+          </Text>
+          <EthnicityMultiSelectPicker
+            selected={prefs.ethnicityPreferences}
+            onChange={(items: EthnicityOption[]) => onPrefsChange({ ethnicityPreferences: items })}
+            accentColor={sem.accent}
+            textColor={sem.textPrimary}
+            mutedColor={sem.textMuted}
+            borderColor={sem.border}
+            surfaceColor={sem.surface}
           />
         </View>
 
@@ -259,7 +382,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text
-                className="text-base font-bold"
+                className="text-lg font-bold"
                 style={{ color: '#FFFFFF', opacity: pressed ? 0.8 : 1 }}
               >
                 Save Preferences
@@ -277,7 +400,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
         >
           {({ pressed }) => (
             <Text
-              className="text-base font-semibold"
+              className="text-lg font-semibold"
               style={{ color: pressed ? sem.accentStrong : sem.textSecondary }}
             >
               Reset
@@ -310,11 +433,11 @@ function ToggleRow({ icon, label, helperText, value, onToggle, sem }: ToggleRowP
         <Ionicons name={icon} size={18} color={sem.accent} />
       </View>
       <View className="flex-1">
-        <Text className="text-sm font-medium" style={{ color: sem.textPrimary }}>
+        <Text className="text-base font-medium" style={{ color: sem.textPrimary }}>
           {label}
         </Text>
         {helperText && (
-          <Text className="text-xs" style={{ color: sem.textMuted }}>
+          <Text className="text-sm" style={{ color: sem.textMuted }}>
             {helperText}
           </Text>
         )}

@@ -15,11 +15,10 @@ Do not include current-user-only actions or UI such as:
 
 The visual design reference is located at:
 
-`docs\screen_specs\profile_detail_other_users\profile-screen-design-other-users.png`
+docs\screen_specs\profile_detail_other_users\profile-screen-design-other-users.png 
 
-Also review any relevant written specifications inside:
-
-`docs\screen_specs\profile_detail_other_users\`
+Also review the sql schema at @schema.sql 
+Also use @project-context.md as context 
 
 Use the visual reference as the primary source for layout, spacing, image proportions, typography hierarchy, card styles, shadows, overlapping content sheet, action buttons, and floating bottom navigation behavior.
 
@@ -28,21 +27,21 @@ Use generated fake profile data for now. Do not add backend, APIs, authenticatio
 ## Technology requirements
 
 * Use React Native + Expo + TypeScript.
-* Use NativeWind for styling with `className`.
-* Prefer NativeWind utilities over `StyleSheet.create`.
-* Use inline `style` only where runtime values are required, such as:
+* Use NativeWind for styling with className.
+* Prefer NativeWind utilities over StyleSheet.create.
+* Use inline style only where runtime values are required, such as:
 
-  * `useWindowDimensions` calculations
+  * useWindowDimensions calculations
   * safe-area inset offsets
   * animated values
   * unsupported NativeWind properties
   * platform-specific shadow/elevation edge cases
 * Reuse existing project dependencies and patterns.
 * Do not upgrade Expo, NativeWind, navigation, or other dependencies unless absolutely necessary.
-* Use the project’s existing icon library. Prefer `@expo/vector-icons` only if no icon system already exists.
-* Use `expo-image` for gallery images if it already exists in the project. Otherwise use the project’s existing Expo-compatible image component.
-* Use `react-native-safe-area-context` for safe-area handling.
-* Add accessible `Pressable` interactions with placeholder actions or `console.log` statements where navigation or backend behavior is not yet connected.
+* Use the project’s existing icon library. Prefer @expo/vector-icons only if no icon system already exists.
+* Use expo-image for gallery images if it already exists in the project. Otherwise use the project’s existing Expo-compatible image component.
+* Use react-native-safe-area-context for safe-area handling.
+* Add accessible Pressable interactions with placeholder actions or console.log statements where navigation or backend behavior is not yet connected.
 
 ## Existing project structure
 
@@ -102,7 +101,7 @@ Bottom navigation: near-black with subtle navy tone
 Border: very soft cool gray
 ```
 
-Use NativeWind semantic token classes, CSS variables, `dark:` variants, or the project’s existing theming approach.
+Use NativeWind semantic token classes, CSS variables, dark: variants, or the project’s existing theming approach.
 
 ## Screen layout
 
@@ -143,14 +142,14 @@ Requirements:
 
 * Large hero image occupying roughly 35–40% of the visible screen.
 * Use 5 generated fake remote image URLs for the profile gallery.
-* Use horizontal paging with `ScrollView` or another performant Expo-compatible list.
-* Use `pagingEnabled`.
-* Calculate image/page width with `useWindowDimensions`.
-* Track the active image index using `onMomentumScrollEnd`.
+* Use horizontal paging with ScrollView or another performant Expo-compatible list.
+* Use pagingEnabled.
+* Calculate image/page width with useWindowDimensions.
+* Track the active image index using onMomentumScrollEnd.
 * Show five pagination dots near the bottom center of the hero image.
 * Active pagination dot uses the accent purple.
 * Inactive dots use white or soft white with reduced opacity.
-* Gallery images use `resizeMode="cover"` and must never stretch.
+* Gallery images use resizeMode="cover" and must never stretch.
 * Avoid image layout shifts while loading.
 * Use image caching and transitions when supported by the existing image component.
 
@@ -165,7 +164,7 @@ Place two circular action buttons over the hero image.
 * Dark back-arrow icon.
 * Use existing navigation back behavior if available.
 * Otherwise log a placeholder action.
-* Include `accessibilityLabel="Go back"`.
+* Include accessibilityLabel="Go back".
 
 ### More-options button
 
@@ -174,14 +173,14 @@ Place two circular action buttons over the hero image.
 * Purple horizontal three-dot icon.
 * Use an existing action-sheet pattern if available.
 * Otherwise log a placeholder action.
-* Include `accessibilityLabel="More profile options"`.
+* Include accessibilityLabel="More profile options".
 
 Both action buttons must:
 
 * Be approximately 52–60px touch targets.
 * Have full-circle styling.
 * Include soft shadow/elevation.
-* Use `Pressable` feedback.
+* Use Pressable feedback.
 * Remain visually above the gallery image.
 
 ## Overlapping profile sheet
@@ -267,7 +266,7 @@ Drinking: Occasionally
 
 Display:
 
-* `Liam, 27` in large bold dark text.
+* Liam, 27 in large bold dark text.
 * A small blue verified badge directly after the name and age.
 * Purple outlined location-pin icon followed by the location text.
 * A multi-line bio underneath.
@@ -291,8 +290,8 @@ Requirements:
 * Pale lavender or softly tinted surface.
 * Large rounded corners.
 * Purple filled location icon on the left.
-* Small muted label: `Address`
-* Larger dark text value: `Bole, Addis Ababa, Ethiopia`
+* Small muted label: Address 
+* Larger dark text value: Bole, Addis Ababa, Ethiopia 
 * Soft border or subtle elevation.
 * Reusable component if it fits existing code patterns.
 
@@ -315,7 +314,7 @@ Each detail card must include:
 Responsive behavior:
 
 * Two columns on standard phone widths.
-* Use responsive calculations from `useWindowDimensions`.
+* Use responsive calculations from useWindowDimensions.
 * Fall back to one column on narrow screens or where accessibility font scaling would cause clipping.
 * When the number of items is odd, leave the final item left-aligned.
 * Avoid nested vertical scroll views.
@@ -382,15 +381,15 @@ Requirements:
 * White outlined messages/chat icon.
 * Soft glow and elevated shadow.
 * Accessible press target.
-* Press behavior should log `Open messages` or use existing message navigation if available.
+* Press behavior should log Open messages or use existing message navigation if available.
 * Do not cover bottom-navigation labels or reduce usability of surrounding tabs.
 
 ## NativeWind expectations
 
-* Use NativeWind `className` for static styles.
+* Use NativeWind className for static styles.
 * Use theme-aware utility classes, semantic tokens, CSS variables, or the project’s existing NativeWind theme pattern.
-* Use `dark:` variants where appropriate.
-* Avoid large `StyleSheet.create` objects.
+* Use dark: variants where appropriate.
+* Avoid large StyleSheet.create objects.
 * Avoid repeating long class strings across profile detail cards.
 * Extract repeated variants or shared class constants where useful.
 * Use runtime styles only for values NativeWind cannot handle well.
@@ -399,13 +398,13 @@ Requirements:
 ## Responsiveness, performance, and accessibility
 
 * Respect safe-area insets.
-* Use `useWindowDimensions` instead of fixed device-specific dimensions.
+* Use useWindowDimensions instead of fixed device-specific dimensions.
 * Support iOS and Android.
-* Avoid nested vertical `ScrollView` components.
+* Avoid nested vertical ScrollView components.
 * Keep gallery and profile-detail rendering performant.
 * Memoize gallery items and detail-card rendering where useful.
 * Use stable keys.
-* Use `Pressable` feedback for all interactive elements.
+* Use Pressable feedback for all interactive elements.
 * Add accessibility labels to all icon-only buttons.
 * Ensure increased font scaling does not clip important text.
 * Support reduced-motion preferences if animations are added.
@@ -423,3 +422,7 @@ At the end, provide:
 3. Any dependency assumptions.
 4. Notes on placeholder interactions and fake data.
 5. Confirmation that no backend or API work was added.
+
+
+
+implement correctly

@@ -20,7 +20,7 @@ export async function uploadPhoto(
   formData.append('file', { uri, name: fileName, type: mimeType } as unknown as Blob);
   formData.append('photo_order', String(photoOrder));
   formData.append('is_primary', String(isPrimary));
-  const res = await apiClient.post<ProfilePhoto>('/api/v1/profile/photos', formData, {
+  const res = await apiClient.post<ProfilePhoto>('/api/v1/profile/me/photos', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return res.data;
@@ -35,10 +35,10 @@ export function uploadPrimaryPhoto(
 }
 
 export async function fetchMyPhotos(): Promise<ProfilePhoto[]> {
-  const res = await apiClient.get<{ items: ProfilePhoto[] }>('/api/v1/profile/photos/me');
+  const res = await apiClient.get<{ items: ProfilePhoto[] }>('/api/v1/profile/me/photos');
   return res.data.items;
 }
 
 export async function deletePhoto(photoId: string): Promise<void> {
-  await apiClient.delete(`/api/v1/profile/photos/${photoId}`);
+  await apiClient.delete(`/api/v1/profile/me/photos/${photoId}`);
 }

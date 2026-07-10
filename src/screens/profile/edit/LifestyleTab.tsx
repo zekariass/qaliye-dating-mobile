@@ -1,41 +1,44 @@
 import { memo, useCallback } from 'react';
 import { View } from 'react-native';
 
+import { LanguageMultiSelectPicker } from '@/components/catalog/LanguageMultiSelectPicker';
 import { type SemanticTheme } from '@/constants/semantic-colors';
+import type { LanguageOption } from '@/types/catalog';
 import {
-  type EditProfileDraft,
-  ACTIVITY_OPTIONS,
-  DRINKING_OPTIONS,
-  INTEREST_OPTIONS,
-  LANGUAGE_OPTIONS,
-  SMOKING_OPTIONS,
+    type EditProfileDraft,
+    ACTIVITY_OPTIONS,
+    DRINKING_OPTIONS,
+    INTEREST_OPTIONS,
+    SMOKING_OPTIONS,
 } from '../mockEditProfile';
 import {
-  ChipSelector,
-  LabeledField,
-  RowPair,
-  SectionCard,
-  SectionTitle,
-  SelectField,
+    ChipSelector,
+    LabeledField,
+    RowPair,
+    SectionCard,
+    SectionTitle,
+    SelectField,
 } from './FormComponents';
 
 type Props = {
   draft: EditProfileDraft;
   onChange: (path: string, value: string) => void;
   onToggleArrayItem: (path: string, value: string) => void;
+  onChangeLanguages: (items: LanguageOption[]) => void;
   sem: SemanticTheme;
 };
 
-export const LifestyleTab = memo(function LifestyleTab({ draft, onChange, onToggleArrayItem, sem }: Props) {
+export const LifestyleTab = memo(function LifestyleTab({ draft, onChange, onToggleArrayItem, onChangeLanguages, sem }: Props) {
   const { lifestyle } = draft;
 
   const handleToggleInterest = useCallback((val: string) => {
     onToggleArrayItem('lifestyle.interests', val);
   }, [onToggleArrayItem]);
 
-  const handleToggleLanguage = useCallback((val: string) => {
-    onToggleArrayItem('lifestyle.languages', val);
-  }, [onToggleArrayItem]);
+  const handleLanguagesChange = useCallback(
+    (items: LanguageOption[]) => onChangeLanguages(items),
+    [onChangeLanguages],
+  );
 
   return (
     <View>
@@ -94,11 +97,14 @@ export const LifestyleTab = memo(function LifestyleTab({ draft, onChange, onTogg
       {/* ─── Languages ─── */}
       <SectionCard sem={sem}>
         <SectionTitle title="Languages" sem={sem} />
-        <ChipSelector
-          options={LANGUAGE_OPTIONS}
+        <LanguageMultiSelectPicker
           selected={lifestyle.languages}
-          onToggle={handleToggleLanguage}
-          sem={sem}
+          onChange={handleLanguagesChange}
+          accentColor="#8A2CFF"
+          textColor={sem.textPrimary}
+          mutedColor={sem.textMuted}
+          borderColor={sem.border}
+          surfaceColor={sem.surface}
         />
       </SectionCard>
     </View>

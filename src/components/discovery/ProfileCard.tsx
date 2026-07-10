@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import {
     StyleSheet,
@@ -24,6 +25,13 @@ import type { ActivityStatus } from '@/types/activity';
 
 const SWIPE_THRESHOLD = 120;
 
+function formatRelationshipIntention(value: string): string {
+  return value
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export type CardDto = {
   user_id: string;
   display_name: string;
@@ -39,7 +47,9 @@ export type CardDto = {
   bio?: string;
   gender?: string;
   height_cm?: number;
-  ethnicity?: string;
+  ethnicities?: import('@/types/catalog').EthnicityOption[];
+  ethnicityOtherText?: string | null;
+  languages?: import('@/types/catalog').LanguageOption[];
   nationality?: string;
   religion?: string;
   education_level?: string;
@@ -49,6 +59,10 @@ export type CardDto = {
   wants_children?: boolean;
   smoking?: boolean;
   drinking?: boolean;
+  smoking_detail?: string | null;
+  drinking_detail?: string | null;
+  activity_level?: string | null;
+  interests?: string[];
   prompt_answers?: { promptText: string; answerText: string }[];
   activity_status?: ActivityStatus;
 };
@@ -185,15 +199,27 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
             </View>
           )}
 
-          {/* Photo dots — top right */}
-          <View style={styles.dotsRow}>
-            {safePhotos.map((_, i) => (
-              <View
-                key={i}
-                style={[styles.dot, i === photoIndex ? styles.dotActive : styles.dotInactive]}
-              />
-            ))}
-          </View>
+          {/* Bottom gradient shadow for text readability */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.90)', 'rgba(0,0,0,0.88)']}
+            locations={[0, 0.6, 1]}
+            style={styles.bottomGradient}
+          />
+
+          {/* Photo progress bars — top edge */}
+          {safePhotos.length > 1 && (
+            <View style={styles.barsRow}>
+              {safePhotos.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.bar,
+                    i === photoIndex ? styles.barActive : styles.barInactive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
 
           {/* Swipe stamps */}
           <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]}>
@@ -227,7 +253,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
             </View>
             <View style={styles.pillRow}>
               <View style={styles.pill}>
-                <Text style={styles.pillText}>{card.relationship_intention}</Text>
+                <Text style={styles.pillText}>{formatRelationshipIntention(card.relationship_intention)}</Text>
               </View>
             </View>
           </View>
@@ -270,27 +296,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.backgroundLavender,
   },
-  dotsRow: {
+  barsRow: {
     position: 'absolute',
     top: spacing.md,
+    left: spacing.md,
     right: spacing.md,
     flexDirection: 'row',
-    gap: 5,
-    alignItems: 'center',
+    gap: 4,
   },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+  bar: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
   },
-  dotActive: {
+  barActive: {
     backgroundColor: colors.primary,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
   },
-  dotInactive: {
-    backgroundColor: 'rgba(255,255,255,0.55)',
+  barInactive: {
+    backgroundColor: 'rgba(255,255,255,0.45)',
   },
   stamp: {
     position: 'absolute',
@@ -320,6 +343,14 @@ const styles = StyleSheet.create({
     color: colors.danger,
     letterSpacing: 2,
   },
+  bottomGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 250,
+    zIndex: 1,
+  },
   infoBox: {
     position: 'absolute',
     left: 0,
@@ -329,6 +360,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     paddingTop: spacing.xl,
     gap: 6,
+    zIndex: 2,
   },
   nameRow: {
     flexDirection: 'row',

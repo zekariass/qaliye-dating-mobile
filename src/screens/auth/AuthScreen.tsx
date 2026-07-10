@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -145,6 +146,9 @@ export default function AuthScreen() {
   async function handleFacebook() {
     try { await facebook.mutateAsync(); } catch { /* error shown via effect */ }
   }
+  function handlePhone() {
+    router.push('/phone-auth' as any);
+  }
 
   const ctaLabel = authTab === 'login' ? t('auth.login') : t('auth.createAccount');
   const isLoading = authTab === 'login' ? login.isPending : signup.isPending;
@@ -252,6 +256,18 @@ export default function AuthScreen() {
               <Text style={s.orText}>{t('auth.orContinueWith')}</Text>
               <View style={s.orLine} />
             </View>
+
+            {/* ── Phone section ── */}
+            <TouchableOpacity
+              style={[s.emailToggle, s.phoneToggle]}
+              onPress={handlePhone}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={t('auth.continueWithPhone')}
+            >
+              <Text style={s.phoneFlag}>🇪🇹</Text>
+              <Text style={[s.emailToggleLabel, s.phoneToggleLabel]}>{t('auth.continueWithPhone')}</Text>
+            </TouchableOpacity>
 
             {/* ── Email section ── */}
             {!showEmailForm ? (
@@ -569,6 +585,18 @@ const s = StyleSheet.create({
   orText: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
+  },
+
+  /* ── Phone toggle ── */
+  phoneToggle: {
+    borderColor: '#E05A00',
+    backgroundColor: 'rgba(255, 120, 20, 0.04)',
+  },
+  phoneFlag: {
+    fontSize: 20,
+  },
+  phoneToggleLabel: {
+    color: '#C04E00',
   },
 
   /* ── Email toggle ── */

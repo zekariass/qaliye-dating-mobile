@@ -3,7 +3,14 @@ import { useMemo } from 'react';
 
 import { fetchDiscoveryProfiles } from '@/api/discovery/discoveryApi';
 import { CardDto } from '@/components/discovery/ProfileCard';
-import type { DiscoveryProfileDto, LocationFilter } from '@/types/discovery';
+import type { DiscoveryProfileDto } from '@/types/discovery';
+
+function formatLabel(value: string): string {
+  return value
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export function mapProfileToCard(p: DiscoveryProfileDto): CardDto {
   // The backend currently returns snake_case fields, while the docs/types
@@ -37,7 +44,13 @@ export function mapProfileToCard(p: DiscoveryProfileDto): CardDto {
     bio: (profile.bio ?? profile.about) ?? undefined,
     gender: profile.gender,
     height_cm: (profile.heightCm ?? profile.height_cm) ?? undefined,
-    ethnicity: (profile.ethnicity ?? profile.ethnic_background) ?? undefined,
+    ethnicities: (profile.ethnicities ?? profile.ethnic_backgrounds ?? []).map((e: any) =>
+      typeof e === 'string' ? { id: e, name: formatLabel(e) } : { id: e.id ?? e.value, name: e.name ?? formatLabel(e.value ?? e.id) }
+    ),
+    ethnicityOtherText: profile.ethnicityOtherText ?? profile.ethnicity_other_text ?? null,
+    languages: (profile.languages ?? []).map((l: any) =>
+      typeof l === 'string' ? { id: l, name: formatLabel(l) } : { id: l.id ?? l.value, name: l.name ?? formatLabel(l.value ?? l.id) }
+    ),
     nationality: (profile.nationality ?? profile.nationality_country) ?? undefined,
     religion: (profile.religion ?? profile.religious_affiliation) ?? undefined,
     education_level: (profile.educationLevel ?? profile.education_level) ?? undefined,
@@ -47,6 +60,10 @@ export function mapProfileToCard(p: DiscoveryProfileDto): CardDto {
     wants_children: (profile.wantsChildren ?? profile.wants_children) ?? undefined,
     smoking: profile.smoking,
     drinking: profile.drinking,
+    smoking_detail: (profile.smokingDetail ?? profile.smoking_detail) ?? null,
+    drinking_detail: (profile.drinkingDetail ?? profile.drinking_detail) ?? null,
+    activity_level: (profile.activityLevel ?? profile.activity_level) ?? null,
+    interests: profile.interests ?? [],
     prompt_answers: (profile.promptAnswers ?? profile.prompt_answers ?? []).map((pa: any) => ({
       promptText: pa.promptText ?? pa.prompt_text ?? pa.prompt,
       answerText: pa.answerText ?? pa.answer_text ?? pa.answer,
@@ -55,11 +72,11 @@ export function mapProfileToCard(p: DiscoveryProfileDto): CardDto {
   };
 }
 
-export function useDiscoveryProfiles(locationFilter: LocationFilter) {
+export function useDiscoveryProfiles() {
   const query = useInfiniteQuery({
-    queryKey: ['discovery', 'profiles', locationFilter],
+    queryKey: ['discovery', 'profiles'],
     queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
-      fetchDiscoveryProfiles(locationFilter, pageParam),
+      fetchDiscoveryProfiles(pageParam),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore && lastPage.nextCursor ? lastPage.nextCursor : undefined,
@@ -73,5 +90,10 @@ export function useDiscoveryProfiles(locationFilter: LocationFilter) {
   const cursorReset =
     (query.data?.pages[query.data.pages.length - 1]?.cursorReset) ?? false;
 
-  return { ...query, cards, cursorReset };
+  // True when the query is doing a background refetch of ALL pages (not pagination,
+  // not initial load). This fires after preference changes / query invalidations.
+  const isRefetching =
+    query.isFetching && !query.isFetchingNextPage && query.data !== undefined;
+
+  return { ...query, cards, cursorReset, isRefetching };
 }

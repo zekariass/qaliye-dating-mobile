@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
@@ -56,7 +57,6 @@ export function useSocialAuth() {
     setGooglePending(true);
     setGoogleError(null);
     try {
-      const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
       GoogleSignin.configure({
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
         offlineAccess: false,
@@ -64,9 +64,37 @@ export function useSocialAuth() {
       await GoogleSignin.hasPlayServices();
       const result = await GoogleSignin.signIn();
       const idToken = (result as any).idToken ?? (result as any).data?.idToken;
-      if (!idToken) throw new Error('Google sign-in failed');
-      const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
-      if (error) throw error;
+      if (!idToken) throw new Error('Google sign-in failed: no idToken returned');
+      // Revoke access + sign out AFTER obtaining the token so that:
+      // (a) revokeAccess succeeds while we're still signed in to the SDK, and
+      // (b) the next signIn() call always shows the account picker.
+      try { await GoogleSignin.revokeAccess(); } catch { /* ignore */ }
+      await GoogleSignin.signOut();
+      try {
+        const payload = JSON.parse(atob(idToken.split('.')[1]));
+        console.log('[Google] id_token aud:', payload.aud, '| iss:', payload.iss, '| exp:', new Date(payload.exp * 1000).toISOString());
+      } catch { /* decoding is best-effort */ }
+      const _diagUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=id_token`;
+      const _diagRes = await fetch(_diagUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+        body: JSON.stringify({ provider: 'google', id_token: idToken }),
+      });
+      const _diagBody = await _diagRes.text();
+      console.log('[Google] RAW Supabase response:', _diagRes.status, _diagBody);
+
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+      if (error) {
+        console.error('[Google] signInWithIdToken error:', error.message, (error as any).status, (error as any).code);
+        throw error;
+      }
     } catch (e) {
       setGoogleError(e as Error);
       /* error stays in state; UI shows it inline */
