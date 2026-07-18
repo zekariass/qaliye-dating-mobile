@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { themedError, themedSuccess } from '@/components/common/ThemedAlert';
+import { themedAlert, themedError, themedSuccess } from '@/components/common/ThemedAlert';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useDeletePhoto, useRegisterPhoto, useReorderPhotos } from '@/hooks/profile/useProfilePhotos';
@@ -17,6 +17,7 @@ import { useUpdateProfilePreferences } from '@/hooks/profile/useProfilePreferenc
 import { useUpdateProfile } from '@/hooks/profile/useUpdateProfile';
 import { useUpdateProfileLocation } from '@/hooks/profile/useUpdateProfileLocation';
 import { useSemanticTheme } from '@/hooks/use-semantic-theme';
+import { isPremiumPlan } from '@/types/billing';
 import type { EthnicityOption, LanguageOption } from '@/types/catalog';
 import {
     mapApiPrefsToDiscoveryPrefDraft,
@@ -42,7 +43,7 @@ export default function EditProfileScreen() {
   const { sem } = useSemanticTheme();
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
   const { entitlements } = useEntitlements();
-  const canUseIncognito = entitlements?.features?.incognito_mode ?? false;
+  const canUseIncognito = entitlements?.features?.incognito_mode ?? isPremiumPlan(entitlements?.plan) ?? false;
 
   const [activeTab, setActiveTab] = useState<TabKey>('bio');
   const [draft, setDraft] = useState<EditProfileDraft | null>(null);
@@ -141,15 +142,47 @@ export default function EditProfileScreen() {
   // ─── Save profile fields (bio + details + lifestyle) ──────────────────
   const handleSave = useCallback(async () => {
     if (!draft) return;
+
+    // Validate user is 18 or older
+    const dob = draft.basics.dateOfBirth;
+    if (dob) {
+      const match = dob.match(/^(\d{1,2})\s+(\w{3})\s+(\d{4})$/);
+      if (match) {
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const day = parseInt(match[1], 10);
+        const monthIdx = months.indexOf(match[2]);
+        const year = parseInt(match[3], 10);
+        if (monthIdx >= 0) {
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const eighteenthBirthday = new Date(year + 18, monthIdx, day);
+          if (eighteenthBirthday > today) {
+            themedAlert({
+              title: 'Invalid Date of Birth',
+              message: 'You must be at least 18 years old to use Qaliye.',
+              icon: 'alert-circle',
+              iconColor: '#EF4444',
+              buttons: [{ text: 'OK', style: 'default' }],
+            });
+            return;
+          }
+        }
+      }
+    }
+
     try {
       const payload = mapEditDraftToUpdateRequest(draft);
+      // Include discovery_mode if prefs are loaded
+      if (prefs) {
+        payload.discovery_mode = prefs.discoveryMode;
+      }
       await updateProfileMutation.mutateAsync(payload);
       setDraftVersion((v) => v + 1);
       themedSuccess('Saved', 'Your profile has been updated.');
     } catch (err: unknown) {
       themedError('Error', (err as Error)?.message ?? 'Failed to save profile.');
     }
-  }, [draft, updateProfileMutation]);
+  }, [draft, prefs, updateProfileMutation]);
 
   // ─── Save preferences ─────────────────────────────────────────────────
   const handleSavePrefs = useCallback(async () => {

@@ -33,8 +33,11 @@ function formatLocation(item: MatchItemDto): string | null {
   return parts.length > 0 ? parts.join(', ') : null;
 }
 
-function formatRelativeTime(iso: string): string {
-  const diffMs  = Date.now() - new Date(iso).getTime();
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return 'Recently';
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return 'Recently';
+  const diffMs  = Date.now() - date.getTime();
   const diffMin = Math.floor(diffMs / 60_000);
   if (diffMin < 1)  return 'Just now';
   if (diffMin < 60) return `${diffMin}m ago`;
@@ -42,7 +45,7 @@ function formatRelativeTime(iso: string): string {
   if (diffH < 24)   return `${diffH}h ago`;
   const diffD = Math.floor(diffH / 24);
   if (diffD < 7)    return `${diffD}d ago`;
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
@@ -261,11 +264,18 @@ const MatchCard = React.memo(function MatchCard({
                 {formatRelativeTime(item.last_message_at)}
               </Text>
             </View>
-          ) : (
+          ) : item.is_new ? (
             <View style={[styles.chip, { backgroundColor: isDark ? '#1F3020' : '#E8F5E9' }]}>
               <Ionicons name="heart" size={11} color="#4CAF50" />
               <Text style={[styles.chipText, { color: '#4CAF50' }]} numberOfLines={1}>
                 New Match!
+              </Text>
+            </View>
+          ) : (
+            <View style={[styles.chip, { backgroundColor: chipBg }]}>
+              <Ionicons name="heart-outline" size={11} color={colors.primary} />
+              <Text style={[styles.chipText, { color: colors.primary }]} numberOfLines={1}>
+                {formatRelativeTime(item.matched_at)}
               </Text>
             </View>
           )}

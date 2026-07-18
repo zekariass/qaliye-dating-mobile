@@ -1,12 +1,13 @@
 import { apiClient } from '@/api/apiClient';
 import type {
-  ChatThreadDto,
-  InboxResponse,
-  MessageDto,
-  MessagesResponse,
-  MuteSettingsRequest,
-  ReceiptRequest,
-  SendMessageRequest,
+    ChatAttachmentSignedUrlDto,
+    ChatThreadDto,
+    InboxResponse,
+    MessageDto,
+    MessagesResponse,
+    MuteSettingsRequest,
+    ReceiptRequest,
+    SendMessageRequest,
 } from '@/types/chat';
 
 const BASE = '/api/v1/chat';
@@ -54,6 +55,10 @@ export async function fetchMessages(
   return res.data;
 }
 
+export async function clearChatMessages(matchId: string): Promise<void> {
+  await apiClient.delete(`${BASE}/matches/${matchId}/messages`);
+}
+
 // ── Send message ──────────────────────────────────────────────────────────
 
 export async function sendMessage(
@@ -65,6 +70,51 @@ export async function sendMessage(
     payload,
   );
   return { data: res.data, status: res.status };
+}
+
+// ── Send message with attachments (multipart) ──────────────────────────────
+
+/**
+ * Send a message with image and/or voice attachments via multipart/form-data.
+ * The caller must build the FormData with:
+ *   - `request` part: JSON containing { clientMessageId, messageType, body }
+ *   - `files` parts: repeated file entries
+ * `durations` is sent as repeated query params (durations=123&durations=456)
+ * so Spring can bind them to List<Long>.
+ */
+export async function sendMessageWithAttachments(
+  matchId: string,
+  formData: FormData,
+  durations?: (number | null)[],
+): Promise<{ data: MessageDto; status: number }> {
+  let url = `${BASE}/matches/${matchId}/messages/attachments`;
+  if (durations && durations.length > 0) {
+    const valid = durations.filter((d): d is number => d != null && d > 0);
+    if (valid.length > 0) {
+      url = `${url}?${valid.map((d) => `durations=${encodeURIComponent(d)}`).join('&')}`;
+    }
+  }
+  const res = await apiClient.post<MessageDto>(
+    url,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return { data: res.data, status: res.status };
+}
+
+// ── Refresh attachment signed URL ───────────────────────────────────────────
+
+/**
+ * Fetch a fresh signed download URL for a chat attachment.
+ * TTL is ~300s (5 minutes). Do NOT cache or log this URL.
+ */
+export async function refreshAttachmentSignedUrl(
+  attachmentId: string,
+): Promise<ChatAttachmentSignedUrlDto> {
+  const res = await apiClient.post<ChatAttachmentSignedUrlDto>(
+    `${BASE}/attachments/${attachmentId}/signed-url`,
+  );
+  return res.data;
 }
 
 // ── Receipts ──────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     FlatList,
@@ -14,13 +15,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { InboxFilter } from '@/api/chat/chatApi';
 import { ConversationRow } from '@/components/messages/ConversationRow';
+import { SupportConversationListItem } from '@/components/messages/SupportConversationListItem';
 import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useInbox } from '@/hooks/messages/useInbox';
 import { useInboxChannel } from '@/hooks/messages/useInboxChannel';
+import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
+import { useStaffConversations } from '@/hooks/support/useStaffConversations';
+import { useSupportConversation } from '@/hooks/support/useSupportConversation';
 import { useTheme } from '@/hooks/use-theme';
 import type { InboxItem } from '@/types/chat';
+import type { SupportConversationStatus } from '@/types/support';
 
 // ---------------------------------------------------------------------------
 // Theme helper
@@ -283,6 +289,40 @@ export default function MessagesListScreen() {
 
   useInboxChannel(currentUserId, filter as InboxFilter);
 
+  const { data: profile } = useCurrentProfile();
+  const isStaff = profile?.role === 'ADMIN' || profile?.role === 'MODERATOR';
+
+  const {
+    conversation: supportConversation,
+    isLoading: supportLoading,
+    isError: supportError,
+    unreadCount: supportUnread,
+    refetch: supportRefetch,
+  } = useSupportConversation();
+
+  const {
+    conversations: staffConversations,
+    isLoading: staffLoading,
+    isError: staffError,
+    refetch: staffRefetch,
+  } = useStaffConversations();
+
+  const staffUnreadCount = useMemo(
+    () => staffConversations.reduce(
+      (sum, c) => sum + Math.max(0, c.next_public_sequence - 1 - c.staff_last_read_sequence),
+      0,
+    ),
+    [staffConversations],
+  );
+
+  const handleSupportPress = useCallback(() => {
+    router.push('/(app)/support-conversation' as any);
+  }, [router]);
+
+  const handleStaffSupportPress = useCallback(() => {
+    router.push('/(app)/staff-support-inbox' as any);
+  }, [router]);
+
   const handleRowPress = useCallback(
     (item: InboxItem) => {
       router.push({
@@ -318,11 +358,33 @@ export default function MessagesListScreen() {
 
   const keyExtractor = useCallback((item: InboxItem) => item.matchId, []);
 
+  const supportProps: SupportHeaderProps = isStaff
+    ? {
+        isStaff: true,
+        supportStatus: 'IDLE',
+        supportLastMessageAt: null,
+        supportUnreadCount: staffUnreadCount,
+        supportLoading: staffLoading,
+        supportError: staffError,
+        onSupportPress: handleStaffSupportPress,
+        onSupportRetry: () => staffRefetch(),
+      }
+    : {
+        isStaff: false,
+        supportStatus: supportConversation?.status ?? 'IDLE',
+        supportLastMessageAt: supportConversation?.last_public_message_at ?? null,
+        supportUnreadCount: supportUnread,
+        supportLoading,
+        supportError,
+        onSupportPress: handleSupportPress,
+        onSupportRetry: () => supportRefetch(),
+      };
+
   // ── Loading skeleton ──────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <View style={[styles.screen, { backgroundColor: th.bg, paddingTop: insets.top }]}>
-        <Header filter={filter} onFilterChange={setFilter} th={th} />
+        <Header filter={filter} onFilterChange={setFilter} th={th} {...supportProps} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={th.purple} />
         </View>
@@ -334,7 +396,7 @@ export default function MessagesListScreen() {
   if (isError) {
     return (
       <View style={[styles.screen, { backgroundColor: th.bg, paddingTop: insets.top }]}>
-        <Header filter={filter} onFilterChange={setFilter} th={th} />
+        <Header filter={filter} onFilterChange={setFilter} th={th} {...supportProps} />
         <ErrorState onRetry={refetch} />
       </View>
     );
@@ -348,7 +410,7 @@ export default function MessagesListScreen() {
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         ListHeaderComponent={
-          <Header filter={filter} onFilterChange={setFilter} th={th} />
+          <Header filter={filter} onFilterChange={setFilter} th={th} {...supportProps} />
         }
         ListEmptyComponent={<EmptyState filter={filter} />}
         ListFooterComponent={
@@ -382,29 +444,203 @@ export default function MessagesListScreen() {
 // Header (extracted so it can be used in loading/error states too)
 // ---------------------------------------------------------------------------
 
-interface HeaderProps {
+interface SupportHeaderProps {
+  isStaff: boolean;
+  supportStatus: SupportConversationStatus;
+  supportLastMessageAt: string | null;
+  supportUnreadCount: number;
+  supportLoading: boolean;
+  supportError: boolean;
+  onSupportPress: () => void;
+  onSupportRetry: () => void;
+}
+
+interface HeaderProps extends SupportHeaderProps {
   filter: MessageFilter;
   onFilterChange: (f: MessageFilter) => void;
   th: ReturnType<typeof useScreenTheme>;
 }
 
-function Header({ filter, onFilterChange, th }: HeaderProps) {
+function Header({
+  filter,
+  onFilterChange,
+  th,
+  isStaff,
+  supportStatus,
+  supportLastMessageAt,
+  supportUnreadCount,
+  supportLoading,
+  supportError,
+  onSupportPress,
+  onSupportRetry,
+}: HeaderProps) {
+  const { t } = useTranslation();
+  const { mode } = useTheme();
+  const isDark = mode === 'dark';
+
   return (
-    <View style={styles.header}>
-      {/* Title */}
-      <View style={styles.titleRow}>
-        <Text style={[styles.title, { color: th.text }]}>
-          Your Conversations
-        </Text>
+    <>
+      <View style={styles.header}>
+        {/* Title */}
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: th.text }]}>
+            Your Conversations
+          </Text>
+        </View>
+
+        {/* Segmented filter */}
+        <View style={styles.segWrap}>
+          <SegmentedControl active={filter} onChange={onFilterChange} />
+        </View>
       </View>
 
-      {/* Segmented filter */}
-      <View style={styles.segWrap}>
-        <SegmentedControl active={filter} onChange={onFilterChange} />
-      </View>
-    </View>
+      {/* Support conversation — always first, always visible, full-width */}
+      {isStaff ? (
+        <StaffSupportItem
+          unreadCount={supportUnreadCount}
+          isLoading={supportLoading}
+          isError={supportError}
+          onPress={onSupportPress}
+          onRetry={onSupportRetry}
+          isDark={isDark}
+          textColor={th.text}
+          textSecondary={th.textSecondary}
+          label={t('support.staffInboxTitle')}
+          accessLabel={t('support.staffInboxAccess')}
+        />
+      ) : (
+        <SupportConversationListItem
+          status={supportStatus}
+          lastPublicMessageAt={supportLastMessageAt}
+          unreadCount={supportUnreadCount}
+          isLoading={supportLoading}
+          isError={supportError}
+          onPress={onSupportPress}
+          onRetry={onSupportRetry}
+        />
+      )}
+    </>
   );
 }
+
+// ---------------------------------------------------------------------------
+// StaffSupportItem — simple row for staff that navigates to the inbox
+// ---------------------------------------------------------------------------
+
+function StaffSupportItem({
+  unreadCount,
+  isLoading,
+  isError,
+  onPress,
+  onRetry,
+  isDark,
+  textColor,
+  textSecondary,
+  label,
+  accessLabel,
+}: {
+  unreadCount: number;
+  isLoading: boolean;
+  isError: boolean;
+  onPress: () => void;
+  onRetry: () => void;
+  isDark: boolean;
+  textColor: string;
+  textSecondary: string;
+  label: string;
+  accessLabel: string;
+}) {
+  const { t } = useTranslation();
+  const rowBg = isDark ? '#1E1438' : '#F5F0FF';
+  const borderColor = isDark ? '#4B2D8A' : '#DDD0F8';
+
+  return (
+    <TouchableOpacity
+      style={[staffItemStyles.row, { backgroundColor: rowBg, borderColor }]}
+      onPress={isError ? onRetry : onPress}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={accessLabel}
+    >
+      <View style={[staffItemStyles.avatar, { backgroundColor: isDark ? '#2E1A5A' : '#EDE0FF' }]}>
+        <Ionicons name="headset" size={26} color={colors.primary} />
+      </View>
+      <View style={staffItemStyles.body}>
+        <View style={staffItemStyles.topRow}>
+          <Text style={[staffItemStyles.title, { color: textColor }]} numberOfLines={1}>
+            {label}
+          </Text>
+          {unreadCount > 0 && !isError && (
+            <View style={[staffItemStyles.badge, { backgroundColor: colors.primary }]}>
+              <Text style={staffItemStyles.badgeText}>
+                {unreadCount > 99 ? '99+' : String(unreadCount)}
+              </Text>
+            </View>
+          )}
+          {isError && (
+            <Ionicons name="refresh" size={16} color={colors.danger} />
+          )}
+        </View>
+        <Text style={[staffItemStyles.subtitle, { color: textSecondary }]} numberOfLines={1}>
+          {isLoading ? '...' : isError ? 'Tap to retry' : t('support.staffInboxSubtitle')}
+        </Text>
+        <View style={[staffItemStyles.divider, { backgroundColor: isDark ? '#3D2A6E' : '#F0EAF9' }]} />
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={isDark ? '#7C6EA0' : '#C4AEF0'} style={{ marginRight: 4 }} />
+    </TouchableOpacity>
+  );
+}
+
+const staffItemStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    borderLeftWidth: 3,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  body: { flex: 1 },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 8,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  badge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  subtitle: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginTop: 12,
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Styles

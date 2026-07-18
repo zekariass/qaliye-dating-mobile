@@ -13,6 +13,7 @@ interface ProfileHeaderProps {
   age: number;
   isVerified: boolean;
   location: string;
+  isIncognito?: boolean;
 }
 
 const AVATAR_SIZE = 120;
@@ -25,6 +26,7 @@ export default function ProfileHeader({
   age,
   isVerified,
   location,
+  isIncognito = false,
 }: ProfileHeaderProps) {
   const { top: safeTop } = useSafeAreaInsets();
   const router = useRouter();
@@ -93,6 +95,12 @@ export default function ProfileHeader({
               {location}
             </Text>
           </View>
+          {isIncognito && (
+            <View style={[styles.incognitoBadge, { backgroundColor: th.backgroundSelected }]}>
+              <Ionicons name="eye-off" size={12} color={colors.primary} />
+              <Text style={[styles.incognitoText, { color: colors.primary }]}>Private mode</Text>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -178,5 +186,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     flex: 1,
+  },
+  incognitoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  incognitoText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

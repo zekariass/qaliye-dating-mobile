@@ -2,22 +2,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Image,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
+import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
+import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useLikes } from '@/hooks/discovery/useLikes';
+import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
 import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
 import type { LikeDirection, LikeItemDto } from '@/types/discovery';
@@ -197,10 +200,12 @@ interface LikeCardProps {
   item:           LikeItemDto;
   isReceived:     boolean;
   onPress:        () => void;
+  onUnsend:       () => void;
+  isUnsending:    boolean;
   activityStatus?: ActivityStatus | null;
 }
 
-function LikeCard({ item, isReceived, onPress, activityStatus }: LikeCardProps) {
+function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, activityStatus }: LikeCardProps) {
   const { card, textPrimary, textMuted, purple, chipBg } = useLikesTheme();
   const location = formatLocation(item);
 
@@ -256,12 +261,13 @@ function LikeCard({ item, isReceived, onPress, activityStatus }: LikeCardProps) 
             <Ionicons name="heart" size={17} color={purple} />
           </TouchableOpacity>
         )}
+
       </View>
 
       {/* ── Info section ── */}
       <View style={styles.cardInfo}>
 
-        {/* Name + verified badge + dislike button */}
+        {/* Name + verified badge */}
         <View style={styles.nameRow}>
           <View style={styles.nameLeft}>
             <Text style={[styles.nameText, { color: textPrimary }]} numberOfLines={1}>
@@ -276,15 +282,6 @@ function LikeCard({ item, isReceived, onPress, activityStatus }: LikeCardProps) 
               />
             )}
           </View>
-          <TouchableOpacity
-            onPress={() => console.log(`Dislike: ${item.action_id} (${item.display_name})`)}
-            activeOpacity={0.7}
-            hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-            accessibilityRole="button"
-            accessibilityLabel={`Dislike ${item.display_name}`}
-          >
-            <Ionicons name="heart-dislike-outline" size={17} color={textMuted} />
-          </TouchableOpacity>
         </View>
 
         {/* Location + distance */}
@@ -302,22 +299,121 @@ function LikeCard({ item, isReceived, onPress, activityStatus }: LikeCardProps) 
           </View>
         ) : null}
 
-        {/* Action type chip */}
-        <View style={[styles.chip, { backgroundColor: chipBg }]}>
-          <Ionicons
-            name={item.action_type === 'SUPERLIKE' ? 'star' : 'heart'}
-            size={11}
-            color={purple}
-          />
-          <Text style={[styles.chipText, { color: purple }]} numberOfLines={2}>
-            {item.action_type === 'SUPERLIKE' ? 'Super Like' : 'Like'}
-          </Text>
+        {/* Action type chip + unsend like button */}
+        <View style={styles.chipRow}>
+          <View style={[styles.chip, { backgroundColor: chipBg }]}>
+            <Ionicons
+              name={item.action_type === 'SUPERLIKE' ? 'star' : 'heart'}
+              size={11}
+              color={purple}
+            />
+            <Text style={[styles.chipText, { color: purple }]} numberOfLines={2}>
+              {item.action_type === 'SUPERLIKE' ? 'Super Liked' : 'Liked'}
+            </Text>
+          </View>
+
+          {/* Unsend like button — sent likes only */}
+          {!isReceived && (
+            <TouchableOpacity
+              style={[styles.unsendBtn, { backgroundColor: chipBg }]}
+              onPress={onUnsend}
+              disabled={isUnsending}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`Unsend like ${item.display_name}`}
+              hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+            >
+              {isUnsending ? (
+                <ActivityIndicator size="small" color={colors.danger} />
+              ) : (
+                <Ionicons name="heart-dislike" size={17} color={colors.danger} />
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
       </View>
     </TouchableOpacity>
   );
 }
+
+// ─── BlurredLikeCard (see_who_liked_you = false) ──────────────────────────────
+
+interface BlurredLikeCardProps {
+  item: LikeItemDto;
+  onPress: () => void;
+}
+
+function BlurredLikeCard({ item, onPress }: BlurredLikeCardProps) {
+  const { card, textPrimary, textMuted, purple } = useLikesTheme();
+  const { colors: th } = useTheme();
+  const isDark = th.background === '#0D0712';
+
+  return (
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: card }]}
+      onPress={onPress}
+      activeOpacity={0.88}
+      accessibilityRole="button"
+      accessibilityLabel="Upgrade to see who liked you"
+    >
+      <View style={styles.imageWrap}>
+        {item.primary_photo_url ? (
+          <Image
+            source={{ uri: item.primary_photo_url }}
+            style={[styles.cardImage, { opacity: isDark ? 0.15 : 0.5 }]}
+            resizeMode="cover"
+            blurRadius={isDark ? 8 : 10}
+          />
+        ) : (
+          <View style={[styles.cardImage, styles.photoPlaceholder]}>
+            <Ionicons name="person" size={36} color="#999" />
+          </View>
+        )}
+
+        <View style={[blurStyles.overlay, { backgroundColor: isDark ? 'rgba(13,7,18,0.55)' : 'rgba(0,0,0,0.25)' }]}>
+          <View style={[blurStyles.lockCircle, { backgroundColor: purple }]}>
+            <Ionicons name="lock-closed" size={22} color="#FFF" />
+          </View>
+          <Text style={[blurStyles.overlayText, { color: isDark ? '#FFF' : '#FFF' }]}>Upgrade to see</Text>
+        </View>
+      </View>
+
+      <View style={styles.cardInfo}>
+        <View style={styles.nameRow}>
+          <View style={styles.nameLeft}>
+            <Text style={[styles.nameText, { color: textPrimary, fontSize: 14 }]} numberOfLines={1}>
+              Someone likes you
+            </Text>
+          </View>
+        </View>
+        <Text style={[styles.locationText, { color: textMuted }]} numberOfLines={1}>
+          Tap to unlock with Premium
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const blurStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  lockCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overlayText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});
 
 // ─── EmptyState ───────────────────────────────────────────────────────────────
 
@@ -450,6 +546,9 @@ export default function LikesListScreen() {
   const insets    = useSafeAreaInsets();
   const { bg }    = useLikesTheme();
   const router    = useRouter();
+  const { entitlements } = useEntitlements();
+  const canSeeWhoLikedYou = entitlements?.features?.see_who_liked_you ?? false;
+  console.log('[LikesListScreen] entitlements:', JSON.stringify(entitlements), 'canSeeWhoLikedYou:', canSeeWhoLikedYou);
 
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
   const { getStatus } = useActivityStatuses(visibleIds);
@@ -467,6 +566,9 @@ export default function LikesListScreen() {
     fetchNextPage, hasNextPage, isFetchingNextPage, refetch,
   } = useLikes(direction);
 
+  const { mutateAsync: swipeAction, isPending: isSwiping } = useSwipeAction();
+  const [unsendingId, setUnsendingId] = useState<string | null>(null);
+
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -480,16 +582,76 @@ export default function LikesListScreen() {
     [router],
   );
 
+  const handleBlurredCardPress = useCallback(() => {
+    themedAlert({
+      title: 'Premium Feature',
+      message: 'Upgrade to Premium to see who liked you!',
+      icon: 'lock-closed-outline',
+      iconColor: colors.primary,
+      buttons: [
+        {
+          text: 'Upgrade to Premium',
+          onPress: () => {
+            router.push('/(app)/premium' as any);
+          },
+        },
+        { text: 'Not now', style: 'cancel' },
+      ],
+    });
+  }, [router]);
+
+  const handleUnsend = useCallback(
+    (item: LikeItemDto) => {
+      themedAlert({
+        title: 'Unsend Like?',
+        message: `Withdraw your like from ${item.display_name}?`,
+        icon: 'heart-dislike-outline',
+        iconColor: colors.danger,
+        buttons: [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Unsend Like',
+            style: 'destructive',
+            onPress: async () => {
+              setUnsendingId(item.action_id);
+              try {
+                await swipeAction({ type: 'PASS', targetUserId: item.user_id });
+                refetch();
+              } catch (err: any) {
+                themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not unsend like.');
+              } finally {
+                setUnsendingId(null);
+              }
+            },
+          },
+        ],
+      });
+    },
+    [swipeAction, refetch],
+  );
+
   const renderItem = useCallback(
-    ({ item }: { item: LikeItemDto }) => (
-      <LikeCard
-        item={item}
-        isReceived={activeTab === 'received'}
-        onPress={() => handleCardPress(item.user_id)}
-        activityStatus={getStatus(item.user_id, item.activity_status)}
-      />
-    ),
-    [activeTab, handleCardPress, getStatus],
+    ({ item }: { item: LikeItemDto }) => {
+      if (activeTab === 'received' && !canSeeWhoLikedYou) {
+        return (
+          <BlurredLikeCard
+            item={item}
+            onPress={handleBlurredCardPress}
+          />
+        );
+      }
+      return (
+        <LikeCard
+          item={item}
+          isReceived={activeTab === 'received'}
+          onPress={() => handleCardPress(item.user_id)}
+          onUnsend={() => handleUnsend(item)}
+          isUnsending={unsendingId === item.action_id}
+          activityStatus={getStatus(item.user_id, item.activity_status)}
+        />
+      );
+    },
+    [activeTab, canSeeWhoLikedYou, handleCardPress, handleBlurredCardPress, handleUnsend, unsendingId, getStatus],
   );
 
   const renderFooter = useCallback(() => {
@@ -620,6 +782,20 @@ const styles = StyleSheet.create({
     width:          36,
     height:         36,
     borderRadius:   18,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+
+  chipRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+  },
+
+  unsendBtn: {
+    width:          36,
+    height:         28,
+    borderRadius:   14,
     alignItems:     'center',
     justifyContent: 'center',
   },

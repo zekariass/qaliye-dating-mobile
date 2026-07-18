@@ -11,7 +11,6 @@ import {
     NATIONALITY_OPTIONS,
     RELATIONSHIP_INTENTION_OPTIONS,
     RELIGION_OPTIONS,
-    RESIDENCY_OPTIONS,
     SMOKING_OPTIONS,
     YES_NO_OPTIONS,
 } from '../mockEditProfile';
@@ -89,16 +88,6 @@ export const BasicsTab = memo(function BasicsTab({ draft, onChange, sem }: Props
         </RowPair>
 
         <RowPair>
-          <LabeledField label="Residency type" sem={sem}>
-            <SelectField
-              value={basics.residencyType === 'ETHIOPIA' ? 'Ethiopia' : basics.residencyType === 'ERITREA' ? 'Eritrea' : 'Diaspora'}
-              options={RESIDENCY_OPTIONS.map((r) => r === 'ETHIOPIA' ? 'Ethiopia' : r === 'ERITREA' ? 'Eritrea' : 'Diaspora')}
-              onSelect={(v) => onChange('basics.residencyType', v === 'Ethiopia' ? 'ETHIOPIA' : v === 'Eritrea' ? 'ERITREA' : 'DIASPORA')}
-              sem={sem}
-              leftIcon="globe-outline"
-              placeholder="Residency type"
-            />
-          </LabeledField>
           <LabeledField label="Address" sem={sem}>
             <SelectField
               value={basics.address}

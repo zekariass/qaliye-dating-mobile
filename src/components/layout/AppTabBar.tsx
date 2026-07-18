@@ -363,7 +363,7 @@ interface AppTabBarProps {
 // Constants
 // ---------------------------------------------------------------------------
 const LABELS: Record<string, string> = {
-  index:    'Home',
+  index:    'Swipe',
   matches:  'Matches',
   messages: 'Messages',
   likes:    'Likes',
@@ -382,7 +382,6 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 function tabIcon(routeName: string, active: boolean): IoniconName {
   switch (routeName) {
-    case 'index':   return active ? 'home'           : 'home-outline';
     case 'matches': return active ? 'heart-circle'   : 'heart-circle-outline';
     case 'likes':   return active ? 'heart'          : 'heart-outline';
     case 'profile': return active ? 'person'         : 'person-outline';
@@ -390,18 +389,61 @@ function tabIcon(routeName: string, active: boolean): IoniconName {
   }
 }
 
-function MatchesIcon({ active, color }: { active: boolean; color: string }) {
-  const name = active ? 'heart' : 'heart-outline';
+function MatchesIcon({
+  active,
+  color,
+  inactiveFill,
+}: {
+  active: boolean;
+  color: string;
+  inactiveFill: string;
+}) {
+  const backName = active ? 'heart' : 'heart-outline';
+  const frontColor = active ? color : inactiveFill;
   return (
     <View style={styles.matchesIconWrap}>
-      <Ionicons name={name} size={23} color={color} style={styles.matchesHeartBack} />
-      <Ionicons name={name} size={23} color={color} style={styles.matchesHeartFront} />
+      <Ionicons name={backName} size={23} color={color} style={styles.matchesHeartBack} />
+      <Ionicons name="heart" size={23} color={frontColor} style={styles.matchesHeartFront} />
     </View>
   );
 }
 
 function ChatBubblesIcon() {
   return <Ionicons name="chatbubbles" size={22} color="#fff" />;
+}
+
+function SwipeIcon({
+  color,
+  active,
+  inactiveFill,
+}: {
+  color: string;
+  active: boolean;
+  inactiveFill: string;
+}) {
+  const frontFillStyle = { backgroundColor: active ? color : inactiveFill };
+  const frontBorderColor = active ? color : inactiveFill;
+  const backFillStyle = active ? { backgroundColor: color } : undefined;
+  return (
+    <View style={styles.swipeIconWrap}>
+      <View
+        style={[
+          styles.swipeCard,
+          styles.swipeCardBack,
+          { borderColor: color },
+          backFillStyle,
+        ]}
+      />
+      <View
+        style={[
+          styles.swipeCard,
+          styles.swipeCardFront,
+          { borderColor: frontBorderColor },
+          frontFillStyle,
+        ]}
+      />
+    </View>
+  );
 }
 
 function UnreadBadge({ count }: { count: number }) {
@@ -437,8 +479,9 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
   // Bar bg matches the parent/screen background — full integration
   const barBg            = th.background;
   const separatorColor   = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
-  const inactiveColor    = isDark ? '#64748B' : '#9CA3AF';
+  const inactiveColor    = isDark ? '#64748B' : '#111827';
   const activeColor      = isDark ? '#A78BFA' : ACTIVE_COLOR; // slightly lighter tint in dark
+  const swipeInactiveFill = isDark ? '#E5E7EB' : '#0B0B0B';
   // Center outer ring blends seamlessly with background
   const centerOuterBorder = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
 
@@ -546,7 +589,13 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
 
               <View style={styles.iconWrap}>
                 {route.name === 'matches' ? (
-                  <MatchesIcon active={isFocused} color={iconColor} />
+                  <MatchesIcon
+                    active={isFocused}
+                    color={iconColor}
+                    inactiveFill={swipeInactiveFill}
+                  />
+                ) : route.name === 'index' ? (
+                  <SwipeIcon color={iconColor} active={isFocused} inactiveFill={swipeInactiveFill} />
                 ) : (
                   <Ionicons
                     name={tabIcon(route.name, isFocused)}
@@ -625,6 +674,27 @@ const styles = StyleSheet.create({
     height: 26,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  swipeIconWrap: {
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swipeCard: {
+    position: 'absolute',
+    width: 16,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.6,
+    backgroundColor: 'transparent',
+  },
+  swipeCardBack: {
+    transform: [{ translateX: 4 }, { translateY: 2 }],
+    opacity: 0.7,
+  },
+  swipeCardFront: {
+    transform: [{ translateX: -3 }, { translateY: -1 }, { rotate: '-12deg' }],
   },
   matchesHeartBack: {
     position: 'absolute',

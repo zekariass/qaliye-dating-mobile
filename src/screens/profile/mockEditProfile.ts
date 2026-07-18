@@ -20,7 +20,6 @@ export type EditProfileDraft = {
     gender: string;
     dateOfBirth: string;
     heightCm: string;
-    residencyType: string;
     address: string;
   };
   personal: {
@@ -71,10 +70,8 @@ export type DiscoveryPrefDraft = {
 
 export const GENDER_OPTIONS = ['MALE', 'FEMALE'] as const;
 
-export const RESIDENCY_OPTIONS = ['ETHIOPIA', 'ERITREA', 'DIASPORA'] as const;
-
 export const NATIONALITY_OPTIONS = [
-  'Ethiopian', 'Eritrean', 'Dual Citizen', 'Other',
+  'Ethiopian', 'Eritrean', 'Other',
 ] as const;
 
 export const RELIGION_OPTIONS = [
@@ -100,10 +97,67 @@ export const DRINKING_OPTIONS = ['No', 'Socially', 'Occasionally', 'Yes'] as con
 export const ACTIVITY_OPTIONS = ['Sedentary', 'Light', 'Moderate', 'Active', 'Very active'] as const;
 
 export const INTEREST_OPTIONS = [
-  'Travel', 'Reading', 'Cooking', 'Fitness', 'Music', 'Art',
-  'Photography', 'Dancing', 'Hiking', 'Coffee', 'Movies', 'Volunteering',
-  'Yoga', 'Gaming', 'Writing', 'Languages', 'Tech', 'Fashion',
+  'Travel',
+  'Reading',
+  'Cooking',
+  'Baking',
+  'Fitness',
+  'Running',
+  'Cycling',
+  'Swimming',
+  'Yoga',
+  'Meditation',
+  'Sports',
+  'Football',
+  'Basketball',
+  'Tennis',
+  'Hiking',
+  'Camping',
+  'Nature',
+  'Gardening',
+  'Music',
+  'Concerts',
+  'Singing',
+  'Dancing',
+  'Movies',
+  'TV Shows',
+  'Theatre',
+  'Comedy',
+  'Podcasts',
+  'Gaming',
+  'Art',
+  'Photography',
+  'Writing',
+  'Poetry',
+  'Design',
+  'Fashion',
+  'Crafts',
+  'DIY',
+  'Coffee',
+  'Tea',
+  'Food',
+  'Restaurants',
+  'Brunch',
+  'Tech',
+  'Science',
+  'History',
+  'Languages',
+  'Business',
+  'Entrepreneurship',
+  'Volunteering',
+  'Animals',
+  'Pets',
+  'Sustainability',
+  'Spirituality',
+  'Family',
+  'Nightlife',
+  'Festivals',
+  'Board Games',
+  'Shopping',
+  'Cars',
 ] as const;
+
+export type Interest = typeof INTEREST_OPTIONS[number];
 
 
 // ─── Initial mock data ──────────────────────────────────────────────────────────
@@ -114,14 +168,13 @@ export const INITIAL_DRAFT: EditProfileDraft = {
     gender: 'FEMALE',
     dateOfBirth: '14 Nov 1995',
     heightCm: '165',
-    residencyType: 'ETHIOPIA',
     address: 'Addis Ababa, Ethiopia',
   },
   personal: {
     bio: 'Coffee lover ☕, travel enthusiast ✈️ and believer in meaningful conversations.',
     ethnicities: [],
     ethnicityOtherText: '',
-    nationality: 'Ethiopian',
+    nationality: 'ET',
     religion: 'Orthodox Christian',
     educationLevel: "Bachelor's Degree",
     occupation: 'Software Engineer',
@@ -177,14 +230,13 @@ export function computeCompletionPercent(draft: EditProfileDraft, prefs: Discove
   let filled = 0;
   let total = 0;
 
-  // Basics (6 fields)
+  // Basics (5 fields)
   const b = draft.basics;
-  total += 6;
+  total += 5;
   if (b.displayName) filled++;
   if (b.gender) filled++;
   if (b.dateOfBirth) filled++;
   if (b.heightCm) filled++;
-  if (b.residencyType) filled++;
   if (b.address) filled++;
 
   // Personal (10 fields)

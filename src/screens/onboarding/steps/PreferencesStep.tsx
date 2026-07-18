@@ -104,8 +104,8 @@ export default function PreferencesStep({ onComplete, isCompleted }: Props) {
     }
   }, [interestedIn, isCompleted, isDirty, minAge, maxAge, maxDistance, onComplete]);
 
-  const ageLabel = `${minAge} – ${maxAge === 80 ? '80+' : maxAge}`;
-  const distanceLabel = maxDistance >= 200 ? '200+ km' : `${maxDistance} km`;
+  const ageLabel = `${minAge} – ${maxAge === 100 ? '100+' : maxAge}`;
+  const distanceLabel = maxDistance >= 500 ? '500+ km' : `${maxDistance} km`;
   const saveLabel = isCompleted && isDirty ? t('onboarding.preferences.saveAndContinue') : t('onboarding.preferences.continue');
 
   if (isPrefilling) {
@@ -159,7 +159,7 @@ export default function PreferencesStep({ onComplete, isCompleted }: Props) {
           <Slider
             style={styles.slider}
             minimumValue={18}
-            maximumValue={79}
+            maximumValue={99}
             step={1}
             value={minAge}
             onValueChange={(v: number) => setMinAge(Math.min(v, maxAge - 1))}
@@ -167,14 +167,14 @@ export default function PreferencesStep({ onComplete, isCompleted }: Props) {
             maximumTrackTintColor={th.border}
             thumbTintColor={colors.primary}
           />
-          <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>80+</Text>
+          <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>100+</Text>
         </View>
         <View style={styles.sliderRow}>
           <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>18</Text>
           <Slider
             style={styles.slider}
             minimumValue={19}
-            maximumValue={80}
+            maximumValue={100}
             step={1}
             value={maxAge}
             onValueChange={(v: number) => setMaxAge(Math.max(v, minAge + 1))}
@@ -182,11 +182,11 @@ export default function PreferencesStep({ onComplete, isCompleted }: Props) {
             maximumTrackTintColor={th.border}
             thumbTintColor={colors.primary}
           />
-          <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>80+</Text>
+          <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>100+</Text>
         </View>
         <View style={styles.ageLabelsRow}>
           <Text style={[styles.ageRangeHint, { color: th.textMuted }]}>{t('onboarding.preferences.min')}: {minAge}</Text>
-          <Text style={[styles.ageRangeHint, { color: th.textMuted }]}>{t('onboarding.preferences.max')}: {maxAge === 80 ? '80+' : maxAge}</Text>
+          <Text style={[styles.ageRangeHint, { color: th.textMuted }]}>{t('onboarding.preferences.max')}: {maxAge === 100 ? '100+' : maxAge}</Text>
         </View>
       </View>
 
@@ -205,7 +205,7 @@ export default function PreferencesStep({ onComplete, isCompleted }: Props) {
           <Slider
             style={styles.slider}
             minimumValue={5}
-            maximumValue={200}
+            maximumValue={500}
             step={5}
             value={maxDistance}
             onValueChange={(v: number) => setMaxDistance(v)}
@@ -213,7 +213,7 @@ export default function PreferencesStep({ onComplete, isCompleted }: Props) {
             maximumTrackTintColor={th.border}
             thumbTintColor={colors.primary}
           />
-          <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>200+</Text>
+          <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>500+</Text>
         </View>
       </View>
 

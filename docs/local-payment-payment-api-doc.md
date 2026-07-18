@@ -1,51 +1,168 @@
-# Manual Transfer Payment Verification — Frontend Integration Guide
+# Local Payment Flow — API Reference
 
-This document describes the full API flow that a frontend (Android, iOS, or Web) must implement to support **MANUAL_TRANSFER** payment verification using the Verify.et backend integration.
+All endpoints are under base path `/api/v1/billing` and require a valid JWT
+(user context resolved from the `Authorization: Bearer <token>` header).
 
----
-
-## Base URL
-
-```
-https://api.qaliye.app/api/v1
-```
-
-All endpoints require a valid `Authorization: Bearer <jwt>` header unless stated otherwise.
+Admin endpoints are under `/api/v1/admin/billing` and additionally require an admin role.
 
 ---
 
-## High-Level Flow
+## Status Lifecycle
 
+| Status | Channel | Meaning |
+|---|---|---|
+| `CREATED` | All | Order created; gateway checkout failed (will have no `providerCheckoutUrl`) |
+| `AWAITING_PAYMENT` | Online | Checkout URL issued; waiting for user to pay on gateway |
+| `VERIFICATION_PENDING` | Manual/verify.et | verify.et request queued; poll for result |
+| `RECEIPT_SUBMITTED` | Manual/receipt | User uploaded a receipt; waiting for admin approval |
+| `REVIEW_REQUIRED` | Manual/verify.et | verify.et confirmed real transaction but bank or amount mismatch; admin must review |
+| `MANUAL_REVIEW` | Manual/verify.et | verify.et failed / not found / duplicate reference; admin must review |
+| `VERIFIED` | All | Payment confirmed; entitlement fulfilled |
+| `REJECTED` | All | Admin rejected or gateway declined |
+| `EXPIRED` | All | Order passed expiry time without resolution |
+| `CANCELLED` | All | User or system cancelled |
+
+### Flow diagrams
+
+**Online payment (Chapa / ArifPay)**
 ```
-1.  GET  /billing/offers                                   → list available offers
-2.  GET  /billing/payment-channels?platform=               → list available payment channels
-3.  User selects a channel (MANUAL_TRANSFER or ONLINE_PAYMENT)
-4.  GET  /billing/payment-options?platform=&channel=       → list payment methods for that channel
-5.  User selects a payment method
-6.  POST /billing/orders                                   → create an order
-7.  Display payment instructions to the user
-8.  Render a form based on verificationParams
-9.  User pays at their bank / app
-10. User fills the form and submits
-11. POST /billing/orders/{orderId}/verify                  → submit payment details for verification
-12. Poll GET /billing/orders/{orderId}                     → poll until a terminal status is reached
+CREATED ──► AWAITING_PAYMENT ──► VERIFIED
+                              └─► REJECTED
+                              └─► EXPIRED
+                              └─► CANCELLED
+```
+
+**Manual transfer — verify.et path**
+```
+                              ┌─► VERIFIED          (bank + amount match)
+VERIFICATION_PENDING ─────────┤─► REVIEW_REQUIRED   (transaction real but mismatch)
+                              ├─► MANUAL_REVIEW      (verify.et failed / dup ref)
+                              └─► REJECTED
+```
+
+**Manual transfer — receipt upload path**
+```
+RECEIPT_SUBMITTED ──► VERIFIED   (admin approves)
+                  └─► REJECTED   (admin rejects)
 ```
 
 ---
 
-## Step 1 — Get Available Offers
+## 1. Discover Payment Channels
 
-### `GET /billing/offers?platform={platform}`
+### `GET /api/v1/billing/payment-channels`
 
-Returns the subscription / consumable products that can be purchased.
+Returns the payment channels available to the caller's billing market.
+Call this first to let the user choose a channel (e.g. "Online Payment" vs "Bank Transfer").
 
-#### Query Parameters
+**Query params**
 
-| Parameter  | Type   | Required | Description                            |
-|------------|--------|----------|----------------------------------------|
-| `platform` | string | No       | `ANDROID` (default), `IOS`, or `WEB`  |
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `platform` | string | `ANDROID` | Caller's platform: `ANDROID` or `IOS` |
 
-#### Response `200 OK`
+**Response `200`**
+
+```json
+{
+  "platform": "ANDROID",
+  "billingCountryCode": "ET",
+  "resolvedMarketCountryCode": "ET",
+  "fallbackToGlobal": false,
+  "paymentChannels": [
+    {
+      "code": "ONLINE_PAYMENT",
+      "displayName": "Online Payment",
+      "activeOnlineMethodCode": "chapa",
+      "displayOrder": 1,
+      "methodCount": 1
+    },
+    {
+      "code": "MANUAL_TRANSFER",
+      "displayName": "Bank / Mobile Transfer",
+      "activeOnlineMethodCode": null,
+      "displayOrder": 2,
+      "methodCount": 4
+    }
+  ]
+}
+```
+
+| Field | Description |
+|---|---|
+| `billingCountryCode` | Country resolved from the user's profile/IP |
+| `resolvedMarketCountryCode` | Effective market country (may differ if fallback applied) |
+| `fallbackToGlobal` | `true` if the user's country has no market and global market was used |
+| `paymentChannels[].code` | Value to pass as `channel` in `GET /payment-options` |
+| `paymentChannels[].activeOnlineMethodCode` | For `ONLINE_PAYMENT` channels: the single active gateway code (e.g. `chapa`). Use this to find `paymentMethodId` when creating an order. `null` for manual-transfer channels. |
+| `paymentChannels[].methodCount` | Total active methods in the channel |
+
+---
+
+## 2. Discover Payment Methods for a Channel
+
+### `GET /api/v1/billing/payment-options`
+
+Returns the individual payment methods inside a specific channel, along with the
+verification fields the frontend must collect from the user.
+
+**Query params**
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `platform` | string | `ANDROID` | `ANDROID` or `IOS` |
+| `channel` | string | _(none)_ | Filter by channel code from step 1 (e.g. `MANUAL_TRANSFER`). If omitted, all channels are returned. |
+
+**Response `200`**
+
+```json
+{
+  "paymentChannel": "MANUAL_TRANSFER",
+  "activeOnlineMethodCode": null,
+  "platform": "ANDROID",
+  "billingCountryCode": "ET",
+  "resolvedMarketCountryCode": "ET",
+  "fallbackToGlobal": false,
+  "paymentMethods": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "methodCode": "telebirr",
+      "displayName": "TeleBirr",
+      "paymentChannel": "MANUAL_TRANSFER",
+      "paymentMethod": "MOBILE_MONEY",
+      "paymentInstructionsHtml": "<p>Send <strong>499.00 ETB</strong> to 0911000000</p>",
+      "displayOrder": 1,
+      "verificationParams": {
+        "fields": [
+          { "key": "transactionOrReference", "label": "Transaction Reference", "required": true }
+        ]
+      }
+    }
+  ]
+}
+```
+
+| Field | Description |
+|---|---|
+| `paymentMethods[].id` | `paymentMethodId` to use in subsequent order creation calls |
+| `paymentMethods[].methodCode` | Internal code passed to verify.et |
+| `paymentMethods[].verificationParams` | Frontend form definition — render one input per `fields` entry and collect values into `verificationData` |
+
+---
+
+## 3. List Offers
+
+### `GET /api/v1/billing/offers`
+
+Returns the subscription / product offers available for the user's market.
+
+**Query params**
+
+| Param | Type | Default |
+|---|---|---|
+| `platform` | string | `ANDROID` |
+
+**Response `200`** — array of offer objects
 
 ```json
 [
@@ -68,500 +185,410 @@ Returns the subscription / consumable products that can be purchased.
 ]
 ```
 
-#### Key Fields
-
-| Field                        | Description                                                     |
-|------------------------------|-----------------------------------------------------------------|
-| `id`                         | UUID to pass as `paymentOfferId` when creating an order         |
-| `priceMinorUnits`            | Price in the smallest currency unit (e.g. ETB centimes/santim) |
-| `displayPrice`               | Human-readable price string                                     |
-| `hasAvailablePaymentMethods` | `false` means no payment methods exist for this offer           |
+`priceMinorUnits` is the authoritative amount (e.g. `49900` = ETB 499.00).
+Never send an amount from the frontend — the backend always derives amounts from the offer.
 
 ---
 
-## Step 2 — Get Payment Channels
+## 4A. Create Order — Online Payment (Chapa / ArifPay)
 
-### `GET /billing/payment-channels?platform={platform}`
+### `POST /api/v1/billing/orders`
 
-Returns the distinct payment channels available for the authenticated user's billing country and platform. Use this to build the channel selection UI (e.g. tabs or a radio list).
+Creates an order and obtains a gateway checkout URL to redirect the user to.
 
-#### Query Parameters
-
-| Parameter  | Type   | Required | Description                            |
-|------------|--------|----------|----------------------------------------|
-| `platform` | string | No       | `ANDROID` (default), `IOS`, or `WEB`  |
-
-#### Response `200 OK`
-
-```json
-[
-  {
-    "channel": "MANUAL_TRANSFER",
-    "displayName": "Bank / Mobile Transfer"
-  },
-  {
-    "channel": "ONLINE_PAYMENT",
-    "displayName": "Pay Online"
-  }
-]
-```
-
-| Field         | Description                                                          |
-|---------------|----------------------------------------------------------------------|
-| `channel`     | Channel identifier — pass as `channel` query param in Step 3        |
-| `displayName` | Human-readable label to display as a tab or section heading          |
-
-> Only channels that have at least one active payment method for the user's market are returned. The array may contain only one element if, for example, only `MANUAL_TRANSFER` is configured for that country.
-
----
-
-## Step 3 — Get Payment Methods for a Channel
-
-### `GET /billing/payment-options?platform={platform}&channel={channel}`
-
-Returns payment methods for a specific channel in the user's billing market. Call this after the user selects a channel from Step 2.
-
-#### Query Parameters
-
-| Parameter  | Type   | Required | Description                                                          |
-|------------|--------|----------|----------------------------------------------------------------------|
-| `platform` | string | No       | `ANDROID` (default), `IOS`, or `WEB`                                |
-| `channel`  | string | No       | `MANUAL_TRANSFER` or `ONLINE_PAYMENT`. Omit to get all methods       |
-
-#### Response `200 OK`
+**Request body**
 
 ```json
 {
+  "paymentOfferId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "paymentMethodId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
   "platform": "ANDROID",
-  "billingCountryCode": "ETH",
-  "resolvedMarketCountryCode": "ETH",
-  "fallbackToGlobal": false,
-  "paymentMethods": [
+  "idempotencyKey": "client-generated-uuid-v4"
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `paymentOfferId` | ✅ | ID from `GET /offers` |
+| `paymentMethodId` | ✅ | Must match the single active online gateway method for the user's market. Get the ID from `GET /payment-options?channel=ONLINE_PAYMENT`. |
+| `platform` | ❌ | Defaults to `ANDROID` |
+| `idempotencyKey` | ❌ | Client-generated UUID. If supplied and an order already exists for this key, the existing order is returned instead of creating a duplicate. Safe to retry on network timeout. |
+
+**Response `201`** — [OrderResponse](#orderresponse-object)
+
+```json
+{
+  "id": "...",
+  "status": "AWAITING_PAYMENT",
+  "providerCheckoutUrl": "https://checkout.chapa.co/checkout/payment/...",
+  ...
+}
+```
+
+Redirect the user to `providerCheckoutUrl`. The gateway posts a webhook to the
+backend when payment completes. Poll `GET /orders/{orderId}` to detect the final status.
+
+> If the gateway call fails at order creation time, the order is created with
+> `status: CREATED` and `providerCheckoutUrl: null`. Display an error and allow
+> the user to retry.
+
+**Error codes**
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 400 | `invalid_offer` | Offer ID not found or not active |
+| 400 | `no_active_online_payment_method` | No active gateway configured for the user's market |
+| 400 | `invalid_payment_method_for_market` | Submitted `paymentMethodId` does not match the active gateway method for the market |
+| 400 | `payment_method_unavailable` | Method is currently disabled |
+| 400 | `offer_method_market_mismatch` | Offer and method belong to different markets |
+
+---
+
+## 4B. Create Order — Manual Transfer with verify.et
+
+### `POST /api/v1/billing/manual-transfer/verify`
+
+Creates an order and submits the user's bank / mobile-money transaction reference
+to verify.et for automated verification.
+
+**Request body**
+
+```json
+{
+  "paymentOfferId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "paymentMethodId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "platform": "ANDROID",
+  "verificationData": {
+    "transactionOrReference": "AABBCC112233"
+  },
+  "idempotencyKey": "client-generated-uuid-v4"
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `paymentOfferId` | ✅ | ID from `GET /offers` |
+| `paymentMethodId` | ✅ | ID of the chosen manual-transfer method from `GET /payment-options` |
+| `platform` | ❌ | Defaults to `ANDROID` |
+| `verificationData` | ✅ | Map of fields collected from the user. Keys are defined per method (see table below). |
+| `idempotencyKey` | ❌ | Deduplication key — safe to retry on network timeout |
+
+**`verificationData` key(s) by method code**
+
+| `methodCode` | Key to include |
+|---|---|
+| `telebirr`, `mpesa` | `transactionOrReference` |
+| `cbe` | `referenceNumber` or `receiptNumber` |
+| `cbebirr` | `transactionNumber` |
+| `boa`, `awash`, `dashen`, `siinqee`, `kaafiebirr` | `referenceNumber` |
+
+Use `verificationParams.fields` from `GET /payment-options` to render the form dynamically.
+
+**Response `201`** — [OrderResponse](#orderresponse-object)
+
+Handle the response `status` field as follows:
+
+| `status` | Frontend action |
+|---|---|
+| `VERIFICATION_PENDING` | Poll `GET /orders/{orderId}` every `pollAfterMs` ms (= 5000) until status changes |
+| `VERIFIED` | Subscription is active — navigate to success screen |
+| `REVIEW_REQUIRED` | Transaction was real but a discrepancy was detected (wrong bank or amount). Show "under review" message. `canContactSupport: true` |
+| `MANUAL_REVIEW` | Verification failed (not found, system error, or duplicate reference). Show error. `canUploadReceipt: true` — offer the receipt upload path |
+| `REJECTED` | Definitively failed. `canContactSupport: true` |
+
+**Error codes** (same as 4A, plus):
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 400 | `invalid_payment_method` | Method ID not found |
+| 400 | `not_manual_transfer_method` | Supplied method is not a MANUAL_TRANSFER method |
+
+---
+
+## 4C. Create Order — Manual Transfer with Receipt Upload
+
+### `POST /api/v1/billing/manual-transfer/receipt`
+
+Creates an order and records a receipt that the user has already uploaded to cloud
+storage. An admin will review and manually approve.
+
+> **Upload first**: the client uploads the receipt image to the configured cloud
+> storage bucket **before** calling this endpoint, then passes the resulting
+> `bucket` and `path` in this request.
+
+**Request body**
+
+```json
+{
+  "paymentOfferId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "paymentMethodId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "platform": "ANDROID",
+  "receiptStorageBucket": "qaliye-receipts",
+  "receiptStoragePath": "users/abc123/receipts/2025-07-08_telebirr.jpg",
+  "additionalNotes": {
+    "note": "Paid from my wife's phone"
+  },
+  "idempotencyKey": "client-generated-uuid-v4"
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `paymentOfferId` | ✅ | ID from `GET /offers` |
+| `paymentMethodId` | ✅ | ID of the chosen manual-transfer method |
+| `platform` | ❌ | Defaults to `ANDROID` |
+| `receiptStorageBucket` | ✅ | Cloud storage bucket where the receipt was uploaded |
+| `receiptStoragePath` | ✅ | Full path/key of the uploaded receipt file |
+| `additionalNotes` | ❌ | Free-form key/value map (e.g. a note to admin) |
+| `idempotencyKey` | ❌ | Deduplication key |
+
+**Response `201`** — [OrderResponse](#orderresponse-object)
+
+```json
+{ "status": "RECEIPT_SUBMITTED", ... }
+```
+
+Show the user a "Your receipt is under review" screen. Poll `GET /orders/{orderId}`
+to detect when admin approves (`VERIFIED`) or rejects (`REJECTED`).
+
+---
+
+## 5. Get Order
+
+### `GET /api/v1/billing/orders/{orderId}`
+
+Returns full details of a single order. Only accessible by the order owner.
+
+**Path params**
+
+| Param | Description |
+|---|---|
+| `orderId` | UUID of the order |
+
+**Response `200`** — [OrderResponse](#orderresponse-object)
+
+**Error codes**
+
+| HTTP | Code |
+|---|---|
+| 404 | `order_not_found` |
+| 403 | `access_denied` |
+
+---
+
+## 6. List Orders
+
+### `GET /api/v1/billing/orders`
+
+**Query params**
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `statuses` | string | _(all)_ | Comma-separated status filter, e.g. `VERIFIED,AWAITING_PAYMENT` |
+| `page` | int | `1` | Page number (1-based) |
+| `pageSize` | int | `20` | Max `100` |
+
+**Response `200`**
+
+```json
+{
+  "orders": [
     {
-      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "methodCode": "cbe",
-      "displayName": "CBE (Commercial Bank of Ethiopia)",
-      "paymentChannel": "MANUAL_TRANSFER",
-      "paymentMethod": "BANK_TRANSFER",
-      "paymentInstructions": "Transfer to Account: 1000123456789\nAccount Name: Qaliye Technologies\nBank: Commercial Bank of Ethiopia",
-      "displayOrder": 1,
-      "verificationParams": {
-        "fields": [
-          {
-            "name": "receiptNumber",
-            "label": "Receipt Number",
-            "type": "text",
-            "required": true,
-            "hint": "Found on your CBE transaction receipt"
-          }
-        ]
-      }
-    },
-    {
-      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
-      "methodCode": "telebirr",
-      "displayName": "Telebirr",
+      "id": "...",
+      "orderReference": "QAL-A1B2C3D4",
+      "status": "VERIFIED",
+      "productCode": "premium_monthly",
+      "productType": "SUBSCRIPTION",
+      "displayName": "Qaliye Premium (1 Month)",
+      "expectedAmountMinorUnits": 49900,
+      "expectedCurrency": "ETB",
+      "displayPrice": "ETB 499.00",
+      "paymentMethodId": "...",
+      "paymentMethodDisplayName": "TeleBirr",
       "paymentChannel": "MANUAL_TRANSFER",
       "paymentMethod": "MOBILE_MONEY",
-      "paymentInstructions": "Send to Telebirr number: 0911234567\nAccount Name: Qaliye Technologies",
-      "displayOrder": 2,
-      "verificationParams": {
-        "fields": [
-          {
-            "name": "reference",
-            "label": "Transaction Reference",
-            "type": "text",
-            "required": true,
-            "hint": "The reference number from your Telebirr transaction"
-          }
-        ]
-      }
+      "methodCode": "telebirr",
+      "expiresAt": "2025-07-10T12:00:00Z",
+      "createdAt": "2025-07-08T12:00:00Z",
+      "updatedAt": "2025-07-08T13:00:00Z",
+      "canResumePayment": false,
+      "canSubmitPayment": false,
+      "canCreateNewOrder": false
     }
-  ]
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "total": 1,
+  "totalPages": 1
 }
 ```
 
-#### Payment Method Fields
+**Action flags on each order summary**
 
-| Field                       | Description                                                              |
-|-----------------------------|--------------------------------------------------------------------------|
-| `id`                        | UUID to pass as `paymentMethodId` when creating an order                 |
-| `methodCode`                | Identifies the bank/wallet (see bank field reference below)              |
-| `paymentChannel`            | `MANUAL_TRANSFER` or `ONLINE_PAYMENT`                                    |
-| `paymentInstructions`       | Plain text — **display to user before they pay** (`null` for ONLINE_PAYMENT) |
-| `verificationParams.fields` | Dynamic form descriptors — **use to build the verification input form**  |
-
-#### `verificationParams.fields` — Field Descriptor Shape
-
-Each element in the `fields` array describes one input the user must fill:
-
-| Property   | Type    | Description                                      |
-|------------|---------|--------------------------------------------------|
-| `name`     | string  | Key name to use in `verificationFields` map      |
-| `label`    | string  | Display label for the input                      |
-| `type`     | string  | Input type: `text`, `tel`, or `number`           |
-| `required` | boolean | Whether the field is mandatory                   |
-| `hint`     | string  | Helper text to show below the input              |
-
-#### Bank Field Reference
-
-The following shows the fields each bank expects. These will be reflected in `verificationParams.fields`. The frontend must forward exactly these keys inside `verificationFields` when submitting.
-
-| `methodCode` | Fields Required                     | Notes                                               |
-|--------------|-------------------------------------|-----------------------------------------------------|
-| `cbe`        | `receiptNumber`                     | 10–20 digit receipt number from CBE slip/app        |
-| `telebirr`   | `reference`                         | Transaction reference or confirmation code          |
-| `cbebirr`    | `phoneNumber`, `reference`          | Sender's phone number and the reference number      |
-| `mpesa`      | `reference`                         | M-Pesa transaction code                             |
-| `boa`        | `reference`                         | Bank of Abyssinia reference number                  |
-| `awash`      | `reference`                         | Awash Bank reference number                         |
-| `dashen`     | `reference`                         | Dashen Bank reference number                        |
-| `siinqee`    | `reference`                         | Siinqee Bank reference number                       |
-| `kaafiebirr` | `reference`                         | KaafiBirr transaction reference                     |
+| Flag | `true` when | Suggested frontend use |
+|---|---|---|
+| `canResumePayment` | `CREATED` or `AWAITING_PAYMENT` | Show "Continue Payment" button |
+| `canSubmitPayment` | _(currently always `false`; reserved)_ | — |
+| `canCreateNewOrder` | `REJECTED`, `EXPIRED`, or `CANCELLED` | Show "Try Again" button |
 
 ---
 
-## Step 4 — Create an Order
+## OrderResponse Object
 
-### `POST /billing/orders`
-
-Creates a pending payment order tied to an offer and a payment method.
-
-#### Request Body
+Returned by `POST /orders`, `POST /manual-transfer/verify`,
+`POST /manual-transfer/receipt`, and `GET /orders/{orderId}`.
 
 ```json
 {
-  "paymentOfferId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "paymentMethodId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "idempotencyKey": "550e8400-e29b-41d4-a716-446655440000",
-  "platform": "ANDROID"
-}
-```
-
-| Field             | Type   | Required | Description                                                                  |
-|-------------------|--------|----------|------------------------------------------------------------------------------|
-| `paymentOfferId`  | UUID   | Yes      | The offer the user selected (from Step 1)                                    |
-| `paymentMethodId` | UUID   | Yes      | The payment method the user selected (from Step 3)                           |
-| `idempotencyKey`  | string | No       | Unique string to prevent duplicate orders on retry — recommended (use UUID)  |
-| `platform`        | string | No       | `ANDROID`, `IOS`, or `WEB`                                                  |
-
-#### Response `201 Created`
-
-```json
-{
-  "id": "c3d4e5f6-0000-0000-0000-000000000001",
-  "orderReference": "ORD-20260708-ABCD1234",
-  "status": "AWAITING_PAYMENT",
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "orderReference": "QAL-A1B2C3D4",
+  "status": "VERIFICATION_PENDING",
+  "paymentOfferId": "...",
   "expectedAmountMinorUnits": 49900,
   "expectedCurrency": "ETB",
-  "paymentMethodId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "paymentMethodId": "...",
   "paymentChannel": "MANUAL_TRANSFER",
-  "paymentMethod": "BANK_TRANSFER",
-  "methodCode": "cbe",
-  "paymentMethodDisplayName": "CBE (Commercial Bank of Ethiopia)",
+  "paymentMethod": "MOBILE_MONEY",
+  "methodCode": "telebirr",
+  "paymentMethodDisplayName": "TeleBirr",
   "providerCheckoutUrl": null,
   "paymentInstructions": {
-    "instructionText": "Transfer to Account: 1000123456789\nAccount Name: Qaliye Technologies\nBank: Commercial Bank of Ethiopia"
+    "paymentChannel": "MANUAL_TRANSFER",
+    "methodCode": "telebirr",
+    "displayName": "TeleBirr",
+    "instructionText": "Send ETB 499.00 to 0911000000 before 2025-07-10 12:00 UTC"
   },
-  "expiresAt": "2026-07-09T00:00:00Z",
-  "createdAt": "2026-07-08T00:00:00Z"
+  "expiresAt": "2025-07-10T12:00:00Z",
+  "createdAt": "2025-07-08T12:00:00Z",
+  "updatedAt": "2025-07-08T12:00:00Z",
+  "verifyEtRequestId": "verifyEt-req-abc123",
+  "pollAfterMs": 5000,
+  "canRetryVerification": false,
+  "canUploadReceipt": false,
+  "canContactSupport": false
 }
 ```
 
-| Field                      | Description                                                                |
-|----------------------------|----------------------------------------------------------------------------|
-| `id`                       | Order UUID — store this for polling and for submitting verification        |
-| `status`                   | `AWAITING_PAYMENT` for new MANUAL_TRANSFER orders                          |
-| `expectedAmountMinorUnits` | Exact amount the user must pay and submit back — do not let user edit this |
-| `expectedCurrency`         | Currency code (e.g. `ETB`)                                                 |
-| `paymentInstructions`      | Object with `instructionText` — display prominently before the form        |
-| `expiresAt`                | Order becomes invalid after this timestamp                                 |
-| `providerCheckoutUrl`      | Always `null` for MANUAL_TRANSFER                                          |
-
-> **Note:** `providerCheckoutUrl` is only populated for `ONLINE_PAYMENT` orders (e.g. Chapa). For `MANUAL_TRANSFER`, ignore this field entirely and show the `paymentInstructions` instead.
-
----
-
-## Step 5 — Display Payment Instructions
-
-Before showing the verification form, render `paymentInstructions.instructionText` clearly to the user. This contains the destination account number, account name, and bank/wallet details that the user must pay to.
-
-The user should complete the actual bank transfer before returning to fill out the form.
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Order ID |
+| `orderReference` | string | Human-readable reference (format: `QAL-XXXXXXXX`) |
+| `status` | string | Current order status — see [Status Lifecycle](#status-lifecycle) |
+| `paymentOfferId` | UUID | The offer this order is for |
+| `expectedAmountMinorUnits` | int | Amount in minor units (divide by 100 for display) |
+| `expectedCurrency` | string | ISO 4217 currency code, e.g. `ETB` |
+| `providerCheckoutUrl` | string\|null | Only set for `AWAITING_PAYMENT` online orders. Redirect the user here. |
+| `paymentInstructions` | object\|null | Rendered instruction snapshot. Present for manual transfer orders. Display `instructionText` to the user. |
+| `expiresAt` | ISO-8601 | When this order expires |
+| `verifyEtRequestId` | string\|null | Set when `status` is `VERIFICATION_PENDING`, `REVIEW_REQUIRED`, or `MANUAL_REVIEW`. For support reference only. |
+| `pollAfterMs` | long\|null | `5000` when `status = VERIFICATION_PENDING`. Poll `GET /orders/{id}` after this many ms. `null` otherwise. |
+| `canRetryVerification` | bool | Reserved; always `false` |
+| `canUploadReceipt` | bool | `true` when `status = MANUAL_REVIEW`. Offer the user to submit a receipt instead. |
+| `canContactSupport` | bool | `true` when `status = REJECTED` or `REVIEW_REQUIRED`. Show contact-support CTA. |
 
 ---
 
-## Step 6 — Submit Verification Details
-
-### `POST /billing/orders/{orderId}/verify`
-
-Submits the payment reference details the user entered, triggering backend verification.
-
-#### Path Parameters
-
-| Parameter | Type | Description               |
-|-----------|------|---------------------------|
-| `orderId` | UUID | The `id` from the order   |
-
-#### Request Body
-
-```json
-{
-  "verificationFields": {
-    "receiptNumber": "FT26190123456"
-  },
-  "submittedAmountMinorUnits": 49900,
-  "submittedCurrency": "ETB"
-}
-```
-
-| Field                       | Type         | Required | Description                                                                              |
-|-----------------------------|--------------|----------|------------------------------------------------------------------------------------------|
-| `verificationFields`        | object (map) | Yes      | Key-value map of form inputs; keys must match `name` in `verificationParams.fields`      |
-| `submittedAmountMinorUnits` | integer      | Yes      | The amount paid — **must exactly equal `expectedAmountMinorUnits` on the order**         |
-| `submittedCurrency`         | string       | Yes      | The currency paid — **must exactly equal `expectedCurrency` on the order**               |
-
-#### `verificationFields` Examples per Bank
-
-**CBE:**
-```json
-{ "receiptNumber": "FT26190123456" }
-```
-
-**Telebirr:**
-```json
-{ "reference": "TELE12345678" }
-```
-
-**CBEBirr:**
-```json
-{ "phoneNumber": "0911234567", "reference": "CBEB98765432" }
-```
-
-**M-Pesa:**
-```json
-{ "reference": "MPESA1234ABCDEF" }
-```
-
-**BOA / Awash / Dashen / Siinqee / KaafiBirr:**
-```json
-{ "reference": "TXN20260708XYZ123" }
-```
-
-#### Response `200 OK`
-
-Returns the updated order object. Check the `status` field immediately:
-
-```json
-{
-  "id": "c3d4e5f6-0000-0000-0000-000000000001",
-  "orderReference": "ORD-20260708-ABCD1234",
-  "status": "VERIFICATION_PENDING",
-  "expectedAmountMinorUnits": 49900,
-  "expectedCurrency": "ETB",
-  "paymentChannel": "MANUAL_TRANSFER",
-  "methodCode": "cbe",
-  "paymentMethodDisplayName": "CBE (Commercial Bank of Ethiopia)",
-  "providerCheckoutUrl": null,
-  "paymentInstructions": { "instructionText": "..." },
-  "expiresAt": "2026-07-09T00:00:00Z",
-  "createdAt": "2026-07-08T00:00:00Z"
-}
-```
-
-If verification completed inline (synchronously), `status` may already be `VERIFIED`, `REJECTED`, or `MANUAL_REVIEW` in this response — no polling would be needed in that case.
-
-#### Error Responses
-
-| HTTP Status | Body `message`               | Cause                                                               |
-|-------------|------------------------------|---------------------------------------------------------------------|
-| `400`       | `order_not_awaiting_payment` | Order is not in `AWAITING_PAYMENT` state (already submitted/finalized) |
-| `400`       | `not_manual_transfer_order`  | This endpoint is only valid for MANUAL_TRANSFER orders              |
-| `400`       | `amount_mismatch`            | `submittedAmountMinorUnits` ≠ `expectedAmountMinorUnits`            |
-| `400`       | `currency_mismatch`          | `submittedCurrency` ≠ `expectedCurrency`                            |
-| `403`       | `access_denied`              | Order belongs to a different user                                   |
-| `404`       | `order_not_found`            | No order found with the given `orderId`                             |
-
----
-
-## Step 7 — Poll for Order Status
-
-### `GET /billing/orders/{orderId}`
-
-Retrieves the latest state of the order. Poll this until a terminal status is reached.
-
-#### Path Parameters
-
-| Parameter | Type | Description             |
-|-----------|------|-------------------------|
-| `orderId` | UUID | The `id` of the order   |
-
-#### Response `200 OK`
-
-Same shape as the `POST /billing/orders` response. Watch the `status` field.
-
-#### Error Responses
-
-| HTTP Status | Body `message` | Cause                                    |
-|-------------|----------------|------------------------------------------|
-| `403`       | `access_denied`  | Order belongs to a different user      |
-| `404`       | `order_not_found` | No order found with this `orderId`    |
-
----
-
-## Order Status Reference
-
-| Status                 | Meaning                                                                                   | Frontend Action                                                              |
-|------------------------|-------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
-| `AWAITING_PAYMENT`     | Order created; user has not submitted payment details yet                                 | Show instructions and verification form                                      |
-| `VERIFICATION_PENDING` | Details submitted; Verify.et has queued the request for background processing             | Show "Verifying…" spinner; continue polling                                  |
-| `VERIFIED`             | Payment confirmed; entitlements have been granted automatically                           | Show success screen; call `GET /billing/entitlements` to refresh features    |
-| `MANUAL_REVIEW`        | Automatic verification inconclusive; waiting for admin to manually review                 | Show "Under review" message; poll every 30s; no user action required         |
-| `ADMIN_REVIEW`         | Possible duplicate transaction or settlement account mismatch; admin investigating        | Show "Under review" message; inform user to contact support if urgent        |
-| `REJECTED`             | Payment reference not found or verification definitively failed                           | Show failure state; offer user the option to create a new order              |
-| `EXPIRED`              | Order passed its `expiresAt` timestamp without being paid                                 | Show expiry message; guide user to start a new order                         |
-| `CANCELLED`            | Order was cancelled (by admin or system)                                                  | Redirect user back to payment method selection                               |
-
-### Terminal Statuses — Stop Polling
-
-Stop all polling once `status` is one of:
+## Recommended Frontend Integration Flow
 
 ```
-VERIFIED  |  REJECTED  |  EXPIRED  |  CANCELLED
-```
+1. GET /payment-channels?platform=ANDROID
+      → present channels to user (Online / Bank Transfer / etc.)
 
-For `MANUAL_REVIEW` and `ADMIN_REVIEW`, continue background polling at a lower frequency (every 30 seconds) since an admin decision may arrive later.
+2. GET /payment-options?platform=ANDROID&channel=<chosen>
+      → present individual methods; build form from verificationParams.fields
 
-### Recommended Polling Strategy
+3. GET /offers?platform=ANDROID
+      → let user pick offer (product + price)
 
-```
-Immediately after /verify returns VERIFICATION_PENDING:
-  → Poll every 3 seconds for the first 30 seconds
-  → Then every 10 seconds for the next 5 minutes
-  → Then every 30 seconds until terminal status or order expiry
+── Branch A: Online payment ────────────────────────────────────────────────────
+4a. POST /orders  { paymentOfferId, paymentMethodId, platform, idempotencyKey }
+      → status AWAITING_PAYMENT → redirect to providerCheckoutUrl
+5a. Poll GET /orders/{id} every 3–5 s until status ≠ AWAITING_PAYMENT
+
+── Branch B: Manual transfer / verify.et ───────────────────────────────────────
+4b. POST /manual-transfer/verify  { paymentOfferId, paymentMethodId, platform,
+                                    verificationData, idempotencyKey }
+      → VERIFICATION_PENDING → poll GET /orders/{id} every pollAfterMs (5000 ms)
+      → VERIFIED             → success screen
+      → REVIEW_REQUIRED      → "Payment under review" + contact support CTA
+      → MANUAL_REVIEW        → show error + "Upload Receipt" button → go to 4c
+
+── Branch C: Manual transfer / receipt ─────────────────────────────────────────
+4c. Upload receipt image to storage → get bucket + path
+    POST /manual-transfer/receipt  { paymentOfferId, paymentMethodId, platform,
+                                     receiptStorageBucket, receiptStoragePath,
+                                     additionalNotes, idempotencyKey }
+      → RECEIPT_SUBMITTED → "Receipt under review" screen
+5c. Poll GET /orders/{id} every 10–30 s until VERIFIED or REJECTED
 ```
 
 ---
 
-## Step 8 — Refresh Entitlements After Verification
+## Admin Endpoints
 
-Once `status` is `VERIFIED`, call:
+All require an admin-role JWT.
 
-### `GET /billing/entitlements`
+### `GET /api/v1/admin/billing/orders`
 
-Returns the user's active entitlements.
+Lists orders pending admin review.
+
+**Query params**
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `status` | string | `MANUAL_REVIEW,REVIEW_REQUIRED,RECEIPT_SUBMITTED` | Comma-separated status filter |
+| `methodCode` | string | _(none)_ | Filter by payment method code (e.g. `telebirr`) |
+| `countryCode` | string | _(none)_ | Filter by country code (e.g. `ET`) |
+| `page` | int | `1` | — |
+| `pageSize` | int | `20` | — |
+
+---
+
+### `GET /api/v1/admin/billing/orders/{orderId}`
+
+Returns full order details including verification attempts and proof records.
+
+---
+
+### `POST /api/v1/admin/billing/orders/{orderId}/approve`
+
+Approves an order in `MANUAL_REVIEW`, `REVIEW_REQUIRED`, `RECEIPT_SUBMITTED`, or
+`VERIFICATION_PENDING`. Sets status to `VERIFIED` and triggers fulfillment immediately.
+
+**Request body** _(optional)_
 
 ```json
-{
-  "subscriptions": [...],
-  "consumables": [...],
-  "boosts": [...]
-}
+{ "decisionNote": "Verified manually — receipt matched." }
 ```
 
-Use this to unlock premium features in the UI.
+**Response `200`**
 
----
-
-## Full Example: CBE Bank Transfer
-
-### 1. Fetch offers
-
-```http
-GET /billing/offers?platform=ANDROID
-Authorization: Bearer <token>
-```
-
-### 2. Fetch payment channels
-
-```http
-GET /billing/payment-channels?platform=ANDROID
-Authorization: Bearer <token>
-```
-
-**Response** → `[{"channel": "MANUAL_TRANSFER", "displayName": "Bank / Mobile Transfer"}, ...]`
-
-### 3. User selects MANUAL_TRANSFER → Fetch payment methods for that channel
-
-```http
-GET /billing/payment-options?platform=ANDROID&channel=MANUAL_TRANSFER
-Authorization: Bearer <token>
-```
-
-**Response** → list of bank/mobile-money methods; user selects CBE.
-
-### 4. User selects an offer and a payment method → Create order
-
-```http
-POST /billing/orders
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "paymentOfferId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "paymentMethodId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "idempotencyKey": "550e8400-e29b-41d4-a716-446655440000",
-  "platform": "ANDROID"
-}
-```
-
-**Response** → `status: "AWAITING_PAYMENT"`, `expectedAmountMinorUnits: 49900`
-
-### 5. Show `paymentInstructions.instructionText` to user
-
-```
-Transfer to Account: 1000123456789
-Account Name: Qaliye Technologies
-Bank: Commercial Bank of Ethiopia
-Amount: ETB 499.00
-```
-
-### 6. Render the form from `verificationParams.fields`
-
-Show one input labelled **"Receipt Number"**, `type="text"`.
-
-### 7. User pays ETB 499 at CBE, copies their receipt number, submits
-
-```http
-POST /billing/orders/c3d4e5f6-0000-0000-0000-000000000001/verify
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "verificationFields": {
-    "receiptNumber": "FT26190123456"
-  },
-  "submittedAmountMinorUnits": 49900,
-  "submittedCurrency": "ETB"
-}
-```
-
-**Response** → `status: "VERIFICATION_PENDING"`
-
-### 8. Poll for status
-
-```http
-GET /billing/orders/c3d4e5f6-0000-0000-0000-000000000001
-Authorization: Bearer <token>
-```
-
-Repeat every few seconds until `status` is terminal.
-
-### 9. On `VERIFIED` — refresh entitlements
-
-```http
-GET /billing/entitlements
-Authorization: Bearer <token>
+```json
+{ "status": "VERIFIED", "orderId": "..." }
 ```
 
 ---
 
-## Important Notes for Frontend Developers
+### `POST /api/v1/admin/billing/orders/{orderId}/reject`
 
-- **Do not let the user edit the amount.** The `submittedAmountMinorUnits` must match `expectedAmountMinorUnits` exactly. Prefill it from the order and disable the field.
-- **Build forms dynamically.** Always use `verificationParams.fields` to render inputs. Do not hardcode field names per bank in your client code.
-- **Use idempotency keys.** Always pass a stable `idempotencyKey` when creating orders to safely retry failed network requests without creating duplicate orders.
-- **Show instructions first.** The user must know where to send money before they see the form. Display `paymentInstructions.instructionText` prominently and ensure the user has paid before submitting.
-- **Handle order expiry.** Display a countdown from `expiresAt`. Warn the user 5 minutes before expiry. If the order expires, do not resubmit — create a new order.
-- **Manual/Admin review is normal.** If `status` becomes `MANUAL_REVIEW` or `ADMIN_REVIEW`, reassure the user their payment is being reviewed and they will gain access once confirmed. Do not ask them to re-submit.
-- **No direct Verify.et calls.** The frontend has no interaction with Verify.et. All verification is server-to-server. The frontend only communicates with the Qaliye backend.
-- **ONLINE_PAYMENT is separate.** This flow is only for `MANUAL_TRANSFER`. For `ONLINE_PAYMENT` methods (e.g. Chapa), the flow uses `providerCheckoutUrl` to redirect the user to a hosted checkout page — that flow is not described here.
+Rejects an order in any reviewable status. Sets status to `REJECTED`.
+
+**Request body** _(optional)_
+
+```json
+{ "decisionNote": "Amount does not match. Reference number invalid." }
+```
+
+**Response `200`**
+
+```json
+{ "status": "REJECTED", "orderId": "..." }
+```
+
+**Error codes (approve & reject)**
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 404 | `order_not_found` | — |
+| 400 | `order_not_reviewable` | Order is in a terminal or non-reviewable status |
+| 403 | `admin_role_required` | Caller is not an admin |

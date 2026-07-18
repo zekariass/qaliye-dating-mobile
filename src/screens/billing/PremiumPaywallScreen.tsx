@@ -3,13 +3,13 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -229,26 +229,22 @@ export default function PremiumPaywallScreen() {
                 ))}
                 {entitlements?.features && (
                   <>
-                    {entitlements.features.see_who_liked_you && (
-                      <View style={styles.featureRow}>
-                        <Ionicons name={FEATURE_ICONS.see_who_liked_you} size={16} color={colors.primary} />
-                        <Text style={[styles.featureLabel, { color: th.text }]}>See who liked you</Text>
-                      </View>
-                    )}
+                    <View style={styles.featureRow}>
+                      <Ionicons name={FEATURE_ICONS.see_who_liked_you} size={16} color={colors.primary} />
+                      <Text style={[styles.featureLabel, { color: th.text }]}>See who liked you</Text>
+                    </View>
                     {entitlements.features.advanced_filters && (
                       <View style={styles.featureRow}>
                         <Ionicons name={FEATURE_ICONS.advanced_filters} size={16} color={colors.primary} />
                         <Text style={[styles.featureLabel, { color: th.text }]}>Advanced filters</Text>
                       </View>
                     )}
-                    {entitlements.features.incognito_mode && (
-                      <View style={styles.featureRow}>
-                        <Ionicons name={FEATURE_ICONS.incognito_mode} size={16} color={colors.primary} />
-                        <Text style={[styles.featureLabel, { color: th.text }]}>Incognito mode</Text>
-                      </View>
-                    )}
                   </>
                 )}
+                <View style={styles.featureRow}>
+                  <Ionicons name={FEATURE_ICONS.incognito_mode} size={16} color={colors.primary} />
+                  <Text style={[styles.featureLabel, { color: th.text }]}>Private mode (Incognito)</Text>
+                </View>
               </View>
             )}
 

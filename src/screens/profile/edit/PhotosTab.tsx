@@ -16,7 +16,7 @@ import { AccountStatusCard } from './AccountStatusCard';
 import { SectionCard, SectionTitle } from './FormComponents';
 
 const { width: W } = Dimensions.get('window');
-const MAX_PHOTOS = 6;
+const MAX_PHOTOS = 7;
 const CARD_PADDING = 20;
 const GAP = 8;
 const GRID_WIDTH = W - 32 - CARD_PADDING * 2;

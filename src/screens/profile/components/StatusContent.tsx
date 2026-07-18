@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -49,7 +50,9 @@ interface StatusContentProps {
 
 export default function StatusContent({ profile }: StatusContentProps) {
   const { colors: th } = useTheme();
+  const router = useRouter();
   const items = buildStatusItems(profile);
+  const showCompleteBtn = profile.profileCompletionScore < 100;
 
   return (
     <View style={styles.container}>
@@ -69,6 +72,17 @@ export default function StatusContent({ profile }: StatusContentProps) {
             </View>
             <Text style={[styles.label, { color: th.textSecondary }]}>{item.label}</Text>
             <Text style={[styles.value, { color: th.text }]}>{item.value}</Text>
+            {item.label === 'Profile Completion' && showCompleteBtn && (
+              <Pressable
+                style={[styles.completeBtn, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/(app)/edit-profile' as any)}
+                accessibilityLabel="Complete your profile"
+                accessibilityRole="button"
+              >
+                <Text style={styles.completeBtnText}>Complete Profile</Text>
+                <Ionicons name="arrow-forward" size={14} color="#fff" />
+              </Pressable>
+            )}
           </View>
         ))}
       </View>
@@ -124,5 +138,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#1B1340',
+  },
+  completeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  completeBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

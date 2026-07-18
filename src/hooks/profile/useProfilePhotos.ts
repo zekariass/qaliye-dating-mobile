@@ -13,6 +13,7 @@ import type {
     ProfilePhotoDto,
     ProfilePhotosResponse,
 } from '@/types/profile';
+import { computePhotoStaleTime } from '@/utils/signedUrlUtils';
 
 import { PROFILE_ME_QUERY_KEY } from './useCurrentProfile';
 
@@ -22,7 +23,10 @@ export function useProfilePhotos() {
   return useQuery<ProfilePhotosResponse, Error>({
     queryKey: PROFILE_PHOTOS_QUERY_KEY,
     queryFn: fetchProfilePhotos,
-    staleTime: 1000 * 60 * 5,
+    staleTime: (query) => {
+      const data = query.state.data as ProfilePhotosResponse | undefined;
+      return computePhotoStaleTime(data?.photos?.map((p) => p.expires_at) ?? []);
+    },
   });
 }
 

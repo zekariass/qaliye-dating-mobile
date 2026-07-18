@@ -11,6 +11,7 @@ import { useRevenueCatIdentity } from '@/hooks/billing/useRevenueCatIdentity';
 import { useForegroundNotifications } from '@/hooks/notifications/useForegroundNotifications';
 import { useNotificationNavigation } from '@/hooks/notifications/useNotificationNavigation';
 import { useNotificationSetup } from '@/hooks/notifications/useNotificationSetup';
+import { useSignedUrlRefresh } from '@/hooks/profile/useSignedUrlRefresh';
 import { useMeStore } from '@/stores/me-store';
 
 export default function AppLayout() {
@@ -34,6 +35,7 @@ export default function AppLayout() {
   useForegroundNotifications();
   useNotificationNavigation({ isAppReady, hasSession: hasActiveSession });
   useRevenueCatIdentity();
+  useSignedUrlRefresh();
 
   if (isBootstrapping) return null;
   if (hasActiveSession && (meStatus === 'idle' || meStatus === 'loading')) return null;
@@ -97,6 +99,18 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="payment-activity"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="support-conversation"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="staff-support-inbox"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="staff-support-chat"
           options={{ animation: 'slide_from_right' }}
         />
       </Stack>

@@ -101,6 +101,8 @@ export const LIMIT_KEYS = {
   SUPER_LIKES: 'super_likes',
   REWINDS: 'rewinds',
   BOOSTS: 'boosts',
+  VOICE_CHAT_MSGS: 'voice_chat_msgs',
+  IMAGE_CHAT_MSGS: 'image_chat_msgs',
 } as const;
 
 export type ActiveBoostInfo = {
@@ -115,6 +117,8 @@ export type PlanLimits = {
   SUPERLIKES: number | null;
   REWINDS: number | null;
   BOOSTS: number | null;
+  VOICE_CHAT_MSGS: number | null;
+  IMAGE_CHAT_MSGS: number | null;
 };
 
 export type EntitlementResponse = {
@@ -125,6 +129,7 @@ export type EntitlementResponse = {
   active_boost: ActiveBoostInfo;
   features: EntitlementFeatures;
   plan_limits: PlanLimits;
+  boost_duration_minutes: number;
 };
 
 export type OfferDto = {

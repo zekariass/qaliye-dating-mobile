@@ -1,3 +1,4 @@
+import { getCountryName } from '@/constants/countries';
 import type { CurrentUserProfile } from '@/screens/profile/mockCurrentUserProfile';
 import type {
     DiscoveryPrefDraft,
@@ -11,6 +12,7 @@ import type {
     ProfilePreferencesUpdateRequest,
     ProfileUpdateRequest,
 } from '@/types/profile';
+import { sanitizeInterests } from '@/utils/interests';
 
 // ─── Enum → Display Label ──────────────────────────────────────────────────────
 
@@ -28,12 +30,30 @@ const ETHNICITY_API_TO_LABEL: Record<string, string> = {
   OTHER: 'Other',
 };
 
-const NATIONALITY_API_TO_LABEL: Record<string, string> = {
-  ETHIOPIAN: 'Ethiopian',
-  ERITREAN: 'Eritrean',
-  DUAL_CITIZEN: 'Dual Citizen',
-  OTHER: 'Other',
+// Legacy nationality enum → ISO 3166-1 alpha-2 code (for backward compatibility)
+const LEGACY_NATIONALITY_TO_CODE: Record<string, string> = {
+  ETHIOPIAN: 'ET',
+  ERITREAN: 'ER',
 };
+
+// Convert any nationality value (ISO code or legacy enum) to a display name
+function nationalityToDisplay(val: string | null | undefined): string | null {
+  if (!val) return null;
+  // ISO 2-letter code
+  if (/^[A-Z]{2}$/.test(val)) return getCountryName(val) || val;
+  // Legacy enum
+  const code = LEGACY_NATIONALITY_TO_CODE[val];
+  if (code) return getCountryName(code);
+  // Unknown — return as-is
+  return val;
+}
+
+// Convert any nationality value (ISO code or legacy enum) to an ISO code for editing
+function nationalityToCode(val: string | null | undefined): string {
+  if (!val) return '';
+  if (/^[A-Z]{2}$/.test(val)) return val;
+  return LEGACY_NATIONALITY_TO_CODE[val] ?? '';
+}
 
 const RELIGION_API_TO_LABEL: Record<string, string> = {
   ORTHODOX_CHRISTIAN: 'Orthodox Christian',
@@ -109,7 +129,6 @@ function invertMap(m: Record<string, string>): Record<string, string> {
 }
 
 const ETHNICITY_LABEL_TO_API = invertMap(ETHNICITY_API_TO_LABEL);
-const NATIONALITY_LABEL_TO_API = invertMap(NATIONALITY_API_TO_LABEL);
 const RELIGION_LABEL_TO_API = invertMap(RELIGION_API_TO_LABEL);
 const EDUCATION_LABEL_TO_API = invertMap(EDUCATION_API_TO_LABEL);
 const RELATIONSHIP_LABEL_TO_API = invertMap(RELATIONSHIP_API_TO_LABEL);
@@ -183,7 +202,7 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
     residencyType: dto.residency_type,
     ethnicities: dto.ethnicities ?? [],
     ethnicityOtherText: dto.ethnicity_other_text ?? null,
-    nationality: dto.nationality ? (NATIONALITY_API_TO_LABEL[dto.nationality] ?? dto.nationality) : null,
+    nationality: nationalityToDisplay(dto.nationality),
     religion: dto.religion ? (RELIGION_API_TO_LABEL[dto.religion] ?? dto.religion) : null,
     educationLevel: dto.education_level ? (EDUCATION_API_TO_LABEL[dto.education_level] ?? dto.education_level) : null,
     occupation: dto.occupation,
@@ -203,7 +222,7 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
     drinking: dto.drinking,
     languages: dto.languages ?? [],
     activityLevel: dto.activity_level ? (ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level) : null,
-    interests: dto.interests ?? [],
+    interests: sanitizeInterests(dto.interests),
 
     isVisible: dto.is_visible,
     isOnboarded: dto.is_onboarded,
@@ -248,14 +267,13 @@ export function mapProfileMeDtoToEditDraft(dto: ProfileMeDto): EditProfileDraft 
       gender: dto.gender,
       dateOfBirth: formatIsoToDisplay(dto.date_of_birth),
       heightCm: dto.height_cm != null ? String(dto.height_cm) : '',
-      residencyType: dto.residency_type,
       address,
     },
     personal: {
       bio: dto.bio ?? '',
       ethnicities: dto.ethnicities ?? [],
       ethnicityOtherText: dto.ethnicity_other_text ?? '',
-      nationality: dto.nationality ? (NATIONALITY_API_TO_LABEL[dto.nationality] ?? dto.nationality) : '',
+      nationality: nationalityToCode(dto.nationality),
       religion: dto.religion ? (RELIGION_API_TO_LABEL[dto.religion] ?? dto.religion) : '',
       educationLevel: dto.education_level ? (EDUCATION_API_TO_LABEL[dto.education_level] ?? dto.education_level) : '',
       occupation: dto.occupation ?? '',
@@ -290,9 +308,8 @@ export function mapEditDraftToUpdateRequest(
     gender: basics.gender || undefined,
     date_of_birth: basics.dateOfBirth ? parseDisplayToIso(basics.dateOfBirth) : undefined,
     height_cm: basics.heightCm ? Number(basics.heightCm) : null,
-    residency_type: basics.residencyType || undefined,
     bio: personal.bio || null,
-    nationality: personal.nationality ? (NATIONALITY_LABEL_TO_API[personal.nationality] ?? personal.nationality) : null,
+    nationality: personal.nationality || null,
     religion: personal.religion ? (RELIGION_LABEL_TO_API[personal.religion] ?? personal.religion) : null,
     education_level: personal.educationLevel ? (EDUCATION_LABEL_TO_API[personal.educationLevel] ?? personal.educationLevel) : null,
     occupation: personal.occupation || null,
@@ -307,7 +324,7 @@ export function mapEditDraftToUpdateRequest(
     smoking: smokingDetail ? smokingDetail !== 'NO' : undefined,
     drinking: drinkingDetail ? drinkingDetail !== 'NO' : undefined,
     activity_level: lifestyle.activityLevel ? (ACTIVITY_LABEL_TO_API[lifestyle.activityLevel] ?? lifestyle.activityLevel) : null,
-    interests: lifestyle.interests.length > 0 ? lifestyle.interests : undefined,
+    interests: lifestyle.interests.length > 0 ? sanitizeInterests(lifestyle.interests) : undefined,
     language_ids: lifestyle.languages.length > 0 ? lifestyle.languages.map((l) => l.id) : undefined,
     ethnicity_ids: personal.ethnicities.length > 0 ? personal.ethnicities.map((e) => e.id) : undefined,
     ethnicity_other_text: personal.ethnicityOtherText || null,
@@ -439,7 +456,7 @@ function buildOtherUserDetails(dto: OtherUserProfileDto): OtherUserDetailItem[] 
     items.push({ id: 'ethnicity', label: 'Ethnicity', icon: 'people-outline', value: dto.ethnicities.map((e) => e.name).join(', ') });
   }
   if (dto.nationality) {
-    items.push({ id: 'nation', label: 'Nationality', icon: 'flag-outline', value: NATIONALITY_API_TO_LABEL[dto.nationality] ?? dto.nationality });
+    items.push({ id: 'nation', label: 'Nationality', icon: 'flag-outline', value: nationalityToDisplay(dto.nationality) ?? dto.nationality });
   }
   if (dto.religion) {
     items.push({ id: 'religion', label: 'Religion', icon: 'leaf-outline', value: RELIGION_API_TO_LABEL[dto.religion] ?? dto.religion });
@@ -482,7 +499,7 @@ function buildOtherUserDetailGroups(dto: OtherUserProfileDto): OtherUserDetailGr
   if (dto.ethnicities && dto.ethnicities.length > 0)
     heritage.push({ id: 'ethnicity', label: 'Ethnicity',   icon: 'people-outline',   value: dto.ethnicities.map((e) => e.name).join(', ') });
   if (dto.nationality)
-    heritage.push({ id: 'nation',    label: 'Nationality', icon: 'flag-outline',     value: NATIONALITY_API_TO_LABEL[dto.nationality] ?? dto.nationality });
+    heritage.push({ id: 'nation',    label: 'Nationality', icon: 'flag-outline',     value: nationalityToDisplay(dto.nationality) ?? dto.nationality });
   if (dto.languages && dto.languages.length > 0)
     heritage.push({ id: 'languages', label: 'Languages',   icon: 'language-outline', value: dto.languages.map((l) => l.name).join(', ') });
   if (dto.religion)
@@ -530,7 +547,7 @@ export function mapOtherUserProfileDtoToView(dto: OtherUserProfileDto): OtherUse
     matchId: dto.match_id ?? null,
     details: buildOtherUserDetails(dto),
     detailGroups: buildOtherUserDetailGroups(dto),
-    interests: dto.interests ?? [],
+    interests: sanitizeInterests(dto.interests),
     languages: (dto.languages ?? []).map((l) => l.name),
   };
 }

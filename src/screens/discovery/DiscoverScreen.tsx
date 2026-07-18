@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+    ActivityIndicator,
     Dimensions,
     ScrollView,
     StyleSheet,
@@ -30,15 +31,19 @@ import MorePhotosSection from '@/components/discovery/MorePhotosSection';
 import { CardDto } from '@/components/discovery/ProfileCard';
 import ProfileDetailsSection from '@/components/discovery/ProfileDetailsSection';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useActivateBoost } from '@/hooks/billing/useActivateBoost';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { mapProfileToCard, useDiscoveryProfiles } from '@/hooks/discovery/useDiscoveryProfiles';
 import { useRewind } from '@/hooks/discovery/useRewind';
 import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
+import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useTheme } from '@/hooks/use-theme';
+import { isPremiumPlan } from '@/types/billing';
 import {
     canRewind as checkCanRewind,
     canSuperLike as checkCanSuperLike,
+    getBoostStatus,
     getQuotaErrorType,
     getRewindsStatus,
     isQuotaError
@@ -172,6 +177,88 @@ function ScrollHint({ color }: { color: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Boost control (center of header)
+// ---------------------------------------------------------------------------
+type BoostControlProps = {
+  boostStatus: ReturnType<typeof getBoostStatus>;
+  isActivating: boolean;
+  onActivate: () => void;
+  themeColors: ReturnType<typeof useTheme>['colors'];
+  isDark: boolean;
+};
+
+function BoostControl({ boostStatus, isActivating, onActivate, themeColors, isDark }: BoostControlProps) {
+  if (boostStatus.isActive) {
+    return (
+      <View style={boostStyles.boostedBadge}>
+        <Ionicons name="rocket" size={14} color="#FFF" />
+        <Text style={boostStyles.boostedText}>Boosted</Text>
+      </View>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={onActivate}
+      disabled={isActivating}
+      activeOpacity={0.7}
+      style={[
+        boostStyles.boostBtn,
+        {
+          backgroundColor: isDark ? themeColors.backgroundElement : themeColors.surface,
+          borderColor: themeColors.border,
+          borderWidth: 1.5,
+        },
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel="Activate Boost"
+    >
+      {isActivating ? (
+        <ActivityIndicator size="small" color={colors.primary} />
+      ) : (
+        <Ionicons name="rocket-outline" size={20} color={colors.primary} />
+      )}
+    </TouchableOpacity>
+  );
+}
+
+const boostStyles = StyleSheet.create({
+  boostedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 18,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  boostedText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  boostBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+});
+
+// ---------------------------------------------------------------------------
 
 export default function DiscoverScreen() {
   const { t } = useTranslation();
@@ -193,6 +280,8 @@ export default function DiscoverScreen() {
   const [rewindIncoming, setRewindIncoming] = useState<'LIKE' | 'PASS' | false>(false);
   const [matchVisible, setMatchVisible] = useState(false);
   const [matchName, setMatchName] = useState('');
+  const [matchPhoto, setMatchPhoto] = useState<string | undefined>(undefined);
+  const [matchId, setMatchId] = useState<string | null>(null);
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const [syncingCards, setSyncingCards] = useState(false);
   const [superLikeExhausted, setSuperLikeExhausted] = useState(false);
@@ -214,7 +303,113 @@ export default function DiscoverScreen() {
 
   const { mutate: swipe } = useSwipeAction();
   const { mutate: rewind } = useRewind();
-  const { entitlements } = useEntitlements();
+  const { entitlements, refreshEntitlements } = useEntitlements();
+  const { data: profileDto } = useCurrentProfile();
+  const isIncognito = profileDto?.discovery_mode === 'INCOGNITO';
+
+  const activateBoost = useActivateBoost();
+  const boostStatus = useMemo(() => getBoostStatus(entitlements), [entitlements]);
+
+  // ── Boost activation handler ───────────────────────────────────────────────
+  const handleBoostActivate = useCallback(() => {
+    if (activateBoost.isPending) return;
+    if (boostStatus.isActive) return;
+
+    if (boostStatus.canActivate) {
+      themedAlert({
+        title: 'Activate Boost',
+        message: `Boost will make your profile appear more frequently to others for ${boostStatus.durationMinutes} minutes. Ready to stand out?`,
+        icon: 'rocket',
+        iconColor: colors.primary,
+        buttons: [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Activate',
+            style: 'default',
+            onPress: () => {
+              themedAlert({
+                title: 'Activating Boost…',
+                loading: true,
+                buttons: [],
+              });
+              activateBoost.mutate(undefined, {
+                onSuccess: () => {
+                  themedAlert({
+                    title: 'Boost Active!',
+                    message: 'Your profile is now being shown to more people. Enjoy the spotlight!',
+                    icon: 'checkmark-circle',
+                    iconColor: colors.success,
+                    buttons: [{ text: 'OK' }],
+                  });
+                  refreshEntitlements();
+                },
+                onError: (err) => {
+                  if (err.code === 'BOOST_ALREADY_ACTIVE') {
+                    themedAlert({
+                      title: 'Already Boosted',
+                      message: 'A boost is already active. Enjoy the spotlight!',
+                      icon: 'rocket',
+                      iconColor: colors.primary,
+                      buttons: [{ text: 'OK' }],
+                    });
+                  } else {
+                    themedAlert({
+                      title: 'Boost Failed',
+                      message: err.message || 'Could not activate boost. Please try again.',
+                      icon: 'alert-circle',
+                      iconColor: colors.danger,
+                      buttons: [{ text: 'OK' }],
+                    });
+                  }
+                  refreshEntitlements();
+                },
+              });
+            },
+          },
+        ],
+      });
+      return;
+    }
+
+    // No boost credits available
+    const hasPremium = isPremiumPlan(entitlements?.plan);
+    if (hasPremium) {
+      themedAlert({
+        title: 'No Boost Credits',
+        message: 'You have an active Premium subscription but no Boost credits. Visit the Credits Shop to buy more.',
+        icon: 'rocket-outline',
+        iconColor: colors.primary,
+        buttons: [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Buy Boost Credit',
+            style: 'default',
+            onPress: () => router.push('/(app)/credits-shop' as any),
+          },
+        ],
+      });
+    } else {
+      themedAlert({
+        title: 'No Boost Credits',
+        message: 'You need Boost credits to activate a Boost. Upgrade to Premium or buy Boost credits separately.',
+        icon: 'rocket-outline',
+        iconColor: colors.primary,
+        buttons: [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Buy Premium',
+            style: 'default',
+            onPress: () => router.push('/(app)/premium' as any),
+          },
+          {
+            text: 'Buy Boost Credit',
+            style: 'default',
+            onPress: () => router.push('/(app)/credits-shop' as any),
+          },
+        ],
+      });
+    }
+  }, [activateBoost, boostStatus, entitlements, refreshEntitlements, router]);
 
   // ── Queue management ───────────────────────────────────────────────────────
 
@@ -350,6 +545,8 @@ export default function DiscoverScreen() {
           onSuccess: (response) => {
             if (response.isMatch && response.match) {
               setMatchName(response.match.otherUser.displayName);
+              setMatchPhoto(response.match.otherUser.primaryPhotoUrl ?? undefined);
+              setMatchId(response.match.matchId);
               setMatchVisible(true);
             }
           },
@@ -501,14 +698,30 @@ export default function DiscoverScreen() {
           <QaliyeLogo />
         </View>
 
+        {/* Incognito indicator OR Boost control */}
+        {isIncognito ? (
+          <View style={styles.incognitoIndicator}>
+            <Ionicons name="eye-off" size={12} color={th.textSecondary} />
+            <Text style={[styles.incognitoText, { color: th.textSecondary }]}>Private mode</Text>
+          </View>
+        ) : (
+          <BoostControl
+            boostStatus={boostStatus}
+            isActivating={activateBoost.isPending}
+            onActivate={handleBoostActivate}
+            themeColors={th}
+            isDark={isDark}
+          />
+        )}
+
         {/* Settings / Preferences */}
         <TouchableOpacity
-          style={[styles.settingsBtn, { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface }]}
+          style={[styles.settingsBtn, { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
           onPress={() => router.push('/(app)/preferences')}
           activeOpacity={0.7}
           accessibilityLabel={t('discovery.openPreferences')}
         >
-          <Ionicons name="options-outline" size={21} color={th.textSecondary} />
+          <Ionicons name="options-outline" size={21} color={th.text} />
         </TouchableOpacity>
       </View>
 
@@ -578,10 +791,14 @@ export default function DiscoverScreen() {
                 animateTopCardIn={rewindIncoming}
               />
             )}
-          </View>
 
-          {/* Scroll-down hint */}
-          {topCard && <ScrollHint color={th.textMuted} />}
+            {/* Scroll-down hint — overlaid on bottom center of card */}
+            {topCard && (
+              <View style={styles.scrollHintOverlay} pointerEvents="none">
+                <ScrollHint color="#FFFFFF" />
+              </View>
+            )}
+          </View>
 
           {/* Profile details — below card, visible when scrolling */}
           {enrichedTopCard && (
@@ -609,7 +826,16 @@ export default function DiscoverScreen() {
       <MatchCelebrationOverlay
         visible={matchVisible}
         name={matchName}
-        onSendMessage={() => setMatchVisible(false)}
+        photoUrl={matchPhoto}
+        onSendMessage={() => {
+          setMatchVisible(false);
+          if (matchId) {
+            router.push({
+              pathname: '/(app)/chat' as any,
+              params: { matchId, displayName: matchName },
+            });
+          }
+        }}
         onKeepSwiping={() => setMatchVisible(false)}
       />
     </SafeAreaView>
@@ -645,18 +871,27 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
+  incognitoIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  incognitoText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
   settingsBtn: {
     width: 42,
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 21,
-    borderWidth: 1,
+    borderWidth: 1.5,
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+    elevation: 2,
   },
 
   // ── Scroll / Main ───────────────────────────────────────────────────────
@@ -687,6 +922,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 2,
     paddingBottom: 6,
+  },
+  scrollHintOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
 
   // ── Empty state ─────────────────────────────────────────────────────────

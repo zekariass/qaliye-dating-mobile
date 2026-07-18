@@ -85,12 +85,16 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
       SUPERLIKES: (planLimitsRaw.SUPERLIKES ?? null) as number | null,
       REWINDS: (planLimitsRaw.REWINDS ?? null) as number | null,
       BOOSTS: (planLimitsRaw.BOOSTS ?? null) as number | null,
+      VOICE_CHAT_MSGS: (planLimitsRaw.VOICE_CHAT_MSGS ?? planLimitsRaw.voiceChatMsgs ?? null) as number | null,
+      IMAGE_CHAT_MSGS: (planLimitsRaw.IMAGE_CHAT_MSGS ?? planLimitsRaw.imageChatMsgs ?? null) as number | null,
     },
+    boost_duration_minutes: (raw.boost_duration_minutes ?? raw.boostDurationMinutes ?? 30) as number,
   };
 }
 
 export async function fetchEntitlements(): Promise<EntitlementResponse> {
   const res = await apiClient.get<unknown>(`${BASE}/entitlements`);
+  console.log('[fetchEntitlements] raw response:', JSON.stringify(res.data));
   return normalizeEntitlements(res.data as Record<string, unknown>);
 }
 

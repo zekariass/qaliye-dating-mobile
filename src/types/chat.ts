@@ -8,6 +8,49 @@ import type { ActivityStatus } from './activity';
 
 export type MessageType = 'TEXT' | 'ICEBREAKER' | 'PROMPT_REPLY';
 
+// ── Attachment types ───────────────────────────────────────────────────────
+
+export type ChatAttachmentType = 'IMAGE' | 'VOICE';
+
+/** Wire-format attachment DTO (snake_case — as returned by backend) */
+export interface ChatAttachmentDto {
+  id: string;
+  message_id: string;
+  attachment_type: ChatAttachmentType;
+  file_name: string;
+  content_type: string;
+  file_size_bytes: number;
+  duration_ms: number | null;
+  download_url: string | null;
+  created_at: string;
+}
+
+/** Domain model for a chat attachment (camelCase, used in UI) */
+export interface ChatAttachment {
+  id: string;
+  messageId: string;
+  attachmentType: ChatAttachmentType;
+  fileName: string;
+  contentType: string;
+  fileSizeBytes: number;
+  durationMs: number | null;
+  downloadUrl: string | null;
+  createdAt: string;
+}
+
+/** Response from POST /api/v1/chat/attachments/{attachmentId}/signed-url */
+export interface ChatAttachmentSignedUrlDto extends ChatAttachmentDto {}
+
+/** A file the user has selected to attach before sending (local, pre-upload) */
+export interface ChatFileAttachment {
+  uri: string;
+  name: string;
+  type: string;
+  size?: number;
+  /** Duration in ms for voice files, null for images */
+  durationMs?: number | null;
+}
+
 /** Server-authoritative delivery status (derived from receipt state) */
 export type ServerDeliveryStatus = 'SENT' | 'DELIVERED' | 'READ';
 
@@ -28,6 +71,11 @@ export interface ChatMessage {
   deliveryStatus?: ServerDeliveryStatus;
   localSendStatus?: LocalSendStatus;
   errorCode?: string;
+  attachments?: ChatAttachment[];
+  /** Local file references for optimistic pending messages with attachments */
+  pendingFiles?: ChatFileAttachment[];
+  /** Duration of each voice file in the pending message, parallel to pendingFiles */
+  pendingVoiceDurations?: (number | null)[];
 }
 
 // ── Receipt state ─────────────────────────────────────────────────────────
@@ -136,9 +184,11 @@ export interface MessageDto {
   sequence_number: number;
   sender_user_id: string;
   message_type: MessageType;
-  body: string;
+  body: string | null;
   created_at: string;
   edited_at: string | null;
+  delivery_status?: ServerDeliveryStatus;
+  attachments?: ChatAttachmentDto[];
 }
 
 export interface MessagesResponse {
@@ -152,6 +202,13 @@ export interface SendMessageRequest {
   client_message_id: string;
   message_type: MessageType;
   body: string;
+}
+
+/** Request JSON part for multipart attachment send */
+export interface SendMessageWithAttachmentsRequest {
+  clientMessageId: string;
+  messageType: MessageType;
+  body: string | null;
 }
 
 export interface ReceiptRequest {
@@ -180,9 +237,18 @@ export interface MessageCreatedData {
   sequence_number: number;
   sender_user_id: string;
   message_type: MessageType;
-  body: string;
+  body: string | null;
   created_at: string;
   edited_at: string | null;
+  attachments?: Array<{
+    id: string;
+    attachment_type: ChatAttachmentType;
+    file_name: string;
+    content_type: string;
+    file_size_bytes: number;
+    duration_ms: number | null;
+    created_at: string;
+  }>;
 }
 
 export interface ReceiptUpdatedData {
@@ -210,3 +276,43 @@ export type ChatListItem =
   | { kind: 'message'; data: ChatMessageViewModel }
   | { kind: 'date_separator'; id: string; label: string }
   | { kind: 'typing_indicator'; id: string };
+
+// ── Attachment validation constants (must match backend) ───────────────────
+
+export const CHAT_MAX_IMAGE_ATTACHMENTS = 5;
+export const CHAT_MAX_VOICE_ATTACHMENTS = 1;
+export const CHAT_MAX_TOTAL_ATTACHMENTS = 5;
+
+export const CHAT_MAX_IMAGE_FILE_SIZE = 26_214_400; // 25 MiB
+export const CHAT_MAX_VOICE_FILE_SIZE = 26_214_400; // 25 MiB
+
+export const CHAT_VOICE_MAX_DURATION_SECONDS =
+  Number(process.env.EXPO_PUBLIC_CHAT_VOICE_MAX_DURATION_SECONDS) || 300;
+
+export const CHAT_ALLOWED_IMAGE_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+  'image/heic',
+  'image/heif',
+  'image/avif',
+  'image/tiff',
+] as const;
+
+export const CHAT_ALLOWED_VOICE_MIME_TYPES = [
+  'audio/m4a',
+  'audio/mp4',
+  'audio/aac',
+  'audio/mpeg',
+  'audio/x-m4a',
+  'audio/mp3',
+  'audio/ogg',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/webm',
+  'audio/flac',
+  'audio/3gpp',
+  'audio/amr',
+] as const;

@@ -173,10 +173,10 @@ export default function SettingsScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.optionLabel, { color: th.text }]}>
-                {t('settings.activityStatus', 'Activity Status')}
+                {t('settings.activityStatus', 'Online Status')}
               </Text>
               <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                {t('settings.activityStatusSub', 'Show others when you’re active')}
+                {t('settings.activityStatusSub', 'Show others when you’re online')}
               </Text>
             </View>
             <Switch

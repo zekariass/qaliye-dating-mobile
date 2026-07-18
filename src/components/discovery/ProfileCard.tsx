@@ -21,6 +21,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import type { ActivityStatus } from '@/types/activity';
 
 const SWIPE_THRESHOLD = 120;
@@ -82,6 +83,8 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   function ProfileCard({ card, isTop, onSwipe, animateIn = false as const }, ref) {
   const { width } = useWindowDimensions();
   const CARD_W = width - 32;
+  const { data: myProfile } = useCurrentProfile();
+  const myCountry = myProfile?.address?.country_name ?? '';
 
   const [photoIndex, setPhotoIndex] = useState(0);
   const translateX = useSharedValue(0);
@@ -171,7 +174,10 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   }));
 
   const locationText = (() => {
-    const parts = [card.city, card.country_name].filter(Boolean);
+    const sameCountry = myCountry !== '' && card.country_name === myCountry;
+    const parts = sameCountry
+      ? [card.city, card.country_name].filter(Boolean)
+      : [card.country_name].filter(Boolean);
     const place = parts.length > 0 ? parts.join(', ') : card.residency_type;
     if (card.distance_km != null && card.distance_km > 0) {
       return `${place} · ${card.distance_km} km`;
@@ -206,7 +212,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
             style={styles.bottomGradient}
           />
 
-          {/* Photo progress bars — top edge */}
+          {/* Photo progress dots — top edge */}
           {safePhotos.length > 1 && (
             <View style={styles.barsRow}>
               {safePhotos.map((_, i) => (
@@ -238,6 +244,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
                   <VerifiedBadge size={20} />
                 </View>
               )}
+              <Text style={styles.nameSeparator}>·</Text>
               <Text style={styles.age}>{card.age}</Text>
               {card.activity_status && card.activity_status !== 'HIDDEN' && card.activity_status !== 'OFFLINE' && (
                 <ActivityStatusIndicator
@@ -299,21 +306,22 @@ const styles = StyleSheet.create({
   barsRow: {
     position: 'absolute',
     top: spacing.md,
-    left: spacing.md,
     right: spacing.md,
     flexDirection: 'row',
-    gap: 4,
+    gap: 6,
   },
   bar: {
-    flex: 1,
-    height: 5,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   barActive: {
     backgroundColor: colors.primary,
   },
   barInactive: {
-    backgroundColor: 'rgba(255,255,255,0.45)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   stamp: {
     position: 'absolute',
@@ -357,7 +365,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xl + 6,
     paddingTop: spacing.xl,
     gap: 6,
     zIndex: 2,
@@ -380,9 +388,17 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   age: {
-    fontSize: 30,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.85)',
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  nameSeparator: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.6)',
     textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
@@ -408,8 +424,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: radius.full,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.70)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
     backgroundColor: 'rgba(0,0,0,0.25)',
   },
   pillText: {

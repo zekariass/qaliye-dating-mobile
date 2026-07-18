@@ -20,6 +20,8 @@ export interface ChatHeaderProps {
   onBack: () => void;
   /** Optional: tap avatar/name to view the contact's profile */
   onProfilePress?: () => void;
+  /** Optional: open overflow actions menu */
+  onMorePress?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -34,6 +36,7 @@ export function ChatHeader({
   activityStatus,
   onBack,
   onProfilePress,
+  onMorePress,
 }: ChatHeaderProps) {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
@@ -117,8 +120,20 @@ export function ChatHeader({
         </View>
       </TouchableOpacity>
 
-      {/* Right spacer to balance the back button */}
-      <View style={styles.rightSpacer} />
+      {/* Overflow actions */}
+      {onMorePress ? (
+        <TouchableOpacity
+          style={styles.moreBtn}
+          onPress={onMorePress}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Conversation actions"
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color={th.text} />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.rightSpacer} />
+      )}
     </View>
   );
 }
@@ -194,5 +209,11 @@ const styles = StyleSheet.create({
   },
   rightSpacer: {
     width: 36,
+  },
+  moreBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

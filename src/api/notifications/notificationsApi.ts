@@ -17,6 +17,7 @@ type BackendNotificationPreferences = {
   message_notifications_enabled: boolean;
   match_notifications_enabled: boolean;
   like_notifications_enabled: boolean;
+  superlike_notifications_enabled: boolean;
   message_preview_enabled: boolean;
   marketing_notifications_enabled: boolean;
   marketing_notifications_opted_in_at: string | null;
@@ -33,6 +34,7 @@ function toCamelCasePreferences(
     messageNotificationsEnabled: backend.message_notifications_enabled,
     matchNotificationsEnabled: backend.match_notifications_enabled,
     likeNotificationsEnabled: backend.like_notifications_enabled,
+    superlikeNotificationsEnabled: backend.superlike_notifications_enabled,
     messagePreviewEnabled: backend.message_preview_enabled,
     marketingNotificationsEnabled: backend.marketing_notifications_enabled,
     marketingNotificationsOptedInAt: backend.marketing_notifications_opted_in_at,
@@ -51,6 +53,8 @@ function toSnakeCasePatch(
     result.match_notifications_enabled = patch.matchNotificationsEnabled;
   if (patch.likeNotificationsEnabled !== undefined)
     result.like_notifications_enabled = patch.likeNotificationsEnabled;
+  if (patch.superlikeNotificationsEnabled !== undefined)
+    result.superlike_notifications_enabled = patch.superlikeNotificationsEnabled;
   if (patch.messagePreviewEnabled !== undefined)
     result.message_preview_enabled = patch.messagePreviewEnabled;
   if (patch.marketingNotificationsEnabled !== undefined)

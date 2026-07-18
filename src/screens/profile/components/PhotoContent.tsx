@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import {
     Dimensions,
     FlatList,
@@ -62,11 +62,17 @@ export default function PhotoContent({ photos }: PhotoContentProps) {
   const { colors: th } = useTheme();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const { top, bottom } = useSafeAreaInsets();
+  const listRef = useRef<FlatList>(null);
+  const sortedPhotos = [...photos].sort((a, b) => a.order - b.order);
 
   const openViewer = useCallback((index: number) => setViewerIndex(index), []);
   const closeViewer = useCallback(() => setViewerIndex(null), []);
 
-  const sortedPhotos = [...photos].sort((a, b) => a.order - b.order);
+  const goToIndex = useCallback((index: number) => {
+    const clamped = Math.max(0, Math.min(index, sortedPhotos.length - 1));
+    setViewerIndex(clamped);
+    listRef.current?.scrollToIndex({ index: clamped, animated: true });
+  }, [sortedPhotos.length]);
 
   return (
     <View style={styles.container}>
@@ -80,11 +86,11 @@ export default function PhotoContent({ photos }: PhotoContentProps) {
 
         {sortedPhotos.length > 0 ? (
           <View style={styles.grid}>
-            {sortedPhotos.map((photo) => (
+            {sortedPhotos.map((photo, idx) => (
               <PhotoCard
                 key={photo.id}
                 photo={photo}
-                onPress={() => openViewer(photo.order)}
+                onPress={() => openViewer(idx)}
               />
             ))}
           </View>
@@ -106,26 +112,28 @@ export default function PhotoContent({ photos }: PhotoContentProps) {
         onRequestClose={closeViewer}
       >
         <View style={styles.viewerOverlay}>
-          {/* Close button */}
-          <Pressable
-            style={[styles.viewerCloseBtn, { top: top + 12 }]}
-            onPress={closeViewer}
-            accessibilityLabel="Close"
-            accessibilityRole="button"
-          >
-            <Ionicons name="close" size={26} color="#FFFFFF" />
-          </Pressable>
-
-          {/* Photo counter */}
-          {viewerIndex !== null && sortedPhotos.length > 0 && (
-            <Text style={[styles.viewerCounter, { top: top + 18 }]}>
-              {viewerIndex + 1} / {sortedPhotos.length}
-            </Text>
-          )}
+          {/* Header bar — close + counter, not overlapping FlatList */}
+          <View style={[styles.viewerHeader, { paddingTop: top + 8 }]}>
+            <View style={{ width: 40 }} />
+            {viewerIndex !== null && sortedPhotos.length > 0 && (
+              <Text style={styles.viewerCounterText}>
+                {viewerIndex + 1} / {sortedPhotos.length}
+              </Text>
+            )}
+            <Pressable
+              style={styles.viewerCloseBtn}
+              onPress={closeViewer}
+              accessibilityLabel="Close"
+              accessibilityRole="button"
+            >
+              <Ionicons name="close" size={26} color="#FFFFFF" />
+            </Pressable>
+          </View>
 
           {/* Horizontal swipeable gallery */}
           {viewerIndex !== null && (
             <FlatList
+              ref={listRef}
               data={sortedPhotos}
               keyExtractor={(item) => item.id}
               horizontal
@@ -155,36 +163,38 @@ export default function PhotoContent({ photos }: PhotoContentProps) {
             />
           )}
 
-          {/* Navigation arrows */}
-          {viewerIndex !== null && viewerIndex > 0 && (
+          {/* Footer bar — chevrons + primary badge, not overlapping FlatList */}
+          <View style={[styles.viewerFooter, { paddingBottom: bottom + 16 }]}>
+            {/* Left chevron */}
             <Pressable
-              style={[styles.viewerNavLeft, { bottom: SCREEN_H / 2 - 24 }]}
-              onPress={() => setViewerIndex(viewerIndex - 1)}
+              style={[styles.viewerNavBtn, viewerIndex === null || viewerIndex <= 0 ? styles.viewerNavBtnDisabled : null]}
+              onPress={() => viewerIndex !== null && viewerIndex > 0 && goToIndex(viewerIndex - 1)}
+              disabled={viewerIndex === null || viewerIndex <= 0}
               accessibilityLabel="Previous photo"
               accessibilityRole="button"
             >
-              <Ionicons name="chevron-back" size={28} color="#FFFFFFCC" />
+              <Ionicons name="chevron-back" size={28} color={viewerIndex !== null && viewerIndex > 0 ? '#FFFFFFCC' : '#FFFFFF33'} />
             </Pressable>
-          )}
-          {viewerIndex !== null && viewerIndex < sortedPhotos.length - 1 && (
-            <Pressable
-              style={[styles.viewerNavRight, { bottom: SCREEN_H / 2 - 24 }]}
-              onPress={() => setViewerIndex(viewerIndex + 1)}
-              accessibilityLabel="Next photo"
-              accessibilityRole="button"
-            >
-              <Ionicons name="chevron-forward" size={28} color="#FFFFFFCC" />
-            </Pressable>
-          )}
 
-          {/* Primary indicator in viewer */}
-          {viewerIndex !== null &&
-            sortedPhotos[viewerIndex]?.isPrimary && (
-              <View style={[styles.viewerPrimaryBadge, { bottom: bottom + 24 }]}>
+            {/* Primary indicator */}
+            {viewerIndex !== null && sortedPhotos[viewerIndex]?.isPrimary && (
+              <View style={styles.viewerPrimaryBadge}>
                 <Ionicons name="star" size={12} color="#fff" />
                 <Text style={styles.viewerPrimaryText}>Primary Photo</Text>
               </View>
             )}
+
+            {/* Right chevron */}
+            <Pressable
+              style={[styles.viewerNavBtn, viewerIndex === null || viewerIndex >= sortedPhotos.length - 1 ? styles.viewerNavBtnDisabled : null]}
+              onPress={() => viewerIndex !== null && viewerIndex < sortedPhotos.length - 1 && goToIndex(viewerIndex + 1)}
+              disabled={viewerIndex === null || viewerIndex >= sortedPhotos.length - 1}
+              accessibilityLabel="Next photo"
+              accessibilityRole="button"
+            >
+              <Ionicons name="chevron-forward" size={28} color={viewerIndex !== null && viewerIndex < sortedPhotos.length - 1 ? '#FFFFFFCC' : '#FFFFFF33'} />
+            </Pressable>
+          </View>
         </View>
       </Modal>
     </View>
@@ -261,10 +271,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.95)',
   },
+  viewerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
   viewerCloseBtn: {
-    position: 'absolute',
-    right: 16,
-    zIndex: 10,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -272,15 +286,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  viewerCounter: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
+  viewerCounterText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
-    zIndex: 10,
   },
   viewerImageWrap: {
     width: SCREEN_W,
@@ -292,37 +301,29 @@ const styles = StyleSheet.create({
     width: SCREEN_W,
     height: SCREEN_H * 0.7,
   },
-  viewerNavLeft: {
-    position: 'absolute',
-    left: 12,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+  viewerFooter: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
-  viewerNavRight: {
-    position: 'absolute',
-    right: 12,
+  viewerNavBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10,
+  },
+  viewerNavBtnDisabled: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   viewerPrimaryBadge: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    alignSelf: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 999,

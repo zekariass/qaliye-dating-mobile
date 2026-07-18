@@ -106,6 +106,17 @@ export function useChatChannels(
             body: msgData.body,
             created_at: msgData.created_at,
             edited_at: msgData.edited_at,
+            attachments: msgData.attachments?.map((a) => ({
+              id: a.id,
+              message_id: msgData.id,
+              attachment_type: a.attachment_type,
+              file_name: a.file_name,
+              content_type: a.content_type,
+              file_size_bytes: a.file_size_bytes,
+              duration_ms: a.duration_ms,
+              download_url: null,
+              created_at: a.created_at,
+            })),
           },
           currentUserId,
         );
@@ -237,17 +248,23 @@ export function useChatChannels(
       }
       console.log('[useChatChannels] Presence channel status:', status);
       if (status === 'SUBSCRIBED') {
-        await presenceChannel.track({
-          user_id: currentUserId,
-          state: 'viewing_chat',
-        });
-        console.log('[useChatChannels] Presence tracked for user:', currentUserId);
+        try {
+          await presenceChannel.track({
+            user_id: currentUserId,
+            state: 'viewing_chat',
+          });
+          console.log('[useChatChannels] Presence tracked for user:', currentUserId);
+        } catch (trackErr) {
+          console.warn('[useChatChannels] Presence track failed:', trackErr);
+        }
       }
     });
     presenceRef.current = presenceChannel;
   }
 
-    connect();
+    connect().catch((err) => {
+      console.warn('[useChatChannels] connect() failed:', err);
+    });
 
     return () => {
       cancelled = true;

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { sanitizeInterests } from '@/utils/interests';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -24,9 +25,6 @@ function buildLifestyleItems(p: CurrentUserProfile): LifestyleItem[] {
   if (p.activityLevel) {
     items.push({ icon: 'fitness-outline', label: 'Activity Level', value: p.activityLevel });
   }
-  if (p.interests && p.interests.length > 0) {
-    items.push({ icon: 'color-palette-outline', label: 'Interests', value: p.interests.join(', ') });
-  }
   return items;
 }
 
@@ -37,6 +35,7 @@ interface LifestyleContentProps {
 export default function LifestyleContent({ profile }: LifestyleContentProps) {
   const { colors: th } = useTheme();
   const items = buildLifestyleItems(profile);
+  const interests = sanitizeInterests(profile.interests);
 
   return (
     <View style={styles.container}>
@@ -55,6 +54,27 @@ export default function LifestyleContent({ profile }: LifestyleContentProps) {
             </View>
           </View>
         ))}
+
+        {interests.length > 0 && (
+          <View>
+            {items.length > 0 && <View style={[styles.divider, { backgroundColor: th.border }]} />}
+            <View style={styles.row}>
+              <View style={[styles.iconCircle, { backgroundColor: th.backgroundSelected }]}>
+                <Ionicons name="color-palette-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={styles.textCol}>
+                <Text style={[styles.label, { color: th.textSecondary }]}>Interests</Text>
+                <View style={styles.chipWrap}>
+                  {interests.map((interest) => (
+                    <View key={interest} style={[styles.chip, { backgroundColor: th.backgroundSelected, borderColor: th.border }]}>
+                      <Text style={[styles.chipText, { color: colors.primary }]}>{interest}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -105,5 +125,21 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: '#E9DDF8',
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

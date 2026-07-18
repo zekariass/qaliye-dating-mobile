@@ -33,17 +33,6 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           <Text style={[styles.icon, styles.rewindIcon]}>↺</Text>
         </TouchableOpacity>
 
-        {/* Pass */}
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: th.surface }]}
-          onPress={onPass}
-          disabled={disabled}
-          activeOpacity={0.75}
-          accessibilityLabel="Pass profile"
-        >
-          <Text style={[styles.icon, styles.passIcon]}>✕</Text>
-        </TouchableOpacity>
-
         {/* Like */}
         <TouchableOpacity
           style={[styles.button, styles.likeButton, { backgroundColor: th.backgroundSelected }]}
@@ -57,13 +46,13 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
 
         {/* SuperLike */}
         <TouchableOpacity
-          style={[styles.button, styles.superLikeButton, { backgroundColor: th.surface }]}
+          style={[styles.button, { backgroundColor: th.backgroundSelected }]}
           onPress={onSuperLike}
           disabled={disabled}
           activeOpacity={0.75}
           accessibilityLabel="Super like profile"
         >
-          <Ionicons name="star" size={26} color="#FFFFFF" />
+          <Ionicons name="star" size={26} color={colors.primary} />
           {Array.from({ length: TOTAL_STARS }).map((_, i) => {
             const angle = (i / TOTAL_STARS) * 2 * Math.PI - Math.PI / 2;
             const x = Math.cos(angle) * STAR_RADIUS;
@@ -83,6 +72,17 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
               />
             );
           })}
+        </TouchableOpacity>
+
+        {/* Pass */}
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: th.surface }]}
+          onPress={onPass}
+          disabled={disabled}
+          activeOpacity={0.75}
+          accessibilityLabel="Pass profile"
+        >
+          <Text style={[styles.icon, styles.passIcon]}>✕</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -114,9 +114,6 @@ const styles = StyleSheet.create({
   },
   likeButton: {
     backgroundColor: '#F5EEFF',
-  },
-  superLikeButton: {
-    backgroundColor: '#EBF5FF',
   },
   icon: {
     fontSize: 18,

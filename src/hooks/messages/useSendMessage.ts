@@ -1,9 +1,20 @@
 import { useCallback, useRef } from 'react';
 
-import { sendMessage } from '@/api/chat/chatApi';
+import { sendMessage, sendMessageWithAttachments } from '@/api/chat/chatApi';
 import { useChatStore } from '@/stores/chat-store';
-import type { ChatMessage } from '@/types/chat';
+import type { ChatFileAttachment, ChatMessage } from '@/types/chat';
+import { QUOTA_ERROR_CODES } from '@/utils/entitlements';
 import { generateUUID } from '@/utils/uuid';
+
+export type ChatQuotaError = {
+  code: string;
+  message: string;
+};
+
+const CHAT_QUOTA_CODES = new Set([
+  QUOTA_ERROR_CODES.VOICE_CHAT_MSGS,
+  QUOTA_ERROR_CODES.IMAGE_CHAT_MSGS,
+]);
 
 // ---------------------------------------------------------------------------
 // Error codes that must NOT be auto-retried
@@ -82,10 +93,21 @@ export function useSendMessage(matchId: string, currentUserId: string) {
           senderUserId: serverMsg.sender_user_id,
           isMine: true,
           messageType: serverMsg.message_type,
-          body: serverMsg.body,
+          body: serverMsg.body ?? '',
           createdAt: serverMsg.created_at,
           editedAt: serverMsg.edited_at,
           localSendStatus: 'SENT',
+          attachments: serverMsg.attachments?.map((dto) => ({
+            id: dto.id,
+            messageId: dto.message_id,
+            attachmentType: dto.attachment_type,
+            fileName: dto.file_name,
+            contentType: dto.content_type,
+            fileSizeBytes: dto.file_size_bytes,
+            durationMs: dto.duration_ms,
+            downloadUrl: dto.download_url,
+            createdAt: dto.created_at,
+          })),
         };
 
         useChatStore.getState().reconcileMessage(clientMessageId, reconciled);
@@ -108,16 +130,144 @@ export function useSendMessage(matchId: string, currentUserId: string) {
     [matchId, currentUserId],
   );
 
+  // ── Send with attachments (multipart) ─────────────────────────────────────
+
+  const sendWithAttachments = useCallback(
+    async (
+      body: string,
+      files: ChatFileAttachment[],
+      existingClientMessageId?: string,
+      voiceDurationsMs?: (number | null)[],
+    ): Promise<ChatQuotaError | null> => {
+      const hasBody = body.trim().length > 0;
+      const hasFiles = files.length > 0;
+      if (!hasBody && !hasFiles) return null;
+
+      if (Date.now() < rateLimitedUntil.current) return null;
+
+      const clientMessageId = existingClientMessageId ?? generateUUID();
+      const now = new Date().toISOString();
+
+      if (!existingClientMessageId) {
+        const optimistic: ChatMessage = {
+          clientMessageId,
+          matchId,
+          senderUserId: currentUserId,
+          isMine: true,
+          messageType: 'TEXT',
+          body: body.trim(),
+          createdAt: now,
+          editedAt: null,
+          localSendStatus: 'SENDING',
+          pendingFiles: files,
+          pendingVoiceDurations: voiceDurationsMs,
+        };
+        useChatStore.getState().addOptimisticMessage(optimistic);
+      } else {
+        const state = useChatStore.getState();
+        const idx = state.messages.findIndex(
+          (m) => m.clientMessageId === clientMessageId,
+        );
+        if (idx >= 0) {
+          const updated = [...state.messages];
+          updated[idx] = { ...updated[idx], localSendStatus: 'SENDING', errorCode: undefined };
+          useChatStore.setState({ messages: updated });
+        }
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('request', {
+          string: JSON.stringify({
+            clientMessageId,
+            messageType: 'TEXT',
+            body: hasBody ? body.trim() : null,
+          }),
+          type: 'application/json',
+        } as unknown as Blob);
+
+        for (const file of files) {
+          formData.append('files', {
+            uri: file.uri,
+            name: file.name,
+            type: file.type,
+          } as unknown as Blob);
+        }
+
+        const { data: serverMsg } = await sendMessageWithAttachments(
+          matchId,
+          formData,
+          voiceDurationsMs,
+        );
+
+        const reconciled: ChatMessage = {
+          id: serverMsg.id,
+          clientMessageId: serverMsg.client_message_id,
+          matchId: serverMsg.match_id,
+          sequenceNumber: serverMsg.sequence_number,
+          senderUserId: serverMsg.sender_user_id,
+          isMine: true,
+          messageType: serverMsg.message_type,
+          body: serverMsg.body ?? '',
+          createdAt: serverMsg.created_at,
+          editedAt: serverMsg.edited_at,
+          localSendStatus: 'SENT',
+          attachments: serverMsg.attachments?.map((dto) => ({
+            id: dto.id,
+            messageId: dto.message_id,
+            attachmentType: dto.attachment_type,
+            fileName: dto.file_name,
+            contentType: dto.content_type,
+            fileSizeBytes: dto.file_size_bytes,
+            durationMs: dto.duration_ms,
+            downloadUrl: dto.download_url,
+            createdAt: dto.created_at,
+          })),
+        };
+
+        useChatStore.getState().reconcileMessage(clientMessageId, reconciled);
+        return null;
+      } catch (error: any) {
+        const responseStatus = error?.response?.status;
+        const errorCode =
+          error?.response?.data?.error?.code ?? error?.response?.data?.code ?? error?.response?.data?.error ?? 'NETWORK_ERROR';
+        const errorMessage =
+          error?.response?.data?.error?.message ?? error?.response?.data?.message ?? '';
+
+        if (responseStatus === 429) {
+          const retryAfter = parseInt(
+            error?.response?.headers?.['retry-after'] ?? '30',
+            10,
+          );
+          rateLimitedUntil.current = Date.now() + retryAfter * 1000;
+        }
+
+        if (CHAT_QUOTA_CODES.has(errorCode)) {
+          useChatStore.getState().removeOptimisticMessage(clientMessageId);
+          return { code: errorCode, message: errorMessage };
+        }
+
+        useChatStore.getState().markMessageFailed(clientMessageId, errorCode);
+        return null;
+      }
+    },
+    [matchId, currentUserId],
+  );
+
   const retry = useCallback(
     (clientMessageId: string) => {
       const msg = useChatStore
         .getState()
         .messages.find((m) => m.clientMessageId === clientMessageId);
       if (!msg || msg.localSendStatus !== 'FAILED') return;
-      send(msg.body, clientMessageId);
+      if (msg.pendingFiles && msg.pendingFiles.length > 0) {
+        sendWithAttachments(msg.body, msg.pendingFiles, clientMessageId, msg.pendingVoiceDurations);
+      } else {
+        send(msg.body, clientMessageId);
+      }
     },
-    [send],
+    [send, sendWithAttachments],
   );
 
-  return { send, retry };
+  return { send, sendWithAttachments, retry };
 }

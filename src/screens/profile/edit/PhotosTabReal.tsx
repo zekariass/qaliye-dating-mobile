@@ -10,16 +10,19 @@ import {
     Text,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import { supabase } from '@/lib/supabase';
 import type { ProfilePhotoDto } from '@/types/profile';
+import { extractApiError, getApiErrorMessage, getApiErrorTitle } from '@/utils/apiError';
+import { processProfileEditPhoto } from '@/utils/imageProcessor';
 import { AccountStatusCard } from './AccountStatusCard';
 import { SectionCard, SectionTitle } from './FormComponents';
 
 const { width: W } = Dimensions.get('window');
-const MAX_PHOTOS = 6;
+const MAX_PHOTOS = 7;
 const CARD_PADDING = 20;
 const GAP = 8;
 const GRID_WIDTH = W - 32 - CARD_PADDING * 2;
@@ -73,27 +76,24 @@ export const PhotosTabReal = memo(function PhotosTabReal({
 
     if (result.canceled || !result.assets[0]) return;
 
-    const asset = result.assets[0];
-    const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
-    const fileName = `${Date.now()}.${ext}`;
-
     try {
       setLocalLoading(true);
+      const processed = await processProfileEditPhoto(result.assets[0]);
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
       const userId = session.user.id;
-      const storagePath = `${userId}/${fileName}`;
+      const storagePath = `${userId}/${processed.fileName}`;
       const storageBucket = 'profile-photos';
 
-      const response = await fetch(asset.uri);
+      const response = await fetch(processed.uri);
       const arrayBuffer = await response.arrayBuffer();
 
       const { error: uploadError } = await supabase.storage
         .from(storageBucket)
-        .upload(storagePath, arrayBuffer, { contentType: `image/${ext}`, upsert: false });
+        .upload(storagePath, arrayBuffer, { contentType: processed.mimeType, upsert: false });
 
       if (uploadError) throw uploadError;
 
@@ -101,7 +101,8 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       const isPrimary = photos.length === 0;
       await onRegisterPhoto(storageBucket, storagePath, nextOrder, isPrimary);
     } catch (err: unknown) {
-      themedError('Upload failed', (err as Error)?.message ?? 'Could not upload photo.');
+      const detail = extractApiError(err);
+      themedError(getApiErrorTitle(detail.code), getApiErrorMessage(detail));
     } finally {
       setLocalLoading(false);
     }
@@ -120,6 +121,9 @@ export const PhotosTabReal = memo(function PhotosTabReal({
     try {
       setLocalLoading(true);
       await onReorderPhotos(reordered);
+    } catch (err: unknown) {
+      const detail = extractApiError(err);
+      themedError(getApiErrorTitle(detail.code), getApiErrorMessage(detail));
     } finally {
       setLocalLoading(false);
     }
@@ -139,6 +143,9 @@ export const PhotosTabReal = memo(function PhotosTabReal({
     try {
       setLocalLoading(true);
       await onReorderPhotos(reordered);
+    } catch (err: unknown) {
+      const detail = extractApiError(err);
+      themedError(getApiErrorTitle(detail.code), getApiErrorMessage(detail));
     } finally {
       setLocalLoading(false);
     }
@@ -158,6 +165,9 @@ export const PhotosTabReal = memo(function PhotosTabReal({
     try {
       setLocalLoading(true);
       await onReorderPhotos(reordered);
+    } catch (err: unknown) {
+      const detail = extractApiError(err);
+      themedError(getApiErrorTitle(detail.code), getApiErrorMessage(detail));
     } finally {
       setLocalLoading(false);
     }
@@ -180,7 +190,8 @@ export const PhotosTabReal = memo(function PhotosTabReal({
               setLocalLoading(true);
               await onDeletePhoto(id);
             } catch (err: unknown) {
-              themedError('Error', (err as Error)?.message ?? 'Could not remove photo.');
+              const detail = extractApiError(err);
+              themedError(getApiErrorTitle(detail.code), getApiErrorMessage(detail));
             } finally {
               setLocalLoading(false);
             }
@@ -236,10 +247,19 @@ export const PhotosTabReal = memo(function PhotosTabReal({
                     </View>
                     {primaryPhoto.moderation_status === 'PENDING' && (
                       <View
-                        className="absolute top-2 left-2 px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: '#F59E0B' }}
+                        className="absolute inset-0 items-center justify-center"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
                       >
-                        <Text className="text-sm font-bold text-white">Pending</Text>
+                        <ActivityIndicator size="small" color="#fff" />
+                        <Text className="text-xs font-semibold text-white mt-1">Processing…</Text>
+                      </View>
+                    )}
+                    {primaryPhoto.moderation_status === 'MANUAL_REVIEW' && (
+                      <View
+                        className="absolute top-2 left-2 px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: '#6366F1' }}
+                      >
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff' }}>Under review</Text>
                       </View>
                     )}
                   </View>
@@ -365,17 +385,25 @@ const SecondaryPhotoTile = memo(function SecondaryPhotoTile({
       />
       {photo.moderation_status === 'PENDING' && (
         <View
-          className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full"
-          style={{ backgroundColor: '#F59E0B' }}
+          className="absolute inset-0 items-center justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
         >
-          <Text style={{ fontSize: 9, fontWeight: '700', color: '#fff' }}>Pending</Text>
+          <ActivityIndicator size="small" color="#fff" />
+        </View>
+      )}
+      {photo.moderation_status === 'MANUAL_REVIEW' && (
+        <View
+          className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full"
+          style={{ backgroundColor: '#6366F1' }}
+        >
+          <Text style={{ fontSize: 9, fontWeight: '700', color: '#fff' }}>Under review</Text>
         </View>
       )}
       <View
         className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full items-center justify-center"
         style={{ backgroundColor: '#FFFFFFEE' }}
       >
-        <Ionicons name="ellipsis-vertical" size={13} color={sem.textPrimary} />
+        <Ionicons name="pencil" size={13} color={sem.accent} />
       </View>
     </Pressable>
   );
@@ -436,12 +464,13 @@ function ActionSheetModal({
   visible, onClose, targetId, isPrimary, sem,
   onMakePrimary, onRemove, onMoveUp, onMoveDown,
 }: ActionSheetProps) {
+  const insets = useSafeAreaInsets();
   if (!targetId) return null;
 
   const actions = [
     ...(!isPrimary ? [{ label: 'Make primary', icon: 'star-outline' as const, action: () => onMakePrimary(targetId) }] : []),
-    { label: 'Move earlier', icon: 'arrow-up-outline' as const, action: () => onMoveUp(targetId) },
-    { label: 'Move later', icon: 'arrow-down-outline' as const, action: () => onMoveDown(targetId) },
+    ...(!isPrimary ? [{ label: 'Move earlier', icon: 'arrow-up-outline' as const, action: () => onMoveUp(targetId) }] : []),
+    ...(!isPrimary ? [{ label: 'Move later', icon: 'arrow-down-outline' as const, action: () => onMoveDown(targetId) }] : []),
     { label: 'Remove photo', icon: 'trash-outline' as const, action: () => onRemove(targetId), destructive: true },
   ];
 
@@ -454,8 +483,8 @@ function ActionSheetModal({
       >
         <Pressable onPress={() => {}}>
           <View
-            className="rounded-t-3xl px-5 pt-5 pb-10"
-            style={{ backgroundColor: sem.surface }}
+            className="rounded-t-3xl px-5 pt-5"
+            style={{ backgroundColor: sem.surface, paddingBottom: Math.max(insets.bottom, 24) }}
           >
             <View className="w-10 h-1 rounded-full self-center mb-4" style={{ backgroundColor: sem.border }} />
             {actions.map((a) => (

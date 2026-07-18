@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CardDto } from '@/components/discovery/ProfileCard';
+import { getCountryName } from '@/constants/countries';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { getDiscoveryInterests } from '@/utils/interests';
 
 function formatLabel(value: string): string {
   return value
@@ -69,10 +71,10 @@ function SectionGroup({
   mutedCol: string;
   card: CardDto;
 }) {
-  const interests = card.interests ?? [];
   const regularItems = group.items.filter((i) => i.label !== 'Interests');
-  const hasInterests = group.items.some((i) => i.label === 'Interests');
-  const hasContent = regularItems.length > 0 || (hasInterests && interests.length > 0);
+  const { visible: visibleInterests, remaining: remainingInterests } = getDiscoveryInterests(card.interests);
+  const hasInterests = group.items.some((i) => i.label === 'Interests') && visibleInterests.length > 0;
+  const hasContent = regularItems.length > 0 || (hasInterests && visibleInterests.length > 0);
 
   if (!hasContent) return null;
 
@@ -94,7 +96,7 @@ function SectionGroup({
             </View>
           </View>
         ))}
-        {hasInterests && interests.length > 0 && (
+        {hasInterests && visibleInterests.length > 0 && (
           <View>
             {regularItems.length > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
             <View style={styles.listRow}>
@@ -104,11 +106,16 @@ function SectionGroup({
               <View style={[styles.detailBody, { gap: 6 }]}>
                 <Text style={[styles.detailLabel, { color: mutedCol }]}>Interests</Text>
                 <View style={styles.chipWrap}>
-                  {interests.map((interest) => (
+                  {visibleInterests.map((interest) => (
                     <View key={interest} style={[styles.chip, { backgroundColor: iconBg, borderColor: borderCol }]}>
                       <Text style={[styles.chipText, { color: colors.primary }]}>{interest}</Text>
                     </View>
                   ))}
+                  {remainingInterests > 0 && (
+                    <View style={[styles.chip, { backgroundColor: 'transparent', borderColor: 'transparent' }]}>
+                      <Text style={[styles.chipMore, { color: mutedCol }]}>+{remainingInterests} more</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
@@ -149,7 +156,7 @@ export default function ProfileDetailsSection({ card }: Props) {
 
   const heritageItems: DetailItem[] = [
     (card.ethnicities && card.ethnicities.length > 0) ? { icon: 'people-outline',   label: 'Ethnicity',   value: card.ethnicities.map((e) => e.name).join(', ') } : null,
-    card.nationality                                  ? { icon: 'flag-outline',     label: 'Nationality', value: formatLabel(card.nationality) }                   : null,
+    card.nationality                                  ? { icon: 'flag-outline',     label: 'Nationality', value: /^[A-Z]{2}$/.test(card.nationality) ? getCountryName(card.nationality) : formatLabel(card.nationality) }                   : null,
     card.religion                                     ? { icon: 'leaf-outline',     label: 'Religion',    value: formatLabel(card.religion) }                      : null,
   ].filter(Boolean) as DetailItem[];
 
@@ -322,5 +329,10 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  chipMore: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontStyle: 'italic',
   },
 });

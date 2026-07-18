@@ -51,6 +51,7 @@ export default function CurrentUserProfileScreen() {
         age={profile.age}
         isVerified={profile.isVerified}
         location={profile.location}
+        isIncognito={dto.discovery_mode === 'INCOGNITO'}
       />
 
       <ProfileTabBar activeTab={activeTab} onTabChange={setActiveTab} />

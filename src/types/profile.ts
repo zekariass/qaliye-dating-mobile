@@ -19,7 +19,7 @@ export type ProfilePhotoDto = {
   is_primary: boolean;
   signed_url: string;
   expires_at: string;
-  moderation_status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  moderation_status: 'PENDING' | 'APPROVED' | 'MANUAL_REVIEW' | 'REJECTED';
   rejection_reason: string | null;
 };
 
@@ -74,6 +74,7 @@ export type ProfileMeDto = {
   is_verified: boolean;
   profile_completion_score: number;
   discovery_preferences: ProfileDiscoveryPreferencesDto;
+  role: string;
   primary_photo_url: string | null;
   photos: ProfilePhotoDto[];
 };
@@ -85,7 +86,6 @@ export type ProfileUpdateRequest = {
   gender?: string;
   date_of_birth?: string;
   height_cm?: number | null;
-  residency_type?: string;
   bio?: string | null;
   nationality?: string | null;
   religion?: string | null;

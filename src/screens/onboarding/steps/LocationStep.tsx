@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { searchLocations } from '@/api/locationsApi';
 import { fetchProfileLocation, updateLocation } from '@/api/profileApi';
@@ -33,6 +34,7 @@ function isoToFlag(iso?: string | null): string {
 export default function LocationStep({ onComplete, isCompleted }: Props) {
   const { t } = useTranslation();
   const { colors: th } = useTheme();
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>(isCompleted ? 'saved' : 'choice');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -182,10 +184,14 @@ export default function LocationStep({ onComplete, isCompleted }: Props) {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom + spacing.md : 0}
+    >
       <ScrollView
         style={styles.flex}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xxxl + insets.bottom + spacing.xl }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

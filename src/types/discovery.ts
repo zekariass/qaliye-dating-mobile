@@ -152,12 +152,13 @@ export type MatchItemDto = {
   age: number;
   is_verified: boolean;
   primary_photo_url: string | null;
-  matched_at: string;
+  matched_at: string | null;
   rewind_eligible_until: string | null;
   first_message_at: string | null;
   last_message_at: string | null;
   has_conversation: boolean;
   is_unread: boolean;
+  is_new: boolean;
   distance_km: number | null;
   city: string | null;
   region: string | null;

@@ -3,14 +3,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { batchRegisterProfilePhotos, deleteProfilePhoto, fetchProfilePhotos } from '@/api/profile/profileApi';
@@ -18,6 +18,7 @@ import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import type { ProfilePhotoDto } from '@/types/profile';
+import { extractApiError } from '@/utils/apiError';
 import { ProcessedImage, processCardPhoto, processPrimaryPhoto } from '@/utils/imageProcessor';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -162,7 +163,7 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      aspect: [2, 3],
+      aspect: [3, 4],
       quality: 1,
     });
     if (result.canceled || result.assets.length === 0) return;
@@ -238,8 +239,10 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
   const handleSubmit = useCallback(async () => {
     const hasPrimary = existingPrimary !== null || newPrimary !== null;
     const hasCard = cardSlots.some((s) => s !== null);
-    if (!hasPrimary) { setError('Please add a profile photo.'); return; }
-    if (!hasCard) { setError('Please add at least one card photo.'); return; }
+    if (!hasPrimary || !hasCard) {
+      setError('One profile photo and at least one card photo are required.');
+      return;
+    }
     if (isRejected && !newPrimary) { setError('Your profile photo was rejected. Please upload a new one.'); return; }
 
     setError(null);
@@ -283,8 +286,8 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
 
       await onComplete();
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setError(err?.response?.data?.message ?? err?.message ?? 'Upload failed. Please try again.');
+      const detail = extractApiError(e);
+      setError(detail.message);
     } finally {
       setIsSubmitting(false);
       setUploadStatus('');
@@ -296,11 +299,11 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
   const primaryUri = newPrimary?.uri ?? existingPrimary?.signed_url ?? null;
   const hasPrimary = primaryUri != null;
   const filledCards = cardSlots.filter(Boolean).length;
-  const canSubmit = hasPrimary && filledCards > 0 && !isSubmitting && (!isRejected || newPrimary !== null);
+  const canSubmit = !isSubmitting && (!isRejected || newPrimary !== null);
 
   const GAP = 8;
   const cardWidth = Math.floor((screenW - spacing.md * 2 - GAP * 2) / 3);
-  const cardHeight = Math.floor(cardWidth * 1.5);
+  const cardHeight = Math.floor(cardWidth * 4 / 3);
 
   if (isLoadingExisting) {
     return (
@@ -365,7 +368,7 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
             {t('onboarding.photo.profilePhotoDesc')}
           </Text>
           <Text style={[styles.primaryInfoMeta, { color: th.textMuted }]}>
-            1:1 · min 512×512 px · WebP 1024×1024
+            4:5 · min 720×900 px · WebP 1080×1350
           </Text>
           {/* Moderation status */}
           {existingPrimary != null && !newPrimary && (
@@ -450,7 +453,7 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
       </View>
 
       <Text style={[styles.cardMeta, { color: th.textMuted }]}>
-        2:3 · min 720×1080 px · WebP 1080×1620 · tap empty slot to add
+        3:4 · min 720×960 px · WebP 1080×1440 · tap empty slot to add
       </Text>
 
       {/* ── Error ──────────────────────────────────────────────────────────── */}
@@ -525,8 +528,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   primarySlot: {
-    width: 110,
-    height: 110,
+    width: 108,
+    height: 135,
     borderRadius: radius.md,
     borderWidth: 2,
     overflow: 'hidden',

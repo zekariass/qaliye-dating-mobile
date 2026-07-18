@@ -2,17 +2,16 @@ import { memo, useCallback } from 'react';
 import { View } from 'react-native';
 
 import { LanguageMultiSelectPicker } from '@/components/catalog/LanguageMultiSelectPicker';
+import { InterestPicker } from '@/components/profile/InterestPicker';
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import type { LanguageOption } from '@/types/catalog';
 import {
     type EditProfileDraft,
     ACTIVITY_OPTIONS,
     DRINKING_OPTIONS,
-    INTEREST_OPTIONS,
     SMOKING_OPTIONS,
 } from '../mockEditProfile';
 import {
-    ChipSelector,
     LabeledField,
     RowPair,
     SectionCard,
@@ -86,8 +85,7 @@ export const LifestyleTab = memo(function LifestyleTab({ draft, onChange, onTogg
       {/* ─── Interests ─── */}
       <SectionCard sem={sem}>
         <SectionTitle title="Interests" sem={sem} />
-        <ChipSelector
-          options={INTEREST_OPTIONS}
+        <InterestPicker
           selected={lifestyle.interests}
           onToggle={handleToggleInterest}
           sem={sem}

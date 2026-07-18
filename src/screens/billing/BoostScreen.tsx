@@ -83,7 +83,7 @@ export default function BoostScreen() {
                 {t('billing.boostHeroTitle', 'Profile Boost')}
               </Text>
               <Text style={[styles.heroBody, { color: th.textSecondary }]}>
-                {t('billing.boostHeroBody', 'Get 30 minutes of increased visibility. More people will see your profile during your boost.')}
+                {t('billing.boostHeroBody', 'Get {{minutes}} minutes of increased visibility. More people will see your profile during your boost.', { minutes: boostStatus.durationMinutes })}
               </Text>
             </View>
 

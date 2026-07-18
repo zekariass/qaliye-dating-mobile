@@ -56,8 +56,8 @@ export type BasicProfilePayload = {
   display_name: string;
   gender: Gender;
   date_of_birth: string;
-  residency_type: ResidencyType;
   relationship_intention: RelationshipIntention;
+  interests?: string[];
 };
 
 export type GpsLocationPayload = {
@@ -106,6 +106,7 @@ export type ProfileMeResponse = {
   relationship_intention: RelationshipIntention;
   is_onboarded: boolean;
   profile_completion_score: number;
+  interests?: string[];
 };
 
 export type ProfileLocationResponse = {

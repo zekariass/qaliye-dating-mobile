@@ -27,10 +27,21 @@ const LIMIT_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> 
   super_likes: 'star',
   rewinds: 'arrow-undo',
   boosts: 'rocket',
+  voiceChatMsgs: 'mic',
+  imageChatMsgs: 'image',
+};
+
+const LIMIT_LABEL: Record<string, string> = {
+  likes: 'Likes',
+  super_likes: 'Super Likes',
+  rewinds: 'Rewinds',
+  boosts: 'Boosts',
+  voiceChatMsgs: 'Voice Msgs',
+  imageChatMsgs: 'Image Msgs',
 };
 
 function formatLimitKey(key: string): string {
-  return key
+  return LIMIT_LABEL[key] ?? key
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');

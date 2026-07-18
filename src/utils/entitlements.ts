@@ -19,11 +19,16 @@ export type PlanLimitDisplay = {
 
 export function getPlanLimitDisplays(entitlements: EntitlementResponse | null): PlanLimitDisplay[] {
   const pl = entitlements?.plan_limits;
+  const limits = entitlements?.limits;
+  const voiceLimit = pl?.VOICE_CHAT_MSGS ?? limits?.[LIMIT_KEYS.VOICE_CHAT_MSGS]?.limit ?? null;
+  const imageLimit = pl?.IMAGE_CHAT_MSGS ?? limits?.[LIMIT_KEYS.IMAGE_CHAT_MSGS]?.limit ?? null;
   return [
     { label: 'Likes per day', icon: 'heart', value: pl?.LIKES ?? null, formatted: formatLimit(pl?.LIKES) },
     { label: 'Super Likes per day', icon: 'star', value: pl?.SUPERLIKES ?? null, formatted: formatLimit(pl?.SUPERLIKES) },
     { label: 'Rewinds per day', icon: 'arrow-undo', value: pl?.REWINDS ?? null, formatted: formatLimit(pl?.REWINDS) },
     { label: 'Boosts per month', icon: 'rocket', value: pl?.BOOSTS ?? null, formatted: formatLimit(pl?.BOOSTS) },
+    { label: 'Voice messages per day', icon: 'mic', value: voiceLimit, formatted: formatLimit(voiceLimit) },
+    { label: 'Image messages per day', icon: 'image', value: imageLimit, formatted: formatLimit(imageLimit) },
   ];
 }
 
@@ -123,6 +128,7 @@ export type BoostStatus = {
   isUnlimited: boolean;
   isActive: boolean;
   remainingSeconds: number;
+  durationMinutes: number;
   canActivate: boolean;
   isExhausted: boolean;
   resetsAt?: string;
@@ -144,6 +150,7 @@ export function getBoostStatus(entitlements: EntitlementResponse | null): BoostS
     isUnlimited,
     isActive,
     remainingSeconds: activeBoost?.remaining_seconds ?? 0,
+    durationMinutes: entitlements?.boost_duration_minutes ?? 30,
     canActivate: !isActive && (isUnlimited || totalAvailable > 0),
     isExhausted: !isActive && !isUnlimited && dailyNum === 0 && credits === 0,
     resetsAt: limit?.resets_at,
@@ -158,25 +165,69 @@ export function hasFeature(entitlements: EntitlementResponse | null, feature: ke
   return entitlements?.features?.[feature] ?? false;
 }
 
+// ── Chat message quota helpers ─────────────────────────────────────────────
+
+export function getVoiceChatMsgsStatus(entitlements: EntitlementResponse | null): LimitStatus {
+  const limit = getLimit(entitlements, LIMIT_KEYS.VOICE_CHAT_MSGS);
+  const remaining = limit?.remaining ?? null;
+  const isUnlimited = remaining === null;
+  return {
+    available: isUnlimited ? Infinity : (remaining ?? 0),
+    remaining,
+    isUnlimited,
+    isExhausted: !isUnlimited && remaining === 0,
+    resetsAt: limit?.resets_at,
+  };
+}
+
+export function canSendVoiceChatMsg(entitlements: EntitlementResponse | null): boolean {
+  const status = getVoiceChatMsgsStatus(entitlements);
+  return status.isUnlimited || status.available > 0;
+}
+
+export function getImageChatMsgsStatus(entitlements: EntitlementResponse | null): LimitStatus {
+  const limit = getLimit(entitlements, LIMIT_KEYS.IMAGE_CHAT_MSGS);
+  const remaining = limit?.remaining ?? null;
+  const isUnlimited = remaining === null;
+  return {
+    available: isUnlimited ? Infinity : (remaining ?? 0),
+    remaining,
+    isUnlimited,
+    isExhausted: !isUnlimited && remaining === 0,
+    resetsAt: limit?.resets_at,
+  };
+}
+
+export function canSendImageChatMsg(entitlements: EntitlementResponse | null): boolean {
+  const status = getImageChatMsgsStatus(entitlements);
+  return status.isUnlimited || status.available > 0;
+}
+
 export const QUOTA_ERROR_CODES = {
   LIKES: 'DAILY_LIKE_LIMIT_EXCEEDED',
   SUPER_LIKES: 'DAILY_SUPERLIKE_LIMIT_EXCEEDED',
   REWINDS: 'DAILY_REWIND_LIMIT_EXCEEDED',
+  VOICE_CHAT_MSGS: 'DAILY_VOICE_CHAT_MSG_LIMIT_EXCEEDED',
+  IMAGE_CHAT_MSGS: 'DAILY_IMAGE_CHAT_MSG_LIMIT_EXCEEDED',
 } as const;
 
 export function isQuotaError(error: unknown): boolean {
   const status = (error as any)?.response?.status;
-  const code: string = (error as any)?.response?.data?.error ?? (error as any)?.response?.data?.code ?? '';
+  const code: string = (error as any)?.response?.data?.error?.code ?? (error as any)?.response?.data?.error ?? (error as any)?.response?.data?.code ?? '';
   if (status === 429 || status === 402) return true;
   return code === QUOTA_ERROR_CODES.LIKES ||
     code === QUOTA_ERROR_CODES.SUPER_LIKES ||
-    code === QUOTA_ERROR_CODES.REWINDS;
+    code === QUOTA_ERROR_CODES.REWINDS ||
+    code === QUOTA_ERROR_CODES.VOICE_CHAT_MSGS ||
+    code === QUOTA_ERROR_CODES.IMAGE_CHAT_MSGS;
 }
 
-export function getQuotaErrorType(error: unknown): 'LIKES' | 'SUPER_LIKES' | 'REWINDS' | null {
-  const code: string = (error as any)?.response?.data?.error ?? (error as any)?.response?.data?.code ?? '';
+export function getQuotaErrorType(error: unknown): 'LIKES' | 'SUPER_LIKES' | 'REWINDS' | 'VOICE_CHAT_MSGS' | 'IMAGE_CHAT_MSGS' | null {
+  const code: string = (error as any)?.response?.data?.error?.code ?? (error as any)?.response?.data?.error ?? (error as any)?.response?.data?.code ?? '';
   if (code === QUOTA_ERROR_CODES.LIKES) return 'LIKES';
   if (code === QUOTA_ERROR_CODES.SUPER_LIKES) return 'SUPER_LIKES';
   if (code === QUOTA_ERROR_CODES.REWINDS) return 'REWINDS';
+  if (code === QUOTA_ERROR_CODES.VOICE_CHAT_MSGS) return 'VOICE_CHAT_MSGS';
+  if (code === QUOTA_ERROR_CODES.IMAGE_CHAT_MSGS) return 'IMAGE_CHAT_MSGS';
   return null;
 }

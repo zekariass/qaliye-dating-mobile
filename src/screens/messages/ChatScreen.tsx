@@ -1,18 +1,29 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
+    InteractionManager,
+    Keyboard,
     KeyboardAvoidingView,
+    Modal,
     Platform,
+    Pressable,
+    ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { ReportType } from '@/api/safety/safetyApi';
+import { themedAlert, themedError, themedSuccess } from '@/components/common/ThemedAlert';
 import { ChatHeader } from '@/components/messages/ChatHeader';
 import { DateSeparator } from '@/components/messages/DateSeparator';
 import { MessageBubble } from '@/components/messages/MessageBubble';
@@ -20,31 +31,34 @@ import { MessageComposer } from '@/components/messages/MessageComposer';
 import { colors } from '@/constants/theme';
 import { useChatMetadataPoller } from '@/hooks/activity/useChatMetadataPoller';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
+import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useAppStateChat } from '@/hooks/messages/useAppStateChat';
 import { useChatChannels } from '@/hooks/messages/useChatChannels';
 import { useChatThread } from '@/hooks/messages/useChatThread';
+import { useChatVoiceRecorder } from '@/hooks/messages/useChatVoiceRecorder';
+import { useClearChatMessages } from '@/hooks/messages/useClearChatMessages';
 import { INBOX_QUERY_KEY } from '@/hooks/messages/useInbox';
 import { useReceipts } from '@/hooks/messages/useReceipts';
 import { useSendMessage } from '@/hooks/messages/useSendMessage';
 import { useTypingIndicator } from '@/hooks/messages/useTypingIndicator';
+import { useBlockUser } from '@/hooks/safety/useBlockUser';
+import { useReportUser } from '@/hooks/safety/useReportUser';
 import { useTheme } from '@/hooks/use-theme';
 import { useChatStore } from '@/stores/chat-store';
 import type {
+    ChatFileAttachment,
     ChatListItem,
     ChatMessage,
     ChatMessageViewModel,
     ReceiptState,
     ServerDeliveryStatus,
 } from '@/types/chat';
+import {
+    getImageChatMsgsStatus,
+    getVoiceChatMsgsStatus,
+} from '@/utils/entitlements';
+import { processChatImage } from '@/utils/imageProcessor';
 
-
-import { supabase } from '@/lib/supabase';
-
-supabase.auth.getSession().then(({ data: { session } }) => {
-  console.log('Session exists:', !!session);
-  console.log('User ID:', session?.user?.id);
-  console.log('Access token (first 50 chars):', session?.access_token?.substring(0, 50));
-});
 
 // ---------------------------------------------------------------------------
 // Screen params
@@ -193,6 +207,20 @@ const typingStyles = StyleSheet.create({
   },
 });
 
+const REPORT_OPTIONS: { type: ReportType; label: string }[] = [
+  { type: 'FAKE_PROFILE', label: 'Fake profile' },
+  { type: 'HARASSMENT', label: 'Harassment' },
+  { type: 'HATE_SPEECH', label: 'Hate speech' },
+  { type: 'INAPPROPRIATE_CONTENT', label: 'Inappropriate content' },
+  { type: 'SCAM', label: 'Scam or fraud' },
+  { type: 'UNDERAGE', label: 'Underage user' },
+  { type: 'VIOLENCE_OR_THREATS', label: 'Violence or threats' },
+  { type: 'PRIVACY_VIOLATION', label: 'Privacy violation' },
+  { type: 'OFF_PLATFORM_SOLICITATION', label: 'Off-platform solicitation' },
+  { type: 'SPAM', label: 'Spam' },
+  { type: 'OTHER', label: 'Other' },
+];
+
 // ---------------------------------------------------------------------------
 // Error state
 // ---------------------------------------------------------------------------
@@ -256,15 +284,30 @@ export default function ChatScreen() {
 
   const [loadError, setLoadError] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [selectedFiles, setSelectedFiles] = useState<ChatFileAttachment[]>([]);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const [activeVoiceId, setActiveVoiceId] = useState<string | null>(null);
+  const [actionsVisible, setActionsVisible] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
+  const [reportDropdownOpen, setReportDropdownOpen] = useState(false);
+  const [selectedReportType, setSelectedReportType] = useState<ReportType | null>(null);
+  const [reportDescription, setReportDescription] = useState('');
+
+  // ── Voice recorder ───────────────────────────────────────────────────────
+  const voiceRecorder = useChatVoiceRecorder();
 
   // ── Hooks ────────────────────────────────────────────────────────────────
   const { loadThread, loadOlderMessages, syncAfterSequence } = useChatThread(
     matchId,
     currentUserId ?? '',
   );
-  const { send, retry } = useSendMessage(matchId, currentUserId ?? '');
+  const { send, sendWithAttachments, retry } = useSendMessage(matchId, currentUserId ?? '');
   const { scheduleDeliveryReceipt, scheduleReadReceipt, cancelTimers } =
     useReceipts(matchId);
+  const { mutate: blockUser, isPending: isBlocking } = useBlockUser();
+  const { mutate: reportUser, isPending: isReporting } = useReportUser();
+  const { mutate: clearMessages, isPending: isClearing } = useClearChatMessages();
+  const { entitlements, refreshEntitlements } = useEntitlements();
 
   const handleMatchEnded = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: [INBOX_QUERY_KEY] });
@@ -341,6 +384,133 @@ export default function ChatScreen() {
     [send, stopTyping],
   );
 
+  const handleSendWithAttachments = useCallback(
+    async (text: string, files: ChatFileAttachment[], voiceDurationsMs?: (number | null)[]) => {
+      stopTyping();
+      const quotaError = await sendWithAttachments(text, files, undefined, voiceDurationsMs);
+      if (quotaError) {
+        showQuotaUpsell(quotaError.message);
+      } else {
+        refreshEntitlements();
+      }
+      setSelectedFiles([]);
+      setTimeout(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 50);
+    },
+    [sendWithAttachments, stopTyping, refreshEntitlements],
+  );
+
+  const handleSendVoice = useCallback(
+    async (text: string) => {
+      const rec = voiceRecorder.recording;
+      if (!rec) return;
+      const file: ChatFileAttachment = {
+        uri: rec.uri,
+        name: rec.fileName,
+        type: rec.mimeType,
+        size: rec.fileSizeBytes || undefined,
+        durationMs: rec.durationMs,
+      };
+      stopTyping();
+      const quotaError = await sendWithAttachments(text, [file], undefined, [rec.durationMs]);
+      if (quotaError) {
+        showQuotaUpsell(quotaError.message);
+      } else {
+        refreshEntitlements();
+      }
+      voiceRecorder.deleteRecording();
+      setSelectedFiles([]);
+      setTimeout(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 50);
+    },
+    [sendWithAttachments, stopTyping, voiceRecorder, refreshEntitlements],
+  );
+
+  // ── Chat quota helpers ────────────────────────────────────────────────────
+  const voiceQuotaStatus = getVoiceChatMsgsStatus(entitlements);
+  const imageQuotaStatus = getImageChatMsgsStatus(entitlements);
+
+  const showQuotaUpsell = useCallback(
+    (message: string) => {
+      themedAlert({
+        title: 'Daily limit reached',
+        message: message || 'You have reached your daily limit for this message type.',
+        icon: 'lock-closed-outline',
+        iconColor: colors.warning,
+        buttons: [
+          {
+            text: 'Upgrade to Premium',
+            onPress: () => {
+              router.push('/(app)/premium' as any);
+            },
+          },
+          { text: 'Not now', style: 'cancel' },
+        ],
+      });
+    },
+    [router],
+  );
+
+  const handleQuotaExceeded = useCallback(
+    (type: 'voice' | 'image') => {
+      const msg = type === 'voice'
+        ? 'You have reached your daily voice message limit.'
+        : 'You have reached your daily image message limit.';
+      showQuotaUpsell(msg);
+    },
+    [showQuotaUpsell],
+  );
+
+  const handlePickImage = useCallback(async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsMultipleSelection: true,
+        selectionLimit: 3,
+      });
+      if (result.canceled) return;
+      setIsProcessingImages(true);
+      await new Promise<void>((resolve) =>
+        InteractionManager.runAfterInteractions(() => resolve()),
+      );
+      for (const asset of result.assets) {
+        const img = await processChatImage(asset, 1080);
+        const file: ChatFileAttachment = {
+          uri: img.uri,
+          name: img.fileName,
+          type: img.mimeType,
+          size: asset.fileSize,
+        };
+        setSelectedFiles((prev) => {
+          const combined = [...prev, file];
+          if (combined.length > 3) {
+            Alert.alert('Too many attachments', 'You can attach up to 3 images per message.');
+            return prev;
+          }
+          return combined;
+        });
+        await new Promise<void>((resolve) =>
+          InteractionManager.runAfterInteractions(() => resolve()),
+        );
+      }
+    } catch {
+      Alert.alert('Error', 'Could not open image picker.');
+    } finally {
+      setIsProcessingImages(false);
+    }
+  }, []);
+
+  const handleRemoveFile = useCallback((idx: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const handleStopAllVoices = useCallback((id: string) => {
+    setActiveVoiceId(id);
+  }, []);
+
   const handleRetry = useCallback(
     (clientMessageId: string) => retry(clientMessageId),
     [retry],
@@ -367,6 +537,137 @@ export default function ChatScreen() {
     }
   }, [router, thread, matchId]);
 
+  const participant = thread?.participant;
+
+  const handleOpenActions = useCallback(() => {
+    if (!participant) return;
+    setActionsVisible(true);
+  }, [participant]);
+
+  const handleCloseActions = useCallback(() => {
+    setActionsVisible(false);
+  }, []);
+
+  const handleClearConversation = useCallback(() => {
+    handleCloseActions();
+    if (!matchId) return;
+    themedAlert({
+      title: 'Clear conversation?',
+      message:
+        'This hides the existing messages for you. The other person will still see the chat.',
+      icon: 'trash-outline',
+      iconColor: colors.danger,
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            clearMessages(matchId, {
+              onSuccess: () => {
+                themedSuccess('Conversation cleared', 'Only new messages will appear from now on.');
+              },
+              onError: (error: any) => {
+                const status = error?.response?.status;
+                const code = error?.response?.data?.code;
+                let message = 'Could not clear this conversation. Please try again later.';
+                if (status === 403 && code === 'ACCOUNT_NOT_ACTIVE') {
+                  message = 'Your account must be active to manage chats.';
+                } else if (status === 403 && code === 'MATCH_ACCESS_DENIED') {
+                  message = 'You no longer have access to this conversation.';
+                } else if (status === 404) {
+                  message = 'This match no longer exists.';
+                }
+                themedError('Clear failed', message);
+              },
+            });
+          },
+        },
+      ],
+    });
+  }, [clearMessages, handleCloseActions, matchId]);
+
+  const handleConfirmBlock = useCallback(() => {
+    if (!participant?.userId) return;
+    blockUser(
+      { userId: participant.userId },
+      {
+        onSuccess: () => {
+          themedAlert({
+            title: 'User blocked',
+            message: `${participant.displayName} has been blocked.`,
+            icon: 'ban',
+            iconColor: colors.danger,
+            buttons: [{ text: 'OK', onPress: () => router.back() }],
+          });
+        },
+        onError: (error: any) => {
+          const msg = error?.response?.data?.message;
+          themedError(
+            'Could not block user',
+            msg === 'CANNOT_BLOCK_SELF'
+              ? 'You cannot block yourself.'
+              : 'Something went wrong. Please try again.',
+          );
+        },
+      },
+    );
+  }, [blockUser, participant, router]);
+
+  const handleBlock = useCallback(() => {
+    handleCloseActions();
+    if (!participant) return;
+    themedAlert({
+      title: 'Block user?',
+      message: `Blocking ${participant.displayName} will end the match and hide them from your discovery feed.`,
+      icon: 'ban-outline',
+      iconColor: colors.danger,
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Block', style: 'destructive', onPress: handleConfirmBlock },
+      ],
+    });
+  }, [handleCloseActions, handleConfirmBlock, participant]);
+
+  const handleOpenReport = useCallback(() => {
+    handleCloseActions();
+    setSelectedReportType(null);
+    setReportDescription('');
+    setReportDropdownOpen(false);
+    setReportVisible(true);
+  }, [handleCloseActions]);
+
+  const handleSubmitReport = useCallback(() => {
+    if (!participant?.userId || !selectedReportType) return;
+    const body: { report_type: ReportType; description?: string } = {
+      report_type: selectedReportType,
+    };
+    if (reportDescription.trim().length > 0) {
+      body.description = reportDescription.trim().slice(0, 2000);
+    }
+    reportUser(
+      { userId: participant.userId, body },
+      {
+        onSuccess: () => {
+          setReportVisible(false);
+          setReportDescription('');
+          themedSuccess('Report submitted', 'Thank you. Our team will review this conversation.');
+        },
+        onError: (error: any) => {
+          const msg = error?.response?.data?.message;
+          themedError(
+            'Could not submit report',
+            msg === 'CANNOT_REPORT_SELF'
+              ? 'You cannot report yourself.'
+              : 'Something went wrong. Please try again.',
+          );
+        },
+      },
+    );
+  }, [participant, reportDescription, reportUser, selectedReportType]);
+
+  const reportButtonDisabled = !selectedReportType || isReporting;
+
   const keyExtractor = useCallback(
     (item: ChatListItem) => {
       if (item.kind === 'message') {
@@ -389,10 +690,12 @@ export default function ChatScreen() {
         <MessageBubble
           message={item.data}
           onRetry={handleRetry}
+          activeVoiceId={activeVoiceId}
+          onStopAllVoices={handleStopAllVoices}
         />
       );
     },
-    [handleRetry],
+    [handleRetry, activeVoiceId, handleStopAllVoices],
   );
 
   const isEnded = threadStatus === 'ENDED';
@@ -417,6 +720,7 @@ export default function ChatScreen() {
         activityStatus={headerActivityStatus}
         onBack={handleBack}
         onProfilePress={handleProfilePress}
+        onMorePress={participant ? handleOpenActions : undefined}
       />
 
       {/* Message timeline */}
@@ -469,10 +773,219 @@ export default function ChatScreen() {
       {/* Composer */}
       <MessageComposer
         onSend={handleSend}
+        onSendWithAttachments={handleSendWithAttachments}
+        onPickImage={handlePickImage}
+        selectedFiles={selectedFiles}
+        onRemoveFile={handleRemoveFile}
         bottomInset={insets.bottom}
         onTextChange={onTextChange}
         disabled={isEnded}
+        isProcessingImages={isProcessingImages}
+        voiceRecorder={voiceRecorder}
+        onSendVoice={handleSendVoice}
+        voiceQuotaRemaining={voiceQuotaStatus.remaining}
+        imageQuotaRemaining={imageQuotaStatus.remaining}
+        onQuotaExceeded={handleQuotaExceeded}
       />
+
+      {/* Actions menu */}
+      <Modal
+        transparent
+        visible={actionsVisible}
+        animationType="fade"
+        onRequestClose={handleCloseActions}
+      >
+        <Pressable style={styles.actionsOverlay} onPress={handleCloseActions}>
+          <View
+            style={[
+              styles.actionsCard,
+              {
+                backgroundColor: th.surface,
+                borderColor: th.border,
+                marginTop: insets.top + 56,
+              },
+            ]}
+          >
+            <Pressable
+              style={styles.actionsItem}
+              onPress={handleOpenReport}
+            >
+              <Ionicons name="flag-outline" size={18} color={colors.danger} />
+              <Text style={[styles.actionsText, { color: colors.danger }]}>Report</Text>
+            </Pressable>
+            <View style={[styles.actionsDivider, { backgroundColor: th.border }]} />
+            <Pressable
+              style={[styles.actionsItem, isBlocking && { opacity: 0.6 }]}
+              onPress={handleBlock}
+              disabled={isBlocking}
+            >
+              {isBlocking ? (
+                <ActivityIndicator size="small" color={th.text} />
+              ) : (
+                <Ionicons name="ban-outline" size={18} color={th.text} />
+              )}
+              <Text style={[styles.actionsText, { color: th.text }]}>Block user</Text>
+            </Pressable>
+            <View style={[styles.actionsDivider, { backgroundColor: th.border }]} />
+            <Pressable
+              style={[styles.actionsItem, isClearing && { opacity: 0.6 }]}
+              onPress={handleClearConversation}
+              disabled={isClearing}
+            >
+              {isClearing ? (
+                <ActivityIndicator size="small" color={colors.danger} />
+              ) : (
+                <Ionicons name="trash-outline" size={18} color={colors.danger} />
+              )}
+              <Text style={[styles.actionsText, { color: colors.danger }]}>Clear conversation</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Report modal */}
+      <Modal
+        transparent
+        visible={reportVisible}
+        animationType="slide"
+        onRequestClose={() => setReportVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={[styles.reportKAV, { paddingBottom: insets.bottom }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <Pressable
+            style={styles.reportBackdrop}
+            onPress={() => {
+              setReportVisible(false);
+              setReportDropdownOpen(false);
+            }}
+          />
+          <Pressable
+            style={[styles.reportSheet, { backgroundColor: th.surface }]}
+            onPress={() => {}}
+          >
+            <View style={[styles.reportHandle, { backgroundColor: th.border }]} />
+            <Text style={[styles.reportTitle, { color: th.text }]}>Report conversation</Text>
+            <Text style={[styles.reportSubtitle, { color: th.textMuted }]}>Why are you reporting {participant?.displayName ?? 'this user'}?</Text>
+
+            <Pressable
+              style={[
+                styles.reportDropdownBtn,
+                {
+                  borderColor: reportDropdownOpen ? colors.primary : th.border,
+                  backgroundColor: th.backgroundSelected,
+                },
+              ]}
+              onPress={() => {
+                Keyboard.dismiss();
+                setReportDropdownOpen((prev) => !prev);
+              }}
+            >
+              <Text
+                style={[
+                  styles.reportDropdownValue,
+                  { color: selectedReportType ? th.text : th.textMuted },
+                ]}
+                numberOfLines={1}
+              >
+                {selectedReportType
+                  ? REPORT_OPTIONS.find((o) => o.type === selectedReportType)?.label
+                  : 'Select a reason…'}
+              </Text>
+              <Ionicons
+                name={reportDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={th.textMuted}
+              />
+            </Pressable>
+
+            {reportDropdownOpen && (
+              <ScrollView
+                style={[styles.reportOptionsList, { borderColor: th.border, backgroundColor: th.surface }]}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {REPORT_OPTIONS.map(({ type, label }, idx) => {
+                  const selected = selectedReportType === type;
+                  return (
+                    <Pressable
+                      key={type}
+                      style={[
+                        styles.reportOption,
+                        idx < REPORT_OPTIONS.length - 1 && {
+                          borderBottomWidth: StyleSheet.hairlineWidth,
+                          borderBottomColor: th.border,
+                        },
+                        selected && { backgroundColor: th.backgroundSelected },
+                      ]}
+                      onPress={() => {
+                        setSelectedReportType(type);
+                        setReportDropdownOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.reportOptionLabel,
+                          { color: selected ? colors.primary : th.text },
+                          selected && { fontWeight: '700' },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                      {selected && (
+                        <Ionicons name="checkmark" size={16} color={colors.primary} />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            <TextInput
+              style={[
+                styles.reportInput,
+                {
+                  borderColor: th.border,
+                  color: th.text,
+                  backgroundColor: th.backgroundSelected,
+                },
+              ]}
+              multiline
+              numberOfLines={4}
+              maxLength={2000}
+              placeholder="Add details (optional)"
+              placeholderTextColor={th.textMuted}
+              value={reportDescription}
+              onChangeText={setReportDescription}
+              editable={!isReporting}
+              textAlignVertical="top"
+            />
+            <Text style={[styles.reportCharCount, { color: th.textMuted }]}>
+              {reportDescription.length}/2000
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.reportSubmitBtn,
+                {
+                  backgroundColor: reportButtonDisabled ? th.border : colors.danger,
+                  opacity: isReporting ? 0.6 : 1,
+                },
+              ]}
+              onPress={handleSubmitReport}
+              disabled={reportButtonDisabled}
+              activeOpacity={0.85}
+            >
+              {isReporting ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.reportSubmitLabel}>Submit report</Text>
+              )}
+            </TouchableOpacity>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -509,5 +1022,120 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#DC2626',
     textAlign: 'center',
+  },
+  actionsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    paddingHorizontal: 16,
+  },
+  actionsCard: {
+    alignSelf: 'flex-end',
+    width: 240,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 6,
+    gap: 2,
+  },
+  actionsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  actionsText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  actionsDivider: {
+    height: StyleSheet.hairlineWidth,
+    width: '100%',
+  },
+  reportKAV: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  reportBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  reportSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+    paddingTop: 16,
+    gap: 14,
+  },
+  reportHandle: {
+    alignSelf: 'center',
+    width: 50,
+    height: 4,
+    borderRadius: 999,
+    marginBottom: 4,
+  },
+  reportTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  reportSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  reportDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  reportDropdownValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
+    marginRight: 8,
+  },
+  reportOptionsList: {
+    maxHeight: 220,
+    borderWidth: 1,
+    borderRadius: 14,
+  },
+  reportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  reportOptionLabel: {
+    fontSize: 15,
+    flex: 1,
+    marginRight: 12,
+  },
+  reportInput: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 110,
+    fontSize: 15,
+  },
+  reportCharCount: {
+    fontSize: 12,
+    alignSelf: 'flex-end',
+  },
+  reportSubmitBtn: {
+    borderRadius: 999,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  reportSubmitLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
   },
 });

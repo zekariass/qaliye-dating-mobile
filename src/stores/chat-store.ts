@@ -1,12 +1,32 @@
 import { create } from 'zustand';
 
 import type {
-  ChatMessage,
-  ChatThread,
-  MessageDto,
-  ReceiptState,
-  ThreadStatus,
+    ChatAttachment,
+    ChatAttachmentDto,
+    ChatMessage,
+    ChatThread,
+    MessageDto,
+    ReceiptState,
+    ThreadStatus,
 } from '@/types/chat';
+
+// ---------------------------------------------------------------------------
+// Attachment DTO → domain mapper
+// ---------------------------------------------------------------------------
+
+function mapAttachmentDto(dto: ChatAttachmentDto): ChatAttachment {
+  return {
+    id: dto.id,
+    messageId: dto.message_id,
+    attachmentType: dto.attachment_type,
+    fileName: dto.file_name,
+    contentType: dto.content_type,
+    fileSizeBytes: dto.file_size_bytes,
+    durationMs: dto.duration_ms,
+    downloadUrl: dto.download_url,
+    createdAt: dto.created_at,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // DTO → model mapper
@@ -24,10 +44,12 @@ export function mapMessageDto(
     senderUserId: dto.sender_user_id,
     isMine: dto.sender_user_id === currentUserId,
     messageType: dto.message_type,
-    body: dto.body,
+    body: dto.body ?? '',
     createdAt: dto.created_at,
     editedAt: dto.edited_at,
+    deliveryStatus: dto.delivery_status,
     localSendStatus: 'SENT',
+    attachments: dto.attachments?.map(mapAttachmentDto),
   };
 }
 
@@ -62,6 +84,11 @@ function insertSorted(messages: ChatMessage[], msg: ChatMessage): ChatMessage[] 
       ...existing,
       ...msg,
       localSendStatus: msg.localSendStatus ?? existing.localSendStatus,
+      // When a server-confirmed message (has a real id) merges over an optimistic,
+      // clear local-only fields so pending previews don't render alongside server attachments
+      ...(msg.id !== undefined
+        ? { pendingFiles: undefined, pendingVoiceDurations: undefined }
+        : {}),
     };
     return result;
   }
@@ -136,6 +163,7 @@ interface ChatStoreState {
     hasMoreAfter?: boolean,
   ) => void;
   addOptimisticMessage: (msg: ChatMessage) => void;
+  removeOptimisticMessage: (clientMessageId: string) => void;
   reconcileMessage: (clientMessageId: string, serverMsg: ChatMessage) => void;
   markMessageFailed: (clientMessageId: string, errorCode?: string) => void;
   updateReceiptState: (receipt: Partial<ReceiptState>) => void;
@@ -249,8 +277,11 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         id: serverMsg.id,
         sequenceNumber: serverMsg.sequenceNumber,
         createdAt: serverMsg.createdAt,
+        attachments: serverMsg.attachments,
         localSendStatus: 'SENT',
         errorCode: undefined,
+        pendingFiles: undefined,
+        pendingVoiceDurations: undefined,
       };
 
       const reordered = updated.sort((a, b) => {
@@ -269,6 +300,14 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
       return { messages: reordered, highestKnownSequence: highest };
     });
+  },
+
+  removeOptimisticMessage: (clientMessageId) => {
+    set((state) => ({
+      messages: state.messages.filter(
+        (m) => m.clientMessageId !== clientMessageId,
+      ),
+    }));
   },
 
   markMessageFailed: (clientMessageId, errorCode) => {

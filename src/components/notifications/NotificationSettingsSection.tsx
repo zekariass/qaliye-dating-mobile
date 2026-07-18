@@ -34,7 +34,8 @@ type RowProps = {
 };
 
 function PreferenceRow({ label, sublabel, value, onValueChange, disabled, isLoading }: RowProps) {
-  const { colors: th } = useTheme();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
   return (
     <View style={styles.row}>
       <View style={{ flex: 1 }}>
@@ -52,8 +53,8 @@ function PreferenceRow({ label, sublabel, value, onValueChange, disabled, isLoad
           value={value}
           onValueChange={onValueChange}
           disabled={disabled}
-          trackColor={{ false: 'rgba(0,0,0,0.1)', true: colors.primary + 'AA' }}
-          thumbColor={value ? colors.primary : '#ccc'}
+          trackColor={{ false: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)', true: colors.primary + 'AA' }}
+          thumbColor={value ? colors.primary : isDark ? '#f0f0f0' : '#ccc'}
         />
       )}
     </View>
@@ -254,11 +255,32 @@ export function NotificationSettingsSection() {
           <View style={[styles.divider, { borderColor: th.border }]} />
 
           <PreferenceRow
-            label={t('notifications.likes', 'Likes and superlikes')}
+            label={t('notifications.likes', 'Likes')}
             value={prefs.likeNotificationsEnabled}
             onValueChange={(v) => update({ likeNotificationsEnabled: v })}
             disabled={categoryDisabled}
             isLoading={pendingField === 'likeNotificationsEnabled' && isUpdating}
+          />
+
+          <View style={[styles.divider, { borderColor: th.border }]} />
+
+          <PreferenceRow
+            label={t('notifications.superlikes', 'Super likes')}
+            value={prefs.superlikeNotificationsEnabled}
+            onValueChange={(v) => update({ superlikeNotificationsEnabled: v })}
+            disabled={categoryDisabled}
+            isLoading={pendingField === 'superlikeNotificationsEnabled' && isUpdating}
+          />
+
+          <View style={[styles.divider, { borderColor: th.border }]} />
+
+          <PreferenceRow
+            label={t('notifications.marketing', 'Offers and updates')}
+            sublabel={t('notifications.marketingSub', 'Promotions and feature announcements')}
+            value={prefs.marketingNotificationsEnabled}
+            onValueChange={handleMarketing}
+            disabled={!pushEnabled || !permGranted}
+            isLoading={pendingField === 'marketingNotificationsEnabled' && isUpdating}
           />
 
           <View style={[styles.divider, { borderColor: th.border }]} />
@@ -273,17 +295,6 @@ export function NotificationSettingsSection() {
             onValueChange={handleMessagePreview}
             disabled={categoryDisabled}
             isLoading={pendingField === 'messagePreviewEnabled' && isUpdating}
-          />
-
-          <View style={[styles.divider, { borderColor: th.border }]} />
-
-          <PreferenceRow
-            label={t('notifications.marketing', 'Offers and updates')}
-            sublabel={t('notifications.marketingSub', 'Promotions and feature announcements')}
-            value={prefs.marketingNotificationsEnabled}
-            onValueChange={handleMarketing}
-            disabled={!pushEnabled || !permGranted}
-            isLoading={pendingField === 'marketingNotificationsEnabled' && isUpdating}
           />
         </>
       )}

@@ -48,7 +48,7 @@ const STATUS_META: Record<NonNullable<OtherUserRelationStatus>, { label: string;
 
 const ACTION_META: Record<NonNullable<OtherUserRelationStatus>, { primary: { icon: IoniconName; color: string; label: string }; secondary?: { icon: IoniconName; color: string; label: string } }> = {
   matched:       { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: 'Unmatch' } },
-  like_sent:     { primary: { icon: 'close-circle', color: colors.danger, label: 'Pass' } },
+  like_sent:     { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: 'Unsend Like' } },
   like_received: { primary: { icon: 'close-circle', color: colors.danger, label: 'Decline' }, secondary: { icon: 'heart', color: colors.heartPink, label: 'Like Back' } },
 };
 
@@ -115,12 +115,16 @@ export default function OtherUserProfileScreen() {
 
   const handlePass = () => {
     if (!userId) return;
-    const label = profile?.status === 'like_received' ? 'Decline' : 'Pass';
+    const isLikeReceived = profile?.status === 'like_received';
+    const isLikeSent = profile?.status === 'like_sent';
+    const label = isLikeReceived ? 'Decline' : isLikeSent ? 'Unsend Like' : 'Pass';
     themedAlert({
       title: `${label}?`,
-      message: profile?.status === 'like_received'
+      message: isLikeReceived
         ? `Reject ${profile?.name ?? 'this user'}'s like?`
-        : `Pass on ${profile?.name ?? 'this user'}?`,
+        : isLikeSent
+          ? `Withdraw your like from ${profile?.name ?? 'this user'}?`
+          : `Pass on ${profile?.name ?? 'this user'}?`,
       icon: 'close-circle-outline',
       iconColor: colors.danger,
       buttons: [
@@ -428,26 +432,53 @@ export default function OtherUserProfileScreen() {
       {actionMeta && (
         <View style={[styles.fixedActionButtonsRow, { bottom: safeBottom + 72 }]}>
           {profile?.status === 'matched' ? (
-            <TouchableOpacity
-              style={[
-                styles.actionTextButton,
-                { opacity: isUnmatching ? 0.6 : 1 },
-              ]}
-              onPress={handleUnmatch}
-              disabled={isUnmatching}
-              activeOpacity={0.82}
-              accessibilityRole="button"
-              accessibilityLabel="Unmatch"
-            >
-              {isUnmatching ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <>
-                  <Ionicons name="heart-dislike" size={15} color="#FFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.actionTextButtonLabel}>Unmatch</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.actionTextButton,
+                  { backgroundColor: colors.primary, opacity: isSwiping ? 0.6 : 1 },
+                ]}
+                onPress={() => {
+                  if (resolvedMatchId) {
+                    router.push({
+                      pathname: '/(app)/chat' as any,
+                      params: {
+                        matchId: resolvedMatchId,
+                        displayName: profile?.name ?? '',
+                        avatarUrl: profile?.images?.[0] ?? '',
+                        isVerified: profile?.verified ? '1' : '0',
+                      },
+                    });
+                  }
+                }}
+                activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel="Chat"
+              >
+                <Ionicons name="chatbubble-ellipses" size={15} color="#FFF" style={{ marginRight: 6 }} />
+                <Text style={styles.actionTextButtonLabel}>Chat</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.actionTextButton,
+                  { opacity: isUnmatching ? 0.6 : 1 },
+                ]}
+                onPress={handleUnmatch}
+                disabled={isUnmatching}
+                activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel="Unmatch"
+              >
+                {isUnmatching ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <>
+                    <Ionicons name="heart-dislike" size={15} color="#FFF" style={{ marginRight: 6 }} />
+                    <Text style={styles.actionTextButtonLabel}>Unmatch</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
           ) : (
             <TouchableOpacity
               style={[styles.actionIconButton, { backgroundColor: colors.danger, opacity: isSwiping ? 0.6 : 1 }]}
