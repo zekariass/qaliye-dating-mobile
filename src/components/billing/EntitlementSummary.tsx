@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import type { EntitlementResponse, QuotaInfo } from '@/types/billing';
-import { isPremiumPlan } from '@/types/billing';
+import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 
 type Props = {
   entitlements: EntitlementResponse;
@@ -73,6 +73,7 @@ export function EntitlementSummary({
 }: Props) {
   const { plan, subscription } = entitlements;
   const isPremium = isPremiumPlan(plan);
+  const isFreePremium = isFreePremiumPlan(plan);
 
   const limitEntries = Object.entries(entitlements.limits);
   const rows: [string, QuotaInfo][][] = [];
@@ -86,15 +87,15 @@ export function EntitlementSummary({
         <View
           style={[
             styles.badge,
-            { backgroundColor: isPremium ? colors.primary : '#6B7280' },
+            { backgroundColor: isPremium ? (isFreePremium ? colors.warning : colors.primary) : '#6B7280' },
           ]}
         >
           <Ionicons
-            name={isPremium ? 'diamond' : 'person-outline'}
+            name={isPremium ? (isFreePremium ? 'gift' : 'diamond') : 'person-outline'}
             size={12}
             color="#fff"
           />
-          <Text style={styles.badgeText}>{isPremium ? 'Premium' : 'Free'}</Text>
+          <Text style={styles.badgeText}>{isPremium ? (isFreePremium ? 'Free Premium' : 'Premium') : 'Free'}</Text>
         </View>
 
         {isPremium && subscription?.expires_at && (

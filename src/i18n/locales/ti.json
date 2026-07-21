@@ -8,11 +8,11 @@
   },
   "auth": {
     "brandName": "ቃሊይ",
-    "brandTaglineLine1": "ልቢ ካብ ሕርሻና",
-    "brandTaglineLine2": "ዓርሶም ዝረኽቡሉ.",
-    "brandTaglineHighlight1": "ልቢ",
-    "brandTaglineHighlight2": "ዓርሶም",
-    "welcome": "እንቋዕ ደሓን መጻእካ 👋",
+    "brandTaglineLine1": "ቃለ መሃላዬ",
+    "brandTaglineLine2": "",
+    "brandTaglineHighlight1": "መሃላዬ",
+    "brandTaglineHighlight2": "",
+    "welcome": "እንቋዕ ደሓን መጻእካ",
     "login": "እቶ",
     "sendCode": "ኮድ ስደድ",
     "emailAddress": "ኣድራሻ ኢሜይል",
@@ -25,7 +25,6 @@
     "orContinueWith": "ወይ ቀጽል ብ",
     "google": "Google",
     "apple": "Apple",
-    "facebook": "Facebook",
     "phone": "ስልኪ",
     "email": "ኢሜይል",
     "invalidEmail": "ቅኑዕ ኢሜይል ኣእቱ",
@@ -83,7 +82,7 @@
   "discovery": {
     "nearby": "ኣብ ጎኒ",
     "kmAway": "{{distance}} ኪ.ሜ ርሕቀት",
-    "noMoreProfiles": "ኣብ ጎኒ ካልእ ፕሮፋይል የለን",
+    "noMoreProfiles": "ምንም ፕሮፋይላት ኣይተረኽቡን",
     "adjustPreferences": "ምርጫኻ ኣስተኻኽል",
     "itsAMatch": "ተራኺቡ! 🎉",
     "matchSubtitle": "ንተን {{name}} ተራኺብኩም።",
@@ -169,7 +168,27 @@
       "continue": "ቀጽል",
       "saveAndContinue": "ዕብየትን ቀጽልን",
       "interests": "ፍትዋታትካ",
-      "interestsSubtitle": "ክሳብ 8 ዝፈትዎም ምምራጽ።"
+      "interestsSubtitle": "ክሳብ 8 ዝፈትዎም ምምራጽ።",
+      "religion": "ሃይማኖትካ",
+      "religionSubtitle": "ሃይማኖትካ እንታይ እዩ? እዚኣ ምራጽ ኣይትግበኣን።",
+      "religionLabel": "ሃይማኖት",
+      "religionPlaceholder": "ሃይማኖትካ ምረጽ",
+      "lifestyle": "ናይ ህይወት ስርዓት",
+      "lifestyleSubtitle": "ብዛዕባ ልማዻትካ ተነግረና። እዚኣ ምራጽ ኣይትግበኣን።",
+      "habits": "ልማዻት",
+      "smoking": "ምስትይት",
+      "smokingPlaceholder": "ምረጽ",
+      "drinking": "ምስቲ",
+      "drinkingPlaceholder": "ምረጽ",
+      "activityLevel": "ደረጃ ንጥፈት",
+      "activityLevelPlaceholder": "ምረጽ",
+      "educationOccupation": "ትምህርቲ ከምኡ'ውን ስራሕ",
+      "educationOccupationSubtitle": "ትምህርትካ እንታይ እዩ? እዚኣ ምራጽ ኣይትግበኣን።",
+      "educationWork": "ትምህርቲ ከምኡ'ውን ስራሕ",
+      "educationLevel": "ደረጃ ትምህርቲ",
+      "educationLevelPlaceholder": "ምረጽ",
+      "occupation": "ስራሕ",
+      "occupationPlaceholder": "ስራሕካ"
     },
     "location": {
       "title": "ኣበይ ትነብር?",
@@ -308,7 +327,9 @@
     "close": "ዕጸው",
     "back": "ተመለስ",
     "done": "ተወዲኡ",
-    "continue": "ቀጽል"
+    "continue": "ቀጽል",
+    "connectionErrorTitle": "ዓቕቢ ግንኙነት",
+    "connectionErrorBody": "ሰርቨራት ክበጽሕ ኣይክኣልናን። እባኽኹም ዓውዲ መርሕኹም ኣረጋግጹ እሞ ደጊምኩም ፈትኑ።"
   },
   "billing": {
     "settingsSection": "ምዝገባ & ክሬዲቶች",
@@ -324,6 +345,7 @@
     "restoring": "ኣብ ምምላስ ኣሎ…",
     "restoreDone": "ምምላስ ተወዲኡ። ኣብ ላዕሊ ደረጃ ውጥንካ ርኣይ።",
     "alreadyPremium": "ብልጫ ፕሪሚየም ድሮ ኣሎካ።",
+    "freePremiumActive": "ነፃ ፕሪሚየም",
     "premiumFeatures": "ናይ ፕሪሚየም ባህርያት",
     "choosePlan": "ውጥን ምረጽ",
     "offersUnavailable": "ምዝገባ ዘይርከብ",
@@ -379,6 +401,33 @@
     "uploadFailed": "ጻዕሪ ኣይተሳኽዐን",
     "permissionRequired": "ናይ ፎቶ ቤተ-መዛግብቲ ፍቓድ የድሊ",
     "copied": "ተቐዲሑ"
+  },
+  "promotion": {
+    "claimNow": "ሕጂ ሓቶ",
+    "notNow": "ሕጂ ኣይኰነን",
+    "viewOffer": "ናይ ሕቶ ርኣዮ",
+    "subscribe": "ተጸምበር",
+    "freeDays": "{{duration}} ናጻ",
+    "expiresOn": "ይወዳእ {{date}}",
+    "forWomen": "ንኣንስትያት",
+    "forMen": "ንኣባዶት",
+    "claimSuccessTitle": "ፕሪሚዩም ተንቀሳቒሱ!",
+    "claimSuccessBody": "ናጻ ፕሪሚዩም ኣጠቓቕማ ሕጂ ንጡፍ ኢዩ።",
+    "claimErrorTitle": "ምሕታት ኣይተሳኽዐን",
+    "claimError": "ጸገም ተፈጢሩ። በጃኻ ደጊምካ ፈትን።",
+    "offer": {
+      "discount": "ፕሮሞ"
+    },
+    "history": {
+      "title": "ሽልማታተይ",
+      "settingsSub": "ዝሓቶምካ ፕሮሞሽናት ርኣዮ",
+      "empty": "ክሳዕ ሕጂ ሽልማት የለን",
+      "emptyBody": "ዝሓቶምካ ፕሮሞሽናት ኣብዚ ክርኣዩ እዮም።",
+      "statusFulfilled": "ንጡፍ",
+      "statusReserved": "ኣብ ጽቡቕ",
+      "statusCancelled": "ተሰሪዙ",
+      "statusExpired": "ዝሓለፈ"
+    }
   },
   "support": {
     "title": "ቃሊይ ደገፍ",

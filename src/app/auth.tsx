@@ -4,7 +4,9 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 
+import { colors, radius, spacing } from '@/constants/theme';
 import { useBootstrapApp } from '@/hooks/auth/useBootstrapApp';
+import { useTheme } from '@/hooks/use-theme';
 import AuthScreen from '@/screens/auth/AuthScreen';
 import { useMeStore } from '@/stores/me-store';
 
@@ -19,6 +21,7 @@ export default function Auth() {
   const accountJustDeleted = useMeStore((s) => s.accountJustDeleted);
   const setAccountJustDeleted = useMeStore((s) => s.setAccountJustDeleted);
   const { t } = useTranslation();
+  const { colors: th } = useTheme();
 
   useEffect(() => {
     if (hasActiveSession && meStatus === 'idle') {
@@ -57,12 +60,14 @@ export default function Auth() {
         statusBarTranslucent
       >
         <View style={deletedOverlay.backdrop}>
-          <View style={deletedOverlay.card}>
-            <Ionicons name="checkmark-circle-outline" size={56} color="#EF4444" style={{ marginBottom: 20 }} />
-            <Text style={deletedOverlay.title}>
+          <View style={[deletedOverlay.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+            <View style={[deletedOverlay.iconCircle, { backgroundColor: colors.danger + '20' }]}>
+              <Ionicons name="checkmark-circle-outline" size={28} color={colors.danger} />
+            </View>
+            <Text style={[deletedOverlay.title, { color: th.text }]}>
               {t('settings.accountDeletedOverlayTitle', 'Account Deleted')}
             </Text>
-            <Text style={deletedOverlay.body}>
+            <Text style={[deletedOverlay.body, { color: th.textSecondary }]}>
               {t(
                 'settings.accountDeletedOverlayBody',
                 'Your account and all associated data have been permanently deleted. You will be signed out shortly.',
@@ -78,34 +83,36 @@ export default function Auth() {
 const deletedOverlay = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    padding: spacing.lg,
   },
   card: {
     width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 44,
-    paddingHorizontal: 28,
+    maxWidth: 340,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: spacing.lg,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 12,
+    gap: 10,
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   title: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1a1a2e',
     textAlign: 'center',
-    marginBottom: 12,
   },
   body: {
     fontSize: 14,
-    lineHeight: 22,
-    color: '#555',
     textAlign: 'center',
+    lineHeight: 20,
   },
 });

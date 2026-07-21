@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { deactivateDevice } from '@/api/notifications/notificationsApi';
@@ -13,8 +13,10 @@ import { useNotificationsStore } from '@/stores/notifications-store';
 
 export function useSignOutWithDeactivation() {
   const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const signOut = useCallback(async () => {
+    setIsSigningOut(true);
     if (Platform.OS !== 'web') {
       try {
         const installationId = await readInstallationId();
@@ -41,5 +43,5 @@ export function useSignOutWithDeactivation() {
     router.replace('/auth' as never);
   }, [router]);
 
-  return { signOut };
+  return { signOut, isSigningOut };
 }

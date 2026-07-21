@@ -2,15 +2,8 @@ import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { makeRedirectUri } from 'expo-auth-session';
-import * as Linking from 'expo-linking';
-import * as WebBrowser from 'expo-web-browser';
 
 import { supabase } from '@/lib/supabase';
-
-// CRITICAL: Must be called at module level so Expo can close the
-// browser cleanly when the deep-link redirect fires on Android.
-WebBrowser.maybeCompleteAuthSession();
 
 type AuthMutation = {
   mutateAsync: () => Promise<void>;
@@ -18,34 +11,11 @@ type AuthMutation = {
   error: Error | null;
 };
 
-async function createSessionFromUrl(url: string) {
-  // Parse query params from the URL
-  const queryString = url.split('?')[1] ?? '';
-  const searchParams = new URLSearchParams(queryString);
-
-  const errorCode = searchParams.get('error');
-  if (errorCode) {
-    const desc = searchParams.get('error_description') ?? errorCode;
-    throw new Error(desc);
-  }
-
-  const code = searchParams.get('code');
-  if (!code) {
-    throw new Error('No auth code found in callback URL');
-  }
-
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) throw error;
-  return data.session;
-}
-
 export function useSocialAuth() {
   const [googlePending, setGooglePending] = useState(false);
   const [googleError, setGoogleError] = useState<Error | null>(null);
   const [applePending, setApplePending] = useState(false);
   const [appleError, setAppleError] = useState<Error | null>(null);
-  const [facebookPending, setFacebookPending] = useState(false);
-  const [facebookError, setFacebookError] = useState<Error | null>(null);
 
   const google = useCallback(async () => {
     setGooglePending(true);
@@ -108,97 +78,8 @@ export function useSocialAuth() {
     }
   }, []);
 
-  const facebook = useCallback(async () => {
-    setFacebookPending(true);
-    setFacebookError(null);
-
-    try {
-      const redirectTo = makeRedirectUri({
-        scheme: 'qaliyemobile',
-        path: 'callback',
-      });
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'facebook',
-        options: { redirectTo, skipBrowserRedirect: true },
-      });
-      if (error || !data.url) throw error ?? new Error('Facebook sign-in failed');
-
-      if (Platform.OS === 'android') {
-        await WebBrowser.warmUpAsync();
-      }
-
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-
-      // iOS: the browser returns the callback URL directly.
-      if (result.type === 'success' && result.url) {
-        await createSessionFromUrl(result.url);
-        return;
-      }
-
-      if (result.type === 'cancel') {
-        throw new Error('Facebook sign-in cancelled');
-      }
-
-      // Android: Chrome Custom Tabs almost always returns 'dismiss'
-      // because the redirect fires a deep link back into the app
-      // instead of returning to the browser session.
-      // Poll for the session AND actively check Linking for the URL.
-      if (Platform.OS === 'android') {
-        let deepLinkUrl: string | null = null;
-        let listener: { remove(): void } | null = null;
-        const deepLinkPromise = new Promise<string>((resolve) => {
-          listener = Linking.addEventListener('url', ({ url }: { url: string }) => {
-            if (url && url.startsWith('qaliyemobile://callback')) resolve(url);
-          });
-        });
-
-        for (let i = 0; i < 30; i++) {
-          // 1. Check if session already exists (callback screen or root layout handled it)
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            (listener as any)?.remove?.();
-            return;
-          }
-
-          // 2. Check if a deep link URL was captured
-          const initialUrl = await Linking.getInitialURL();
-          if (initialUrl && initialUrl.startsWith('qaliyemobile://callback')) {
-            deepLinkUrl = initialUrl;
-            break;
-          }
-
-          // 3. Check if event listener caught anything (non-blocking)
-          const race = await Promise.race([
-            deepLinkPromise,
-            new Promise<null>((r) => setTimeout(() => r(null), 1000)),
-          ]);
-          if (race) {
-            deepLinkUrl = race;
-            break;
-          }
-        }
-
-        (listener as any)?.remove?.();
-
-        if (deepLinkUrl) {
-          await createSessionFromUrl(deepLinkUrl);
-          return;
-        }
-
-        throw new Error('Facebook sign-in timed out — no session found');
-      }
-
-      throw new Error('Facebook sign-in failed');
-    } catch (e) {
-      setFacebookError(e as Error);
-    } finally {
-      setFacebookPending(false);
-    }
-  }, []);
-
   return {
     google: { mutateAsync: google, isPending: googlePending, error: googleError } as AuthMutation,
     apple: { mutateAsync: apple, isPending: applePending, error: appleError } as AuthMutation,
-    facebook: { mutateAsync: facebook, isPending: facebookPending, error: facebookError } as AuthMutation,
   };
 }

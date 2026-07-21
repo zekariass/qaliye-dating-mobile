@@ -249,12 +249,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     letterSpacing: -0.3,
   },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -267,11 +267,11 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   bioText: {
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 23,
   },
   promptQuestion: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.1,
     marginBottom: 6,
@@ -307,13 +307,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   detailLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.2,
     marginBottom: 3,
   },
   detailValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
 
@@ -329,11 +329,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   chipText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   chipMore: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     fontStyle: 'italic',
   },

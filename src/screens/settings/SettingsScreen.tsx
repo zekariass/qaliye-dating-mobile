@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -11,6 +12,7 @@ import {
     StyleSheet,
     Switch,
     Text,
+    TouchableOpacity,
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,8 +29,9 @@ import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useSignOutWithDeactivation } from '@/hooks/notifications/useSignOutWithDeactivation';
 import { useTheme } from '@/hooks/use-theme';
 import { useRateUs } from '@/hooks/useRateUs';
+import { LANGUAGE_LABELS, LANGUAGE_LIST, useLanguageStore } from '@/stores/language-store';
 import { ThemeMode, useThemeStore } from '@/stores/theme-store';
-import { isPremiumPlan } from '@/types/billing';
+import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 import { extractApiError, getApiErrorTitle } from '@/utils/apiError';
 import { getBoostStatus, getRewindsStatus, getSuperLikesStatus } from '@/utils/entitlements';
 
@@ -46,9 +49,12 @@ export default function SettingsScreen() {
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
   const { showActivityStatus, update: updateVisibility, isUpdating: isUpdatingVisibility } = useActivityVisibility();
-  const { signOut } = useSignOutWithDeactivation();
+  const { signOut, isSigningOut } = useSignOutWithDeactivation();
   const { confirmDelete, deleteStatus } = useDeleteAccount();
   const [revisitSheetVisible, setRevisitSheetVisible] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const language = useLanguageStore((s) => s.language);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
   const { entitlements } = useEntitlements();
   const { requiresActionCount, pendingCount, refetch: refetchPending } = usePendingOrders(Platform.OS === 'android');
   const { restore, restoreResult, isRestoring } = useRevenueCatRestore();
@@ -309,14 +315,16 @@ export default function SettingsScreen() {
             {t('billing.settingsSection', 'Subscription & Credits')}
           </Text>
           {entitlements && (
-            <View style={[styles.planRow, { backgroundColor: isPremiumPlan(entitlements.plan) ? colors.primary + '12' : th.backgroundElement }]}>
+            <View style={[styles.planRow, { backgroundColor: isPremiumPlan(entitlements.plan) ? (isFreePremiumPlan(entitlements.plan) ? colors.warning + '12' : colors.primary + '12') : th.backgroundElement }]}>
               <Ionicons
-                name={isPremiumPlan(entitlements.plan) ? 'diamond' : 'person-outline'}
+                name={isPremiumPlan(entitlements.plan) ? (isFreePremiumPlan(entitlements.plan) ? 'gift' : 'diamond') : 'person-outline'}
                 size={16}
-                color={isPremiumPlan(entitlements.plan) ? colors.primary : th.textSecondary}
+                color={isPremiumPlan(entitlements.plan) ? (isFreePremiumPlan(entitlements.plan) ? colors.warning : colors.primary) : th.textSecondary}
               />
-              <Text style={[styles.planLabel, { color: isPremiumPlan(entitlements.plan) ? colors.primary : th.text }]}>
-                {isPremiumPlan(entitlements.plan) ? t('billing.premiumActive', 'Premium') : t('billing.freePlan', 'Free Plan')}
+              <Text style={[styles.planLabel, { color: isPremiumPlan(entitlements.plan) ? (isFreePremiumPlan(entitlements.plan) ? colors.warning : colors.primary) : th.text }]}>
+                {isPremiumPlan(entitlements.plan)
+                  ? (isFreePremiumPlan(entitlements.plan) ? t('billing.freePremiumActive', 'Free Premium') : t('billing.premiumActive', 'Premium'))
+                  : t('billing.freePlan', 'Free Plan')}
               </Text>
               {entitlements.plan === 'FREE' && (
                 <Pressable
@@ -402,6 +410,25 @@ export default function SettingsScreen() {
           )}
           <Pressable
             style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
+            onPress={() => router.push('/(app)/promotions' as any)}
+            accessibilityRole="button"
+            accessibilityLabel={t('promotion.history.title', 'My Rewards')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="gift-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('promotion.history.title', 'My Rewards')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('promotion.history.settingsSub', 'View your claimed promotions')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+          <Pressable
+            style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
             onPress={() => restore()}
             disabled={isRestoring}
             accessibilityRole="button"
@@ -433,6 +460,35 @@ export default function SettingsScreen() {
               </Text>
               <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
                 {t('settings.rateUsSub', 'Love Qaliye? Leave us a review')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+        </View>
+
+        {/* ── Language ── */}
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Text style={[styles.sectionTitle, { color: th.text }]}>
+            {t('settings.language', 'Language')}
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: th.textSecondary }]}>
+            {t('settings.languageSubtitle', 'Choose your preferred language.')}
+          </Text>
+          <Pressable
+            style={styles.optionRow}
+            onPress={() => setLangOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.language', 'Language')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="language-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {LANGUAGE_LABELS[language].native}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {LANGUAGE_LABELS[language].label}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
@@ -496,6 +552,69 @@ export default function SettingsScreen() {
             </Text>
             <Text style={[overlayStyles.subtitle, { color: th.textSecondary }]}>
               {t('settings.deletingSubtitle', 'Please wait, this may take a moment.')}
+            </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Language picker modal ── */}
+      <Modal
+        visible={langOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLangOpen(false)}
+      >
+        <Pressable style={langStyles.overlay} onPress={() => setLangOpen(false)}>
+          <View style={[langStyles.dropdown, { backgroundColor: th.surface, borderColor: th.border }]}>
+            <Text style={[langStyles.dropdownTitle, { color: th.textMuted }]}>
+              {t('settings.selectLanguage', 'Select Language')}
+            </Text>
+            {LANGUAGE_LIST.map((code) => {
+              const active = code === language;
+              const { native, label } = LANGUAGE_LABELS[code];
+              return (
+                <TouchableOpacity
+                  key={code}
+                  style={[
+                    langStyles.option,
+                    active && { backgroundColor: th.backgroundSelected },
+                  ]}
+                  onPress={async () => {
+                    setLanguage(code);
+                    await i18n.changeLanguage(code);
+                    setLangOpen(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={langStyles.optionTextCol}>
+                    <Text style={[langStyles.optionNative, { color: th.text }]}>{native}</Text>
+                    <Text style={[langStyles.optionLabel, { color: th.textMuted }]}>{label}</Text>
+                  </View>
+                  {active && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* ── Sign-out loading overlay ── */}
+      <Modal
+        visible={isSigningOut}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={overlayStyles.backdrop}>
+          <View style={[overlayStyles.card, { backgroundColor: th.surface }]}>
+            <View style={signOutStyles.iconWrap}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+            <Text style={[overlayStyles.title, { color: th.text }]}>
+              {t('settings.signingOutTitle', 'Signing out…')}
+            </Text>
+            <Text style={[overlayStyles.subtitle, { color: th.textSecondary }]}>
+              {t('settings.signingOutSubtitle', 'Please wait a moment.')}
             </Text>
           </View>
         </View>
@@ -614,7 +733,7 @@ const styles = StyleSheet.create({
 const overlayStyles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: 'rgba(26, 6, 51, 0.6)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
@@ -643,5 +762,59 @@ const overlayStyles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     textAlign: 'center',
+  },
+});
+
+const signOutStyles = StyleSheet.create({
+  iconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(138, 44, 255, 0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+});
+
+const langStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(26, 6, 51, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  dropdown: {
+    width: '100%',
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  dropdownTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  optionTextCol: {
+    flex: 1,
+  },
+  optionNative: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  optionLabel: {
+    fontSize: 13,
   },
 });

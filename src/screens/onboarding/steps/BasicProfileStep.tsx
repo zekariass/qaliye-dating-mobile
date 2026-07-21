@@ -25,9 +25,36 @@ import { InterestPicker } from '@/components/profile/InterestPicker';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useSemanticTheme } from '@/hooks/use-semantic-theme';
 import { useTheme } from '@/hooks/use-theme';
-import { DatePickerField } from '@/screens/profile/edit/FormComponents';
+import {
+    DatePickerField,
+    LabeledField,
+    RowPair,
+    SectionCard,
+    SectionTitle,
+    SelectField,
+    TextInputField,
+} from '@/screens/profile/edit/FormComponents';
+import {
+    ACTIVITY_OPTIONS,
+    DRINKING_OPTIONS,
+    EDUCATION_OPTIONS,
+    RELIGION_OPTIONS,
+    SMOKING_OPTIONS,
+} from '@/screens/profile/mockEditProfile';
 import { Gender, RelationshipIntention } from '@/types/api';
 import { sanitizeInterests } from '@/utils/interests';
+import {
+    ACTIVITY_API_TO_LABEL,
+    ACTIVITY_LABEL_TO_API,
+    DRINKING_API_TO_LABEL,
+    DRINKING_LABEL_TO_API,
+    EDUCATION_API_TO_LABEL,
+    EDUCATION_LABEL_TO_API,
+    RELIGION_API_TO_LABEL,
+    RELIGION_LABEL_TO_API,
+    SMOKING_API_TO_LABEL,
+    SMOKING_LABEL_TO_API,
+} from '@/utils/profileMappers';
 
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -75,6 +102,12 @@ const schema = z
       ['MARRIAGE', 'SERIOUS_RELATIONSHIP', 'LONG_TERM', 'FRIENDSHIP', 'NOT_SURE_YET'] as const,
       { error: 'Please select what you are looking for.' },
     ),
+    religion: z.string().optional(),
+    smoking_detail: z.string().optional(),
+    drinking_detail: z.string().optional(),
+    activity_level: z.string().optional(),
+    education_level: z.string().optional(),
+    occupation: z.string().max(100, 'Must be 100 characters or less.').optional(),
   })
 
 type FormValues = z.infer<typeof schema>;
@@ -94,7 +127,7 @@ const INTENTIONS: { labelKey: string; value: RelationshipIntention; icon: string
   { labelKey: 'onboarding.basicProfile.lookingForNotSure', value: 'NOT_SURE_YET', icon: '🌟' },
 ];
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 8;
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -139,6 +172,12 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
           gender: profile.gender as 'MALE' | 'FEMALE',
           date_of_birth: dobDisplay,
           relationship_intention: profile.relationship_intention,
+          religion: profile.religion ? (RELIGION_API_TO_LABEL[profile.religion] ?? '') : '',
+          smoking_detail: profile.smoking_detail ? (SMOKING_API_TO_LABEL[profile.smoking_detail] ?? '') : '',
+          drinking_detail: profile.drinking_detail ? (DRINKING_API_TO_LABEL[profile.drinking_detail] ?? '') : '',
+          activity_level: profile.activity_level ? (ACTIVITY_API_TO_LABEL[profile.activity_level] ?? '') : '',
+          education_level: profile.education_level ? (EDUCATION_API_TO_LABEL[profile.education_level] ?? '') : '',
+          occupation: profile.occupation ?? '',
         });
         setSelectedInterests(sanitizeInterests(profile.interests));
       })
@@ -220,6 +259,12 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
         date_of_birth: `${String(year).padStart(4, '0')}-${String(monthIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
         relationship_intention: values.relationship_intention,
         interests: sanitizeInterests(selectedInterests),
+        religion: values.religion ? (RELIGION_LABEL_TO_API[values.religion] ?? null) : null,
+        education_level: values.education_level ? (EDUCATION_LABEL_TO_API[values.education_level] ?? null) : null,
+        occupation: values.occupation?.trim() || null,
+        smoking_detail: values.smoking_detail ? (SMOKING_LABEL_TO_API[values.smoking_detail] ?? null) : null,
+        drinking_detail: values.drinking_detail ? (DRINKING_LABEL_TO_API[values.drinking_detail] ?? null) : null,
+        activity_level: values.activity_level ? (ACTIVITY_LABEL_TO_API[values.activity_level] ?? null) : null,
       });
       await onComplete();
     } catch (e: unknown) {
@@ -457,6 +502,163 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                   onToggle={handleToggleInterest}
                   sem={sem}
                 />
+              </View>
+            </View>
+          )}
+
+          {/* Step 5: Religion */}
+          {subStep === 5 && (
+            <View style={styles.stepContainer}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="leaf-outline" size={40} color={colors.primary} />
+              </View>
+              <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
+                {t('onboarding.basicProfile.religionSubtitle')}
+              </Text>
+              <Text style={[styles.stepTitle, { color: th.text }]}>
+                {t('onboarding.basicProfile.religion')}
+              </Text>
+              <View style={{ width: '100%' }}>
+                <SectionCard sem={sem}>
+                  <LabeledField label={t('onboarding.basicProfile.religionLabel')} sem={sem}>
+                    <Controller
+                      control={control}
+                      name="religion"
+                      render={({ field: { onChange, value } }) => (
+                        <SelectField
+                          value={value ?? ''}
+                          options={RELIGION_OPTIONS}
+                          onSelect={onChange}
+                          sem={sem}
+                          leftIcon="leaf-outline"
+                          placeholder={t('onboarding.basicProfile.religionPlaceholder')}
+                        />
+                      )}
+                    />
+                  </LabeledField>
+                </SectionCard>
+              </View>
+            </View>
+          )}
+
+          {/* Step 6: Lifestyle (Smoking, Drinking, Activity Level) */}
+          {subStep === 6 && (
+            <View style={styles.stepContainer}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="fitness-outline" size={40} color={colors.primary} />
+              </View>
+              <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
+                {t('onboarding.basicProfile.lifestyleSubtitle')}
+              </Text>
+              <Text style={[styles.stepTitle, { color: th.text }]}>
+                {t('onboarding.basicProfile.lifestyle')}
+              </Text>
+              <View style={{ width: '100%' }}>
+                <SectionCard sem={sem}>
+                  <SectionTitle title={t('onboarding.basicProfile.habits')} sem={sem} />
+                  <RowPair>
+                    <LabeledField label={t('onboarding.basicProfile.smoking')} sem={sem}>
+                      <Controller
+                        control={control}
+                        name="smoking_detail"
+                        render={({ field: { onChange, value } }) => (
+                          <SelectField
+                            value={value ?? ''}
+                            options={SMOKING_OPTIONS}
+                            onSelect={onChange}
+                            sem={sem}
+                            leftIcon="ban-outline"
+                            placeholder={t('onboarding.basicProfile.smokingPlaceholder')}
+                          />
+                        )}
+                      />
+                    </LabeledField>
+                    <LabeledField label={t('onboarding.basicProfile.drinking')} sem={sem}>
+                      <Controller
+                        control={control}
+                        name="drinking_detail"
+                        render={({ field: { onChange, value } }) => (
+                          <SelectField
+                            value={value ?? ''}
+                            options={DRINKING_OPTIONS}
+                            onSelect={onChange}
+                            sem={sem}
+                            leftIcon="wine-outline"
+                            placeholder={t('onboarding.basicProfile.drinkingPlaceholder')}
+                          />
+                        )}
+                      />
+                    </LabeledField>
+                  </RowPair>
+                  <LabeledField label={t('onboarding.basicProfile.activityLevel')} sem={sem} flex={false}>
+                    <Controller
+                      control={control}
+                      name="activity_level"
+                      render={({ field: { onChange, value } }) => (
+                        <SelectField
+                          value={value ?? ''}
+                          options={ACTIVITY_OPTIONS}
+                          onSelect={onChange}
+                          sem={sem}
+                          leftIcon="fitness-outline"
+                          placeholder={t('onboarding.basicProfile.activityLevelPlaceholder')}
+                        />
+                      )}
+                    />
+                  </LabeledField>
+                </SectionCard>
+              </View>
+            </View>
+          )}
+
+          {/* Step 7: Education & Occupation */}
+          {subStep === 7 && (
+            <View style={styles.stepContainer}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="school-outline" size={40} color={colors.primary} />
+              </View>
+              <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
+                {t('onboarding.basicProfile.educationOccupationSubtitle')}
+              </Text>
+              <Text style={[styles.stepTitle, { color: th.text }]}>
+                {t('onboarding.basicProfile.educationOccupation')}
+              </Text>
+              <View style={{ width: '100%' }}>
+                <SectionCard sem={sem}>
+                  <SectionTitle title={t('onboarding.basicProfile.educationWork')} sem={sem} />
+                  <LabeledField label={t('onboarding.basicProfile.educationLevel')} sem={sem} flex={false}>
+                    <Controller
+                      control={control}
+                      name="education_level"
+                      render={({ field: { onChange, value } }) => (
+                        <SelectField
+                          value={value ?? ''}
+                          options={EDUCATION_OPTIONS}
+                          onSelect={onChange}
+                          sem={sem}
+                          leftIcon="school-outline"
+                          placeholder={t('onboarding.basicProfile.educationLevelPlaceholder')}
+                        />
+                      )}
+                    />
+                  </LabeledField>
+                  <View style={{ height: spacing.md }} />
+                  <LabeledField label={t('onboarding.basicProfile.occupation')} sem={sem} flex={false}>
+                    <Controller
+                      control={control}
+                      name="occupation"
+                      render={({ field: { onChange, value } }) => (
+                        <TextInputField
+                          value={value ?? ''}
+                          onChangeText={onChange}
+                          sem={sem}
+                          leftIcon="briefcase-outline"
+                          placeholder={t('onboarding.basicProfile.occupationPlaceholder')}
+                        />
+                      )}
+                    />
+                  </LabeledField>
+                </SectionCard>
               </View>
             </View>
           )}

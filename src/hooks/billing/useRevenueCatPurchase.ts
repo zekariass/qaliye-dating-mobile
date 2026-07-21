@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { fetchEntitlements } from '@/api/billing/billingApi';
 import {
@@ -103,6 +103,28 @@ export function useRevenueCatPurchase() {
     setErrorMessage(null);
     mutation.reset();
   }, [mutation]);
+
+  // Auto-reset terminal states so banners don't persist forever
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
+
+    if (purchaseState === 'confirmed' || purchaseState === 'cancelled' || purchaseState === 'error') {
+      resetTimerRef.current = setTimeout(() => reset(), 5_000);
+    } else if (purchaseState === 'pending') {
+      resetTimerRef.current = setTimeout(() => reset(), 15_000);
+    }
+
+    return () => {
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
+        resetTimerRef.current = null;
+      }
+    };
+  }, [purchaseState, reset]);
 
   return {
     purchase: mutation.mutate,

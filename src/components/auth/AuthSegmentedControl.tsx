@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors, fontSize, radius, shadows, spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export type AuthTab = 'login' | 'createAccount';
 
@@ -17,8 +18,9 @@ export default function AuthSegmentedControl({
   loginLabel,
   createAccountLabel,
 }: Props) {
+  const { colors: th } = useTheme();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: th.surface, borderColor: th.border }]}>
       <TouchableOpacity
         style={[styles.tab, selected === 'login' && styles.tabActive]}
         onPress={() => onSelect('login')}
@@ -26,7 +28,7 @@ export default function AuthSegmentedControl({
         accessibilityState={{ selected: selected === 'login' }}
         accessibilityLabel={loginLabel}
       >
-        <Text style={[styles.tabText, selected === 'login' && styles.tabTextActive]}>
+        <Text style={[styles.tabText, { color: th.textSecondary }, selected === 'login' && styles.tabTextActive]}>
           {'→  ' + loginLabel}
         </Text>
       </TouchableOpacity>
@@ -38,7 +40,7 @@ export default function AuthSegmentedControl({
         accessibilityState={{ selected: selected === 'createAccount' }}
         accessibilityLabel={createAccountLabel}
       >
-        <Text style={[styles.tabText, selected === 'createAccount' && styles.tabTextActive]}>
+        <Text style={[styles.tabText, { color: th.textSecondary }, selected === 'createAccount' && styles.tabTextActive]}>
           {'＋  ' + createAccountLabel}
         </Text>
       </TouchableOpacity>
@@ -49,10 +51,8 @@ export default function AuthSegmentedControl({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
     borderRadius: radius.full,
     borderWidth: 1.5,
-    borderColor: colors.border,
     padding: 4,
     ...shadows.card,
   },
@@ -68,7 +68,6 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: fontSize.sm,
     fontWeight: '600',
-    color: colors.textSecondary,
   },
   tabTextActive: {
     color: colors.surface,

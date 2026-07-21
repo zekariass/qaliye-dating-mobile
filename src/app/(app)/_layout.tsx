@@ -1,28 +1,37 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Stack } from 'expo-router';
-import { useEffect } from 'react';
-import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ThemedAlert } from '@/components/common/ThemedAlert';
 import { NotificationBanner } from '@/components/notifications/NotificationBanner';
+import { colors, spacing } from '@/constants/theme';
 import { useHeartbeat } from '@/hooks/activity/useHeartbeat';
 import { useBootstrapApp } from '@/hooks/auth/useBootstrapApp';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
+import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
 import { useRevenueCatIdentity } from '@/hooks/billing/useRevenueCatIdentity';
 import { useForegroundNotifications } from '@/hooks/notifications/useForegroundNotifications';
 import { useNotificationNavigation } from '@/hooks/notifications/useNotificationNavigation';
 import { useNotificationSetup } from '@/hooks/notifications/useNotificationSetup';
 import { useSignedUrlRefresh } from '@/hooks/profile/useSignedUrlRefresh';
+import { useTheme } from '@/hooks/use-theme';
 import { useMeStore } from '@/stores/me-store';
 
 export default function AppLayout() {
+  const { t } = useTranslation();
   const { isBootstrapping, hasActiveSession } = useBootstrapApp();
   const meData = useMeStore((s) => s.data);
   const meStatus = useMeStore((s) => s.status);
   const isOnboarded = useMeStore((s) => s.isOnboarded);
   const fetchMe = useMeStore((s) => s.fetchMe);
   const userId = useCurrentUserId();
+  const { colors: th } = useTheme();
+  const [isRetrying, setRetrying] = useState(false);
 
   useHeartbeat();
+  useEligiblePromotions();
 
   useEffect(() => {
     if (hasActiveSession && meStatus === 'idle') {
@@ -38,20 +47,52 @@ export default function AppLayout() {
   useRevenueCatIdentity();
   useSignedUrlRefresh();
 
-  if (isBootstrapping) return null;
-  if (hasActiveSession && (meStatus === 'idle' || meStatus === 'loading')) return null;
+  if (isBootstrapping || (hasActiveSession && (meStatus === 'idle' || meStatus === 'loading'))) {
+    return (
+      <View style={[errStyles.container, { backgroundColor: th.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   if (!hasActiveSession) {
     return <Redirect href="/auth" />;
   }
 
-  // If meStatus === 'error', the session is invalid (e.g. account_deleted 403).
-  // The apiClient interceptor is async-signing-out, but hasActiveSession is still
-  // true.  Do NOT redirect to onboarding — that would mount OnboardingScreen and
-  // fire /api/v1/onboarding/status, triggering another 403.  Return null and wait
-  // for hasActiveSession to flip to false, which redirects to /auth above.
+  // If meStatus === 'error':
+  // - 403 account_deleted/suspended: the apiClient interceptor calls clearMe()
+  //   which resets status to 'idle' almost immediately, so this screen barely
+  //   flashes before hasActiveSession flips to false and redirects to /auth.
+  // - Network error (backend down): status stays 'error' — show a meaningful
+  //   error screen with a retry button instead of a blank purple screen.
   if (hasActiveSession && meStatus === 'error') {
-    return null;
+    const handleRetry = () => {
+      setRetrying(true);
+      useMeStore.setState({ status: 'idle', error: null });
+      fetchMe();
+    };
+    return (
+      <View style={[errStyles.container, { backgroundColor: th.background }]}>
+        <Ionicons name="cloud-offline-outline" size={56} color={colors.primary} />
+        <Text style={[errStyles.title, { color: th.text }]}>
+          {t('common.connectionErrorTitle', 'Connection problem')}
+        </Text>
+        <Text style={[errStyles.subtitle, { color: th.textSecondary }]}>
+          {t('common.connectionErrorBody', 'We couldn\'t reach our servers. Please check your internet connection and try again.')}
+        </Text>
+        <Pressable
+          style={[errStyles.retryBtn, { backgroundColor: colors.primary }]}
+          onPress={handleRetry}
+          disabled={isRetrying}
+        >
+          {isRetrying ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Text style={errStyles.retryText}>{t('common.retry', 'Try again')}</Text>
+          )}
+        </Pressable>
+      </View>
+    );
   }
 
   if (!meData?.onboarding?.is_onboarded && !isOnboarded) {
@@ -123,9 +164,47 @@ export default function AppLayout() {
           name="staff-support-chat"
           options={{ animation: 'slide_from_right' }}
         />
+        <Stack.Screen
+          name="promotions"
+          options={{ animation: 'slide_from_right' }}
+        />
       </Stack>
       <NotificationBanner />
       <ThemedAlert />
     </View>
   );
 }
+
+const errStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    marginTop: spacing.lg,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 14,
+    minWidth: 180,
+    alignItems: 'center',
+  },
+  retryText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+});

@@ -28,7 +28,8 @@ All endpoints require a valid JWT Bearer token in the `Authorization` header.
    - [EligiblePromotionDto](#eligiblepromotiondto)
    - [UserRedemptionDto](#userredemptiondto)
 4. [Enum Reference](#enum-reference)
-5. [Error Codes](#error-codes)
+5. [Gender-Targeted Campaigns](#gender-targeted-campaigns)
+6. [Error Codes](#error-codes)
 
 ---
 
@@ -141,6 +142,7 @@ Use this endpoint to build a "Promotions" or "Available Offers" screen in the fr
     "reservedCount": 42,
     "fulfilledCount": 318,
     "endsAt": "2026-12-31T23:59:59Z",
+    "targetGender": null,
     "canRedeem": true
   },
   {
@@ -159,6 +161,7 @@ Use this endpoint to build a "Promotions" or "Available Offers" screen in the fr
     "reservedCount": 12,
     "fulfilledCount": 873,
     "endsAt": "2026-08-31T23:59:59Z",
+    "targetGender": "MALE",
     "canRedeem": false
   }
 ]
@@ -179,6 +182,7 @@ Use this endpoint to build a "Promotions" or "Available Offers" screen in the fr
 | `reservedCount` | Currently reserved (pending) count |
 | `fulfilledCount` | Completed redemptions count |
 | `endsAt` | Campaign end timestamp (ISO-8601). Null = no end date. |
+| `targetGender` | `"MALE"`, `"FEMALE"`, or `null` (no gender restriction). See [Gender-Targeted Campaigns](#gender-targeted-campaigns). |
 | `canRedeem` | `true` only for USER_CLAIM + FREE_PREMIUM campaigns. Frontend should show a "Claim" button when true. |
 
 **Frontend Integration Tips:**
@@ -186,6 +190,7 @@ Use this endpoint to build a "Promotions" or "Available Offers" screen in the fr
 - Use `reservedCount` and `fulfilledCount` vs `maxRedemptions` to show scarcity/urgency (e.g., "Only 640 left!").
 - Match `subscriptionProductId` to the product in `GET /billing/offers` to show the promotion alongside the relevant subscription plan.
 - For `PURCHASE` promotions, display the discount info but no claim button — these are automatically applied at checkout.
+- `targetGender` indicates the campaign is restricted to a specific gender. The backend already filters this server-side — only eligible promotions are returned. Frontend can optionally show a gender-specific label (e.g., "For women") when `targetGender` is non-null.
 
 ---
 
@@ -220,6 +225,7 @@ The endpoint validates eligibility at request time. If the campaign is inactive,
   "reservedCount": 42,
   "fulfilledCount": 318,
   "endsAt": "2026-12-31T23:59:59Z",
+  "targetGender": null,
   "canRedeem": true
 }
 ```
@@ -231,7 +237,7 @@ See [EligiblePromotionDto](#eligiblepromotiondto) for field details.
 | Status | Error Code | Description |
 |--------|-----------|-------------|
 | 404 | `promotion_not_found` | No campaign with that key exists |
-| 403 | `promotion_not_eligible` | Campaign exists but user is not eligible (inactive, expired, wrong country, capacity exhausted, etc.) |
+| 403 | `promotion_not_eligible` | Campaign exists but user is not eligible (inactive, expired, wrong country, gender mismatch, capacity exhausted, etc.) |
 
 ---
 
@@ -483,7 +489,8 @@ Creates a new promotion campaign in `DRAFT` status. The campaign must be activat
   "maxRedemptionsPerUser": 1,
   "priority": 10,
   "startsAt": "2026-07-20T00:00:00Z",
-  "endsAt": "2026-08-31T23:59:59Z"
+  "endsAt": "2026-08-31T23:59:59Z",
+  "targetGender": null
 }
 ```
 
@@ -507,6 +514,7 @@ Creates a new promotion campaign in `DRAFT` status. The campaign must be activat
 | `priority` | int | No | Higher = more important. Used for sorting `AUTO_ON_SIGNUP` campaigns and tie-breaking. Defaults to `0`. |
 | `startsAt` | Instant | Yes | When the campaign becomes active (UTC ISO-8601) |
 | `endsAt` | Instant | No | When the campaign expires. `null` = no expiry. Must be after `startsAt`. |
+| `targetGender` | string | No | `"MALE"`, `"FEMALE"`, or `null` (no gender restriction). See [Gender-Targeted Campaigns](#gender-targeted-campaigns). |
 
 **Response: `201 Created`** — `CampaignDto`
 
@@ -534,6 +542,7 @@ Creates a new promotion campaign in `DRAFT` status. The campaign must be activat
   "startsAt": "2026-07-20T00:00:00Z",
   "endsAt": "2026-08-31T23:59:59Z",
   "status": "DRAFT",
+  "targetGender": null,
   "createdAt": "2026-07-20T22:00:00Z",
   "updatedAt": "2026-07-20T22:00:00Z"
 }
@@ -550,6 +559,7 @@ Creates a new promotion campaign in `DRAFT` status. The campaign must be activat
 | `discount_fields_required` | `benefitType=DISCOUNT` but `discountType` or `discountValue` is null |
 | `new_user_window_days_required` | `eligibilityType=NEW_USER` but `newUserWindowDays` is null or ≤ 0 |
 | `ends_at_must_be_after_starts_at` | `endsAt` is not after `startsAt` |
+| `invalid_target_gender` | `targetGender` is not `null`, `"MALE"`, or `"FEMALE"` |
 
 ---
 
@@ -608,7 +618,8 @@ Updates mutable campaign fields. Only `name`, `description`, `maxRedemptions`, `
   "maxRedemptions": 2000,
   "maxRedemptionsPerUser": 2,
   "priority": 20,
-  "endsAt": "2026-09-30T23:59:59Z"
+  "endsAt": "2026-09-30T23:59:59Z",
+  "targetGender": "FEMALE"
 }
 ```
 
@@ -620,6 +631,7 @@ Updates mutable campaign fields. Only `name`, `description`, `maxRedemptions`, `
 | `maxRedemptionsPerUser` | int | New per-user cap |
 | `priority` | int | New priority |
 | `endsAt` | Instant | New end date (or null to remove) |
+| `targetGender` | string | New target gender (`"MALE"`, `"FEMALE"`, or `null` to remove gender restriction) |
 
 **Response: `200 OK`** — `CampaignDto`
 
@@ -696,6 +708,7 @@ Lists redemption records for a campaign with pagination.
     "paymentOrderId": null,
     "status": "FULFILLED",
     "eligibilityCountry": "ET",
+    "eligibilityGender": "MALE",
     "originalAmountMinor": 0,
     "discountAmountMinor": 0,
     "finalAmountMinor": 0,
@@ -746,6 +759,7 @@ Returned by `GET /billing/promotions`. Represents a promotion campaign the user 
 | `reservedCount` | int | Currently reserved (pending) count |
 | `fulfilledCount` | int | Fulfilled count |
 | `endsAt` | string\|null | Campaign end (ISO-8601). Null = no end. |
+| `targetGender` | string\|null | `"MALE"`, `"FEMALE"`, or `null` (no restriction) |
 | `canRedeem` | boolean | `true` for USER_CLAIM + FREE_PREMIUM. Indicates the user can call the redeem endpoint. |
 
 ### UserRedemptionDto
@@ -799,6 +813,7 @@ Returned by `GET /billing/promotions/redemptions`. Represents a user's redemptio
 | `startsAt` | Instant | Campaign start (UTC) |
 | `endsAt` | Instant\|null | Campaign end (UTC), null = no end |
 | `status` | string | `DRAFT`, `ACTIVE`, `PAUSED`, `EXPIRED` |
+| `targetGender` | string\|null | `"MALE"`, `"FEMALE"`, or `null` (no gender restriction) |
 | `createdAt` | Instant | Creation timestamp |
 | `updatedAt` | Instant | Last update timestamp |
 
@@ -846,6 +861,7 @@ Embedded in `OfferDto.claimablePromotions[]` for USER_CLAIM campaigns.
 | `paymentOrderId` | UUID\|null | Associated order (for PURCHASE promotions) |
 | `status` | string | `RESERVED`, `FULFILLED`, `CANCELLED`, `EXPIRED` |
 | `eligibilityCountry` | string | User's billing country at time of redemption |
+| `eligibilityGender` | string\|null | User's gender at time of redemption (`"MALE"`, `"FEMALE"`, or `null`) |
 | `originalAmountMinor` | long\|null | Original price (DISCOUNT only) |
 | `discountAmountMinor` | long\|null | Discount amount (DISCOUNT only) |
 | `finalAmountMinor` | long\|null | Final charged amount (DISCOUNT only) |
@@ -876,6 +892,16 @@ Embedded in `OfferDto.claimablePromotions[]` for USER_CLAIM campaigns.
 | `NEW_USER` | User account created within `newUserWindowDays` days. |
 | `NEVER_SUBSCRIBED` | User has never had any subscription (past or present). |
 | `NO_ACTIVE_SUBSCRIPTION` | User does not currently have an active subscription. |
+
+### Target Gender
+
+| Value | Description |
+|-------|-------------|
+| `null` | No gender restriction — campaign is available to all eligible users. |
+| `MALE` | Only users whose profile gender is `MALE` are eligible. |
+| `FEMALE` | Only users whose profile gender is `FEMALE` are eligible. |
+
+> **Note:** Gender is derived from the user's backend profile only. Users without a gender value set on their profile are **not eligible** for gender-targeted campaigns. The frontend cannot override or pass gender — it is always resolved server-side.
 
 ### Benefit Types
 
@@ -940,6 +966,45 @@ Embedded in `OfferDto.claimablePromotions[]` for USER_CLAIM campaigns.
 | `new_user_window_days_required` | 400 | NEW_USER requires newUserWindowDays > 0 |
 | `ends_at_must_be_after_starts_at` | 400 | endsAt must be after startsAt |
 | `invalid_status_transition` | 400 | Illegal status transition for the campaign |
+| `invalid_target_gender` | 400 | `targetGender` is not `null`, `"MALE"`, or `"FEMALE"` |
+
+---
+
+## Gender-Targeted Campaigns
+
+Campaigns can optionally target a specific gender by setting `targetGender` to `"MALE"` or `"FEMALE"`. When `targetGender` is `null`, the campaign is available to all eligible users regardless of gender.
+
+### How It Works
+
+1. **Admin creates** a campaign with `targetGender` set to `"MALE"` or `"FEMALE"` (or `null` for unrestricted).
+2. **Eligibility is enforced server-side** in the central `PromotionEligibilityService`. This affects all promotion flows:
+   - `GET /billing/promotions` — gender-ineligible campaigns are excluded from the list
+   - `GET /billing/offers` — gender-ineligible PURCHASE discounts and USER_CLAIM promotions are excluded
+   - `AUTO_ON_SIGNUP` — gender-ineligible campaigns are skipped during signup
+   - `POST /billing/promotions/{campaignKey}/redeem` — returns `422 promotion_not_eligible` if gender doesn't match
+   - `POST /billing/orders` — gender-ineligible PURCHASE discounts are not applied at checkout
+   - Checkout revalidation — gender is re-checked at order creation time
+3. **Gender is resolved from the backend profile** (`profiles.gender` field). The frontend cannot pass or override gender.
+4. **Users without a gender** on their profile are **not eligible** for any gender-targeted campaign (but are eligible for unrestricted campaigns).
+5. **Redemptions record `eligibilityGender`** — the user's gender at the time of redemption is stored in `promotion_redemptions.eligibility_gender` for audit purposes.
+
+### Separate Capacity Per Gender
+
+To run separate capacity pools for male and female users (e.g., 100 male spots + 100 female spots), create **two separate campaigns** with the same parameters but different `targetGender` values and different `campaignKey` values:
+
+```
+Campaign A: campaignKey="free_trial_male",   targetGender="MALE",   maxRedemptions=100
+Campaign B: campaignKey="free_trial_female", targetGender="FEMALE", maxRedemptions=100
+```
+
+Each campaign has its own independent `reservedCount` and `fulfilledCount`. The backend automatically routes users to the correct campaign based on their profile gender.
+
+### Frontend Integration
+
+- **No client-side gender filtering needed** — the backend already excludes ineligible campaigns from `GET /billing/promotions` and `GET /billing/offers`.
+- The `targetGender` field is included in `EligiblePromotionDto` and `CampaignDto` responses so the frontend can optionally display a gender-specific label (e.g., "For women", "For men") when `targetGender` is non-null.
+- If a user attempts to redeem a gender-targeted campaign they're not eligible for, they'll receive a `422 promotion_not_eligible` error.
+- The `eligibilityGender` field in `RedemptionDto` (admin endpoint) shows which gender was matched at redemption time.
 
 ---
 

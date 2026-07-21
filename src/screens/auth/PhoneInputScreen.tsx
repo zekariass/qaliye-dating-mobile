@@ -20,10 +20,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import GradientButton from '@/components/ui/GradientButton';
 import { colors, fontSize, gradients, radius, spacing } from '@/constants/theme';
 import { usePhoneOtp } from '@/hooks/auth/usePhoneOtp';
+import { useTheme } from '@/hooks/use-theme';
 import { formatEthiopianPhoneDisplay, normalizeEthiopianPhone } from '@/utils/phone';
 
-function PhoneIcon() {
-  return <Ionicons name="call-outline" size={18} color={colors.textMuted} />;
+function PhoneIcon({ color }: { color: string }) {
+  return <Ionicons name="call-outline" size={18} color={color} />;
 }
 function ArrowIcon() {
   return <Text style={{ fontSize: 16, color: colors.surface, fontWeight: '700' }}>→</Text>;
@@ -31,6 +32,8 @@ function ArrowIcon() {
 
 export default function PhoneInputScreen() {
   const { t } = useTranslation();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
   const { sendCode } = usePhoneOtp();
 
   const [phone, setPhone] = useState('');
@@ -114,7 +117,12 @@ export default function PhoneInputScreen() {
   }
 
   return (
-    <LinearGradient colors={gradients.splash} style={styles.bg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+    <LinearGradient
+      colors={isDark ? ['#0D0712', '#160F24', '#1A1230'] : gradients.splash}
+      style={styles.bg}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
       {/* Decorative floating orbs */}
       <Animated.View
         style={[
@@ -147,27 +155,27 @@ export default function PhoneInputScreen() {
             {/* Brand hero */}
             <View style={styles.heroSection}>
               <TouchableOpacity
-                style={styles.backButton}
+                style={[styles.backButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.85)', borderColor: th.border }]}
                 onPress={handleBack}
                 accessibilityRole="button"
                 accessibilityLabel={t('common.back')}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="arrow-back" size={22} color={colors.primaryDark} />
+                <Ionicons name="arrow-back" size={22} color={th.text} />
               </TouchableOpacity>
 
               <View style={styles.brandContainer}>
                 <View style={styles.brandNameRow}>
-                  <Text style={styles.brandNameText}>Qali</Text>
+                  <Text style={[styles.brandNameText, { color: isDark ? th.text : '#3B0068' }]}>Qali</Text>
                   <View style={styles.brandIWrapper}>
                     <Text style={styles.brandHeartIcon}>♥</Text>
-                    <Text style={styles.brandNameText}>ye</Text>
+                    <Text style={[styles.brandNameText, { color: isDark ? th.text : '#3B0068' }]}>ye</Text>
                   </View>
                 </View>
                 <View style={styles.decorDivider}>
-                  <View style={styles.decorLine} />
-                  <Text style={styles.decorHeart}>♥</Text>
-                  <View style={styles.decorLine} />
+                  <View style={[styles.decorLine, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.decorHeart, { color: colors.primary }]}>♥</Text>
+                  <View style={[styles.decorLine, { backgroundColor: colors.primary }]} />
                 </View>
               </View>
             </View>
@@ -176,15 +184,15 @@ export default function PhoneInputScreen() {
             <View style={styles.formSection}>
               <View style={styles.headerRow}>
                 <Text style={styles.flagEmoji}>🇪🇹</Text>
-                <Text style={styles.titleText}>{t('auth.continueWithPhone')}</Text>
+                <Text style={[styles.titleText, { color: th.text }]}>{t('auth.continueWithPhone')}</Text>
               </View>
 
-              <Text style={styles.subtitleText}>{t('auth.enterEthiopianPhone')}</Text>
+              <Text style={[styles.subtitleText, { color: th.textMuted }]}>{t('auth.enterEthiopianPhone')}</Text>
 
               {/* Ethiopia-only badge */}
-              <View style={styles.badgeRow}>
-                <Ionicons name="information-circle-outline" size={15} color={colors.primaryDark} />
-                <Text style={styles.badgeText}>{t('auth.ethiopiaOnly')}</Text>
+              <View style={[styles.badgeRow, { backgroundColor: isDark ? 'rgba(138, 44, 255, 0.15)' : 'rgba(138, 44, 255, 0.07)' }]}>
+                <Ionicons name="information-circle-outline" size={15} color={colors.primary} />
+                <Text style={[styles.badgeText, { color: colors.primary }]}>{t('auth.ethiopiaOnly')}</Text>
               </View>
 
               {/* Phone input row */}
@@ -194,24 +202,25 @@ export default function PhoneInputScreen() {
                   onPress={() => inputRef.current?.focus()}
                   style={[
                     styles.phoneInputContainer,
-                    inputFocused && styles.phoneInputFocused,
-                    !!phoneError && styles.phoneInputError,
+                    { backgroundColor: th.backgroundElement, borderColor: th.border },
+                    inputFocused && { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(138, 44, 255, 0.08)' : '#FBF7FF' },
+                    !!phoneError && { borderColor: colors.danger },
                   ]}
                 >
                   {/* Fixed prefix */}
-                  <View style={styles.prefixBadge}>
+                  <View style={[styles.prefixBadge, { backgroundColor: isDark ? 'rgba(138, 44, 255, 0.12)' : 'rgba(138, 44, 255, 0.06)' }]}>
                     <Text style={styles.flagSmall}>🇪🇹</Text>
-                    <Text style={styles.prefixText}>+251</Text>
+                    <Text style={[styles.prefixText, { color: colors.primary }]}>+251</Text>
                   </View>
 
-                  <View style={styles.prefixDivider} />
+                  <View style={[styles.prefixDivider, { backgroundColor: th.border }]} />
 
                   {/* Local number input */}
                   <TextInput
                     ref={inputRef}
-                    style={styles.phoneTextInput}
+                    style={[styles.phoneTextInput, { color: th.text }]}
                     placeholder={t('auth.phoneInputPlaceholder')}
-                    placeholderTextColor={colors.textMuted}
+                    placeholderTextColor={th.textMuted}
                     keyboardType="phone-pad"
                     maxLength={15}
                     value={phone}
@@ -230,7 +239,7 @@ export default function PhoneInputScreen() {
                   />
 
                   <View style={styles.phoneIconRight}>
-                    <PhoneIcon />
+                    <PhoneIcon color={th.textMuted} />
                   </View>
                 </TouchableOpacity>
               </Animated.View>
@@ -255,7 +264,7 @@ export default function PhoneInputScreen() {
               {/* Privacy note */}
               <View style={styles.privacyRow}>
                 <Ionicons name="shield-checkmark-outline" size={14} color={colors.primary} />
-                <Text style={styles.privacyText}>{t('auth.privacyLine1')}</Text>
+                <Text style={[styles.privacyText, { color: th.textMuted }]}>{t('auth.privacyLine1')}</Text>
               </View>
             </View>
           </ScrollView>
@@ -302,9 +311,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.85)',
     borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -319,7 +326,6 @@ const styles = StyleSheet.create({
   brandNameText: {
     fontSize: 52,
     fontWeight: '800',
-    color: '#3B0068',
     letterSpacing: -1,
     lineHeight: 60,
   },
@@ -339,10 +345,9 @@ const styles = StyleSheet.create({
   decorLine: {
     width: 28,
     height: 1.5,
-    backgroundColor: colors.primary,
     opacity: 0.55,
   },
-  decorHeart: { fontSize: 11, color: colors.primary },
+  decorHeart: { fontSize: 11 },
 
   formSection: {
     paddingHorizontal: spacing.lg,
@@ -359,12 +364,10 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: fontSize.xl,
     fontWeight: '800',
-    color: colors.textPrimary,
     flexShrink: 1,
   },
   subtitleText: {
     fontSize: fontSize.sm,
-    color: colors.textMuted,
     marginBottom: spacing.sm,
   },
 
@@ -372,7 +375,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(138, 44, 255, 0.07)',
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
     borderRadius: radius.sm,
@@ -381,26 +383,20 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: fontSize.xs,
-    color: colors.primaryDark,
     fontWeight: '600',
   },
 
   phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceSoft,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: colors.border,
     minHeight: 58,
     overflow: 'hidden',
   },
   phoneInputFocused: {
-    borderColor: colors.primary,
-    backgroundColor: '#FBF7FF',
   },
   phoneInputError: {
-    borderColor: colors.danger,
   },
   prefixBadge: {
     flexDirection: 'row',
@@ -408,25 +404,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: 5,
-    backgroundColor: 'rgba(138, 44, 255, 0.06)',
   },
   flagSmall: { fontSize: 18 },
   prefixText: {
     fontSize: fontSize.base,
     fontWeight: '700',
-    color: colors.primaryDark,
     letterSpacing: 0.5,
   },
   prefixDivider: {
     width: 1.5,
     alignSelf: 'stretch',
-    backgroundColor: colors.border,
     marginVertical: 10,
   },
   phoneTextInput: {
     flex: 1,
     fontSize: fontSize.base,
-    color: colors.textPrimary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     letterSpacing: 1,
@@ -454,7 +446,6 @@ const styles = StyleSheet.create({
   },
   privacyText: {
     fontSize: fontSize.xs,
-    color: colors.textMuted,
     flexShrink: 1,
   },
 });

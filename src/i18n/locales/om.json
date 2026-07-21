@@ -8,11 +8,11 @@
   },
   "auth": {
     "brandName": "Qaliye",
-    "brandTaglineLine1": "Garaan aadaa keenya irraa",
-    "brandTaglineLine2": "mana argatu.",
-    "brandTaglineHighlight1": "Garaan",
-    "brandTaglineHighlight2": "mana",
-    "welcome": "Baga nagaan dhuftan 👋",
+    "brandTaglineLine1": "Kaku koo",
+    "brandTaglineLine2": "",
+    "brandTaglineHighlight1": "Kaku",
+    "brandTaglineHighlight2": "",
+    "welcome": "Baga nagaan dhuftan",
     "login": "Seeni",
     "sendCode": "Koodii Ergi",
     "emailAddress": "Teessoo imeelii",
@@ -25,7 +25,6 @@
     "orContinueWith": "ykn itti fufuu",
     "google": "Google",
     "apple": "Apple",
-    "facebook": "Facebook",
     "phone": "Bilbila",
     "email": "Imeelii",
     "invalidEmail": "Teessoo imeelii sirrii galchi",
@@ -83,7 +82,7 @@
   "discovery": {
     "nearby": "Dhibee",
     "kmAway": "{{distance}} km fagoo",
-    "noMoreProfiles": "Dhibee beeksisa dabalataan hin jiru",
+    "noMoreProfiles": "Profiles hin jiru",
     "adjustPreferences": "Filannoo kee sirreessi",
     "itsAMatch": "Wal siman! 🎉",
     "matchSubtitle": "Ati fi {{name}} wal jaallattan.",
@@ -147,7 +146,27 @@
       "lookingFor": "Ani barbaada", "lookingForMarriage": "Fuudhaa", "lookingForRelationship": "Gadi fagoo jiruu", "lookingForLongTerm": "Dheeraa jiruu", "lookingForFriendship": "Hojii irrattii", "lookingForNotSure": "Hin beeku",
       "continue": "Itti fufi", "saveAndContinue": "Ol kaa'i fi itti fufi",
       "interests": "Waann ati hawwatu",
-      "interestsSubtitle": "Hangafa 8 waan jaallattu filadhu."
+      "interestsSubtitle": "Hangafa 8 waan jaallattu filadhu.",
+      "religion": "Amantii kee",
+      "religionSubtitle": "Amantiin kee eenyu? Kun filannoodha.",
+      "religionLabel": "Amantii",
+      "religionPlaceholder": "Amantii kee filadhu",
+      "lifestyle": "Caaseeffama jireenyaa",
+      "lifestyleSubtitle": "Waa'ee aadaa kee nu qabi. Kun filannoodha.",
+      "habits": "Aadaa",
+      "smoking": "Siguungoo",
+      "smokingPlaceholder": "Filadhu",
+      "drinking": "Dhugubii",
+      "drinkingPlaceholder": "Filadhu",
+      "activityLevel": "Sadarkaa sochii",
+      "activityLevelPlaceholder": "Filadhu",
+      "educationOccupation": "Barnoota fi Hojii",
+      "educationOccupationSubtitle": "Madda barnootaa kee eenyu? Kun filannoodha.",
+      "educationWork": "Barnoota fi Hojii",
+      "educationLevel": "Sadarkaa barnootaa",
+      "educationLevelPlaceholder": "Filadhu",
+      "occupation": "Hojii",
+      "occupationPlaceholder": "Hojii kee"
     },
     "location": {
       "title": "Bakka jireenya keeti?", "subtitle": "Bakka kee fayyadamuun namoota sitti dhihoo argisiisna.",
@@ -253,7 +272,9 @@
     "close": "Cufii",
     "back": "Deebi'i",
     "done": "Xumurame",
-    "continue": "Itti Fufuu"
+    "continue": "Itti Fufuu",
+    "connectionErrorTitle": "Rakkoo qunnamtii",
+    "connectionErrorBody": "Sarvaraa qabachuu hin dandeenye. Maaloo qunnamtii intarneetii kee mirkaneessi irra deebi'ii yaali."
   },
   "billing": {
     "settingsSection": "Gamaggamaa & Kreediitii",
@@ -269,6 +290,7 @@
     "restoring": "Deebi'aa jira…",
     "restoreDone": "Deebi'insi xumurame. Sadarkaa karoora kee olitti ilaali.",
     "alreadyPremium": "Duraan Premium qabda.",
+    "freePremiumActive": "Premium Bilaataa",
     "premiumFeatures": "Faayidaalee Premium",
     "choosePlan": "Karoora Filadhu",
     "offersUnavailable": "Gamaggamaa hin argamne",
@@ -324,6 +346,33 @@
     "uploadFailed": "Fe'uu hin milkoofne",
     "permissionRequired": "Hayyama mana suuraatii barbaachisaadha",
     "copied": "Godhame"
+  },
+  "promotion": {
+    "claimNow": "Amma gaafadhu",
+    "notNow": "Amma miti",
+    "viewOffer": "Dhiyaata ilaali",
+    "subscribe": "Galmaahu",
+    "freeDays": "{{duration}} bilisaan",
+    "expiresOn": "Dhumata {{date}}",
+    "forWomen": "Dubartootaf",
+    "forMen": "Dhiiraf",
+    "claimSuccessTitle": "Premium Hojjechuu Jalqabe!",
+    "claimSuccessBody": "Fayyadama premium bilisaa kee amma hojjechuu jalqabe.",
+    "claimErrorTitle": "Gaafachuu Hin Milkoofne",
+    "claimError": "Rakkoo uumame. Maaloo irra deebi'ii yaali.",
+    "offer": {
+      "discount": "Promo"
+    },
+    "history": {
+      "title": "Badhaasawwan Koo",
+      "settingsSub": "Promotionota gaafatte ilaali",
+      "empty": "Hanga ammaatti badhaasa hin jiru",
+      "emptyBody": "Promotionota gaafatte as ni mul'atu.",
+      "statusFulfilled": "Hojjechaa jira",
+      "statusReserved": "Eegaa jira",
+      "statusCancelled": "Haqame",
+      "statusExpired": "Yeroon Darbame"
+    }
   },
   "support": {
     "title": "Gargaarsa Qaliye",

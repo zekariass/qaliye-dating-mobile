@@ -21,11 +21,12 @@ import InfoMessage from '@/components/auth/InfoMessage';
 import GradientButton from '@/components/ui/GradientButton';
 import { colors, fontSize, gradients, radius, spacing } from '@/constants/theme';
 import { usePhoneOtp } from '@/hooks/auth/usePhoneOtp';
+import { useTheme } from '@/hooks/use-theme';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
-function CodeIcon() {
-  return <Text style={styles.inputIcon}>🔑</Text>;
+function CodeIcon({ color }: { color: string }) {
+  return <Text style={[styles.inputIcon, { color }]}>🔑</Text>;
 }
 function CheckIcon() {
   return <Text style={{ fontSize: 18, color: colors.surface }}>✓</Text>;
@@ -36,6 +37,8 @@ function ArrowIcon() {
 
 export default function PhoneOtpScreen() {
   const { t } = useTranslation();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
   const params = useLocalSearchParams<{ phone?: string; display?: string }>();
   const phone = params.phone ?? '';
   const displayPhone = params.display ?? phone;
@@ -151,7 +154,12 @@ export default function PhoneOtpScreen() {
     : t('auth.phoneOtpResendCode');
 
   return (
-    <LinearGradient colors={gradients.splash} style={styles.bg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+    <LinearGradient
+      colors={isDark ? ['#0D0712', '#160F24', '#1A1230'] : gradients.splash}
+      style={styles.bg}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
       <Animated.View
         style={[
           styles.orb,
@@ -183,27 +191,27 @@ export default function PhoneOtpScreen() {
             {/* Brand hero */}
             <View style={styles.heroSection}>
               <TouchableOpacity
-                style={styles.backButton}
+                style={[styles.backButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.85)', borderColor: th.border }]}
                 onPress={handleBack}
                 accessibilityRole="button"
                 accessibilityLabel={t('common.back')}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="arrow-back" size={22} color={colors.primaryDark} />
+                <Ionicons name="arrow-back" size={22} color={th.text} />
               </TouchableOpacity>
 
               <View style={styles.brandContainer}>
                 <View style={styles.brandNameRow}>
-                  <Text style={styles.brandNameText}>Qali</Text>
+                  <Text style={[styles.brandNameText, { color: isDark ? th.text : '#3B0068' }]}>Qali</Text>
                   <View style={styles.brandIWrapper}>
                     <Text style={styles.brandHeartIcon}>♥</Text>
-                    <Text style={styles.brandNameText}>ye</Text>
+                    <Text style={[styles.brandNameText, { color: isDark ? th.text : '#3B0068' }]}>ye</Text>
                   </View>
                 </View>
                 <View style={styles.decorDivider}>
-                  <View style={styles.decorLine} />
-                  <Text style={styles.decorHeart}>♥</Text>
-                  <View style={styles.decorLine} />
+                  <View style={[styles.decorLine, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.decorHeart, { color: colors.primary }]}>♥</Text>
+                  <View style={[styles.decorLine, { backgroundColor: colors.primary }]} />
                 </View>
               </View>
             </View>
@@ -212,25 +220,25 @@ export default function PhoneOtpScreen() {
             <View style={styles.formSection}>
               <View style={styles.headerRow}>
                 <Text style={styles.shieldEmoji}>📱</Text>
-                <Text style={styles.titleText}>{t('auth.phoneOtpTitle')}</Text>
+                <Text style={[styles.titleText, { color: th.text }]}>{t('auth.phoneOtpTitle')}</Text>
               </View>
 
-              <Text style={styles.subtitleText}>{t('auth.phoneOtpSubtitle')}</Text>
+              <Text style={[styles.subtitleText, { color: th.textMuted }]}>{t('auth.phoneOtpSubtitle')}</Text>
               <View style={styles.phoneDisplayRow}>
                 <Text style={styles.flagText}>🇪🇹</Text>
-                <Text style={styles.phoneDisplayText}>{displayPhone}</Text>
+                <Text style={[styles.phoneDisplayText, { color: colors.primary }]}>{displayPhone}</Text>
               </View>
 
               <View style={styles.infoWrapper}>
                 <InfoMessage
-                  icon={<Ionicons name="information-circle-outline" size={14} color={colors.primaryDark} />}
+                  icon={<Ionicons name="information-circle-outline" size={14} color={colors.primary} />}
                   message={t('auth.phoneOtpCheckSms')}
                 />
               </View>
 
               <View style={styles.inputWrapper}>
                 <AuthTextInput
-                  leftSlot={<CodeIcon />}
+                  leftSlot={<CodeIcon color={th.textMuted} />}
                   placeholder={t('auth.phoneOtpEnterCode')}
                   keyboardType="number-pad"
                   maxLength={6}
@@ -277,6 +285,7 @@ export default function PhoneOtpScreen() {
                 <Text
                   style={[
                     styles.resendText,
+                    { color: colors.primary },
                     (resendCooldown > 0 || isResending) && styles.resendTextDisabled,
                   ]}
                 >
@@ -291,7 +300,7 @@ export default function PhoneOtpScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t('auth.phoneOtpBackToPhone')}
               >
-                <Text style={styles.backText}>{t('auth.phoneOtpBackToPhone')}</Text>
+                <Text style={[styles.backText, { color: th.textMuted }]}>{t('auth.phoneOtpBackToPhone')}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -338,9 +347,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.85)',
     borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -355,7 +362,6 @@ const styles = StyleSheet.create({
   brandNameText: {
     fontSize: 52,
     fontWeight: '800',
-    color: '#3B0068',
     letterSpacing: -1,
     lineHeight: 60,
   },
@@ -375,10 +381,9 @@ const styles = StyleSheet.create({
   decorLine: {
     width: 28,
     height: 1.5,
-    backgroundColor: colors.primary,
     opacity: 0.55,
   },
-  decorHeart: { fontSize: 11, color: colors.primary },
+  decorHeart: { fontSize: 11 },
 
   formSection: {
     paddingHorizontal: spacing.lg,
@@ -395,12 +400,10 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: fontSize.xl,
     fontWeight: '800',
-    color: colors.textPrimary,
     flexShrink: 1,
   },
   subtitleText: {
     fontSize: fontSize.sm,
-    color: colors.textMuted,
     marginBottom: 4,
   },
   phoneDisplayRow: {
@@ -413,11 +416,10 @@ const styles = StyleSheet.create({
   phoneDisplayText: {
     fontSize: fontSize.base,
     fontWeight: '700',
-    color: colors.primary,
   },
   infoWrapper: { marginBottom: spacing.sm },
   inputWrapper: { marginBottom: spacing.xs + 2 },
-  inputIcon: { fontSize: 18, color: colors.textMuted },
+  inputIcon: { fontSize: 18 },
   ctaWrapper: {
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
@@ -443,7 +445,6 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: fontSize.sm,
-    color: colors.primary,
     fontWeight: '600',
   },
   resendTextDisabled: { opacity: 0.5 },
@@ -454,6 +455,5 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: fontSize.sm,
-    color: colors.textMuted,
   },
 });

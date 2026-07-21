@@ -138,8 +138,6 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
       quality: 1,
     });
     if (result.canceled || result.assets.length === 0) return;
@@ -162,11 +160,12 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [3, 4],
       quality: 1,
     });
-    if (result.canceled || result.assets.length === 0) return;
+    if (result.canceled || result.assets.length === 0) {
+      console.warn('[pickCard] Picker returned canceled or empty', { canceled: result.canceled, assetCount: result.assets?.length });
+      return;
+    }
     setProcessingCardIdx(slotIdx);
     try {
       const processed = await processCardPhoto(result.assets[0], slotIdx);

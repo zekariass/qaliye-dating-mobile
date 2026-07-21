@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -11,6 +12,7 @@ type Props = {
   isSelected: boolean;
   isActive?: boolean;
   disabled?: boolean;
+  hasActivePremium?: boolean;
   onSelect: () => void;
   onPurchase: () => void;
   isPurchasing: boolean;
@@ -34,6 +36,7 @@ export function OfferCard({
   isSelected,
   isActive = false,
   disabled = false,
+  hasActivePremium = false,
   onSelect,
   onPurchase,
   isPurchasing,
@@ -43,9 +46,25 @@ export function OfferCard({
   surfaceColor,
   borderColor,
 }: Props) {
+  const { t } = useTranslation();
+
+  // Suppress all promotional pricing display when user already has active premium.
+  const promotion = hasActivePremium ? null : (offer.promotion ?? null);
+  const effectivePrice = hasActivePremium ? null : (offer.effective_display_price ?? null);
+
+  // Determine the actual discounted price and the original price to strike through.
+  // Only show strikethrough + badge when the discounted price differs from the original.
+  const discountedPrice = rcPackage
+    ? null
+    : promotion?.effective_display_price ?? effectivePrice ?? null;
+  const basePrice = offer.display_price;
+
+  const hasDiscount = !rcPackage && !!discountedPrice && discountedPrice !== basePrice;
+
   const displayPrice = rcPackage
     ? rcPackage.product.priceString
-    : offer.display_price;
+    : hasDiscount ? discountedPrice! : basePrice;
+  const originalPrice = rcPackage ? null : hasDiscount ? basePrice : null;
 
   const interval = offer.product_type === 'SUBSCRIPTION'
     ? intervalLabel(offer.billing_interval_count, offer.billing_interval_unit)
@@ -81,9 +100,21 @@ export function OfferCard({
       </View>
 
       <View style={styles.right}>
+        {originalPrice && (
+          <Text style={[styles.originalPrice, { color: secondaryColor }]}>
+            {originalPrice}
+          </Text>
+        )}
         <Text style={[styles.price, { color: storeUnavailable ? secondaryColor : (isSelected ? colors.primary : textColor) }]}>
           {displayPrice}
         </Text>
+        {hasDiscount && (
+          <View style={styles.discountBadge}>
+            <Text style={styles.discountBadgeText}>
+              {t('promotion.offer.discount', 'Promo')}
+            </Text>
+          </View>
+        )}
         {storeUnavailable ? (
           <View style={styles.unavailableBtn}>
             <Ionicons name="storefront-outline" size={12} color={secondaryColor} />
@@ -129,6 +160,22 @@ export function OfferCard({
 }
 
 const styles = StyleSheet.create({
+  originalPrice: {
+    fontSize: 12,
+    textDecorationLine: 'line-through',
+    opacity: 0.7,
+  },
+  discountBadge: {
+    backgroundColor: colors.warning + '22',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  discountBadgeText: {
+    color: colors.warning,
+    fontSize: 10,
+    fontWeight: '700',
+  },
   card: {
     flexDirection: 'row',
     alignItems: 'center',

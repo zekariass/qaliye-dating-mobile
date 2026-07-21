@@ -8,11 +8,11 @@
   },
   "auth": {
     "brandName": "ቃሊይ",
-    "brandTaglineLine1": "ልቦች ከቅርሳችን",
-    "brandTaglineLine2": "መኖሪያ የሚያገኙበት.",
-    "brandTaglineHighlight1": "ልቦች",
-    "brandTaglineHighlight2": "መኖሪያ",
-    "welcome": "እንኳን ደህና መጡ 👋",
+    "brandTaglineLine1": "የእኔ ቃል",
+    "brandTaglineLine2": "",
+    "brandTaglineHighlight1": "ቃል",
+    "brandTaglineHighlight2": "",
+    "welcome": "እንኳን ደህና መጡ",
     "login": "ግባ",
     "sendCode": "ኮድ ላክ",
     "emailAddress": "የኢሜይል አድራሻ",
@@ -25,7 +25,6 @@
     "orContinueWith": "ወይም ቀጥ",
     "google": "Google",
     "apple": "Apple",
-    "facebook": "Facebook",
     "phone": "ስልክ",
     "email": "ኢሜይል",
     "invalidEmail": "ትክክለኛ ኢሜይል አስገባ",
@@ -83,7 +82,7 @@
   "discovery": {
     "nearby": "በአቅራቢያ",
     "kmAway": "{{distance}} ኪ.ሜ ርቀት",
-    "noMoreProfiles": "በአቅራቢያ ተጨማሪ መገለጫዎች የሉም",
+    "noMoreProfiles": "ምንም መገለጫዎች አልተገኙም",
     "adjustPreferences": "ምርጫዎን ያስተካክሉ",
     "itsAMatch": "ተዛመደ! 🎉",
     "matchSubtitle": "አንተ እና {{name}} እርስ በርስ አድናቋችላችሁ።",
@@ -169,7 +168,27 @@
       "continue": "ቀጥል",
       "saveAndContinue": "አስቀምጥና ቀጥል",
       "interests": "የእርስዎ ፍትዎች",
-      "interestsSubtitle": "እስከ 8 የሚወዷቸውን ይምረጡ።"
+      "interestsSubtitle": "እስከ 8 የሚወዷቸውን ይምረጡ።",
+      "religion": "ሃይማኖትዎ",
+      "religionSubtitle": "ሃይማኖትዎ ምንድነው? ይህ አማራጭ ነው።",
+      "religionLabel": "ሃይማኖት",
+      "religionPlaceholder": "ሃይማኖትዎን ይምረጡ",
+      "lifestyle": "የህይወት ዘይቤ",
+      "lifestyleSubtitle": "ስለ ልማዶችዎ ይንገሩን። ይህ አማራጭ ነው።",
+      "habits": "ልማዶች",
+      "smoking": "ማጨስ",
+      "smokingPlaceholder": "ይምረጡ",
+      "drinking": "መጠጥ",
+      "drinkingPlaceholder": "ይምረጡ",
+      "activityLevel": "የእንቅስቓሴ ደረጃ",
+      "activityLevelPlaceholder": "ይምረጡ",
+      "educationOccupation": "ትምህርት እና ስራ",
+      "educationOccupationSubtitle": "የትምህርት ዳራዎ ምንድነው? ይህ አማራጭ ነው።",
+      "educationWork": "ትምህርት እና ስራ",
+      "educationLevel": "የትምህርት ደረጃ",
+      "educationLevelPlaceholder": "ይምረጡ",
+      "occupation": "ስራ",
+      "occupationPlaceholder": "የእርስዎ ስራ"
     },
     "location": {
       "title": "የት ነው የሚኖሩት?",
@@ -308,7 +327,9 @@
     "close": "ዝጋ",
     "back": "ተመለስ",
     "done": "ተጠናቋል",
-    "continue": "ቀጥል"
+    "continue": "ቀጥል",
+    "connectionErrorTitle": "የግንኙነት ችግር",
+    "connectionErrorBody": "ሰርቨሮችን ማድረስ አልቻልንም። እባክዎ የእርስዎን የእርስዎን የበይነመረብ ግንኙነት ያረጋግጡ እና እንደገና ይሞክሩ።"
   },
   "billing": {
     "settingsSection": "ደንብ እና ክሬዲቶች",
@@ -324,6 +345,7 @@
     "restoring": "እየመለሱ ነው…",
     "restoreDone": "መልሶ ማምጣት ተጠናቋል። ከዚህ በላይ ያለዎን ደንብ ይፈትሹ።",
     "alreadyPremium": "አስቀድሞ ፕሬሚየም ተጠቃሚ ነዎት።",
+    "freePremiumActive": "ነፃ ፕሬሚየም",
     "premiumFeatures": "ፕሬሚየም ባህሪያት",
     "choosePlan": "ዕቅድ ምረጥ",
     "offersUnavailable": "ደንብ አይገኝም",
@@ -379,6 +401,33 @@
     "uploadFailed": "መጫን አልተሳካም",
     "permissionRequired": "ፎቶ ቤተ-መጻሕፍት ፈቃድ ያስፈልጋል",
     "copied": "ተቀድቷል"
+  },
+  "promotion": {
+    "claimNow": "አሁን ይጠይቁ",
+    "notNow": "አሁን አይደለም",
+    "viewOffer": "አቅርቦት ይመልከቱ",
+    "subscribe": "ይመዝገቡ",
+    "freeDays": "{{duration}} ነፃ",
+    "expiresOn": "ያበቃል {{date}}",
+    "forWomen": "ለሴቶች",
+    "forMen": "ለወንዶች",
+    "claimSuccessTitle": "ፕሬሚየም ተንቀሳቀሰ!",
+    "claimSuccessBody": "ነፃ ፕሬሚየም ተጠቃሚነትዎ አሁን ንቁ ነው።",
+    "claimErrorTitle": "መጠየቅ አልተሳካም",
+    "claimError": "ችግር ተፈጥሯል። እባክዎ ዳግም ይሞክሩ።",
+    "offer": {
+      "discount": "ፕሮሞ"
+    },
+    "history": {
+      "title": "ሽልማቶቼ",
+      "settingsSub": "የጠየቋቸውን ፕሮሞሽኖች ይመልከቱ",
+      "empty": "እስካሁን ሽልማቶች የሉም",
+      "emptyBody": "የጠየቋቸው ፕሮሞሽኖች እዚህ ይታያሉ።",
+      "statusFulfilled": "ንቁ",
+      "statusReserved": "በጥበቃ ላይ",
+      "statusCancelled": "ተሰርዟል",
+      "statusExpired": "ጊዜ ያለፈ"
+    }
   },
   "support": {
     "title": "ቃሊይ ድጋፍ",

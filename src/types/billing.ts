@@ -1,7 +1,11 @@
-export type BillingPlan = 'FREE' | 'PREMIUM' | 'PREMIUM_MONTHLY' | 'PREMIUM_YEARLY' | (string & {});
+export type BillingPlan = 'FREE' | 'PREMIUM' | 'PREMIUM_MONTHLY' | 'PREMIUM_YEARLY' | 'FREE_PREMIUM' | (string & {});
 
 export function isPremiumPlan(plan: BillingPlan | null | undefined): boolean {
   return !!plan && plan !== 'FREE';
+}
+
+export function isFreePremiumPlan(plan: BillingPlan | null | undefined): boolean {
+  return plan === 'FREE_PREMIUM';
 }
 
 export function isActiveSubscription(sub: SubscriptionInfo | null | undefined): boolean {
@@ -140,6 +144,8 @@ export type OfferDto = {
   currency: string;
   price_minor_units: number;
   display_price: string;
+  effective_price_minor_units?: number;
+  effective_display_price?: string;
   billing_interval_count?: number;
   billing_interval_unit?: BillingIntervalUnit;
   auto_renew: boolean;
@@ -148,6 +154,8 @@ export type OfferDto = {
   revenuecat_package_id?: string;
   has_available_payment_methods: boolean;
   available_payment_method_count: number;
+  promotion?: OfferPromotionDto | null;
+  claimable_promotions?: ClaimablePromotionDto[];
 };
 
 export type VerificationField = {
@@ -288,3 +296,88 @@ export type OrderListResponse = {
 };
 
 export type SuperLikeExhaustionContext = 'QUOTA' | 'CREDITS';
+
+// ─── Promotion Types ───────────────────────────────────────────────────────────
+
+export type RedemptionStatus = 'RESERVED' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
+
+export type PromotionTriggerType = 'USER_CLAIM' | 'PURCHASE' | 'AUTO_ON_SIGNUP';
+export type PromotionBenefitType = 'FREE_PREMIUM' | 'DISCOUNT';
+export type PromotionDiscountType = 'PERCENTAGE' | 'FIXED';
+
+export type OfferPromotionDto = {
+  campaign_id: string;
+  campaign_key: string;
+  name: string;
+  description: string | null;
+  discount_type: PromotionDiscountType;
+  discount_value_basis_points_or_minor_units: number;
+  discount_currency: string | null;
+  original_amount_minor: number;
+  discount_amount_minor: number;
+  final_amount_minor: number;
+  effective_display_price: string;
+  ends_at: string | null;
+};
+
+export type ClaimablePromotionDto = {
+  campaign_id: string;
+  campaign_key: string;
+  name: string;
+  description: string | null;
+  duration_days: number | null;
+  ends_at: string | null;
+  target_gender: 'MALE' | 'FEMALE' | null;
+};
+
+export type EligiblePromotionDto = {
+  campaign_id: string;
+  campaign_key: string;
+  name: string;
+  description: string | null;
+  trigger_type: PromotionTriggerType;
+  benefit_type: PromotionBenefitType;
+  discount_type: PromotionDiscountType | null;
+  discount_value: number | null;
+  discount_currency: string | null;
+  subscription_product_id: string;
+  duration_days: number | null;
+  max_redemptions: number | null;
+  reserved_count: number;
+  fulfilled_count: number;
+  ends_at: string | null;
+  target_gender: 'MALE' | 'FEMALE' | null;
+  can_redeem: boolean;
+};
+
+export type UserRedemptionDto = {
+  id: string;
+  campaign_id: string;
+  campaign_key: string;
+  campaign_name: string;
+  benefit_type: PromotionBenefitType;
+  duration_days: number | null;
+  subscription_id: string | null;
+  payment_order_id: string | null;
+  status: RedemptionStatus;
+  original_amount_minor: number | null;
+  discount_amount_minor: number | null;
+  final_amount_minor: number | null;
+  currency: string | null;
+  reserved_at: string;
+  fulfilled_at: string | null;
+  cancelled_at: string | null;
+  expired_at: string | null;
+  failure_code: string | null;
+  eligibility_gender: 'MALE' | 'FEMALE' | null;
+};
+
+export type RedeemPromotionResponse = {
+  redemption_id: string;
+  subscription_id: string;
+  campaign_key: string;
+  plan_code: string | null;
+  duration_days: number;
+  period_end: string;
+  message: string;
+};

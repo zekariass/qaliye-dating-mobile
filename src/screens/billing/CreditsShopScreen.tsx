@@ -269,6 +269,7 @@ export default function CreditsShopScreen() {
                             offer={backendOffer}
                             rcPackage={rcPackage}
                             isSelected={selectedOfferId === backendOffer.id}
+                            hasActivePremium={hasActivePremium}
                             onSelect={() => setSelectedOfferId(backendOffer.id)}
                             onPurchase={handlePurchase}
                             isPurchasing={isBusy}
@@ -284,6 +285,7 @@ export default function CreditsShopScreen() {
                             key={offer.id}
                             offer={offer}
                             isSelected={selectedOfferId === offer.id}
+                            hasActivePremium={hasActivePremium}
                             onSelect={() => setSelectedOfferId(offer.id)}
                             onPurchase={handlePurchase}
                             isPurchasing={isBusy}
@@ -300,6 +302,7 @@ export default function CreditsShopScreen() {
                         key={offer.id}
                         offer={offer}
                         isSelected={selectedOfferId === offer.id}
+                        hasActivePremium={hasActivePremium}
                         onSelect={() => setSelectedOfferId(offer.id)}
                         onPurchase={handlePurchase}
                         isPurchasing={isBusy}

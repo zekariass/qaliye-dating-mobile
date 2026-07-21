@@ -58,6 +58,12 @@ export type BasicProfilePayload = {
   date_of_birth: string;
   relationship_intention: RelationshipIntention;
   interests?: string[];
+  religion?: string | null;
+  education_level?: string | null;
+  occupation?: string | null;
+  smoking_detail?: string | null;
+  drinking_detail?: string | null;
+  activity_level?: string | null;
 };
 
 export type GpsLocationPayload = {
@@ -107,6 +113,12 @@ export type ProfileMeResponse = {
   is_onboarded: boolean;
   profile_completion_score: number;
   interests?: string[];
+  religion?: string | null;
+  education_level?: string | null;
+  occupation?: string | null;
+  smoking_detail?: string | null;
+  drinking_detail?: string | null;
+  activity_level?: string | null;
 };
 
 export type ProfileLocationResponse = {

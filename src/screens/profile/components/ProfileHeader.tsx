@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { isFreePremiumPlan, isPremiumPlan, type BillingPlan } from '@/types/billing';
 
 interface ProfileHeaderProps {
   avatarUri: string;
@@ -14,6 +15,7 @@ interface ProfileHeaderProps {
   isVerified: boolean;
   location: string;
   isIncognito?: boolean;
+  plan?: BillingPlan | null;
 }
 
 const AVATAR_SIZE = 120;
@@ -27,10 +29,14 @@ export default function ProfileHeader({
   isVerified,
   location,
   isIncognito = false,
+  plan = null,
 }: ProfileHeaderProps) {
   const { top: safeTop } = useSafeAreaInsets();
   const router = useRouter();
   const { colors: th } = useTheme();
+
+  const showPremium = isPremiumPlan(plan);
+  const premiumLabel = isFreePremiumPlan(plan) ? 'Free Premium' : 'Premium';
 
   return (
     <View style={[styles.container, { backgroundColor: th.background }]}>
@@ -45,6 +51,13 @@ export default function ProfileHeader({
         >
           <Ionicons name="chevron-back" size={22} color={th.text} />
         </Pressable>
+
+        {showPremium && (
+          <View style={[styles.premiumBadge, { backgroundColor: th.surface }]}>
+            <Ionicons name="diamond" size={16} color={colors.primary} />
+            <Text style={[styles.premiumText, { color: colors.primary }]}>{premiumLabel}</Text>
+          </View>
+        )}
 
         <View style={styles.topRight}>
           <Pressable
@@ -199,5 +212,22 @@ const styles = StyleSheet.create({
   incognitoText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  premiumText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

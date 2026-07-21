@@ -3,13 +3,13 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,16 +19,19 @@ import { PaymentMethodSheet } from '@/components/billing/PaymentMethodSheet';
 import { themedAlert, themedError, themedSuccess } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
 import { useCreateOrder } from '@/hooks/billing/useCreateOrder';
+import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useOffers } from '@/hooks/billing/useOffers';
 import { usePaymentOptions } from '@/hooks/billing/usePaymentOptions';
+import { useRedeemPromotion } from '@/hooks/billing/useRedeemPromotion';
 import { useRevenueCatPurchase } from '@/hooks/billing/useRevenueCatPurchase';
 import { useRevenueCatReconcile } from '@/hooks/billing/useRevenueCatReconcile';
 import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useTheme } from '@/hooks/use-theme';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
-import type { PaymentMethodDto } from '@/types/billing';
-import { isActiveSubscription, isPremiumPlan } from '@/types/billing';
+import type { ClaimablePromotionDto, PaymentMethodDto } from '@/types/billing';
+import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
+import { extractApiError } from '@/utils/apiError';
 import { getPlanLimitDisplays } from '@/utils/entitlements';
 
 const FEATURE_ICONS = {
@@ -50,6 +53,32 @@ export default function PremiumPaywallScreen() {
   const { purchase, purchaseState, isPurchasing } = useRevenueCatPurchase();
   const { restore, restoreState, restoreResult, isRestoring } = useRevenueCatRestore();
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder();
+  const { promotions: eligiblePromotions } = useEligiblePromotions();
+  const { mutate: redeemPromotion, isPending: isRedeeming } = useRedeemPromotion();
+  const [claimingKey, setClaimingKey] = useState<string | null>(null);
+
+  const handleClaimPromotion = useCallback((cp: ClaimablePromotionDto) => {
+    if (isRedeeming || claimingKey) return;
+    const eligible = eligiblePromotions.find(
+      (p) => p.campaign_key === cp.campaign_key && p.can_redeem,
+    );
+    if (!eligible) return;
+    setClaimingKey(cp.campaign_key);
+    redeemPromotion(cp.campaign_key, {
+      onSuccess: (data) => {
+        setClaimingKey(null);
+        themedSuccess(
+          t('promotion.claimSuccessTitle', 'Premium Activated!'),
+          data.message || t('promotion.claimSuccessBody', 'Your free premium access is now active.'),
+        );
+      },
+      onError: (err) => {
+        setClaimingKey(null);
+        const detail = extractApiError(err);
+        themedError(t('promotion.claimErrorTitle', 'Claim Failed'), detail.message);
+      },
+    });
+  }, [isRedeeming, claimingKey, eligiblePromotions, redeemPromotion, t]);
 
   useEffect(() => {
     if (restoreResult === 'success') {
@@ -77,6 +106,7 @@ export default function PremiumPaywallScreen() {
 
   const isGlobalMarket = subscriptionOffers.some((o) => o.country_code === 'GLOBAL');
   const isPremium = isPremiumPlan(entitlements?.plan) && isActiveSubscription(entitlements?.subscription);
+  const isFreePremium = isFreePremiumPlan(entitlements?.plan) && isActiveSubscription(entitlements?.subscription);
 
   const activeOfferId = isPremium
     ? subscriptionOffers.find(
@@ -207,10 +237,12 @@ export default function PremiumPaywallScreen() {
             )}
 
             {isPremium && (
-              <View style={[styles.alreadyActiveBanner, { backgroundColor: colors.success + '18' }]}>
-                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <View style={[styles.alreadyActiveBanner, { backgroundColor: (isFreePremium ? colors.warning : colors.success) + '18' }]}>
+                <Ionicons name={isFreePremium ? 'gift' : 'checkmark-circle'} size={20} color={isFreePremium ? colors.warning : colors.success} />
                 <Text style={[styles.alreadyActiveText, { color: th.text }]}>
-                  {t('billing.alreadyPremium', 'You already have Premium access.')}
+                  {isFreePremium
+                    ? t('billing.freePremiumActive', 'You are currently using Free Premium.')
+                    : t('billing.alreadyPremium', 'You already have Premium access.')}
                 </Text>
               </View>
             )}
@@ -248,6 +280,53 @@ export default function PremiumPaywallScreen() {
               </View>
             )}
 
+            {(() => {
+              const allClaimable = subscriptionOffers
+                .flatMap((o) => o.claimable_promotions ?? [])
+                .filter(
+                  (cp, idx, arr) =>
+                    arr.findIndex((x) => x.campaign_key === cp.campaign_key) === idx,
+                );
+              if (!allClaimable.length) return null;
+              return allClaimable.map((cp) => {
+                const isEligible = eligiblePromotions.some(
+                  (p) => p.campaign_key === cp.campaign_key && p.can_redeem,
+                );
+                if (!isEligible) return null;
+                const isClaiming = claimingKey === cp.campaign_key;
+                return (
+                  <View
+                    key={cp.campaign_key}
+                    style={[styles.claimableBanner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}
+                  >
+                    <Ionicons name="gift-outline" size={18} color={colors.primary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.claimableName, { color: th.text }]}>{cp.name}</Text>
+                      {cp.description ? (
+                        <Text style={[styles.claimableDesc, { color: th.textSecondary }]} numberOfLines={2}>
+                          {cp.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Pressable
+                      style={[styles.claimBtn, isClaiming && styles.claimBtnDisabled]}
+                      onPress={() => handleClaimPromotion(cp)}
+                      disabled={isClaiming || isRedeeming}
+                      accessibilityRole="button"
+                    >
+                      {isClaiming ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.claimBtnText}>
+                          {t('promotion.claimNow', 'Claim now')}
+                        </Text>
+                      )}
+                    </Pressable>
+                  </View>
+                );
+              });
+            })()}
+
             {(noOffers || offersError) && !isPremium ? (
               <View style={[styles.unavailableCard, { backgroundColor: th.surface, borderColor: th.border }]}>
                 <Ionicons name="alert-circle-outline" size={28} color={th.textSecondary} />
@@ -275,6 +354,7 @@ export default function PremiumPaywallScreen() {
                             isSelected={selectedOfferId === backendOffer.id}
                             isActive={activeOfferId === backendOffer.id}
                             disabled={isPremium && activeOfferId !== backendOffer.id}
+                            hasActivePremium={isPremium}
                             onSelect={() => handleSelectOffer(backendOffer.id)}
                             onPurchase={handlePurchase}
                             isPurchasing={isBusy}
@@ -292,6 +372,7 @@ export default function PremiumPaywallScreen() {
                             isSelected={selectedOfferId === offer.id}
                             isActive={activeOfferId === offer.id}
                             disabled={isPremium && activeOfferId !== offer.id}
+                            hasActivePremium={isPremium}
                             onSelect={() => handleSelectOffer(offer.id)}
                             onPurchase={handlePurchase}
                             isPurchasing={isBusy}
@@ -310,6 +391,7 @@ export default function PremiumPaywallScreen() {
                         isSelected={selectedOfferId === offer.id}
                         isActive={activeOfferId === offer.id}
                         disabled={isPremium && activeOfferId !== offer.id}
+                        hasActivePremium={isPremium}
                         onSelect={() => handleSelectOffer(offer.id)}
                         onPurchase={handlePurchase}
                         isPurchasing={isBusy}
@@ -427,6 +509,39 @@ const styles = StyleSheet.create({
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   featureLabel: { flex: 1, fontSize: 14 },
   featureValue: { fontSize: 14, fontWeight: '700' },
+  claimableBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+  },
+  claimableName: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  claimableDesc: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  claimBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  claimBtnDisabled: {
+    opacity: 0.6,
+  },
+  claimBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   unavailableCard: {
     borderRadius: 14,
     borderWidth: 1,

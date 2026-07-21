@@ -55,7 +55,7 @@ function nationalityToCode(val: string | null | undefined): string {
   return LEGACY_NATIONALITY_TO_CODE[val] ?? '';
 }
 
-const RELIGION_API_TO_LABEL: Record<string, string> = {
+export const RELIGION_API_TO_LABEL: Record<string, string> = {
   ORTHODOX_CHRISTIAN: 'Orthodox Christian',
   PROTESTANT: 'Protestant',
   CATHOLIC: 'Catholic',
@@ -65,7 +65,7 @@ const RELIGION_API_TO_LABEL: Record<string, string> = {
   PREFER_NOT_TO_SAY: 'Prefer not to say',
 };
 
-const EDUCATION_API_TO_LABEL: Record<string, string> = {
+export const EDUCATION_API_TO_LABEL: Record<string, string> = {
   HIGH_SCHOOL: 'High School',
   DIPLOMA: 'Diploma',
   BACHELORS: "Bachelor's Degree",
@@ -89,21 +89,21 @@ const MARITAL_API_TO_LABEL: Record<string, string> = {
   SEPARATED: 'Separated',
 };
 
-const SMOKING_API_TO_LABEL: Record<string, string> = {
+export const SMOKING_API_TO_LABEL: Record<string, string> = {
   NO: 'No',
   YES: 'Yes',
   OCCASIONALLY: 'Occasionally',
   TRYING_TO_QUIT: 'Trying to quit',
 };
 
-const DRINKING_API_TO_LABEL: Record<string, string> = {
+export const DRINKING_API_TO_LABEL: Record<string, string> = {
   NO: 'No',
   SOCIALLY: 'Socially',
   OCCASIONALLY: 'Occasionally',
   YES: 'Yes',
 };
 
-const ACTIVITY_API_TO_LABEL: Record<string, string> = {
+export const ACTIVITY_API_TO_LABEL: Record<string, string> = {
   SEDENTARY: 'Sedentary',
   LIGHT: 'Light',
   MODERATE: 'Moderate',
@@ -129,13 +129,13 @@ function invertMap(m: Record<string, string>): Record<string, string> {
 }
 
 const ETHNICITY_LABEL_TO_API = invertMap(ETHNICITY_API_TO_LABEL);
-const RELIGION_LABEL_TO_API = invertMap(RELIGION_API_TO_LABEL);
-const EDUCATION_LABEL_TO_API = invertMap(EDUCATION_API_TO_LABEL);
+export const RELIGION_LABEL_TO_API = invertMap(RELIGION_API_TO_LABEL);
+export const EDUCATION_LABEL_TO_API = invertMap(EDUCATION_API_TO_LABEL);
 const RELATIONSHIP_LABEL_TO_API = invertMap(RELATIONSHIP_API_TO_LABEL);
 const MARITAL_LABEL_TO_API = invertMap(MARITAL_API_TO_LABEL);
-const SMOKING_LABEL_TO_API = invertMap(SMOKING_API_TO_LABEL);
-const DRINKING_LABEL_TO_API = invertMap(DRINKING_API_TO_LABEL);
-const ACTIVITY_LABEL_TO_API = invertMap(ACTIVITY_API_TO_LABEL);
+export const SMOKING_LABEL_TO_API = invertMap(SMOKING_API_TO_LABEL);
+export const DRINKING_LABEL_TO_API = invertMap(DRINKING_API_TO_LABEL);
+export const ACTIVITY_LABEL_TO_API = invertMap(ACTIVITY_API_TO_LABEL);
 
 // ─── Helper: format ISO date → 'DD MMM YYYY' ──────────────────────────────────
 

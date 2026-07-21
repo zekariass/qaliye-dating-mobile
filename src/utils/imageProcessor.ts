@@ -37,9 +37,27 @@ export async function processPrimaryPhoto(asset: ImagePickerAsset): Promise<Proc
   if (isWebpAsset(asset)) {
     return { uri: asset.uri, fileName: 'profile_avatar.webp', mimeType: 'image/webp' };
   }
+
+  // Center-crop to 4:5 aspect ratio, then resize to output dimensions
+  const targetAspect = OUT_PRIMARY_W / OUT_PRIMARY_H; // 0.8 (4:5)
+  const assetAspect = asset.width / asset.height;
+  let cropOriginX = 0, cropOriginY = 0, cropW = asset.width, cropH = asset.height;
+  if (assetAspect > targetAspect) {
+    // Image is wider than target — crop width
+    cropW = Math.round(asset.height * targetAspect);
+    cropOriginX = Math.round((asset.width - cropW) / 2);
+  } else {
+    // Image is taller than target — crop height
+    cropH = Math.round(asset.width / targetAspect);
+    cropOriginY = Math.round((asset.height - cropH) / 2);
+  }
+
   const result = await ImageManipulator.manipulateAsync(
     asset.uri,
-    [{ resize: { width: OUT_PRIMARY_W } }],
+    [
+      { crop: { originX: cropOriginX, originY: cropOriginY, width: cropW, height: cropH } },
+      { resize: { width: OUT_PRIMARY_W } },
+    ],
     { compress: QUALITY, format: ImageManipulator.SaveFormat.WEBP },
   );
   return { uri: result.uri, fileName: 'profile_avatar.webp', mimeType: 'image/webp' };
@@ -61,9 +79,25 @@ export async function processCardPhoto(
       mimeType: 'image/webp',
     };
   }
+
+  // Center-crop to 3:4 aspect ratio, then resize to output dimensions
+  const targetAspect = OUT_CARD_W / OUT_CARD_H; // 0.75 (3:4)
+  const assetAspect = asset.width / asset.height;
+  let cropOriginX = 0, cropOriginY = 0, cropW = asset.width, cropH = asset.height;
+  if (assetAspect > targetAspect) {
+    cropW = Math.round(asset.height * targetAspect);
+    cropOriginX = Math.round((asset.width - cropW) / 2);
+  } else {
+    cropH = Math.round(asset.width / targetAspect);
+    cropOriginY = Math.round((asset.height - cropH) / 2);
+  }
+
   const result = await ImageManipulator.manipulateAsync(
     asset.uri,
-    [{ resize: { width: OUT_CARD_W } }],
+    [
+      { crop: { originX: cropOriginX, originY: cropOriginY, width: cropW, height: cropH } },
+      { resize: { width: OUT_CARD_W } },
+    ],
     { compress: QUALITY, format: ImageManipulator.SaveFormat.WEBP },
   );
   return {
@@ -80,9 +114,21 @@ export async function processProfileEditPhoto(asset: ImagePickerAsset): Promise<
     return { uri: asset.uri, fileName, mimeType: 'image/webp' };
   }
 
+  // Center-crop to 3:4 aspect ratio
+  const targetAspect = 3 / 4; // 0.75
+  const assetAspect = asset.width / asset.height;
+  let cropOriginX = 0, cropOriginY = 0, cropW = asset.width, cropH = asset.height;
+  if (assetAspect > targetAspect) {
+    cropW = Math.round(asset.height * targetAspect);
+    cropOriginX = Math.round((asset.width - cropW) / 2);
+  } else {
+    cropH = Math.round(asset.width / targetAspect);
+    cropOriginY = Math.round((asset.height - cropH) / 2);
+  }
+
   const result = await ImageManipulator.manipulateAsync(
     asset.uri,
-    [],
+    [{ crop: { originX: cropOriginX, originY: cropOriginY, width: cropW, height: cropH } }],
     { compress: QUALITY, format: ImageManipulator.SaveFormat.WEBP },
   );
 

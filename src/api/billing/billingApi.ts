@@ -5,11 +5,14 @@ import type {
     BillingPlatform,
     BoostActivationRequest,
     BoostActivationResponse,
+    ClaimablePromotionDto,
     CreateOrderRequest,
+    EligiblePromotionDto,
     EntitlementResponse,
     ManualTransferVerifyRequest,
     ManualTransferVerifyResponse,
     OfferDto,
+    OfferPromotionDto,
     OrderListItem,
     OrderListResponse,
     OrderResponse,
@@ -18,8 +21,14 @@ import type {
     PaymentMethodDto,
     PaymentOptionsResponse,
     ProductType,
+    PromotionBenefitType,
+    PromotionDiscountType,
+    PromotionTriggerType,
     QuotaInfo,
+    RedeemPromotionResponse,
+    RedemptionStatus,
     SubscriptionStatus,
+    UserRedemptionDto,
     VerificationField,
     VerificationParams,
     VerifyPaymentRequest
@@ -97,7 +106,37 @@ export async function fetchEntitlements(): Promise<EntitlementResponse> {
   return normalizeEntitlements(res.data as Record<string, unknown>);
 }
 
+function normalizeOfferPromotion(raw: Record<string, unknown>): OfferPromotionDto {
+  return {
+    campaign_id: (raw.campaignId ?? raw.campaign_id ?? '') as string,
+    campaign_key: (raw.campaignKey ?? raw.campaign_key ?? '') as string,
+    name: (raw.name ?? '') as string,
+    description: (raw.description ?? null) as string | null,
+    discount_type: (raw.discountType ?? raw.discount_type ?? 'PERCENTAGE') as PromotionDiscountType,
+    discount_value_basis_points_or_minor_units: (raw.discountValueBasisPointsOrMinorUnits ?? raw.discount_value_basis_points_or_minor_units ?? 0) as number,
+    discount_currency: (raw.discountCurrency ?? raw.discount_currency ?? null) as string | null,
+    original_amount_minor: (raw.originalAmountMinor ?? raw.original_amount_minor ?? 0) as number,
+    discount_amount_minor: (raw.discountAmountMinor ?? raw.discount_amount_minor ?? 0) as number,
+    final_amount_minor: (raw.finalAmountMinor ?? raw.final_amount_minor ?? 0) as number,
+    effective_display_price: (raw.effectiveDisplayPrice ?? raw.effective_display_price ?? '') as string,
+    ends_at: (raw.endsAt ?? raw.ends_at ?? null) as string | null,
+  };
+}
+
+function normalizeClaimablePromotion(raw: Record<string, unknown>): ClaimablePromotionDto {
+  return {
+    campaign_id: (raw.campaignId ?? raw.campaign_id ?? '') as string,
+    campaign_key: (raw.campaignKey ?? raw.campaign_key ?? '') as string,
+    name: (raw.name ?? '') as string,
+    description: (raw.description ?? null) as string | null,
+    duration_days: (raw.durationDays ?? raw.duration_days ?? null) as number | null,
+    ends_at: (raw.endsAt ?? raw.ends_at ?? null) as string | null,
+  };
+}
+
 function normalizeOffer(raw: Record<string, unknown>): OfferDto {
+  const rawPromotion = (raw.promotion ?? null) as Record<string, unknown> | null;
+  const rawClaimable = (raw.claimablePromotions ?? raw.claimable_promotions ?? []) as Record<string, unknown>[];
   return {
     id: raw.id as string,
     product_code: (raw.product_code ?? raw['productCode'] ?? '') as string,
@@ -106,6 +145,8 @@ function normalizeOffer(raw: Record<string, unknown>): OfferDto {
     currency: (raw.currency ?? '') as string,
     price_minor_units: (raw.price_minor_units ?? raw['priceMinorUnits'] ?? 0) as number,
     display_price: (raw.display_price ?? raw['displayPrice'] ?? '') as string,
+    effective_price_minor_units: (raw.effectivePriceMinorUnits ?? raw.effective_price_minor_units) as number | undefined,
+    effective_display_price: (raw.effectiveDisplayPrice ?? raw.effective_display_price) as string | undefined,
     billing_interval_count: (raw.billing_interval_count ?? raw['billingIntervalCount']) as number | undefined,
     billing_interval_unit: (raw.billing_interval_unit ?? raw['billingIntervalUnit']) as BillingIntervalUnit | undefined,
     auto_renew: (raw.auto_renew ?? raw['autoRenew'] ?? false) as boolean,
@@ -114,6 +155,8 @@ function normalizeOffer(raw: Record<string, unknown>): OfferDto {
     revenuecat_package_id: (raw.revenuecat_package_id ?? raw['revenuecatPackageId']) as string | undefined,
     has_available_payment_methods: (raw.has_available_payment_methods ?? raw['hasAvailablePaymentMethods'] ?? false) as boolean,
     available_payment_method_count: (raw.available_payment_method_count ?? raw['availablePaymentMethodCount'] ?? 0) as number,
+    promotion: rawPromotion ? normalizeOfferPromotion(rawPromotion) : null,
+    claimable_promotions: rawClaimable.map(normalizeClaimablePromotion),
   };
 }
 
@@ -348,6 +391,89 @@ export async function verifyManualTransfer(
     headers: { 'Content-Type': 'application/json' },
   });
   return normalizeManualTransferVerifyResponse(res.data as Record<string, unknown>);
+}
+
+function normalizeEligiblePromotion(raw: Record<string, unknown>): EligiblePromotionDto {
+  return {
+    campaign_id: (raw.campaignId ?? raw.campaign_id ?? '') as string,
+    campaign_key: (raw.campaignKey ?? raw.campaign_key ?? '') as string,
+    name: (raw.name ?? '') as string,
+    description: (raw.description ?? null) as string | null,
+    trigger_type: (raw.triggerType ?? raw.trigger_type ?? 'PURCHASE') as PromotionTriggerType,
+    benefit_type: (raw.benefitType ?? raw.benefit_type ?? 'DISCOUNT') as PromotionBenefitType,
+    discount_type: (raw.discountType ?? raw.discount_type ?? null) as PromotionDiscountType | null,
+    discount_value: (raw.discountValue ?? raw.discount_value ?? null) as number | null,
+    discount_currency: (raw.discountCurrency ?? raw.discount_currency ?? null) as string | null,
+    subscription_product_id: (raw.subscriptionProductId ?? raw.subscription_product_id ?? '') as string,
+    duration_days: (raw.durationDays ?? raw.duration_days ?? null) as number | null,
+    max_redemptions: (raw.maxRedemptions ?? raw.max_redemptions ?? null) as number | null,
+    reserved_count: (raw.reservedCount ?? raw.reserved_count ?? 0) as number,
+    fulfilled_count: (raw.fulfilledCount ?? raw.fulfilled_count ?? 0) as number,
+    ends_at: (raw.endsAt ?? raw.ends_at ?? null) as string | null,
+    can_redeem: (raw.canRedeem ?? raw.can_redeem ?? false) as boolean,
+  };
+}
+
+function normalizeUserRedemption(raw: Record<string, unknown>): UserRedemptionDto {
+  return {
+    id: (raw.id ?? '') as string,
+    campaign_id: (raw.campaignId ?? raw.campaign_id ?? '') as string,
+    campaign_key: (raw.campaignKey ?? raw.campaign_key ?? '') as string,
+    campaign_name: (raw.campaignName ?? raw.campaign_name ?? '') as string,
+    benefit_type: (raw.benefitType ?? raw.benefit_type ?? 'FREE_PREMIUM') as PromotionBenefitType,
+    duration_days: (raw.durationDays ?? raw.duration_days ?? null) as number | null,
+    subscription_id: (raw.subscriptionId ?? raw.subscription_id ?? null) as string | null,
+    payment_order_id: (raw.paymentOrderId ?? raw.payment_order_id ?? null) as string | null,
+    status: (raw.status ?? 'RESERVED') as RedemptionStatus,
+    original_amount_minor: (raw.originalAmountMinor ?? raw.original_amount_minor ?? null) as number | null,
+    discount_amount_minor: (raw.discountAmountMinor ?? raw.discount_amount_minor ?? null) as number | null,
+    final_amount_minor: (raw.finalAmountMinor ?? raw.final_amount_minor ?? null) as number | null,
+    currency: (raw.currency ?? null) as string | null,
+    reserved_at: (raw.reservedAt ?? raw.reserved_at ?? '') as string,
+    fulfilled_at: (raw.fulfilledAt ?? raw.fulfilled_at ?? null) as string | null,
+    cancelled_at: (raw.cancelledAt ?? raw.cancelled_at ?? null) as string | null,
+    expired_at: (raw.expiredAt ?? raw.expired_at ?? null) as string | null,
+    failure_code: (raw.failureCode ?? raw.failure_code ?? null) as string | null,
+  };
+}
+
+export async function fetchEligiblePromotions(): Promise<EligiblePromotionDto[]> {
+  const res = await apiClient.get<unknown>(`${BASE}/promotions`);
+  const raw = res.data;
+  const items = Array.isArray(raw) ? raw : [];
+  return items.map((item) => normalizeEligiblePromotion(item as Record<string, unknown>));
+}
+
+export async function fetchPromotionByKey(campaignKey: string): Promise<EligiblePromotionDto> {
+  const res = await apiClient.get<unknown>(`${BASE}/promotions/${encodeURIComponent(campaignKey)}`);
+  return normalizeEligiblePromotion(res.data as Record<string, unknown>);
+}
+
+export async function fetchPromotionRedemptions(params?: {
+  page?: number;
+  page_size?: number;
+}): Promise<UserRedemptionDto[]> {
+  const queryParams: Record<string, unknown> = {};
+  if (params?.page != null) queryParams.page = params.page;
+  if (params?.page_size != null) queryParams.pageSize = params.page_size;
+  const res = await apiClient.get<unknown>(`${BASE}/promotions/redemptions`, { params: queryParams });
+  const raw = res.data;
+  const items = Array.isArray(raw) ? raw : [];
+  return items.map((item) => normalizeUserRedemption(item as Record<string, unknown>));
+}
+
+export async function redeemPromotion(campaignKey: string): Promise<RedeemPromotionResponse> {
+  const res = await apiClient.post<unknown>(`${BASE}/promotions/${encodeURIComponent(campaignKey)}/redeem`);
+  const raw = res.data as Record<string, unknown>;
+  return {
+    redemption_id: (raw.redemptionId ?? raw.redemption_id ?? '') as string,
+    subscription_id: (raw.subscriptionId ?? raw.subscription_id ?? '') as string,
+    campaign_key: (raw.campaignKey ?? raw.campaign_key ?? '') as string,
+    plan_code: (raw.planCode ?? raw.plan_code ?? null) as string | null,
+    duration_days: (raw.durationDays ?? raw.duration_days ?? 0) as number,
+    period_end: (raw.periodEnd ?? raw.period_end ?? '') as string,
+    message: (raw.message ?? '') as string,
+  };
 }
 
 export async function activateBoost(

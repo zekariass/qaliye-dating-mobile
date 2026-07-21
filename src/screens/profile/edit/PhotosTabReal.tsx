@@ -69,12 +69,13 @@ export const PhotosTabReal = memo(function PhotosTabReal({
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [3, 4],
       quality: 0.85,
     });
 
-    if (result.canceled || !result.assets[0]) return;
+    if (result.canceled || !result.assets[0]) {
+      console.warn('[pickAndUpload] Picker returned canceled or empty', { canceled: result.canceled, assetCount: result.assets?.length });
+      return;
+    }
 
     try {
       setLocalLoading(true);

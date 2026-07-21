@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+    ActivityIndicator,
     Animated,
     Easing,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     ScrollView,
     StatusBar,
@@ -23,6 +26,7 @@ import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { useAuthError } from '@/hooks/auth/useAuthError';
 import { useEmailAuth } from '@/hooks/auth/useEmailAuth';
 import { useSocialAuth } from '@/hooks/auth/useSocialAuth';
+import { useTheme } from '@/hooks/use-theme';
 
 function PulsingHeart() {
   const scale = useRef(new Animated.Value(1)).current;
@@ -45,6 +49,8 @@ function PulsingHeart() {
 
 export default function AuthScreen() {
   const { t } = useTranslation();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
 
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -61,7 +67,7 @@ export default function AuthScreen() {
   const [showEmailForm, setShowEmailForm] = useState(false);
 
   const { login, signup } = useEmailAuth();
-  const { google, apple, facebook } = useSocialAuth();
+  const { google, apple } = useSocialAuth();
   const getErrorKey = useAuthError();
 
   const line1 = t('auth.brandTaglineLine1');
@@ -108,7 +114,7 @@ export default function AuthScreen() {
 
   useEffect(() => {
     const emailError = authTab === 'login' ? login.error : signup.error;
-    const socialError = google.error ?? apple.error ?? facebook.error;
+    const socialError = google.error ?? apple.error;
     const activeError = emailError ?? socialError;
     if (activeError) {
       const key = getErrorKey(activeError);
@@ -116,7 +122,7 @@ export default function AuthScreen() {
     } else {
       setGeneralError('');
     }
-  }, [authTab, login.error, signup.error, google.error, apple.error, facebook.error, getErrorKey, t]);
+  }, [authTab, login.error, signup.error, google.error, apple.error, getErrorKey, t]);
 
   async function handlePrimaryPress() {
     setGeneralError('');
@@ -143,22 +149,26 @@ export default function AuthScreen() {
   async function handleApple() {
     try { await apple.mutateAsync(); } catch { /* error shown via effect */ }
   }
-  async function handleFacebook() {
-    try { await facebook.mutateAsync(); } catch { /* error shown via effect */ }
-  }
-  function handlePhone() {
+function handlePhone() {
     router.push('/phone-auth' as any);
   }
 
   const ctaLabel = authTab === 'login' ? t('auth.login') : t('auth.createAccount');
   const isLoading = authTab === 'login' ? login.isPending : signup.isPending;
+  const isSocialLoading = google.isPending || apple.isPending;
 
   return (
-    <View style={s.root}>
+    <View style={[s.root, { backgroundColor: th.background }]}>
       <StatusBar barStyle="light-content" />
 
       {/* ── Purple Hero ── */}
       <View style={s.hero}>
+        <LinearGradient
+          colors={['#1A0633', '#2A0B4F', '#4B1389']}
+          start={{ x: 0.3, y: 0 }}
+          end={{ x: 0.7, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
         <View style={[s.bubble, s.bubble1]} />
         <View style={[s.bubble, s.bubble2]} />
         <View style={[s.bubble, s.bubble3]} />
@@ -176,9 +186,11 @@ export default function AuthScreen() {
           <Text style={s.tagline}>
             {before1}<Text style={s.tagHL}>{h1}</Text>{after1}
           </Text>
-          <Text style={s.tagline}>
-            {before2}<Text style={s.tagHL}>{h2}</Text>{after2}
-          </Text>
+          {!!line2 && (
+            <Text style={s.tagline}>
+              {before2}<Text style={s.tagHL}>{h2}</Text>{after2}
+            </Text>
+          )}
 
           <View style={s.dividerDeco}>
             <View style={s.decoLine} />
@@ -200,25 +212,26 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
-          <View style={s.card}>
-            <View style={s.cardHandle} />
-            <Text style={s.welcomeText}>{t('auth.welcome')}</Text>
+          <View style={[s.card, { backgroundColor: th.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28 }]}>
+            <View style={[s.cardHandle, { backgroundColor: th.border }]} />
+            <Text style={[s.welcomeText, { color: th.text }]}>{t('auth.welcome')}</Text>
 
             {/* ── Social buttons ── */}
             <View style={s.socialStack}>
               <TouchableOpacity
-                style={[s.socialBtn, s.googleBtn]}
+                style={[s.socialBtn, s.googleBtn, { backgroundColor: th.surface, borderColor: th.border }]}
                 onPress={handleGoogle}
                 activeOpacity={0.85}
                 accessibilityRole="button"
                 accessibilityLabel="Continue with Google"
               >
                 <Ionicons name="logo-google" size={20} color="#4285F4" />
-                <Text style={[s.socialLabel, { color: colors.textPrimary }]}>
+                <Text style={[s.socialLabel, { color: th.text }]}>
                   Continue with Google
                 </Text>
               </TouchableOpacity>
 
+              {Platform.OS === 'ios' && (
               <TouchableOpacity
                 style={[s.socialBtn, s.appleBtn]}
                 onPress={handleApple}
@@ -226,24 +239,13 @@ export default function AuthScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Continue with Apple"
               >
-                <Ionicons name="logo-apple" size={22} color="#FFFFFF" />
-                <Text style={[s.socialLabel, { color: '#FFFFFF' }]}>
+                <Ionicons name="logo-apple" size={22} color={isDark ? '#FFFFFF' : '#000000'} />
+                <Text style={[s.socialLabel, { color: isDark ? '#FFFFFF' : '#000000' }]}>
                   Continue with Apple
                 </Text>
               </TouchableOpacity>
+              )}
 
-              <TouchableOpacity
-                style={[s.socialBtn, s.facebookBtn]}
-                onPress={handleFacebook}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel="Continue with Facebook"
-              >
-                <Ionicons name="logo-facebook" size={20} color="#FFFFFF" />
-                <Text style={[s.socialLabel, { color: '#FFFFFF' }]}>
-                  Continue with Facebook
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {!!generalError && !showEmailForm && (
@@ -252,14 +254,14 @@ export default function AuthScreen() {
 
             {/* ── Divider ── */}
             <View style={s.orRow}>
-              <View style={s.orLine} />
-              <Text style={s.orText}>{t('auth.orContinueWith')}</Text>
-              <View style={s.orLine} />
+              <View style={[s.orLine, { backgroundColor: th.border }]} />
+              <Text style={[s.orText, { color: th.textMuted }]}>{t('auth.orContinueWith')}</Text>
+              <View style={[s.orLine, { backgroundColor: th.border }]} />
             </View>
 
             {/* ── Phone section ── */}
             <TouchableOpacity
-              style={[s.emailToggle, s.phoneToggle]}
+              style={[s.emailToggle, s.phoneToggle, { borderColor: '#E05A00', backgroundColor: isDark ? 'rgba(255, 120, 20, 0.10)' : 'rgba(255, 120, 20, 0.04)' }]}
               onPress={handlePhone}
               activeOpacity={0.8}
               accessibilityRole="button"
@@ -272,12 +274,12 @@ export default function AuthScreen() {
             {/* ── Email section ── */}
             {!showEmailForm ? (
               <TouchableOpacity
-                style={s.emailToggle}
+                style={[s.emailToggle, { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(138, 44, 255, 0.12)' : 'rgba(138, 44, 255, 0.04)' }]}
                 onPress={() => setShowEmailForm(true)}
                 activeOpacity={0.8}
               >
                 <Ionicons name="mail-outline" size={20} color={colors.primary} />
-                <Text style={s.emailToggleLabel}>Continue with Email</Text>
+                <Text style={[s.emailToggleLabel, { color: colors.primary }]}>Continue with Email</Text>
               </TouchableOpacity>
             ) : (
               <View style={s.emailForm}>
@@ -296,7 +298,7 @@ export default function AuthScreen() {
 
                 <View style={s.inputGap}>
                   <AuthTextInput
-                    leftSlot={<Ionicons name="mail-outline" size={18} color={colors.textMuted} />}
+                    leftSlot={<Ionicons name="mail-outline" size={18} color={th.textMuted} />}
                     placeholder={t('auth.emailAddress')}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -310,12 +312,12 @@ export default function AuthScreen() {
 
                 <View style={s.inputGap}>
                   <AuthTextInput
-                    leftSlot={<Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />}
+                    leftSlot={<Ionicons name="lock-closed-outline" size={18} color={th.textMuted} />}
                     rightSlot={
                       <Ionicons
                         name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                         size={18}
-                        color={colors.textMuted}
+                        color={th.textMuted}
                       />
                     }
                     onRightPress={() => setShowPassword((p) => !p)}
@@ -333,12 +335,12 @@ export default function AuthScreen() {
                 {authTab === 'createAccount' && (
                   <View style={s.inputGap}>
                     <AuthTextInput
-                      leftSlot={<Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />}
+                      leftSlot={<Ionicons name="lock-closed-outline" size={18} color={th.textMuted} />}
                       rightSlot={
                         <Ionicons
                           name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                           size={18}
-                          color={colors.textMuted}
+                          color={th.textMuted}
                         />
                       }
                       onRightPress={() => setShowConfirmPassword((p) => !p)}
@@ -381,13 +383,30 @@ export default function AuthScreen() {
             <View style={s.privacyRow}>
               <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />
               <View style={s.privacyTexts}>
-                <Text style={s.privacyText}>{t('auth.privacyLine1')}</Text>
-                <Text style={s.privacyText}>{t('auth.privacyLine2')}</Text>
+                <Text style={[s.privacyText, { color: th.textMuted }]}>{t('auth.privacyLine1')}</Text>
+                <Text style={[s.privacyText, { color: th.textMuted }]}>{t('auth.privacyLine2')}</Text>
               </View>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Social auth loading overlay ── */}
+      <Modal
+        visible={isSocialLoading}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={s.loadingOverlay}>
+          <View style={[s.loadingCard, { backgroundColor: th.surface }]}>
+            <View style={s.loadingIconWrap}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+            <Text style={[s.loadingText, { color: th.text }]}>{t('auth.signingIn', 'Signing in…')}</Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -398,7 +417,6 @@ export default function AuthScreen() {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#5B18D6',
   },
 
   /* ── Hero ── */
@@ -504,9 +522,6 @@ const s = StyleSheet.create({
   },
   card: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
@@ -520,14 +535,12 @@ const s = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.border,
     alignSelf: 'center',
     marginBottom: spacing.md,
   },
   welcomeText: {
     fontSize: fontSize.xl,
     fontWeight: '800',
-    color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
@@ -547,17 +560,12 @@ const s = StyleSheet.create({
     minHeight: 52,
   },
   googleBtn: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
   },
   appleBtn: {
     backgroundColor: '#000000',
   },
-  facebookBtn: {
-    backgroundColor: '#1877F2',
-  },
-  socialLabel: {
+socialLabel: {
     fontSize: fontSize.base,
     fontWeight: '600',
   },
@@ -580,17 +588,13 @@ const s = StyleSheet.create({
   orLine: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.border,
   },
   orText: {
     fontSize: fontSize.sm,
-    color: colors.textMuted,
   },
 
   /* ── Phone toggle ── */
   phoneToggle: {
-    borderColor: '#E05A00',
-    backgroundColor: 'rgba(255, 120, 20, 0.04)',
   },
   phoneFlag: {
     fontSize: 20,
@@ -608,14 +612,11 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(138, 44, 255, 0.04)',
     marginBottom: spacing.md,
   },
   emailToggleLabel: {
     fontSize: fontSize.base,
     fontWeight: '600',
-    color: colors.primary,
   },
 
   /* ── Email form ── */
@@ -655,8 +656,41 @@ const s = StyleSheet.create({
   },
   privacyText: {
     fontSize: fontSize.xs,
-    color: colors.textMuted,
     lineHeight: 18,
     textAlign: 'left',
+  },
+
+  /* ── Loading overlay ── */
+  loadingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(138, 44, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingCard: {
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.md,
+    shadowColor: '#8A2CFF',
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  loadingIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(138, 44, 255, 0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
   },
 });

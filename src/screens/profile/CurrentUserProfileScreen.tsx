@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
+import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import { mapProfileMeDtoToCurrentUserProfile } from '@/utils/profileMappers';
@@ -22,6 +23,7 @@ export default function CurrentUserProfileScreen() {
   const router = useRouter();
 
   const { data: dto, isLoading, isError, error } = useCurrentProfile();
+  const { entitlements } = useEntitlements();
 
   if (isLoading) {
     return (
@@ -52,6 +54,7 @@ export default function CurrentUserProfileScreen() {
         isVerified={profile.isVerified}
         location={profile.location}
         isIncognito={dto.discovery_mode === 'INCOGNITO'}
+        plan={entitlements?.plan ?? null}
       />
 
       <ProfileTabBar activeTab={activeTab} onTabChange={setActiveTab} />

@@ -7,7 +7,8 @@ import {
     View
 } from 'react-native';
 
-import { colors, fontSize, radius, spacing } from '@/constants/theme';
+import { fontSize, radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 type Props = TextInputProps & {
   leftSlot?: ReactNode;
@@ -22,12 +23,13 @@ export default function AuthTextInput({
   style,
   ...rest
 }: Props) {
+  const { colors: th } = useTheme();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: th.backgroundElement, borderColor: th.border }]}>
       {leftSlot != null && <View style={styles.leftSlot}>{leftSlot}</View>}
       <TextInput
-        style={[styles.input, leftSlot != null && styles.inputWithLeft, style]}
-        placeholderTextColor={colors.textMuted}
+        style={[styles.input, { color: th.text }, leftSlot != null && styles.inputWithLeft, style]}
+        placeholderTextColor={th.textMuted}
         {...rest}
       />
       {rightSlot != null && (
@@ -48,10 +50,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceSoft,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: colors.border,
     paddingHorizontal: spacing.md,
     minHeight: 48,
   },
@@ -63,7 +63,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: fontSize.base,
-    color: colors.textPrimary,
     paddingVertical: spacing.sm,
   },
   inputWithLeft: {

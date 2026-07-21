@@ -15,9 +15,8 @@ import { supabase } from '@/lib/supabase';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  useEffect(() => {
-    SplashScreen.hide();
-  }, []);
+  // Native splash is hidden by the React SplashScreen component
+  // once its animated content has rendered, avoiding a blank gap.
 
   // Global deep-link catcher for OAuth callbacks on Android.
   // Chrome Custom Tabs sometimes fires deep links without routing

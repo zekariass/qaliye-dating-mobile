@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -22,6 +22,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PromotionAlert } from '@/components/billing/PromotionAlert';
 import QaliyeLogo from '@/components/common/QaliyeLogo';
 import { themedAlert } from '@/components/common/ThemedAlert';
 import CardActionButtons from '@/components/discovery/CardActionButtons';
@@ -32,6 +33,7 @@ import { CardDto } from '@/components/discovery/ProfileCard';
 import ProfileDetailsSection from '@/components/discovery/ProfileDetailsSection';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useActivateBoost } from '@/hooks/billing/useActivateBoost';
+import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { mapProfileToCard, useDiscoveryProfiles } from '@/hooks/discovery/useDiscoveryProfiles';
 import { useRewind } from '@/hooks/discovery/useRewind';
@@ -40,6 +42,8 @@ import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useTheme } from '@/hooks/use-theme';
 import { useReviewPrompt } from '@/hooks/useReviewPrompt';
+import { usePromotionStore } from '@/stores/promotion-store';
+import type { EligiblePromotionDto } from '@/types/billing';
 import { isPremiumPlan } from '@/types/billing';
 import {
     canRewind as checkCanRewind,
@@ -286,6 +290,7 @@ export default function DiscoverScreen() {
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const [syncingCards, setSyncingCards] = useState(false);
   const [superLikeExhausted, setSuperLikeExhausted] = useState(false);
+  const [activePromotion, setActivePromotion] = useState<EligiblePromotionDto | null>(null);
   const router = useRouter();
 
   // ── API hooks ──────────────────────────────────────────────────────────────
@@ -306,6 +311,28 @@ export default function DiscoverScreen() {
   const { onMatch: onReviewMatch } = useReviewPrompt();
   const { mutate: rewind } = useRewind();
   const { entitlements, refreshEntitlements } = useEntitlements();
+
+  const { selectedPromotion } = useEligiblePromotions();
+  const canShowPromotion = usePromotionStore((s) => s.canShow);
+  const recordShown = usePromotionStore((s) => s.recordShown);
+  const recordDismissed = usePromotionStore((s) => s.recordDismissed);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!selectedPromotion) return;
+      if (activePromotion) return;
+      if (!canShowPromotion(selectedPromotion.campaign_key)) return;
+      setActivePromotion(selectedPromotion);
+      recordShown(selectedPromotion.campaign_key);
+    }, [selectedPromotion, activePromotion, canShowPromotion, recordShown]),
+  );
+
+  const handleDismissPromotion = useCallback(() => {
+    if (activePromotion) {
+      recordDismissed(activePromotion.campaign_key);
+    }
+    setActivePromotion(null);
+  }, [activePromotion, recordDismissed]);
   const { data: profileDto } = useCurrentProfile();
   const isIncognito = profileDto?.discovery_mode === 'INCOGNITO';
 
@@ -829,6 +856,12 @@ export default function DiscoverScreen() {
           setMatchVisible(false);
           onReviewMatch();
         }}
+      />
+
+      {/* ── Promotion alert — temporary, non-blocking ── */}
+      <PromotionAlert
+        promotion={activePromotion}
+        onDismiss={handleDismissPromotion}
       />
     </SafeAreaView>
   );

@@ -83,6 +83,13 @@ export const API_ERROR_TITLES: Record<string, string> = {
   RECENT_AUTH_REQUIRED: 'Re-authentication required',
   ACCOUNT_SUSPENDED: 'Account suspended',
   ACCOUNT_DELETED: 'Account already deleted',
+  PROMOTION_NOT_FOUND: 'Promotion not found',
+  PROMOTION_NOT_CLAIMABLE: 'Promotion not claimable',
+  PROMOTION_NOT_ACTIVE: 'Promotion not active',
+  PROMOTION_EXPIRED: 'Promotion expired',
+  PROMOTION_NOT_ELIGIBLE: 'Not eligible',
+  PROMOTION_CAPACITY_EXHAUSTED: 'Promotion unavailable',
+  USER_HAS_ACTIVE_SUBSCRIPTION: 'Already subscribed',
 };
 
 /**

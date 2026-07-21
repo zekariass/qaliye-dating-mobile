@@ -1,21 +1,23 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import * as NativeSplash from 'expo-splash-screen';
 import { useCallback, useEffect, useState } from 'react';
 import { Dimensions, Image, StatusBar, StyleSheet, View } from 'react-native';
 import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withSpring,
-  withTiming,
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withRepeat,
+    withSequence,
+    withSpring,
+    withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { colors, fontSize, spacing } from '@/constants/theme';
 import { useBootstrapApp } from '@/hooks/auth/useBootstrapApp';
+import { useTheme } from '@/hooks/use-theme';
 
 const { width: W, height: H } = Dimensions.get('window');
 const AnimatedImage = Animated.createAnimatedComponent(Image);
@@ -33,6 +35,8 @@ const ORBS = [
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { mode } = useTheme();
+  const isDark = mode === 'dark';
   const { isBootstrapping, hasActiveSession } = useBootstrapApp();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
@@ -48,6 +52,9 @@ export default function SplashScreen() {
   const taglineTranslateY = useSharedValue(12);
 
   useEffect(() => {
+    // Hide the native splash once our React content is mounted and animating
+    NativeSplash.hide();
+
     screenOpacity.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.ease) });
 
     logoScale.value = withDelay(
@@ -127,7 +134,9 @@ export default function SplashScreen() {
       <StatusBar hidden />
 
       <LinearGradient
-        colors={['#2A0B4F', colors.primaryDark, colors.secondary]}
+        colors={isDark
+          ? ['#0D0712', '#1A0B2E', '#2A0B4F']
+          : ['#2A0B4F', colors.primaryDark, colors.secondary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.fill}
@@ -155,7 +164,7 @@ export default function SplashScreen() {
         <Animated.View style={titleStyle}>
           <AnimatedTitle text="Qaliye" color="#FFFFFF" />
         </Animated.View>
-        <Animated.Text style={[styles.tagline, taglineStyle]}>
+        <Animated.Text style={[styles.tagline, { color: 'rgba(255,255,255,0.85)' }, taglineStyle]}>
           Find your soulmate.
         </Animated.Text>
       </View>
@@ -349,7 +358,6 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: fontSize.md,
-    color: 'rgba(255,255,255,0.85)',
     marginTop: spacing.sm,
     fontWeight: '500',
   },

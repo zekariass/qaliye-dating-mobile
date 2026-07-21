@@ -5,7 +5,7 @@ const VALID_SET = new Set<string>(INTEREST_OPTIONS);
 
 export const MAX_INTERESTS = 8;
 export const INTERESTS_INITIAL_PREVIEW_COUNT = 20;
-export const DISCOVERY_CARD_INTEREST_PREVIEW = 3;
+export const DISCOVERY_CARD_INTEREST_PREVIEW = MAX_INTERESTS;
 
 const INTEREST_TO_KEY: Record<string, string> = {
   'Travel': 'travel',
