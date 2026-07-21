@@ -23,7 +23,6 @@ export function useEmailAuth() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     } catch (e) {
-      console.error('[useEmailAuth] login error:', (e as Error).message);
       setLoginError(e as Error);
       throw e;
     } finally {
@@ -54,7 +53,6 @@ export function useEmailAuth() {
       // sign-in failed (email confirmation genuinely required)
       return { needsConfirmation: true };
     } catch (e) {
-      console.error('[useEmailAuth] signup error:', (e as Error).message);
       setSignupError(e as Error);
       throw e;
     } finally {

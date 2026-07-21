@@ -20,7 +20,6 @@ export function useTypingIndicator(
     (text: string) => {
       const hasText = text.trim().length > 0;
       if (!hasText) {
-        console.log('[useTypingIndicator] Sending typing=false (empty text)');
         sendTyping(false);
         lastSentAt.current = 0;
         if (stopTimer.current) {
@@ -32,14 +31,12 @@ export function useTypingIndicator(
 
       const now = Date.now();
       if (now - lastSentAt.current >= THROTTLE_MS) {
-        console.log('[useTypingIndicator] Sending typing=true (throttled)');
         sendTyping(true);
         lastSentAt.current = now;
       }
 
       if (stopTimer.current) clearTimeout(stopTimer.current);
       stopTimer.current = setTimeout(() => {
-        console.log('[useTypingIndicator] Sending typing=false (timeout)');
         sendTyping(false);
         lastSentAt.current = 0;
         stopTimer.current = null;

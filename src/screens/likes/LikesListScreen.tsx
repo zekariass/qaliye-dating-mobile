@@ -252,7 +252,7 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, activitySt
         {isReceived && (
           <TouchableOpacity
             style={[styles.overlayBtn, overlayBtnShadow, { backgroundColor: card }]}
-            onPress={() => console.log(`Like back: ${item.action_id} (${item.display_name})`)}
+            onPress={() => {}}
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel={`Like back ${item.display_name}`}
@@ -548,8 +548,6 @@ export default function LikesListScreen() {
   const router    = useRouter();
   const { entitlements } = useEntitlements();
   const canSeeWhoLikedYou = entitlements?.features?.see_who_liked_you ?? false;
-  console.log('[LikesListScreen] entitlements:', JSON.stringify(entitlements), 'canSeeWhoLikedYou:', canSeeWhoLikedYou);
-
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
   const { getStatus } = useActivityStatuses(visibleIds);
 

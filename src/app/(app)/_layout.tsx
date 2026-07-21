@@ -18,6 +18,7 @@ export default function AppLayout() {
   const { isBootstrapping, hasActiveSession } = useBootstrapApp();
   const meData = useMeStore((s) => s.data);
   const meStatus = useMeStore((s) => s.status);
+  const isOnboarded = useMeStore((s) => s.isOnboarded);
   const fetchMe = useMeStore((s) => s.fetchMe);
   const userId = useCurrentUserId();
 
@@ -44,7 +45,16 @@ export default function AppLayout() {
     return <Redirect href="/auth" />;
   }
 
-  if (!meData?.onboarding?.is_onboarded) {
+  // If meStatus === 'error', the session is invalid (e.g. account_deleted 403).
+  // The apiClient interceptor is async-signing-out, but hasActiveSession is still
+  // true.  Do NOT redirect to onboarding — that would mount OnboardingScreen and
+  // fire /api/v1/onboarding/status, triggering another 403.  Return null and wait
+  // for hasActiveSession to flip to false, which redirects to /auth above.
+  if (hasActiveSession && meStatus === 'error') {
+    return null;
+  }
+
+  if (!meData?.onboarding?.is_onboarded && !isOnboarded) {
     return <Redirect href={"/(onboarding)" as any} />;
   }
 

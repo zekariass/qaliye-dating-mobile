@@ -28,10 +28,7 @@ export function usePhoneOtp() {
         throw new Error('invalid_ethiopian_phone');
       }
       const { error } = await supabase.auth.signInWithOtp({ phone: normalized });
-      if (error) {
-        console.error('[usePhoneOtp] signInWithOtp error:', error.message, error);
-        throw error;
-      }
+      if (error) throw error;
     } catch (e) {
       setSendError(e as Error);
       throw e;

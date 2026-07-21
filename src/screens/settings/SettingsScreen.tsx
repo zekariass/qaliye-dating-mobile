@@ -3,6 +3,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+    ActivityIndicator,
+    Modal,
     Platform,
     Pressable,
     ScrollView,
@@ -18,13 +20,16 @@ import { NotificationSettingsSection } from '@/components/notifications/Notifica
 import { ReviewPassedProfilesSheet } from '@/components/settings/ReviewPassedProfilesSheet';
 import { colors } from '@/constants/theme';
 import { useActivityVisibility } from '@/hooks/activity/useActivityVisibility';
+import { useDeleteAccount } from '@/hooks/auth/useDeleteAccount';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { usePendingOrders } from '@/hooks/billing/useOrders';
 import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useSignOutWithDeactivation } from '@/hooks/notifications/useSignOutWithDeactivation';
 import { useTheme } from '@/hooks/use-theme';
+import { useRateUs } from '@/hooks/useRateUs';
 import { ThemeMode, useThemeStore } from '@/stores/theme-store';
 import { isPremiumPlan } from '@/types/billing';
+import { extractApiError, getApiErrorTitle } from '@/utils/apiError';
 import { getBoostStatus, getRewindsStatus, getSuperLikesStatus } from '@/utils/entitlements';
 
 const THEME_OPTIONS: { key: ThemeMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
@@ -42,10 +47,12 @@ export default function SettingsScreen() {
   const setMode = useThemeStore((s) => s.setMode);
   const { showActivityStatus, update: updateVisibility, isUpdating: isUpdatingVisibility } = useActivityVisibility();
   const { signOut } = useSignOutWithDeactivation();
+  const { confirmDelete, deleteStatus } = useDeleteAccount();
   const [revisitSheetVisible, setRevisitSheetVisible] = useState(false);
   const { entitlements } = useEntitlements();
   const { requiresActionCount, pendingCount, refetch: refetchPending } = usePendingOrders(Platform.OS === 'android');
   const { restore, restoreResult, isRestoring } = useRevenueCatRestore();
+  const { rateUs } = useRateUs();
 
   useEffect(() => {
     if (restoreResult === 'success') {
@@ -93,6 +100,60 @@ export default function SettingsScreen() {
     });
   }, [t, signOut]);
 
+  const handleDeleteAccount = useCallback(() => {
+    themedAlert({
+      title: t('settings.deleteAccountTitle', 'Delete Account'),
+      message: t(
+        'settings.deleteAccountWarning',
+        'This will permanently delete your account, profile, photos, matches, and messages. This action cannot be undone and your data cannot be recovered.',
+      ),
+      icon: 'warning-outline',
+      iconColor: colors.danger,
+      buttons: [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('common.continue', 'Continue'),
+          style: 'destructive',
+          onPress: () => {
+            themedAlert({
+              title: t('settings.deleteAccountConfirmTitle', 'Are you absolutely sure?'),
+              message: t(
+                'settings.deleteAccountConfirmBody',
+                'You are about to permanently delete your Qaliye account. This cannot be undone.',
+              ),
+              icon: 'trash-outline',
+              iconColor: colors.danger,
+              buttons: [
+                { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+                {
+                  text: t('settings.deleteAccountBtn', 'Delete My Account'),
+                  style: 'destructive',
+                  onPress: () =>
+                    confirmDelete().catch((err) => {
+                      const detail = extractApiError(err);
+                      themedError(
+                        getApiErrorTitle(detail.code),
+                        detail.code?.toLowerCase() === 'recent_auth_required'
+                          ? t(
+                              'settings.deleteAccountReauth',
+                              'Your session has expired. Please sign in again and retry.',
+                            )
+                          : t(
+                              'settings.deleteAccountError',
+                              'Account deletion failed. Please try again.',
+                            ),
+                      );
+                    }),
+
+                },
+              ],
+            });
+          },
+        },
+      ],
+    });
+  }, [t, confirmDelete, deleteStatus]);
+
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
@@ -102,6 +163,7 @@ export default function SettingsScreen() {
   }, [router]);
 
   return (
+    <>
     <View style={[styles.screen, { backgroundColor: th.background, paddingTop: safeTop }]}>
       <View style={styles.header}>
         <Pressable
@@ -356,6 +418,28 @@ export default function SettingsScreen() {
         </View>
 
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Pressable
+            style={styles.optionRow}
+            onPress={rateUs}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.rateUs', 'Rate Us')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: '#FFF7ED' }]}>
+              <Ionicons name="star-outline" size={18} color="#F59E0B" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('settings.rateUs', 'Rate Us')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('settings.rateUsSub', 'Love Qaliye? Leave us a review')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
           <Text style={[styles.sectionTitle, { color: th.text }]}>
             {t('settings.account', 'Account')}
           </Text>
@@ -373,9 +457,50 @@ export default function SettingsScreen() {
             </Text>
             <Ionicons name="chevron-forward" size={18} color="#EF4444" />
           </Pressable>
+          <Pressable
+            style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
+            onPress={handleDeleteAccount}
+            disabled={deleteStatus !== 'idle'}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.deleteAccount', 'Delete Account')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: '#FEE2E2' }]}>
+              <Ionicons name="trash-outline" size={18} color="#EF4444" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: '#EF4444' }]}>
+                {t('settings.deleteAccount', 'Delete Account')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('settings.deleteAccountSub', 'Permanently delete your account and all data')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#EF4444" />
+          </Pressable>
         </View>
       </ScrollView>
     </View>
+
+      {/* ── Account Deletion Overlay ─────────────────────────────────────── */}
+      <Modal
+        visible={deleteStatus === 'deleting'}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={overlayStyles.backdrop}>
+          <View style={[overlayStyles.card, { backgroundColor: th.surface }]}>
+            <ActivityIndicator size="large" color={colors.danger} style={{ marginBottom: 20 }} />
+            <Text style={[overlayStyles.title, { color: th.text }]}>
+              {t('settings.deletingTitle', 'Deleting your account…')}
+            </Text>
+            <Text style={[overlayStyles.subtitle, { color: th.textSecondary }]}>
+              {t('settings.deletingSubtitle', 'Please wait, this may take a moment.')}
+            </Text>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -483,5 +608,40 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: '700',
+  },
+});
+
+const overlayStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  card: {
+    width: '100%',
+    borderRadius: 20,
+    paddingVertical: 40,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  iconCircle: {
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  subtitle: {
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
   },
 });

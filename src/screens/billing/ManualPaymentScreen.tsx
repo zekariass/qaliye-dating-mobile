@@ -194,13 +194,6 @@ export default function ManualPaymentScreen() {
     }
 
     if (isManualTransferMode) {
-      console.log('[ManualPaymentScreen] verifyManualTransfer call:', {
-        payment_offer_id: offerId,
-        payment_method_id: methodId,
-        verification_data: verificationFields,
-        fieldValues,
-        fields,
-      });
       verifyManualTransfer(
         {
           payment_offer_id: offerId,

@@ -65,10 +65,7 @@ export default function ProfileFloatingNav({ activeTab = 'profile' }: Props) {
   const inactiveColor   = isDark ? '#7C6EA0' : '#9CA3AF';
 
   const handleTabPress = (name: string) => {
-    if (name === 'messages') {
-      console.log('Open messages');
-      return;
-    }
+    if (name === 'messages') return;
     router.navigate(TAB_ROUTES[name] as any);
   };
 

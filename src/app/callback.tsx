@@ -20,12 +20,9 @@ export default function OAuthCallback() {
       if (handledRef.current) return;
       handledRef.current = true;
 
-      console.log('[Callback] handling URL:', incomingUrl);
-
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          console.log('[Callback] session already exists');
           setStatus('success');
           return;
         }
@@ -36,16 +33,13 @@ export default function OAuthCallback() {
           const codeMatch = incomingUrl.match(/error=([^&#]+)/);
           const desc = descMatch ? decodeURIComponent(descMatch[1].replace(/\+/g, ' ')) : null;
           const code = codeMatch ? decodeURIComponent(codeMatch[1]) : 'auth_error';
-          console.error('[Callback] error in URL:', code, desc);
           throw new Error(desc ?? code);
         }
 
         const { error } = await supabase.auth.exchangeCodeForSession(incomingUrl);
         if (error) throw error;
-        console.log('[Callback] session established');
         setStatus('success');
       } catch (e: any) {
-        console.error('[Callback] error:', e.message);
         setStatus('error');
         setErrorMsg(e.message || 'Authentication failed');
       }

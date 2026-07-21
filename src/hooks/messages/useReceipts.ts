@@ -33,17 +33,14 @@ export function useReceipts(matchId: string) {
         if (seq <= 0) return;
         pendingDelivery.current = 0;
 
-        console.log('[useReceipts] Sending delivery receipt up to sequence:', seq);
         try {
           await markDelivered(matchId, { up_to_sequence: seq });
-          console.log('[useReceipts] Delivery receipt sent successfully');
           useChatStore.setState({ lastDeliveredReceiptSent: seq });
           useChatStore.getState().updateReceiptState({
             myLastDeliveredSequence: seq,
           });
-        } catch (err) {
-          console.error('[useReceipts] Delivery receipt failed:', err);
-          // Will be retried on next merge
+        } catch {
+          // Non-fatal — will be retried on next merge
         }
       }, DEBOUNCE_MS);
     },
@@ -64,18 +61,15 @@ export function useReceipts(matchId: string) {
         if (seq <= 0) return;
         pendingRead.current = 0;
 
-        console.log('[useReceipts] Sending read receipt up to sequence:', seq);
         try {
           await markRead(matchId, { up_to_sequence: seq });
-          console.log('[useReceipts] Read receipt sent successfully');
           useChatStore.setState({ lastReadReceiptSent: seq });
           useChatStore.getState().updateReceiptState({
             myLastReadSequence: seq,
             myLastDeliveredSequence: seq,
           });
-        } catch (err) {
-          console.error('[useReceipts] Read receipt failed:', err);
-          // Will be retried on next visible check
+        } catch {
+          // Non-fatal — will be retried on next visible check
         }
       }, DEBOUNCE_MS);
     },

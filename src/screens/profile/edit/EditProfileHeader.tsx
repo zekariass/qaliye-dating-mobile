@@ -17,8 +17,6 @@ export const EditProfileHeader = memo(function EditProfileHeader({ sem, onSave, 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
-    } else {
-      console.log('Go back');
     }
   };
 

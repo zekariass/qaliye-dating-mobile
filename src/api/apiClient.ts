@@ -1,11 +1,58 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 
+import { deactivateDevice } from '@/api/notifications/notificationsApi';
+import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
+import { readInstallationId } from '@/services/notifications/installationId';
+import { useBillingStore } from '@/stores/billing-store';
+import { useChatStore } from '@/stores/chat-store';
+import { useMeStore } from '@/stores/me-store';
+import { useNotificationsStore } from '@/stores/notifications-store';
 
 export const apiClient = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_BASE_URL,
   timeout: 15000,
 });
+
+let isSigningOutOnAccountDeleted = false;
+
+async function handleAccountDeleted() {
+  if (isSigningOutOnAccountDeleted) return;
+  isSigningOutOnAccountDeleted = true;
+
+  try {
+    if (Platform.OS !== 'web') {
+      try {
+        const installationId = await readInstallationId();
+        if (installationId) {
+          await deactivateDevice(installationId);
+        }
+      } catch {
+        /* non-fatal */
+      }
+    }
+  } finally {
+    // Cancel ALL in-flight queries FIRST so pending HTTP requests are aborted
+    // and no onSuccess callbacks fire with stale data after we clear everything.
+    // NOTE: Do NOT set accountJustDeleted here. That flag is only set by the
+    // explicit delete action in useDeleteAccount.ts. Setting it here would cause
+    // the "Account Deleted" overlay to re-appear on every re-login attempt after
+    // deletion, because the interceptor fires again on the stale-session path.
+    queryClient.cancelQueries();
+    await supabase.auth.signOut({ scope: 'local' });
+    queryClient.clear();
+    useMeStore.getState().clearMe();
+    useChatStore.getState().reset();
+    useBillingStore.getState().clearActiveOrder();
+    useBillingStore.getState().clearOrderIdempotencyKey();
+    useBillingStore.getState().clearBoostIdempotencyKey();
+    useNotificationsStore.getState().setPendingNavIntent(null);
+    useNotificationsStore.getState().setForegroundBanner(null);
+    useNotificationsStore.getState().setLastHandledNotificationId('');
+    isSigningOutOnAccountDeleted = false;
+  }
+}
 
 apiClient.interceptors.request.use(async (config) => {
   const {
@@ -22,7 +69,7 @@ apiClient.interceptors.request.use(async (config) => {
         console.log(`[API] request data:`, typeof config.data === 'string' ? config.data : JSON.stringify(config.data));
       }
     }
-  } else {
+  } else if (__DEV__) {
     console.warn('[API] No active session — request sent without Bearer token');
   }
   return config;
@@ -52,6 +99,23 @@ apiClient.interceptors.response.use(
         JSON.stringify(error.response.data),
       );
     }
+
+    const rawError = error.response?.data?.error;
+    const errorCode: string | undefined =
+      typeof rawError === 'string'
+        ? rawError                                          // {"error":"account_deleted"}
+        : typeof rawError === 'object' && rawError !== null
+          ? (rawError as { code?: string }).code            // {"error":{"code":"ACCOUNT_DELETED"}}
+          : undefined;
+    const normalizedCode = errorCode?.toLowerCase();
+    if (
+      error.response?.status === 403 &&
+      (normalizedCode === 'account_deleted' || normalizedCode === 'account_suspended') &&
+      !(error.config as { _skipAccountGuard?: boolean })?._skipAccountGuard
+    ) {
+      handleAccountDeleted();
+    }
+
     return Promise.reject(error);
   },
 );

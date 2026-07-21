@@ -6,3 +6,7 @@ export async function fetchMe(): Promise<MeResponse> {
   const response = await apiClient.get<MeResponse>('/api/v1/me');
   return response.data;
 }
+
+export async function deleteAccount(): Promise<void> {
+  await apiClient.delete('/api/v1/me', { params: { confirm: true } });
+}

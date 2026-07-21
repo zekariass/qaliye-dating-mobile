@@ -79,6 +79,10 @@ export const API_ERROR_TITLES: Record<string, string> = {
   CONFLICT: 'Already done',
   RATE_LIMITED: 'Too many requests',
   INTERNAL_ERROR: 'Server error',
+  CONFIRMATION_REQUIRED: 'Confirmation required',
+  RECENT_AUTH_REQUIRED: 'Re-authentication required',
+  ACCOUNT_SUSPENDED: 'Account suspended',
+  ACCOUNT_DELETED: 'Account already deleted',
 };
 
 /**

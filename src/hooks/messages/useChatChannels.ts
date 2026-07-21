@@ -74,7 +74,6 @@ export function useChatChannels(
       if (cancelled) return;
       if (session?.access_token) {
         supabase.realtime.setAuth(session.access_token);
-        console.log('[useChatChannels] Realtime auth token set');
       }
 
       // ── Events channel (server-published, durable) ─────────────────
@@ -179,9 +178,7 @@ export function useChatChannels(
       },
     );
 
-    eventsChannel.subscribe((status) => {
-      console.log('[useChatChannels] Events channel status:', status);
-    });
+    eventsChannel.subscribe((_status) => {});
     eventsRef.current = eventsChannel;
 
     // ── Typing channel (ephemeral) ──────────────────────────────────────
@@ -192,14 +189,11 @@ export function useChatChannels(
 
     typingChannel.on('broadcast', { event: 'typing' }, (payload) => {
       const data = payload.payload as any;
-      console.log('[useChatChannels] Typing event received:', data);
       if (data.user_id === currentUserId) return;
       useChatStore.getState().setParticipantTyping(!!data.is_typing);
     });
 
-    typingChannel.subscribe((status) => {
-      console.log('[useChatChannels] Typing channel status:', status);
-    });
+    typingChannel.subscribe((_status) => {});
     typingRef.current = typingChannel;
 
     // ── Presence channel ────────────────────────────────────────────────
@@ -215,7 +209,6 @@ export function useChatChannels(
 
     presenceChannel.on('presence', { event: 'sync' }, () => {
       const presState = presenceChannel.presenceState();
-      console.log('[useChatChannels] Presence sync state:', presState);
       const otherPresent = Object.values(presState).some((entries: any) =>
         entries.some((e: any) => e.user_id !== currentUserId),
       );
@@ -223,7 +216,6 @@ export function useChatChannels(
     });
 
     presenceChannel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
-      console.log('[useChatChannels] Presence join:', newPresences);
       const otherJoined = newPresences.some(
         (p: any) => p.user_id !== currentUserId,
       );
@@ -231,7 +223,6 @@ export function useChatChannels(
     });
 
     presenceChannel.on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-      console.log('[useChatChannels] Presence leave:', leftPresences);
       const otherLeft = leftPresences.some(
         (p: any) => p.user_id !== currentUserId,
       );
@@ -240,31 +231,24 @@ export function useChatChannels(
 
     presenceChannel.subscribe(async (status: string, err?: unknown) => {
       if (status === 'CHANNEL_ERROR' && err) {
-        if (!presenceFailedRef.current) {
-          console.log('[useChatChannels] Presence channel failed (will not retry):', err);
-          presenceFailedRef.current = true;
-        }
+        presenceFailedRef.current = true;
         return;
       }
-      console.log('[useChatChannels] Presence channel status:', status);
       if (status === 'SUBSCRIBED') {
         try {
           await presenceChannel.track({
             user_id: currentUserId,
             state: 'viewing_chat',
           });
-          console.log('[useChatChannels] Presence tracked for user:', currentUserId);
-        } catch (trackErr) {
-          console.warn('[useChatChannels] Presence track failed:', trackErr);
+        } catch {
+          // Non-fatal — presence tracking is best-effort
         }
       }
     });
     presenceRef.current = presenceChannel;
   }
 
-    connect().catch((err) => {
-      console.warn('[useChatChannels] connect() failed:', err);
-    });
+    connect().catch(() => {});
 
     return () => {
       cancelled = true;

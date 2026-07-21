@@ -26,30 +26,15 @@ export default function RootLayout() {
     const callbackBase = 'qaliyemobile://callback';
 
     const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('[RootLayout] ALL url event:', url);
       if (!url || !url.startsWith(callbackBase)) return;
-
-      console.log('[RootLayout] caught callback URL:', url);
 
       const exchange = async () => {
         try {
-          if (url.includes('error=')) {
-            const descMatch = url.match(/error_description=([^&#]+)/);
-            const codeMatch = url.match(/error=([^&#]+)/);
-            const desc = descMatch ? decodeURIComponent(descMatch[1].replace(/\+/g, ' ')) : null;
-            const code = codeMatch ? decodeURIComponent(codeMatch[1]) : 'auth_error';
-            console.error('[RootLayout] OAuth error:', code, desc);
-            return;
-          }
+          if (url.includes('error=')) return;
 
-          const { error } = await supabase.auth.exchangeCodeForSession(url);
-          if (error) {
-            console.error('[RootLayout] exchangeCodeForSession error:', error.message);
-          } else {
-            console.log('[RootLayout] session established from deep link');
-          }
-        } catch (e: any) {
-          console.error('[RootLayout] deep link exchange failed:', e.message);
+          await supabase.auth.exchangeCodeForSession(url);
+        } catch {
+          // Non-fatal — session exchange failure will leave user on auth screen
         }
       };
 

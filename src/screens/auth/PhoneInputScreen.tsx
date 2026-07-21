@@ -105,7 +105,6 @@ export default function PhoneInputScreen() {
       router.push({ pathname: '/phone-otp' as any, params: { phone: normalized, display } });
     } catch (e) {
       const err = e as Error;
-      console.error('[PhoneInputScreen] sendCode failed:', err.message, err);
       setGeneralError(getErrorMessage(err));
     }
   }

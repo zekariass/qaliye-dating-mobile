@@ -19,8 +19,6 @@ type AuthMutation = {
 };
 
 async function createSessionFromUrl(url: string) {
-  console.log('[Facebook] createSessionFromUrl:', url);
-
   // Parse query params from the URL
   const queryString = url.split('?')[1] ?? '';
   const searchParams = new URLSearchParams(queryString);
@@ -37,11 +35,7 @@ async function createSessionFromUrl(url: string) {
   }
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) {
-    console.error('[Facebook] exchangeCodeForSession error:', error.message);
-    throw error;
-  }
-  console.log('[Facebook] session established');
+  if (error) throw error;
   return data.session;
 }
 
@@ -70,31 +64,11 @@ export function useSocialAuth() {
       // (b) the next signIn() call always shows the account picker.
       try { await GoogleSignin.revokeAccess(); } catch { /* ignore */ }
       await GoogleSignin.signOut();
-      try {
-        const payload = JSON.parse(atob(idToken.split('.')[1]));
-        console.log('[Google] id_token aud:', payload.aud, '| iss:', payload.iss, '| exp:', new Date(payload.exp * 1000).toISOString());
-      } catch { /* decoding is best-effort */ }
-      const _diagUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=id_token`;
-      const _diagRes = await fetch(_diagUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-          'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!}`,
-        },
-        body: JSON.stringify({ provider: 'google', id_token: idToken }),
-      });
-      const _diagBody = await _diagRes.text();
-      console.log('[Google] RAW Supabase response:', _diagRes.status, _diagBody);
-
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
       });
-      if (error) {
-        console.error('[Google] signInWithIdToken error:', error.message, (error as any).status, (error as any).code);
-        throw error;
-      }
+      if (error) throw error;
     } catch (e) {
       setGoogleError(e as Error);
       /* error stays in state; UI shows it inline */
@@ -143,13 +117,10 @@ export function useSocialAuth() {
         scheme: 'qaliyemobile',
         path: 'callback',
       });
-      console.log('[Facebook] redirectTo:', redirectTo);
-
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: { redirectTo, skipBrowserRedirect: true },
       });
-      console.log('[Facebook] OAuth URL:', data?.url, 'error:', error?.message);
       if (error || !data.url) throw error ?? new Error('Facebook sign-in failed');
 
       if (Platform.OS === 'android') {
@@ -157,7 +128,6 @@ export function useSocialAuth() {
       }
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-      console.log('[Facebook] browser result type:', result.type, 'url:', (result as any).url ?? 'none');
 
       // iOS: the browser returns the callback URL directly.
       if (result.type === 'success' && result.url) {
@@ -174,16 +144,11 @@ export function useSocialAuth() {
       // instead of returning to the browser session.
       // Poll for the session AND actively check Linking for the URL.
       if (Platform.OS === 'android') {
-        console.log('[Facebook] polling for session after Android dismiss...');
-
         let deepLinkUrl: string | null = null;
         let listener: { remove(): void } | null = null;
         const deepLinkPromise = new Promise<string>((resolve) => {
           listener = Linking.addEventListener('url', ({ url }: { url: string }) => {
-            if (url && url.startsWith('qaliyemobile://callback')) {
-              console.log('[Facebook] deep link event:', url);
-              resolve(url);
-            }
+            if (url && url.startsWith('qaliyemobile://callback')) resolve(url);
           });
         });
 
@@ -192,7 +157,6 @@ export function useSocialAuth() {
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
             (listener as any)?.remove?.();
-            console.log('[Facebook] session established via polling');
             return;
           }
 
@@ -217,7 +181,6 @@ export function useSocialAuth() {
         (listener as any)?.remove?.();
 
         if (deepLinkUrl) {
-          console.log('[Facebook] handling deep link URL:', deepLinkUrl);
           await createSessionFromUrl(deepLinkUrl);
           return;
         }

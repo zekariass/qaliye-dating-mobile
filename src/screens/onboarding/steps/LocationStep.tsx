@@ -327,17 +327,6 @@ export default function LocationStep({ onComplete, isCompleted }: Props) {
               </View>
             )}
 
-            {selectedPlace != null && (
-              <View style={[styles.selectedBox, { backgroundColor: th.backgroundSelected, borderColor: colors.primary }]}>
-                <Text style={styles.selectedFlag}>{isoToFlag(selectedPlace.country_code)}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.selectedLabel, { color: th.textMuted }]}>Selected city</Text>
-                  <Text style={[styles.selectedText, { color: th.text }]}>{selectedPlace.display_name}</Text>
-                </View>
-                <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-              </View>
-            )}
-
             {error != null && <Text style={styles.errorText}>{error}</Text>}
 
             <TouchableOpacity
@@ -444,19 +433,6 @@ const styles = StyleSheet.create({
   resultTextCol: { flex: 1 },
   resultCity: { fontSize: 15, fontWeight: '600' },
   resultMeta: { fontSize: 13, marginTop: 2 },
-
-  selectedBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  selectedFlag: { fontSize: 26 },
-  selectedLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 2 },
-  selectedText: { fontSize: 15, fontWeight: '600' },
 
   errorText: { color: '#FF6B6B', fontSize: 13, textAlign: 'center', marginTop: spacing.sm, marginBottom: spacing.sm },
 

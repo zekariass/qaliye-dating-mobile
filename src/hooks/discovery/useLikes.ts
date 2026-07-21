@@ -8,9 +8,7 @@ export function useLikes(direction: LikeDirection) {
   const query = useInfiniteQuery({
     queryKey: ['discovery', 'likes', direction],
     queryFn: async ({ pageParam }: { pageParam: number }) => {
-      const data = await fetchLikes(direction, pageParam);
-      console.log(`[useLikes] Fetched ${direction} likes (page ${data.page}):`, data);
-      return data;
+      return fetchLikes(direction, pageParam);
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage: LikesPageResponse) =>

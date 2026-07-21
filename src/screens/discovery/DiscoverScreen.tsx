@@ -39,6 +39,7 @@ import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useTheme } from '@/hooks/use-theme';
+import { useReviewPrompt } from '@/hooks/useReviewPrompt';
 import { isPremiumPlan } from '@/types/billing';
 import {
     canRewind as checkCanRewind,
@@ -302,6 +303,7 @@ export default function DiscoverScreen() {
   } = useDiscoveryProfiles();
 
   const { mutate: swipe } = useSwipeAction();
+  const { onMatch: onReviewMatch } = useReviewPrompt();
   const { mutate: rewind } = useRewind();
   const { entitlements, refreshEntitlements } = useEntitlements();
   const { data: profileDto } = useCurrentProfile();
@@ -446,20 +448,6 @@ export default function DiscoverScreen() {
     return () => clearTimeout(timer);
   }, [isLoading]);
 
-  // Debug: log top card location fields
-  useEffect(() => {
-    if (displayQueue.length > 0) {
-      const top = displayQueue[0];
-      console.log('[DiscoverScreen] top card location debug:', {
-        user_id: top.user_id,
-        display_name: top.display_name,
-        city: top.city,
-        country_name: top.country_name,
-        residency_type: top.residency_type,
-        distance_km: top.distance_km,
-      });
-    }
-  }, [displayQueue[0]?.user_id]);
 
   // Pre-fetch next page when queue is running low
   useEffect(() => {
@@ -566,7 +554,7 @@ export default function DiscoverScreen() {
         },
       );
     },
-    [swipe, router],
+    [swipe, router, onReviewMatch],
   );
 
   // ── Rewind handler ──────────────────────────────────────────────────────────
@@ -829,6 +817,7 @@ export default function DiscoverScreen() {
         photoUrl={matchPhoto}
         onSendMessage={() => {
           setMatchVisible(false);
+          onReviewMatch();
           if (matchId) {
             router.push({
               pathname: '/(app)/chat' as any,
@@ -836,7 +825,10 @@ export default function DiscoverScreen() {
             });
           }
         }}
-        onKeepSwiping={() => setMatchVisible(false)}
+        onKeepSwiping={() => {
+          setMatchVisible(false);
+          onReviewMatch();
+        }}
       />
     </SafeAreaView>
   );

@@ -94,7 +94,6 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
 
 export async function fetchEntitlements(): Promise<EntitlementResponse> {
   const res = await apiClient.get<unknown>(`${BASE}/entitlements`);
-  console.log('[fetchEntitlements] raw response:', JSON.stringify(res.data));
   return normalizeEntitlements(res.data as Record<string, unknown>);
 }
 
@@ -197,12 +196,6 @@ function normalizePaymentMethod(raw: Record<string, unknown>): PaymentMethodDto 
     display_order: (raw.display_order ?? raw['displayOrder'] ?? 0) as number,
     verification_params: normalizeVerificationParams(verificationRaw),
   };
-  console.log('[normalizePaymentMethod] raw keys:', Object.keys(raw));
-  console.log('[normalizePaymentMethod] payment_instructions:', method.payment_instructions?.substring(0, 80));
-  console.log('[normalizePaymentMethod] verification_params:', method.verification_params);
-  console.log('[normalizePaymentMethod] raw verificationParams value:', raw['verificationParams']);
-  console.log('[normalizePaymentMethod] raw verification_params value:', raw['verification_params']);
-  console.log('[normalizePaymentMethod] verificationRaw type:', typeof verificationRaw, 'value:', JSON.stringify(verificationRaw));
   return method;
 }
 
@@ -214,7 +207,6 @@ export async function fetchPaymentOptions(
     params: channel ? { platform, channel } : { platform },
   });
   const data = res.data;
-  console.log('[fetchPaymentOptions] raw response:', JSON.stringify(data).substring(0, 500));
   const rawMethods = (data.payment_methods ?? data['paymentMethods'] ?? []) as Record<string, unknown>[];
   return {
     platform: (data.platform ?? platform) as BillingPlatform,
@@ -352,11 +344,9 @@ export async function verifyManualTransfer(
     verification_data: body.verification_data,
     idempotency_key: body.idempotency_key,
   };
-  console.log('[verifyManualTransfer] sending payload:', JSON.stringify(payload));
   const res = await apiClient.post<unknown>(`${BASE}/manual-transfer/verify`, payload, {
     headers: { 'Content-Type': 'application/json' },
   });
-  console.log('[verifyManualTransfer] response status:', res.status, 'data:', JSON.stringify(res.data).substring(0, 200));
   return normalizeManualTransferVerifyResponse(res.data as Record<string, unknown>);
 }
 

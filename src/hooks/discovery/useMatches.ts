@@ -7,11 +7,7 @@ import type { MatchItemDto, MatchesPageResponse } from '@/types/discovery';
 export function useMatches() {
   const query = useInfiniteQuery({
     queryKey: ['discovery', 'matches'],
-    queryFn: async ({ pageParam }: { pageParam: number }) => {
-      const data = await fetchMatches(pageParam);
-      console.log(`[useMatches] Fetched matches (page ${data.page}):`, data);
-      return data;
-    },
+    queryFn: ({ pageParam }: { pageParam: number }) => fetchMatches(pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage: MatchesPageResponse) =>
       lastPage.has_next ? lastPage.page + 1 : undefined,

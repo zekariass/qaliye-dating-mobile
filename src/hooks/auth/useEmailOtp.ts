@@ -21,7 +21,6 @@ export function useEmailOtp() {
       const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
       if (error) throw error;
     } catch (e) {
-      console.error('[useEmailOtp] verifyOtp error:', (e as Error).message);
       setVerifyError(e as Error);
       throw e;
     } finally {
@@ -36,7 +35,6 @@ export function useEmailOtp() {
       const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) throw error;
     } catch (e) {
-      console.error('[useEmailOtp] resendOtp error:', (e as Error).message);
       setResendError(e as Error);
       throw e;
     } finally {

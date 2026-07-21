@@ -10,12 +10,14 @@
     "ios": {
       "bundleIdentifier": "com.qaliye.app",
       "supportsTablet": false,
+      "appStoreUrl": "https://apps.apple.com/app/id6741631870",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.qaliye.app",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.qaliye.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

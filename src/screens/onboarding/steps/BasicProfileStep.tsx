@@ -4,18 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  Easing,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Animated,
+    Dimensions,
+    Easing,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
@@ -286,11 +286,11 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
               <View style={styles.iconCircle}>
                 <Ionicons name="person-outline" size={40} color={colors.primary} />
               </View>
-              <Text style={[styles.stepTitle, { color: th.text }]}>
-                {t('onboarding.basicProfile.displayName')}
-              </Text>
               <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
                 {t('onboarding.basicProfile.subtitleNew')}
+              </Text>
+              <Text style={[styles.stepTitle, { color: th.text }]}>
+                {t('onboarding.basicProfile.displayName')}
               </Text>
               <Controller
                 control={control}
@@ -326,11 +326,11 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
               <View style={styles.iconCircle}>
                 <Ionicons name="people-outline" size={40} color={colors.primary} />
               </View>
-              <Text style={[styles.stepTitle, { color: th.text }]}>
-                {t('onboarding.basicProfile.gender')}
-              </Text>
               <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
                 {t('onboarding.basicProfile.subtitleNew')}
+              </Text>
+              <Text style={[styles.stepTitle, { color: th.text }]}>
+                {t('onboarding.basicProfile.gender')}
               </Text>
               <Controller
                 control={control}
@@ -372,11 +372,11 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
               <View style={styles.iconCircle}>
                 <Ionicons name="calendar-outline" size={40} color={colors.primary} />
               </View>
-              <Text style={[styles.stepTitle, { color: th.text }]}>
-                {t('onboarding.basicProfile.dob')}
-              </Text>
               <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
                 {t('onboarding.basicProfile.subtitleNew')}
+              </Text>
+              <Text style={[styles.stepTitle, { color: th.text }]}>
+                {t('onboarding.basicProfile.dob')}
               </Text>
               <Controller
                 control={control}
@@ -400,11 +400,11 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
               <View style={styles.iconCircle}>
                 <Ionicons name="heart-outline" size={40} color={colors.primary} />
               </View>
-              <Text style={[styles.stepTitle, { color: th.text }]}>
-                {t('onboarding.basicProfile.lookingFor')}
-              </Text>
               <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
                 {t('onboarding.basicProfile.subtitleNew')}
+              </Text>
+              <Text style={[styles.stepTitle, { color: th.text }]}>
+                {t('onboarding.basicProfile.lookingFor')}
               </Text>
               <Controller
                 control={control}
@@ -445,11 +445,11 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
               <View style={styles.iconCircle}>
                 <Ionicons name="color-palette-outline" size={40} color={colors.primary} />
               </View>
-              <Text style={[styles.stepTitle, { color: th.text }]}>
-                {t('onboarding.basicProfile.interests', 'Your Interests')}
-              </Text>
               <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
-                {t('onboarding.basicProfile.interestsSubtitle', 'Pick up to 8 things you love.')}
+                {t('onboarding.basicProfile.interestsSubtitle')}
+              </Text>
+              <Text style={[styles.stepTitle, { color: th.text }]}>
+                {t('onboarding.basicProfile.interests')}
               </Text>
               <View style={{ width: '100%' }}>
                 <InterestPicker
@@ -567,13 +567,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.5,
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xl,
   },
   stepSubtitle: {
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.sm,
     paddingHorizontal: spacing.md,
   },
 

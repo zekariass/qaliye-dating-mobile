@@ -21,6 +21,7 @@ import { supabase } from '@/lib/supabase';
 import { LANGUAGE_LABELS, LANGUAGE_LIST, useLanguageStore } from '@/stores/language-store';
 import { useMeStore } from '@/stores/me-store';
 import { OnboardingStatus, OnboardingStep } from '@/types/api';
+import { extractApiError } from '@/utils/apiError';
 
 import BasicProfileStep from './steps/BasicProfileStep';
 import CompletionStep from './steps/CompletionStep';
@@ -78,6 +79,7 @@ export default function OnboardingScreen() {
   const { colors: th, mode } = useTheme();
   const markOnboarded = useMeStore((s) => s.markOnboarded);
   const clearMe = useMeStore((s) => s.clearMe);
+  const fetchMe = useMeStore((s) => s.fetchMe);
 
   const { t } = useTranslation();
   const language = useLanguageStore((s) => s.language);
@@ -105,24 +107,23 @@ export default function OnboardingScreen() {
       const status = await fetchOnboardingStatus();
       setOnboardingStatus(status);
       if (status.next_step === 'DONE') {
+        await fetchMe().catch(() => {});
         markOnboarded();
         router.replace('/(app)/(tabs)' as never);
         return;
       }
       if (setDisplay) setDisplayStep(status.next_step);
     } catch (e: unknown) {
-      const err = e as { response?: { status?: number; data?: { message?: string } }; message?: string; code?: string };
-      console.error('[Onboarding] fetchOnboardingStatus failed:', err?.response?.status, err?.response?.data, err?.message, err?.code);
-      const msg =
-        err?.response?.data?.message ??
-        (err?.code === 'ERR_NETWORK' || !process.env.EXPO_PUBLIC_API_BASE_URL
-          ? 'API base URL is not configured. Add EXPO_PUBLIC_API_BASE_URL to your .env file.'
-          : `Error ${err?.response?.status ?? err?.message ?? 'Unknown error'}`);
-      setError(msg);
+      const detail = extractApiError(e);
+      if (detail.code === 'account_deleted' || detail.code === 'account_suspended') {
+        setError(detail.code);
+      } else {
+        setError(detail.message);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [markOnboarded, router]);
+  }, [markOnboarded, router, fetchMe]);
 
   useEffect(() => { loadStatus(true); }, [loadStatus]);
 
@@ -325,11 +326,28 @@ export default function OnboardingScreen() {
           <View style={styles.centered}>
             <View style={[styles.stateCard, { backgroundColor: th.surface, borderColor: th.border }]}>
               <View style={[styles.stateIconCircle, { backgroundColor: 'rgba(239,68,68,0.09)' }]}>
-                <Ionicons name="cloud-offline-outline" size={30} color="#EF4444" />
+                <Ionicons
+                  name={error === 'account_deleted' || error === 'account_suspended' ? 'person-remove-outline' : 'cloud-offline-outline'}
+                  size={30}
+                  color="#EF4444"
+                />
               </View>
-              <Text style={[styles.stateTitle, { color: th.text }]}>{t('onboarding.errorTitle')}</Text>
-              <Text style={[styles.stateSub, { color: th.textSecondary }]}>{error}</Text>
+              <Text style={[styles.stateTitle, { color: th.text }]}>
+                {error === 'account_deleted'
+                  ? t('onboarding.accountDeletedTitle', 'Account Deleted')
+                  : error === 'account_suspended'
+                    ? t('onboarding.accountSuspendedTitle', 'Account Suspended')
+                    : t('onboarding.errorTitle')}
+              </Text>
+              <Text style={[styles.stateSub, { color: th.textSecondary }]}>
+                {error === 'account_deleted'
+                  ? t('onboarding.accountDeletedMsg', 'Your account has been deleted. You will be signed out.')
+                  : error === 'account_suspended'
+                    ? t('onboarding.accountSuspendedMsg', 'Your account has been suspended. Contact support if you believe this is an error.')
+                    : error}
+              </Text>
             </View>
+            {error !== 'account_deleted' && error !== 'account_suspended' && (
             <TouchableOpacity
               onPress={() => loadStatus(true)}
               style={[styles.retryBtn, { backgroundColor: colors.primary }]}
@@ -338,6 +356,7 @@ export default function OnboardingScreen() {
               <Ionicons name="refresh" size={16} color="#FFF" />
               <Text style={styles.retryText}>{t('onboarding.retry')}</Text>
             </TouchableOpacity>
+            )}
           </View>
 
         ) : (

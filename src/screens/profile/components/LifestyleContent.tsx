@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { sanitizeInterests } from '@/utils/interests';
+import { sanitizeInterests, translateInterest } from '@/utils/interests';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -33,6 +34,7 @@ interface LifestyleContentProps {
 }
 
 export default function LifestyleContent({ profile }: LifestyleContentProps) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const items = buildLifestyleItems(profile);
   const interests = sanitizeInterests(profile.interests);
@@ -63,11 +65,11 @@ export default function LifestyleContent({ profile }: LifestyleContentProps) {
                 <Ionicons name="color-palette-outline" size={18} color={colors.primary} />
               </View>
               <View style={styles.textCol}>
-                <Text style={[styles.label, { color: th.textSecondary }]}>Interests</Text>
+                <Text style={[styles.label, { color: th.textSecondary }]}>{t('interests.label')}</Text>
                 <View style={styles.chipWrap}>
                   {interests.map((interest) => (
                     <View key={interest} style={[styles.chip, { backgroundColor: th.backgroundSelected, borderColor: th.border }]}>
-                      <Text style={[styles.chipText, { color: colors.primary }]}>{interest}</Text>
+                      <Text style={[styles.chipText, { color: colors.primary }]}>{translateInterest(interest, t)}</Text>
                     </View>
                   ))}
                 </View>

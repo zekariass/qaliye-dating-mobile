@@ -6,7 +6,7 @@ import { CardDto } from '@/components/discovery/ProfileCard';
 import { getCountryName } from '@/constants/countries';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getDiscoveryInterests } from '@/utils/interests';
+import { getDiscoveryInterests, translateInterest } from '@/utils/interests';
 
 function formatLabel(value: string): string {
   return value
@@ -61,7 +61,7 @@ interface Props {
 // Section renderer — full-width list with dividers inside a single card
 // ---------------------------------------------------------------------------
 function SectionGroup({
-  group, surfaceBg, iconBg, borderCol, textCol, mutedCol, card,
+  group, surfaceBg, iconBg, borderCol, textCol, mutedCol, card, t,
 }: {
   group: DetailGroup;
   surfaceBg: string;
@@ -70,6 +70,7 @@ function SectionGroup({
   textCol: string;
   mutedCol: string;
   card: CardDto;
+  t: ReturnType<typeof useTranslation>['t'];
 }) {
   const regularItems = group.items.filter((i) => i.label !== 'Interests');
   const { visible: visibleInterests, remaining: remainingInterests } = getDiscoveryInterests(card.interests);
@@ -104,16 +105,16 @@ function SectionGroup({
                 <Ionicons name="color-palette-outline" size={16} color={colors.primary} />
               </View>
               <View style={[styles.detailBody, { gap: 6 }]}>
-                <Text style={[styles.detailLabel, { color: mutedCol }]}>Interests</Text>
+                <Text style={[styles.detailLabel, { color: mutedCol }]}>{t('interests.label')}</Text>
                 <View style={styles.chipWrap}>
                   {visibleInterests.map((interest) => (
                     <View key={interest} style={[styles.chip, { backgroundColor: iconBg, borderColor: borderCol }]}>
-                      <Text style={[styles.chipText, { color: colors.primary }]}>{interest}</Text>
+                      <Text style={[styles.chipText, { color: colors.primary }]}>{translateInterest(interest, t)}</Text>
                     </View>
                   ))}
                   {remainingInterests > 0 && (
                     <View style={[styles.chip, { backgroundColor: 'transparent', borderColor: 'transparent' }]}>
-                      <Text style={[styles.chipMore, { color: mutedCol }]}>+{remainingInterests} more</Text>
+                      <Text style={[styles.chipMore, { color: mutedCol }]}>{t('interests.moreCount', { count: remainingInterests })}</Text>
                     </View>
                   )}
                 </View>
@@ -228,6 +229,7 @@ export default function ProfileDetailsSection({ card }: Props) {
           textCol={th.text}
           mutedCol={th.textMuted}
           card={card}
+          t={t}
         />
       ))}
     </View>

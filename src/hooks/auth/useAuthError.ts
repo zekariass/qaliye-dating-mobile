@@ -4,7 +4,6 @@ export function useAuthError() {
   return useCallback((error: Error | null | undefined): string | null => {
     if (!error) return null;
     const msg = error.message.toLowerCase();
-    console.log('[useAuthError] raw message:', error.message);
     if (msg.includes('invalid login credentials')) return 'auth.loginError';
     if (msg.includes('email not confirmed')) return 'auth.loginError';
     if (msg.includes('user already registered')) return 'auth.signupError';
