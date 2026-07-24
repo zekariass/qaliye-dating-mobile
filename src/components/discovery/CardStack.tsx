@@ -33,7 +33,7 @@ const CardStack = forwardRef<CardStackHandle, Props>(
 
     // Guard undefined/invalid entries; keep top MAX_VISIBLE; reverse so top
     // card renders last and therefore sits above the others in the z-order.
-    const visible = cards
+    const visible = (cards ?? [])
       .filter((c): c is CardDto => {
         if (c == null || typeof c.user_id !== 'string' || !c.user_id) {
           if (__DEV__) {

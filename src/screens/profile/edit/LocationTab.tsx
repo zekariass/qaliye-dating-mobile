@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Pressable,
+    ScrollView,
     Text,
     TextInput,
     View,
@@ -22,6 +23,7 @@ type Props = {
   sem: SemanticTheme;
   onSave: (payload: LocationPayload) => Promise<void>;
   isSaving: boolean;
+  scrollRef: React.RefObject<ScrollView | null>;
 };
 
 function isoToFlag(iso?: string | null): string {
@@ -35,6 +37,7 @@ export const LocationTab = memo(function LocationTab({
   sem,
   onSave,
   isSaving,
+  scrollRef,
 }: Props) {
   const [pendingPayload, setPendingPayload] = useState<LocationPayload | null>(null);
   const [pendingDisplay, setPendingDisplay] = useState<string | null>(null);
@@ -44,6 +47,7 @@ export const LocationTab = memo(function LocationTab({
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchInputWrapRef = useRef<View>(null);
 
   // ─── Debounced city search ───────────────────────────────────────────
   useEffect(() => {
@@ -179,36 +183,9 @@ export const LocationTab = memo(function LocationTab({
           )}
         </View>
 
-        {/* GPS button */}
-        <Pressable
-          onPress={handleUseCurrentLocation}
-          disabled={isLocating || isSaving}
-          className="flex-row items-center justify-center rounded-xl py-3 mb-3 border"
-          style={{ borderColor: colors.primary, backgroundColor: `${colors.primary}12` }}
-          accessibilityRole="button"
-          accessibilityLabel="Use current GPS location"
-        >
-          {isLocating ? (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
-          ) : (
-            <Ionicons name="locate" size={16} color={colors.primary} style={{ marginRight: 8 }} />
-          )}
-          <Text className="text-base font-semibold" style={{ color: colors.primary }}>
-            {isLocating ? 'Getting location…' : 'Use current GPS location'}
-          </Text>
-        </Pressable>
-
-        {/* Divider */}
-        <View className="flex-row items-center my-3">
-          <View className="flex-1 h-px" style={{ backgroundColor: sem.border }} />
-          <Text className="text-sm mx-3" style={{ color: sem.textMuted }}>
-            or search a city
-          </Text>
-          <View className="flex-1 h-px" style={{ backgroundColor: sem.border }} />
-        </View>
-
         {/* Search input */}
         <View
+          ref={searchInputWrapRef}
           className="flex-row items-center rounded-xl px-3 py-2.5 mb-2 border"
           style={{ backgroundColor: sem.surface, borderColor: sem.border }}
         >
@@ -218,6 +195,17 @@ export const LocationTab = memo(function LocationTab({
             onChangeText={(t) => {
               setQuery(t);
               setLocationError(null);
+            }}
+            onFocus={() => {
+              setTimeout(() => {
+                searchInputWrapRef.current?.measureLayout(
+                  scrollRef.current as any,
+                  (_x, y) => {
+                    scrollRef.current?.scrollTo({ y: Math.max(0, y - 60), animated: true });
+                  },
+                  () => {},
+                );
+              }, 300);
             }}
             placeholder="Search city…"
             placeholderTextColor={sem.textMuted}
@@ -276,6 +264,34 @@ export const LocationTab = memo(function LocationTab({
             ))}
           </View>
         )}
+
+        {/* Divider */}
+        <View className="flex-row items-center my-3">
+          <View className="flex-1 h-px" style={{ backgroundColor: sem.border }} />
+          <Text className="text-sm mx-3" style={{ color: sem.textMuted }}>
+            or use GPS
+          </Text>
+          <View className="flex-1 h-px" style={{ backgroundColor: sem.border }} />
+        </View>
+
+        {/* GPS button */}
+        <Pressable
+          onPress={handleUseCurrentLocation}
+          disabled={isLocating || isSaving}
+          className="flex-row items-center justify-center rounded-xl py-3 mb-3 border"
+          style={{ borderColor: colors.primary, backgroundColor: `${colors.primary}12` }}
+          accessibilityRole="button"
+          accessibilityLabel="Use current GPS location"
+        >
+          {isLocating ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
+          ) : (
+            <Ionicons name="locate" size={16} color={colors.primary} style={{ marginRight: 8 }} />
+          )}
+          <Text className="text-base font-semibold" style={{ color: colors.primary }}>
+            {isLocating ? 'Getting location…' : 'Use current GPS location'}
+          </Text>
+        </Pressable>
 
         {/* Error */}
         {locationError && (

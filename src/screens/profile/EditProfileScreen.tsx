@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    KeyboardAvoidingView,
+    Keyboard,
     Platform,
     ScrollView,
     Text,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -46,6 +46,8 @@ export default function EditProfileScreen() {
   const canUseIncognito = entitlements?.features?.incognito_mode ?? isPremiumPlan(entitlements?.plan) ?? false;
 
   const [activeTab, setActiveTab] = useState<TabKey>('bio');
+  const scrollRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [draft, setDraft] = useState<EditProfileDraft | null>(null);
   const [prefs, setPrefs] = useState<DiscoveryPrefDraft | null>(null);
 
@@ -59,6 +61,28 @@ export default function EditProfileScreen() {
   const registerPhotoMutation = useRegisterPhoto();
   const reorderPhotosMutation = useReorderPhotos();
   const deletePhotoMutation = useDeletePhoto();
+
+  // ─── Track keyboard height for dynamic bottom padding ────────────────
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardWillShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+    const showSubAndroid = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSubAndroid = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+      showSubAndroid.remove();
+      hideSubAndroid.remove();
+    };
+  }, []);
 
   // ─── Initialise form state from API data ──────────────────────────────
   const [draftVersion, setDraftVersion] = useState(0);
@@ -337,6 +361,7 @@ export default function EditProfileScreen() {
             sem={sem}
             onSave={handleSaveLocation}
             isSaving={updateLocationMutation.isPending}
+            scrollRef={scrollRef}
           />
         );
       case 'preferences':
@@ -358,23 +383,24 @@ export default function EditProfileScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: sem.bg, paddingTop: safeTop }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-      >
-        <EditProfileHeader sem={sem} onSave={handleSave} isSaving={isSaving} />
-        <ProfileCompletionBar percent={completionPercent} sem={sem} />
-        <EditProfileTabBar activeTab={activeTab} onTabChange={setActiveTab} sem={sem} />
+      <EditProfileHeader sem={sem} onSave={handleSave} isSaving={isSaving} />
+      <ProfileCompletionBar percent={completionPercent} sem={sem} />
+      <EditProfileTabBar activeTab={activeTab} onTabChange={setActiveTab} sem={sem} />
 
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ padding: 10, paddingBottom: safeBottom + 24 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {renderTab()}
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <ScrollView
+        ref={scrollRef}
+        className="flex-1"
+        contentContainerStyle={{
+          padding: 10,
+          paddingBottom: keyboardHeight > 0 ? keyboardHeight + safeBottom + 24 : safeBottom + 24,
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        contentInsetAdjustmentBehavior="automatic"
+      >
+        {renderTab()}
+      </ScrollView>
     </View>
   );
 }

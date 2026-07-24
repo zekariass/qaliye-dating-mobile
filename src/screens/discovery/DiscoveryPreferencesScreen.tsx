@@ -294,7 +294,8 @@ export default function DiscoveryPreferencesScreen() {
           </View>
         </Card>
 
-        {/* ── Max Distance ── */}
+        {/* ── Max Distance (only for Nearby mode) ── */}
+        {prefs.locationMode === 'nearby' && (
         <Card>
           <View style={styles.distanceHeader}>
             <STitle label={t('discovery.preferences.maxDistance')} />
@@ -319,18 +320,23 @@ export default function DiscoveryPreferencesScreen() {
             <Text style={styles.sliderEndText}>500 km</Text>
           </View>
         </Card>
+        )}
 
         {/* ── Toggles ── */}
         <Card>
-          <TRow
-            label="Expand search when limited"
-            desc="Broaden discovery if few matches found"
-            iconName="search-outline"
-            iconBg="#F59E0B"
-            value={prefs.expandSearchWhenLimited}
-            onChange={(v) => update('expandSearchWhenLimited', v)}
-          />
-          <View style={[styles.divider, { backgroundColor: th.border }]} />
+          {prefs.locationMode === 'nearby' && (
+            <>
+              <TRow
+                label="Expand search when limited"
+                desc="Broaden discovery if few matches found"
+                iconName="search-outline"
+                iconBg="#F59E0B"
+                value={prefs.expandSearchWhenLimited}
+                onChange={(v) => update('expandSearchWhenLimited', v)}
+              />
+              <View style={[styles.divider, { backgroundColor: th.border }]} />
+            </>
+          )}
           <TRow
             label={t('discovery.preferences.showVerifiedOnly')}
             desc={t('discovery.preferences.verifiedDesc')}
@@ -343,7 +349,7 @@ export default function DiscoveryPreferencesScreen() {
 
         {/* ── Has Children Preference ── */}
         <Card>
-          <STitle label="Preferred: has children" />
+          <STitle label="Has children" />
           <View style={styles.chipRow}>
             {HAS_CHILDREN_OPTS.map(({ key, label }) => {
               const isActive = prefs.hasChildrenPreference === key;
@@ -364,7 +370,7 @@ export default function DiscoveryPreferencesScreen() {
 
         {/* ── Wants Children Preference ── */}
         <Card>
-          <STitle label="Preferred: wants children" />
+          <STitle label="Wants children" />
           <View style={styles.chipRow}>
             {WANTS_CHILDREN_OPTS.map(({ key, label }) => {
               const isActive = prefs.wantsChildrenPreference === key;

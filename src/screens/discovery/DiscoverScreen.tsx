@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
+    AppState,
     Dimensions,
     ScrollView,
     StyleSheet,
@@ -23,14 +24,15 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PromotionAlert } from '@/components/billing/PromotionAlert';
-import QaliyeLogo from '@/components/common/QaliyeLogo';
 import { themedAlert } from '@/components/common/ThemedAlert';
+import BrowseModeGrid from '@/components/discovery/BrowseModeGrid';
 import CardActionButtons from '@/components/discovery/CardActionButtons';
 import CardStack, { CardStackHandle } from '@/components/discovery/CardStack';
 import MatchCelebrationOverlay from '@/components/discovery/MatchCelebrationOverlay';
 import MorePhotosSection from '@/components/discovery/MorePhotosSection';
 import { CardDto } from '@/components/discovery/ProfileCard';
 import ProfileDetailsSection from '@/components/discovery/ProfileDetailsSection';
+import { SwipeIcon } from '@/components/layout/AppTabBar';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useActivateBoost } from '@/hooks/billing/useActivateBoost';
 import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
@@ -42,6 +44,7 @@ import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useTheme } from '@/hooks/use-theme';
 import { useReviewPrompt } from '@/hooks/useReviewPrompt';
+import { useDiscoveryStore } from '@/stores/discovery-store';
 import { usePromotionStore } from '@/stores/promotion-store';
 import type { EligiblePromotionDto } from '@/types/billing';
 import { isPremiumPlan } from '@/types/billing';
@@ -283,6 +286,8 @@ export default function DiscoverScreen() {
 
   const [displayQueue, setDisplayQueue] = useState<CardDto[]>([]);
   const [rewindIncoming, setRewindIncoming] = useState<'LIKE' | 'PASS' | false>(false);
+  const [browseRewindTrigger, setBrowseRewindTrigger] = useState(0);
+  const [swipedIds, setSwipedIds] = useState<Set<string>>(new Set());
   const [matchVisible, setMatchVisible] = useState(false);
   const [matchName, setMatchName] = useState('');
   const [matchPhoto, setMatchPhoto] = useState<string | undefined>(undefined);
@@ -292,6 +297,8 @@ export default function DiscoverScreen() {
   const [superLikeExhausted, setSuperLikeExhausted] = useState(false);
   const [isRewinding, setIsRewinding] = useState(false);
   const [activePromotion, setActivePromotion] = useState<EligiblePromotionDto | null>(null);
+  const viewMode = useDiscoveryStore((s) => s.viewMode);
+  const setViewMode = useDiscoveryStore((s) => s.setViewMode);
   const router = useRouter();
 
   // ── API hooks ──────────────────────────────────────────────────────────────
@@ -327,6 +334,16 @@ export default function DiscoverScreen() {
       recordShown(selectedPromotion.campaign_key);
     }, [selectedPromotion, activePromotion, canShowPromotion, recordShown]),
   );
+
+  // Reset to swipe mode when app returns from background to active
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        setViewMode('swipe');
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const handleDismissPromotion = useCallback(() => {
     if (activePromotion) {
@@ -555,6 +572,7 @@ export default function DiscoverScreen() {
       lastSwipedCardRef.current = card;
       lastSwipedDirRef.current  = direction;
       setDisplayQueue((prev) => prev.filter((c) => c.user_id !== card.user_id));
+      setSwipedIds((prev) => new Set(prev).add(card.user_id));
       swipe(
         { type: isSuperLike ? 'SUPER_LIKE' : direction, targetUserId: card.user_id },
         {
@@ -571,10 +589,12 @@ export default function DiscoverScreen() {
             const errorType = getQuotaErrorType(e);
             if (isSuperLike || errorType === 'SUPER_LIKES') {
               shownIdsRef.current.delete(card.user_id);
+              setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
               setDisplayQueue((prev) => [card, ...prev]);
               setSuperLikeExhausted(true);
             } else if (direction === 'LIKE' || errorType === 'LIKES') {
               shownIdsRef.current.delete(card.user_id);
+              setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
               setDisplayQueue((prev) => [card, ...prev]);
               router.push('/(app)/premium' as any);
             }
@@ -708,15 +728,42 @@ export default function DiscoverScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: th.background }]} edges={['top']}>
       {/* ── Header ─────────────────────────────────── */}
       <View style={styles.header}>
-        {/* Qaliye logo */}
-        <View
-          style={[
-            styles.logoContainer,
-            { backgroundColor: isDark ? th.backgroundElement : th.surface, borderColor: th.border },
-          ]}
+        {/* Mode toggle — replaces Qaliye logo */}
+        <TouchableOpacity
+          style={styles.logoContainer}
+          onPress={() => setViewMode(viewMode === 'swipe' ? 'browse' : 'swipe')}
+          activeOpacity={0.7}
+          accessibilityLabel={viewMode === 'swipe' ? 'Switch to browse mode' : 'Switch to swipe mode'}
+          accessibilityRole="button"
         >
-          <QaliyeLogo />
-        </View>
+          {viewMode === 'swipe' ? (
+            <Ionicons name="grid-outline" size={22} color={th.text} />
+          ) : (
+            <SwipeIcon color={th.text} active={false} inactiveFill={isDark ? '#E5E7EB' : '#0B0B0B'} />
+          )}
+        </TouchableOpacity>
+
+        {/* Rewind — browse mode only */}
+        {viewMode === 'browse' && (
+          <TouchableOpacity
+            style={[styles.settingsBtn, { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
+            onPress={() => setBrowseRewindTrigger((n) => n + 1)}
+            activeOpacity={0.7}
+            disabled={!checkCanRewind(entitlements)}
+            accessibilityLabel="Rewind last action"
+            accessibilityRole="button"
+          >
+            <Text
+              style={{
+                fontSize: 22,
+                fontWeight: '700',
+                color: checkCanRewind(entitlements) ? '#F97316' : th.textSecondary,
+              }}
+            >
+              ↺
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Incognito indicator OR Boost control */}
         {isIncognito ? (
@@ -747,6 +794,46 @@ export default function DiscoverScreen() {
 
       {/* ── Main content (scrollable + fixed buttons) ── */}
       <View style={styles.main}>
+        {viewMode === 'browse' ? (
+          <BrowseModeGrid
+            cards={apiCards}
+            isLoading={isLoading}
+            isError={isError}
+            onRefresh={refetch}
+            isRefreshing={isRefetching}
+            onSwitchToSwipe={() => setViewMode('swipe')}
+            onMatch={(response) => {
+              if (response.isMatch && response.match) {
+                setMatchName(response.match.otherUser.displayName);
+                setMatchPhoto(response.match.otherUser.primaryPhotoUrl ?? undefined);
+                setMatchId(response.match.matchId);
+                setMatchVisible(true);
+              }
+            }}
+            onRewind={() => {}}
+            canRewind={checkCanRewind(entitlements)}
+            canSuperLike={checkCanSuperLike(entitlements)}
+            rewindTrigger={browseRewindTrigger}
+            swipedIds={swipedIds}
+            onCardAction={(userId, swiped, card) => {
+              setSwipedIds((prev) => {
+                const next = new Set(prev);
+                if (swiped) next.add(userId);
+                else next.delete(userId);
+                return next;
+              });
+              if (swiped) {
+                setDisplayQueue((prev) => prev.filter((c) => c.user_id !== userId));
+              } else if (card) {
+                setDisplayQueue((prev) => {
+                  if (prev.some((c) => c.user_id === userId)) return prev;
+                  return [card, ...prev];
+                });
+              }
+            }}
+          />
+        ) : (
+        <>
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
@@ -761,6 +848,7 @@ export default function DiscoverScreen() {
         >
           {/* Card zone — fixed height filling available space */}
           <View style={[styles.cardArea, { height: CARD_AREA_H }]}>
+
             {showAnimation ? (
               <FindingMatchesAnimation
                 accentColor={colors.primary}
@@ -850,6 +938,8 @@ export default function DiscoverScreen() {
             />
           </View>
         )}
+        </>
+        )}
       </View>
 
       {/* ── Overlays ───────────────────────────────── */}
@@ -899,17 +989,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   logoContainer: {
-    height: 44,
+    width: 42,
+    height: 42,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
   },
   incognitoIndicator: {
     flexDirection: 'row',
@@ -1045,4 +1128,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+
+
 });

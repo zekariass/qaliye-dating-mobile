@@ -334,6 +334,7 @@ import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useInbox } from '@/hooks/messages/useInbox';
 import { useInboxChannel } from '@/hooks/messages/useInboxChannel';
 import { useTheme } from '@/hooks/use-theme';
+import { useDiscoveryStore } from '@/stores/discovery-store';
 
 // ---------------------------------------------------------------------------
 // Type mirrors of what Expo Router passes to tabBar
@@ -412,7 +413,7 @@ function ChatBubblesIcon() {
   return <Ionicons name="chatbubbles" size={22} color="#fff" />;
 }
 
-function SwipeIcon({
+export function SwipeIcon({
   color,
   active,
   inactiveFill,
@@ -465,6 +466,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
   const router = useRouter();
   const userId = useCurrentUserId();
   const qc = useQueryClient();
+  const viewMode = useDiscoveryStore((s) => s.viewMode);
 
   // Keep inbox fresh so the unread badge is always up to date
   useInboxChannel(userId, 'ALL');
@@ -595,7 +597,11 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
                     inactiveFill={swipeInactiveFill}
                   />
                 ) : route.name === 'index' ? (
-                  <SwipeIcon color={iconColor} active={isFocused} inactiveFill={swipeInactiveFill} />
+                  viewMode === 'browse' ? (
+                    <Ionicons name="grid-outline" size={23} color={iconColor} />
+                  ) : (
+                    <SwipeIcon color={iconColor} active={isFocused} inactiveFill={swipeInactiveFill} />
+                  )
                 ) : (
                   <Ionicons
                     name={tabIcon(route.name, isFocused)}
@@ -612,7 +618,9 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
                   isFocused && { color: activeColor, fontWeight: '700' },
                 ]}
               >
-                {LABELS[route.name] ?? ''}
+                {route.name === 'index'
+                  ? (viewMode === 'browse' ? 'Browse' : 'Swipe')
+                  : (LABELS[route.name] ?? '')}
               </Text>
             </TouchableOpacity>
           );

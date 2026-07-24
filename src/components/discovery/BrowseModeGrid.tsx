@@ -1,0 +1,867 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import Animated, {
+    Easing,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
+} from 'react-native-reanimated';
+
+import VerifiedBadge from '@/components/common/VerifiedBadge';
+import BrowseProfileDetailSheet from '@/components/discovery/BrowseProfileDetailSheet';
+import { CardDto } from '@/components/discovery/ProfileCard';
+import { colors, radius, spacing } from '@/constants/theme';
+import { mapProfileToCard } from '@/hooks/discovery/useDiscoveryProfiles';
+import { useRewind } from '@/hooks/discovery/useRewind';
+import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
+import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
+import { useTheme } from '@/hooks/use-theme';
+import type { SwipeActionResponse } from '@/types/discovery';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const CARD_W = SCREEN_W - spacing.md * 2;
+const CARD_H = CARD_W * 1.1;
+const ACTION_BTN = 44;
+
+interface BrowseItem {
+  user_id: string;
+  display_name: string;
+  age: number;
+  distance_km: number | null;
+  is_verified: boolean;
+  city: string;
+  country_name: string;
+  primary_photo: string | null;
+  relationship_intention: string;
+  bio?: string;
+}
+
+function mapCardToBrowseItem(card: CardDto): BrowseItem {
+  return {
+    user_id: card.user_id,
+    display_name: card.display_name,
+    age: card.age,
+    distance_km: card.distance_km,
+    is_verified: card.is_verified,
+    city: card.city,
+    country_name: card.country_name,
+    primary_photo: card.photos?.[0]?.image_url ?? null,
+    relationship_intention: card.relationship_intention,
+    bio: card.bio,
+  };
+}
+
+function formatIntention(value: string): string {
+  if (!value) return '';
+  return value
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// ── Skeleton card ─────────────────────────────────────────────────────────
+function SkeletonCard({ themeBg }: { themeBg: string }) {
+  return (
+    <View style={[styles.card, { backgroundColor: themeBg }]}>
+      <View style={styles.skeletonPhoto} />
+      <View style={styles.skeletonInfo}>
+        <View style={styles.skeletonLine} />
+        <View style={[styles.skeletonLine, { width: '60%' }]} />
+      </View>
+    </View>
+  );
+}
+
+// ── Profile card ──────────────────────────────────────────────────────────
+function BrowseProfileCard({
+  item,
+  onPress,
+  onLike,
+  onPass,
+  cardBg,
+  iconBg,
+  borderColor,
+  textColor,
+  isActing,
+}: {
+  item: BrowseItem;
+  onPress: (userId: string) => void;
+  onLike: (userId: string) => void;
+  onPass: (userId: string) => void;
+  cardBg: string;
+  iconBg: string;
+  borderColor: string;
+  textColor: string;
+  isActing: boolean;
+}) {
+  const { data: myProfile } = useCurrentProfile();
+  const myCountry = myProfile?.address?.country_name ?? '';
+
+  const translateX = useSharedValue(0);
+  const cardOpacity = useSharedValue(1);
+  const stampOpacity = useSharedValue(0);
+  const [animating, setAnimating] = useState(false);
+  const actionType = useSharedValue<'none' | 'pass' | 'like'>('none');
+
+  const locationText = useMemo(() => {
+    const sameCountry = myCountry !== '' && item.country_name === myCountry;
+    const place = sameCountry
+      ? item.city
+      : item.country_name;
+    return place ?? '';
+  }, [item.city, item.country_name, myCountry]);
+
+  const animateAndAction = useCallback(
+    (action: 'pass' | 'like', fn: () => void) => {
+      if (animating) return;
+      setAnimating(true);
+      actionType.value = action;
+
+      // Show stamp first
+      stampOpacity.value = withTiming(1, { duration: 250 });
+
+      // After stamp is visible, slide card off screen
+      const targetX = action === 'pass' ? -SCREEN_W - 60 : SCREEN_W + 60;
+      setTimeout(() => {
+        translateX.value = withTiming(targetX, {
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+        });
+        cardOpacity.value = withTiming(0, { duration: 600 });
+      }, 250);
+
+      // After animation completes, call the action callback
+      setTimeout(() => {
+        runOnJS(setAnimating)(false);
+        fn();
+      }, 250 + 620);
+    },
+    [animating, stampOpacity, translateX, cardOpacity, actionType],
+  );
+
+  const handlePass = useCallback(() => {
+    animateAndAction('pass', () => onPass(item.user_id));
+  }, [animateAndAction, onPass, item.user_id]);
+
+  const handleLike = useCallback(() => {
+    animateAndAction('like', () => onLike(item.user_id));
+  }, [animateAndAction, onLike, item.user_id]);
+
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    opacity: cardOpacity.value,
+  }));
+
+  const likeStampStyle = useAnimatedStyle(() => ({
+    opacity: actionType.value === 'like' ? stampOpacity.value : 0,
+    transform: [{ rotateZ: '-20deg' }],
+  }));
+
+  const passStampStyle = useAnimatedStyle(() => ({
+    opacity: actionType.value === 'pass' ? stampOpacity.value : 0,
+    transform: [{ rotateZ: '20deg' }],
+  }));
+
+  return (
+    <Animated.View style={[styles.card, { backgroundColor: cardBg }, cardAnimatedStyle]}>
+      {/* Photo — tappable to view profile */}
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => onPress(item.user_id)}
+        disabled={animating || isActing}
+        accessibilityLabel={`View ${item.display_name}'s profile`}
+        accessibilityRole="button"
+      >
+        <View style={styles.photoWrap}>
+          {item.primary_photo ? (
+            <Image
+              source={{ uri: item.primary_photo }}
+              style={styles.photo}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View style={[styles.photo, styles.photoPlaceholder]}>
+              <Ionicons name="person" size={48} color={colors.primaryLight} />
+            </View>
+          )}
+
+          {/* Gradient overlay for text readability */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.80)']}
+            locations={[0.35, 1]}
+            style={styles.photoOverlay}
+          />
+
+          {/* Verified badge — top right */}
+          {item.is_verified && (
+            <View style={styles.verifiedWrap}>
+              <VerifiedBadge size={18} />
+            </View>
+          )}
+
+          {/* Action stamps — LIKE / PASS */}
+          <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]} pointerEvents="none">
+            <Text style={styles.likeStampText}>LIKE</Text>
+          </Animated.View>
+          <Animated.View style={[styles.stamp, styles.passStamp, passStampStyle]} pointerEvents="none">
+            <Text style={styles.passStampText}>PASS</Text>
+          </Animated.View>
+
+          {/* Name + age + location — bottom of photo */}
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardName} numberOfLines={1}>
+              {item.display_name}
+              <Text style={styles.cardAge}>  · {item.age}</Text>
+            </Text>
+            {locationText ? (
+              <View style={styles.locationRow}>
+                <Ionicons name="location" size={11} color="rgba(255,255,255,0.85)" />
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {locationText}
+                  {item.distance_km != null && item.distance_km > 0
+                    ? `  ·  ${item.distance_km} km`
+                    : ''}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {/* Info section */}
+      <View style={styles.infoSection}>
+        {/* Bio */}
+        {item.bio ? (
+          <Text style={[styles.bioText, { color: textColor }]} numberOfLines={2}>
+            {item.bio}
+          </Text>
+        ) : null}
+
+        {/* Intention pill */}
+        {item.relationship_intention ? (
+          <View style={[styles.intentionPill, { backgroundColor: iconBg, borderColor }]}>
+            <Ionicons name="heart-outline" size={12} color={colors.primary} />
+            <Text style={styles.intentionText} numberOfLines={1}>
+              {formatIntention(item.relationship_intention)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Action buttons */}
+      <View style={[styles.actionRow, { borderColor }]}>
+        {/* Pass */}
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: iconBg }]}
+          onPress={handlePass}
+          disabled={animating || isActing}
+          activeOpacity={0.7}
+          accessibilityLabel="Pass profile"
+          accessibilityRole="button"
+        >
+          <Ionicons name="close" size={22} color={colors.danger} />
+        </TouchableOpacity>
+
+        {/* View profile */}
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.actionBtnCenter, { backgroundColor: colors.primary }]}
+          onPress={() => onPress(item.user_id)}
+          disabled={animating || isActing}
+          activeOpacity={0.7}
+          accessibilityLabel="View profile"
+          accessibilityRole="button"
+        >
+          <Ionicons name="eye-outline" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        {/* Like */}
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: iconBg }]}
+          onPress={handleLike}
+          disabled={animating || isActing}
+          activeOpacity={0.7}
+          accessibilityLabel="Like profile"
+          accessibilityRole="button"
+        >
+          <Ionicons name="heart" size={20} color={colors.heartPink} />
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────
+interface Props {
+  cards: CardDto[];
+  isLoading: boolean;
+  isError: boolean;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+  onSwitchToSwipe: () => void;
+  onMatch?: (response: SwipeActionResponse) => void;
+  onRewind: () => void;
+  canRewind: boolean;
+  canSuperLike: boolean;
+  rewindTrigger: number;
+  swipedIds: Set<string>;
+  onCardAction: (userId: string, swiped: boolean, card?: CardDto) => void;
+}
+
+export default function BrowseModeGrid({
+  cards,
+  isLoading,
+  isError,
+  onRefresh,
+  isRefreshing,
+  onSwitchToSwipe,
+  onMatch,
+  onRewind,
+  canRewind,
+  canSuperLike,
+  rewindTrigger,
+  swipedIds,
+  onCardAction,
+}: Props) {
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
+  const { mutateAsync: swipeAction, isPending: isSwiping } = useSwipeAction();
+  const rewindMutation = useRewind();
+
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const lastHiddenRef = useRef<{ userId: string; card: CardDto } | null>(null);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<CardDto | null>(null);
+  const [restoredCards, setRestoredCards] = useState<CardDto[]>([]);
+  const [isRewinding, setIsRewinding] = useState(false);
+
+  const allItems = useMemo(() => cards.map(mapCardToBrowseItem), [cards]);
+  const restoredItems = useMemo(
+    () => restoredCards.map(mapCardToBrowseItem),
+    [restoredCards],
+  );
+  const items = useMemo(() => {
+    // Restored cards first, then original cards minus hidden and swiped
+    const restored = restoredItems.filter((it) => !hiddenIds.has(it.user_id) && !swipedIds.has(it.user_id));
+    const original = allItems.filter((it) => !hiddenIds.has(it.user_id) && !swipedIds.has(it.user_id));
+    // Avoid duplicates: skip original items already in restored
+    const restoredIds = new Set(restored.map((it) => it.user_id));
+    return [...restored, ...original.filter((it) => !restoredIds.has(it.user_id))];
+  }, [allItems, restoredItems, hiddenIds, swipedIds]);
+
+  // Map userId back to full CardDto for the detail sheet
+  const cardMap = useMemo(() => {
+    const m = new Map<string, CardDto>();
+    cards.forEach((c) => m.set(c.user_id, c));
+    restoredCards.forEach((c) => m.set(c.user_id, c));
+    return m;
+  }, [cards, restoredCards]);
+
+  const handlePress = useCallback(
+    (userId: string) => {
+      const card = cardMap.get(userId);
+      if (card) {
+        setSelectedCard(card);
+        setSheetVisible(true);
+      }
+    },
+    [cardMap],
+  );
+
+  const handleCloseSheet = useCallback(() => {
+    setSheetVisible(false);
+    setSelectedCard(null);
+  }, []);
+
+  const handleSwipe = useCallback(
+    async (type: 'LIKE' | 'PASS' | 'SUPER_LIKE', userId: string) => {
+      const card = cardMap.get(userId);
+      if (card) {
+        lastHiddenRef.current = { userId, card };
+      }
+      setHiddenIds((prev) => new Set(prev).add(userId));
+      onCardAction(userId, true);
+      // If sheet is open, delay closing so confirmation message is visible
+      if (sheetVisible) {
+        setTimeout(() => setSheetVisible(false), 1200);
+      } else {
+        setSheetVisible(false);
+      }
+      try {
+        const response = await swipeAction({ type, targetUserId: userId });
+        if ((type === 'LIKE' || type === 'SUPER_LIKE') && response.isMatch && onMatch) {
+          onMatch(response);
+        }
+      } catch {
+        // On error, restore the card so the user can retry
+        lastHiddenRef.current = null;
+        onCardAction(userId, false);
+        setHiddenIds((prev) => {
+          const next = new Set(prev);
+          next.delete(userId);
+          return next;
+        });
+      }
+    },
+    [swipeAction, onMatch, cardMap, onCardAction, sheetVisible],
+  );
+
+  // ── Rewind: call API, show spinner, prepend restored card ──
+  const handleBrowseRewind = useCallback(async () => {
+    if (isRewinding) return;
+    setIsRewinding(true);
+    setSheetVisible(false);
+    try {
+      const response = await rewindMutation.mutateAsync(undefined);
+      const res = response as any;
+      const rawProfile = res.restoredProfile ?? res.restored_profile;
+      const restoredCard: CardDto | null = rawProfile
+        ? mapProfileToCard(rawProfile)
+        : lastHiddenRef.current?.card ?? null;
+
+      if (restoredCard) {
+        // Remove from hiddenIds if present
+        setHiddenIds((prev) => {
+          if (!prev.has(restoredCard.user_id)) return prev;
+          const next = new Set(prev);
+          next.delete(restoredCard.user_id);
+          return next;
+        });
+        // Remove from parent swipedIds so it shows in swipe mode too
+        onCardAction(restoredCard.user_id, false, restoredCard);
+        // Prepend to restored cards (avoid duplicates)
+        setRestoredCards((prev) => {
+          if (prev.some((c) => c.user_id === restoredCard.user_id)) return prev;
+          return [restoredCard, ...prev];
+        });
+      }
+      lastHiddenRef.current = null;
+      // Notify parent so swipe mode state stays consistent
+      onRewind();
+    } catch {
+      // Error — just hide spinner, parent handles quota errors
+      onRewind();
+    } finally {
+      setIsRewinding(false);
+    }
+  }, [isRewinding, rewindMutation, onRewind, onCardAction]);
+
+  // React to rewind trigger from header button
+  const lastRewindTriggerRef = useRef(rewindTrigger);
+  useEffect(() => {
+    if (rewindTrigger !== lastRewindTriggerRef.current) {
+      lastRewindTriggerRef.current = rewindTrigger;
+      handleBrowseRewind();
+    }
+  }, [rewindTrigger]);
+
+  const handleLike = useCallback(
+    (userId: string) => handleSwipe('LIKE', userId),
+    [handleSwipe],
+  );
+  const handlePass = useCallback(
+    (userId: string) => handleSwipe('PASS', userId),
+    [handleSwipe],
+  );
+  const handleSuperLike = useCallback(
+    (userId: string) => handleSwipe('SUPER_LIKE', userId),
+    [handleSwipe],
+  );
+
+  const cardBg = isDark ? th.backgroundElement : th.surface;
+  const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';
+  const skeletonBg = isDark ? th.backgroundElement : colors.backgroundLavender;
+
+  // ── Loading state ──
+  if (isLoading && items.length === 0) {
+    return (
+      <View style={styles.container}>
+        <FlatList
+          data={Array.from({ length: 4 })}
+          keyExtractor={(_, i) => `skeleton-${i}`}
+          contentContainerStyle={styles.listContent}
+          scrollEnabled={false}
+          renderItem={() => <SkeletonCard themeBg={skeletonBg} />}
+        />
+      </View>
+    );
+  }
+
+  // ── Error state ──
+  if (isError && items.length === 0) {
+    return (
+      <View style={styles.stateWrap}>
+        <View style={[styles.stateIconCircle, { backgroundColor: skeletonBg }]}>
+          <Ionicons name="cloud-offline-outline" size={44} color={colors.danger} />
+        </View>
+        <Text style={[styles.stateTitle, { color: th.text }]}>Something went wrong</Text>
+        <Text style={[styles.stateSubtitle, { color: th.textSecondary }]}>
+          Check your connection and try again.
+        </Text>
+        <TouchableOpacity style={styles.stateBtn} activeOpacity={0.85} onPress={onRefresh}>
+          <Ionicons name="refresh-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
+          <Text style={styles.stateBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ── Empty state ──
+  if (!isLoading && !isError && items.length === 0) {
+    return (
+      <View style={styles.stateWrap}>
+        <View style={[styles.stateIconCircle, { backgroundColor: skeletonBg }]}>
+          <Ionicons name="heart-dislike-outline" size={44} color={colors.primary} />
+        </View>
+        <Text style={[styles.stateTitle, { color: th.text }]}>No profiles to browse</Text>
+        <Text style={[styles.stateSubtitle, { color: th.textSecondary }]}>
+          Try expanding your preferences or check back later for new people.
+        </Text>
+        <TouchableOpacity style={styles.stateBtn} activeOpacity={0.85} onPress={onSwitchToSwipe}>
+          <Ionicons name="card-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
+          <Text style={styles.stateBtnText}>Back to Swipe</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ── Grid ──
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={items}
+        keyExtractor={(item) => item.user_id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        ListFooterComponent={
+          isRefreshing && items.length > 0 ? (
+            <View style={styles.footerLoading}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <BrowseProfileCard
+            item={item}
+            onPress={handlePress}
+            onLike={handleLike}
+            onPass={handlePass}
+            cardBg={cardBg}
+            iconBg={iconBg}
+            borderColor={th.border}
+            textColor={th.text}
+            isActing={isSwiping || isRewinding}
+          />
+        )}
+      />
+
+      {/* Rewind spinner overlay */}
+      {isRewinding && (
+        <View style={styles.rewindOverlay} pointerEvents="none">
+          <View style={[styles.rewindSpinnerWrap, { backgroundColor: isDark ? th.backgroundElement : th.surface }]}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Rewinding…</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Detail sheet */}
+      <BrowseProfileDetailSheet
+        visible={sheetVisible}
+        card={selectedCard}
+        onClose={handleCloseSheet}
+        onLike={handleLike}
+        onPass={handlePass}
+        onSuperLike={handleSuperLike}
+        canSuperLike={canSuperLike}
+        isActing={isSwiping || isRewinding}
+      />
+    </View>
+  );
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+  },
+  listContent: {
+    paddingVertical: spacing.sm,
+    paddingBottom: 100,
+    gap: 14,
+  },
+
+  // ── Rewind overlay ──
+  rewindOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  rewindSpinnerWrap: {
+    borderRadius: radius.lg,
+    paddingHorizontal: 28,
+    paddingVertical: 22,
+    alignItems: 'center',
+    gap: 12,
+  },
+  rewindSpinnerText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // ── Card ──
+  card: {
+    width: CARD_W,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
+  },
+  photoWrap: {
+    width: '100%',
+    height: CARD_H,
+    position: 'relative',
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
+  photoPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundLavender,
+  },
+  photoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+  },
+  verifiedWrap: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 3,
+  },
+  cardInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    zIndex: 2,
+  },
+  cardName: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  cardAge: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.85)',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
+  },
+  locationText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.80)',
+    fontWeight: '600',
+  },
+
+  // ── Action stamps ──
+  stamp: {
+    position: 'absolute',
+    top: '18%',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderWidth: 3,
+    borderRadius: radius.sm,
+    zIndex: 5,
+  },
+  likeStamp: {
+    left: spacing.lg,
+    borderColor: colors.primary,
+  },
+  likeStampText: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: colors.primary,
+    letterSpacing: 2,
+  },
+  passStamp: {
+    right: spacing.lg,
+    borderColor: colors.danger,
+  },
+  passStampText: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: colors.danger,
+    letterSpacing: 2,
+  },
+
+  // ── Info section (below photo) ──
+  infoSection: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 10,
+    gap: 8,
+  },
+  bioText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  intentionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  intentionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
+  // ── Action buttons row ──
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  actionBtn: {
+    width: ACTION_BTN,
+    height: ACTION_BTN,
+    borderRadius: ACTION_BTN / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  actionBtnCenter: {
+    width: ACTION_BTN + 6,
+    height: ACTION_BTN + 6,
+    borderRadius: (ACTION_BTN + 6) / 2,
+  },
+
+  // ── Skeleton ──
+  skeletonPhoto: {
+    width: '100%',
+    height: CARD_H,
+    backgroundColor: 'rgba(138,44,255,0.08)',
+  },
+  skeletonInfo: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  skeletonLine: {
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(138,44,255,0.12)',
+  },
+
+  // ── State (empty / error) ──
+  stateWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 60,
+  },
+  stateIconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  stateTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  stateSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  stateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 13,
+    borderRadius: radius.full,
+    marginTop: spacing.sm,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  stateBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  footerLoading: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+});
