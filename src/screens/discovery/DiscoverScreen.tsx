@@ -290,6 +290,7 @@ export default function DiscoverScreen() {
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const [syncingCards, setSyncingCards] = useState(false);
   const [superLikeExhausted, setSuperLikeExhausted] = useState(false);
+  const [isRewinding, setIsRewinding] = useState(false);
   const [activePromotion, setActivePromotion] = useState<EligiblePromotionDto | null>(null);
   const router = useRouter();
 
@@ -597,6 +598,7 @@ export default function DiscoverScreen() {
       return;
     }
     isRewindingRef.current = true;
+    setIsRewinding(true);
     await scrollToTop();
     rewind(undefined, {
       onSuccess: (response) => {
@@ -621,13 +623,16 @@ export default function DiscoverScreen() {
           setTimeout(() => {
             setRewindIncoming(false);
             isRewindingRef.current = false;
+            setIsRewinding(false);
           }, 600);
         } else {
           isRewindingRef.current = false;
+          setIsRewinding(false);
         }
       },
       onError: (e) => {
         isRewindingRef.current = false;
+        setIsRewinding(false);
         if (isQuotaError(e)) {
           const status = getRewindsStatus(entitlements);
           if (status.creditsAvailable > 0) {
@@ -805,6 +810,16 @@ export default function DiscoverScreen() {
                 onSwipe={handleSwipe}
                 animateTopCardIn={rewindIncoming}
               />
+            )}
+
+            {/* Rewind loading overlay */}
+            {isRewinding && (
+              <View style={styles.rewindOverlay} pointerEvents="none">
+                <View style={[styles.rewindSpinnerWrap, { backgroundColor: isDark ? th.backgroundElement : th.surface }]}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Rewinding…</Text>
+                </View>
+              </View>
             )}
 
             {/* Scroll-down hint — overlaid on bottom center of card */}
@@ -1001,5 +1016,33 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+
+  // ── Rewind overlay ─────────────────────────────────────────────────────
+  rewindOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 20,
+  },
+  rewindSpinnerWrap: {
+    paddingHorizontal: 28,
+    paddingVertical: 20,
+    borderRadius: 20,
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  rewindSpinnerText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
