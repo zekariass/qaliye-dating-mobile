@@ -12,7 +12,10 @@
       "supportsTablet": false,
       "appStoreUrl": "https://apps.apple.com/app/id6741631870",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Qaliye needs access to your photos to let you add a profile photo.",
+        "NSLocationWhenInUseUsageDescription": "Qaliye uses your location to show you better matches nearby.",
+        "NSMicrophoneUsageDescription": "Qaliye needs access to your microphone to record voice messages in support chat."
       }
     },
     "android": {
@@ -47,7 +50,8 @@
         {
           "icon": "./assets/images/android-icon-monochrome.png",
           "color": "#8A2CFF",
-          "defaultChannel": "qaliye-default"
+          "defaultChannel": "qaliye-default",
+          "notificationPermission": "Qaliye sends notifications about matches, messages, and likes."
         }
       ],
       [
@@ -69,7 +73,7 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.dummy"
+          "iosUrlScheme": "com.googleusercontent.apps.92774223454-mmu2j3123bc6g7hf1fc3ui9nucljhfk9"
         }
       ],
       [

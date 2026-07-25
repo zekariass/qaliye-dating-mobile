@@ -44,8 +44,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        rounded: ['SF Pro Rounded', 'Hiragino Maru Gothic ProN', 'sans-serif'],
+        sans: ['Inter', 'Inter_400Regular', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        rounded: ['Inter_500Medium', 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', 'sans-serif'],
       },
       borderRadius: {
         '4xl': '2rem',

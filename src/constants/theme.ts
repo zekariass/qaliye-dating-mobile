@@ -90,15 +90,15 @@ export const shadows = {
 
 export const Fonts = Platform.select({
   ios: {
-    sans: 'system-ui',
+    sans: 'Inter_400Regular',
     serif: 'ui-serif',
-    rounded: 'ui-rounded',
+    rounded: 'Inter_500Medium',
     mono: 'ui-monospace',
   },
   default: {
-    sans: 'normal',
+    sans: 'Inter_400Regular',
     serif: 'serif',
-    rounded: 'normal',
+    rounded: 'Inter_500Medium',
     mono: 'monospace',
   },
   web: {

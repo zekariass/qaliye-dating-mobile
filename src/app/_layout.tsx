@@ -6,12 +6,23 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import {
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+} from '@expo-google-fonts/inter';
+import { useFonts } from 'expo-font';
+
 import '@/global.css';
 import { useTheme } from '@/hooks/use-theme';
 import '@/i18n';
 import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
+import { applyFontOverride } from '@/utils/fontOverride';
 
+applyFontOverride();
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -43,9 +54,27 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
   const { mode } = useTheme();
   const isDark = mode === 'dark';
   const splashBackground = '#2A0B4F';
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: splashBackground }}>

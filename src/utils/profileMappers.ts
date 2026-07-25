@@ -239,7 +239,9 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
     showVerifiedOnly: dto.discovery_preferences.show_verified_only,
     hasChildrenPreference: dto.discovery_preferences.has_children_preference ?? 'any',
     wantsChildrenPreference: dto.discovery_preferences.wants_children_preference ?? 'any',
-    religionPreferences: dto.discovery_preferences.religion_preferences ?? [],
+    religionPreferences: (dto.discovery_preferences.religion_preferences ?? []).map(
+      (code) => RELIGION_API_TO_LABEL[code] ?? code,
+    ),
     languagePreferences: dto.discovery_preferences.language_preferences ?? [],
     ethnicityPreferences: dto.discovery_preferences.ethnicity_preferences ?? [],
   };
@@ -354,7 +356,9 @@ export function mapApiPrefsToDiscoveryPrefDraft(
     verifiedProfilesOnly: dto.show_verified_only,
     hasChildrenPreference: dto.has_children_preference ?? 'any',
     wantsChildrenPreference: dto.wants_children_preference ?? 'any',
-    religionPreferences: dto.religion_preferences ?? [],
+    religionPreferences: (dto.religion_preferences ?? []).map(
+      (code) => RELIGION_API_TO_LABEL[code] ?? code,
+    ),
     languagePreferences: dto.language_preferences ?? [],
     ethnicityPreferences: dto.ethnicity_preferences ?? [],
     preferencesVersion: dto.preferences_version ?? 0,
@@ -377,7 +381,9 @@ export function mapDiscoveryPrefDraftToUpdateRequest(
     expand_search_when_limited: prefs.expandSearchWhenLimited,
     has_children_preference: prefs.hasChildrenPreference,
     wants_children_preference: prefs.wantsChildrenPreference,
-    religion_preferences: prefs.religionPreferences,
+    religion_preferences: prefs.religionPreferences.map(
+      (label) => RELIGION_LABEL_TO_API[label] ?? label,
+    ),
     language_preference_ids: prefs.languagePreferences.map((l) => l.id),
     ethnicity_preference_ids: prefs.ethnicityPreferences.map((e) => e.id),
     preferences_version: prefs.preferencesVersion,

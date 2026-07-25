@@ -1,3 +1,4 @@
+import { CryptoDigestAlgorithm, digestStringAsync, randomUUID } from 'expo-crypto';
 import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 
@@ -58,16 +59,23 @@ export function useSocialAuth() {
     }
     try {
       const AppleAuthentication = await import('expo-apple-authentication');
+      const rawNonce = randomUUID();
+      const hashedNonce = await digestStringAsync(
+        CryptoDigestAlgorithm.SHA256,
+        rawNonce,
+      );
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: hashedNonce,
       });
       if (!credential.identityToken) throw new Error('Apple sign-in failed');
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
+        nonce: rawNonce,
       });
       if (error) throw error;
     } catch (e) {

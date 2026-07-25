@@ -117,8 +117,8 @@ export default function AuthScreen() {
     const socialError = google.error ?? apple.error;
     const activeError = emailError ?? socialError;
     if (activeError) {
-      const key = getErrorKey(activeError);
-      setGeneralError(key ? t(key) : activeError.message);
+      const message = getErrorKey(activeError);
+      setGeneralError(message ?? activeError.message);
     } else {
       setGeneralError('');
     }
@@ -233,14 +233,14 @@ function handlePhone() {
 
               {Platform.OS === 'ios' && (
               <TouchableOpacity
-                style={[s.socialBtn, s.appleBtn]}
+                style={[s.socialBtn, s.appleBtn, { backgroundColor: isDark ? '#FFFFFF' : '#000000' }]}
                 onPress={handleApple}
                 activeOpacity={0.85}
                 accessibilityRole="button"
                 accessibilityLabel="Continue with Apple"
               >
-                <Ionicons name="logo-apple" size={22} color={isDark ? '#FFFFFF' : '#000000'} />
-                <Text style={[s.socialLabel, { color: isDark ? '#FFFFFF' : '#000000' }]}>
+                <Ionicons name="logo-apple" size={22} color={isDark ? '#000000' : '#FFFFFF'} />
+                <Text style={[s.socialLabel, { color: isDark ? '#000000' : '#FFFFFF' }]}>
                   Continue with Apple
                 </Text>
               </TouchableOpacity>
@@ -562,9 +562,7 @@ const s = StyleSheet.create({
   googleBtn: {
     borderWidth: 1.5,
   },
-  appleBtn: {
-    backgroundColor: '#000000',
-  },
+  appleBtn: {},
 socialLabel: {
     fontSize: fontSize.base,
     fontWeight: '600',

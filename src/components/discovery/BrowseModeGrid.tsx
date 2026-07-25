@@ -35,6 +35,8 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - spacing.md * 2;
 const CARD_H = CARD_W * 1.1;
 const ACTION_BTN = 44;
+const TOTAL_STARS = 12;
+const STAR_RADIUS = 16;
 
 interface BrowseItem {
   user_id: string;
@@ -91,6 +93,8 @@ function BrowseProfileCard({
   onPress,
   onLike,
   onPass,
+  onSuperLike,
+  canSuperLike,
   cardBg,
   iconBg,
   borderColor,
@@ -101,6 +105,8 @@ function BrowseProfileCard({
   onPress: (userId: string) => void;
   onLike: (userId: string) => void;
   onPass: (userId: string) => void;
+  onSuperLike: (userId: string) => void;
+  canSuperLike: boolean;
   cardBg: string;
   iconBg: string;
   borderColor: string;
@@ -114,7 +120,7 @@ function BrowseProfileCard({
   const cardOpacity = useSharedValue(1);
   const stampOpacity = useSharedValue(0);
   const [animating, setAnimating] = useState(false);
-  const actionType = useSharedValue<'none' | 'pass' | 'like'>('none');
+  const actionType = useSharedValue<'none' | 'pass' | 'like' | 'super_like'>('none');
 
   const locationText = useMemo(() => {
     const sameCountry = myCountry !== '' && item.country_name === myCountry;
@@ -125,7 +131,7 @@ function BrowseProfileCard({
   }, [item.city, item.country_name, myCountry]);
 
   const animateAndAction = useCallback(
-    (action: 'pass' | 'like', fn: () => void) => {
+    (action: 'pass' | 'like' | 'super_like', fn: () => void) => {
       if (animating) return;
       setAnimating(true);
       actionType.value = action;
@@ -160,6 +166,11 @@ function BrowseProfileCard({
     animateAndAction('like', () => onLike(item.user_id));
   }, [animateAndAction, onLike, item.user_id]);
 
+  const handleSuperLike = useCallback(() => {
+    if (!canSuperLike) return;
+    animateAndAction('super_like', () => onSuperLike(item.user_id));
+  }, [animateAndAction, onSuperLike, canSuperLike, item.user_id]);
+
   const cardAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
     opacity: cardOpacity.value,
@@ -173,6 +184,11 @@ function BrowseProfileCard({
   const passStampStyle = useAnimatedStyle(() => ({
     opacity: actionType.value === 'pass' ? stampOpacity.value : 0,
     transform: [{ rotateZ: '20deg' }],
+  }));
+
+  const superLikeStampStyle = useAnimatedStyle(() => ({
+    opacity: actionType.value === 'super_like' ? stampOpacity.value : 0,
+    transform: [{ rotateZ: '-15deg' }],
   }));
 
   return (
@@ -214,12 +230,15 @@ function BrowseProfileCard({
             </View>
           )}
 
-          {/* Action stamps — LIKE / PASS */}
+          {/* Action stamps — LIKE / PASS / SUPER LIKE */}
           <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]} pointerEvents="none">
             <Text style={styles.likeStampText}>LIKE</Text>
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.passStamp, passStampStyle]} pointerEvents="none">
             <Text style={styles.passStampText}>PASS</Text>
+          </Animated.View>
+          <Animated.View style={[styles.stamp, styles.superLikeStamp, superLikeStampStyle]} pointerEvents="none">
+            <Text style={styles.superLikeStampText}>SUPER LIKE</Text>
           </Animated.View>
 
           {/* Name + age + location — bottom of photo */}
@@ -277,9 +296,38 @@ function BrowseProfileCard({
           <Ionicons name="close" size={22} color={colors.danger} />
         </TouchableOpacity>
 
+        {/* Super Like — star burst style matching swipe mode */}
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: iconBg, opacity: canSuperLike ? 1 : 0.4 }]}
+          onPress={handleSuperLike}
+          disabled={animating || isActing || !canSuperLike}
+          activeOpacity={0.7}
+          accessibilityLabel="Super like profile"
+          accessibilityRole="button"
+        >
+          <Ionicons name="star" size={26} color={colors.primary} />
+          {Array.from({ length: TOTAL_STARS }).map((_, i) => {
+            const angle = (i / TOTAL_STARS) * 2 * Math.PI - Math.PI / 2;
+            const x = Math.cos(angle) * STAR_RADIUS;
+            const y = Math.sin(angle) * STAR_RADIUS;
+            return (
+              <Ionicons
+                key={i}
+                name="star"
+                size={5}
+                color={colors.primary}
+                style={[
+                  styles.star,
+                  { transform: [{ translateX: x }, { translateY: y }] },
+                ]}
+              />
+            );
+          })}
+        </TouchableOpacity>
+
         {/* View profile */}
         <TouchableOpacity
-          style={[styles.actionBtn, styles.actionBtnCenter, { backgroundColor: colors.primary }]}
+          style={[styles.actionBtn, { backgroundColor: colors.primary }]}
           onPress={() => onPress(item.user_id)}
           disabled={animating || isActing}
           activeOpacity={0.7}
@@ -568,6 +616,8 @@ export default function BrowseModeGrid({
             onPress={handlePress}
             onLike={handleLike}
             onPass={handlePass}
+            onSuperLike={handleSuperLike}
+            canSuperLike={canSuperLike}
             cardBg={cardBg}
             iconBg={iconBg}
             borderColor={th.border}
@@ -686,7 +736,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   cardName: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: -0.3,
@@ -695,7 +745,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   cardAge: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '500',
     color: 'rgba(255,255,255,0.85)',
   },
@@ -740,6 +790,20 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: colors.danger,
     letterSpacing: 2,
+  },
+  superLikeStamp: {
+    left: '50%',
+    marginLeft: -80,
+    borderColor: colors.primary,
+  },
+  superLikeStampText: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.primary,
+    letterSpacing: 1,
+  },
+  star: {
+    position: 'absolute',
   },
 
   // ── Info section (below photo) ──
@@ -789,11 +853,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
-  },
-  actionBtnCenter: {
-    width: ACTION_BTN + 6,
-    height: ACTION_BTN + 6,
-    borderRadius: (ACTION_BTN + 6) / 2,
   },
 
   // ── Skeleton ──
