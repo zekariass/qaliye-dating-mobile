@@ -45,11 +45,7 @@ export default function CompletionStep() {
       const granted = await requestPermission();
       if (!granted) {
         // Permission denied or module unavailable — open device settings
-        if (Platform.OS === 'ios') {
-          await Linking.openURL('app-settings:');
-        } else {
-          await Linking.openSettings();
-        }
+        await Linking.openSettings();
       }
     } catch {
       // silent — user can retry or skip

@@ -4,12 +4,11 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
-    Platform,
     Pressable,
     StyleSheet,
     Switch,
     Text,
-    View,
+    View
 } from 'react-native';
 
 import { themedAlert, themedError } from '@/components/common/ThemedAlert';
@@ -64,22 +63,26 @@ function PreferenceRow({ label, sublabel, value, onValueChange, disabled, isLoad
 export function NotificationSettingsSection() {
   const { t } = useTranslation();
   const { colors: th } = useTheme();
-  const { status: permStatus, checkPermission } = useNotificationPermission();
+  const { status: permStatus, checkPermission, requestPermission } = useNotificationPermission();
   const { data: prefs, isLoading: isLoadingPrefs, isError } = useNotificationPreferences();
   const { mutate: updatePrefs, isPending: isUpdating } = useUpdateNotificationPreferences();
   const [pendingField, setPendingField] = useState<keyof NotificationPreferencesPatch | null>(null);
 
   const permGranted = permStatus === 'granted';
   const permDenied = permStatus === 'denied';
+  const permUndetermined = permStatus === 'undetermined' || permStatus === 'unknown';
 
   const handleOpenDeviceSettings = useCallback(async () => {
-    if (Platform.OS === 'ios') {
-      await Linking.openURL('app-settings:');
-    } else {
-      await Linking.openSettings();
-    }
+    await Linking.openSettings();
     setTimeout(checkPermission, 1500);
   }, [checkPermission]);
+
+  const handleRequestPermission = useCallback(async () => {
+    const granted = await requestPermission();
+    if (!granted) {
+      // User denied — no action needed, UI will update to show "Open Settings"
+    }
+  }, [requestPermission]);
 
   const update = useCallback(
     (patch: NotificationPreferencesPatch) => {
@@ -188,9 +191,33 @@ export function NotificationSettingsSection() {
           <Text style={[styles.permText, { color: th.text }]}>
             {permGranted
               ? t('notifications.deviceEnabled', 'Notifications enabled on this device')
-              : t('notifications.deviceDisabled', 'Notifications disabled in device settings')}
+              : permUndetermined
+                ? t('notifications.deviceUndetermined', 'Notification permission not yet requested')
+                : t('notifications.deviceDisabled', 'Notifications disabled in device settings')}
           </Text>
         </View>
+        {permUndetermined && (
+          <Pressable
+            onPress={handleRequestPermission}
+            accessibilityRole="button"
+            accessibilityLabel={t('notifications.enable', 'Enable')}
+          >
+            <Text style={[styles.openSettings, { color: colors.primary }]}>
+              {t('notifications.enable', 'Enable')}
+            </Text>
+          </Pressable>
+        )}
+        {permGranted && (
+          <Pressable
+            onPress={handleOpenDeviceSettings}
+            accessibilityRole="button"
+            accessibilityLabel={t('notifications.manageInSettings', 'Manage in Settings')}
+          >
+            <Text style={[styles.openSettings, { color: th.textSecondary }]}>
+              {t('notifications.manageInSettings', 'Manage')}
+            </Text>
+          </Pressable>
+        )}
         {permDenied && (
           <Pressable
             onPress={handleOpenDeviceSettings}
