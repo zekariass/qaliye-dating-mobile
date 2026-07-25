@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -65,6 +66,12 @@ export default function AuthScreen() {
   const [confirmationSent, setConfirmationSent] = useState(false);
   const [confirmedEmail, setConfirmedEmail] = useState('');
   const [showEmailForm, setShowEmailForm] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => {});
+  }, []);
 
   const { login, signup } = useEmailAuth();
   const { google, apple } = useSocialAuth();
@@ -231,7 +238,7 @@ function handlePhone() {
                 </Text>
               </TouchableOpacity>
 
-              {Platform.OS === 'ios' && (
+              {appleAvailable && (
               <TouchableOpacity
                 style={[s.socialBtn, s.appleBtn, { backgroundColor: isDark ? '#FFFFFF' : '#000000' }]}
                 onPress={handleApple}

@@ -1,3 +1,4 @@
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { CryptoDigestAlgorithm, digestStringAsync, randomUUID } from 'expo-crypto';
 import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
@@ -58,7 +59,12 @@ export function useSocialAuth() {
       throw err;
     }
     try {
-      const AppleAuthentication = await import('expo-apple-authentication');
+      const available = await AppleAuthentication.isAvailableAsync();
+      if (!available) {
+        throw new Error(
+          'Apple Sign-In is not available. Make sure you are signed into an Apple Account in the Simulator (Settings > Mail > Accounts > Add Apple ID) and that the app was built with the Sign in with Apple entitlement.',
+        );
+      }
       const rawNonce = randomUUID();
       const hashedNonce = await digestStringAsync(
         CryptoDigestAlgorithm.SHA256,

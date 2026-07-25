@@ -14,12 +14,14 @@ import {
 } from 'react-native';
 
 import { batchRegisterProfilePhotos, deleteProfilePhoto, fetchProfilePhotos } from '@/api/profile/profileApi';
+import { ImageCropModal, type CropRegion } from '@/components/common/ImageCropModal';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import type { ProfilePhotoDto } from '@/types/profile';
 import { extractApiError } from '@/utils/apiError';
-import { ProcessedImage, processCardPhoto, processPrimaryPhoto } from '@/utils/imageProcessor';
+import { ProcessedImage, processWithCrop } from '@/utils/imageProcessor';
+import type { ImagePickerAsset } from 'expo-image-picker';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -105,6 +107,14 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
   const [isDeletingPrimary, setIsDeletingPrimary] = useState(false);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
 
+  // Crop modal state
+  const [cropState, setCropState] = useState<{
+    asset: ImagePickerAsset;
+    mode: 'primary' | 'card';
+    cardIdx?: number;
+  } | null>(null);
+  const [cropProcessing, setCropProcessing] = useState(false);
+
   // Load existing photos on mount
   useEffect(() => {
     fetchProfilePhotos()
@@ -141,15 +151,12 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
       quality: 1,
     });
     if (result.canceled || result.assets.length === 0) return;
-    setPrimaryProcessing(true);
-    try {
-      const processed = await processPrimaryPhoto(result.assets[0]);
-      setNewPrimary(processed);
-    } catch (e: unknown) {
-      setError((e as Error).message);
-    } finally {
-      setPrimaryProcessing(false);
+    const asset = result.assets[0];
+    if (asset.width < 720 || asset.height < 900) {
+      setError('Image too small. Upload at least 720 × 900 px for your profile avatar.');
+      return;
     }
+    setCropState({ asset, mode: 'primary' });
   }, []);
 
   const pickCard = useCallback(async (slotIdx: number) => {
@@ -166,20 +173,44 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
       console.warn('[pickCard] Picker returned canceled or empty', { canceled: result.canceled, assetCount: result.assets?.length });
       return;
     }
-    setProcessingCardIdx(slotIdx);
+    const asset = result.assets[0];
+    if (asset.width < 720 || asset.height < 960) {
+      setError('Image too small. Upload at least 720 × 960 px for card photos.');
+      return;
+    }
+    setCropState({ asset, mode: 'card', cardIdx: slotIdx });
+  }, []);
+
+  const handleCropConfirm = useCallback(async (crop: CropRegion) => {
+    if (!cropState) return;
+    setCropProcessing(true);
     try {
-      const processed = await processCardPhoto(result.assets[0], slotIdx);
-      setCardSlots((prev) => {
-        const next = [...prev];
-        next[slotIdx] = { kind: 'local', photo: processed };
-        return next;
-      });
+      if (cropState.mode === 'primary') {
+        setPrimaryProcessing(true);
+        const processed = await processWithCrop(
+          cropState.asset, crop, 1080, 'profile_avatar.webp',
+        );
+        setNewPrimary(processed);
+      } else if (cropState.mode === 'card' && cropState.cardIdx != null) {
+        setProcessingCardIdx(cropState.cardIdx);
+        const processed = await processWithCrop(
+          cropState.asset, crop, 1080, `swipe_photo_${cropState.cardIdx + 1}.webp`,
+        );
+        setCardSlots((prev) => {
+          const next = [...prev];
+          next[cropState.cardIdx!] = { kind: 'local', photo: processed };
+          return next;
+        });
+      }
     } catch (e: unknown) {
       setError((e as Error).message);
     } finally {
+      setCropProcessing(false);
+      setPrimaryProcessing(false);
       setProcessingCardIdx(null);
+      setCropState(null);
     }
-  }, []);
+  }, [cropState]);
 
   // ─── Delete handlers ───────────────────────────────────────────────────────
 
@@ -488,6 +519,16 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
           {t('onboarding.photo.reviewNote')}
         </Text>
       </View>
+      <ImageCropModal
+        visible={cropState !== null}
+        imageUri={cropState?.asset.uri ?? ''}
+        imageWidth={cropState?.asset.width ?? 1}
+        imageHeight={cropState?.asset.height ?? 1}
+        aspectRatio={cropState?.mode === 'primary' ? 4 / 5 : 3 / 4}
+        onConfirm={handleCropConfirm}
+        onCancel={() => setCropState(null)}
+        processing={cropProcessing}
+      />
     </ScrollView>
   );
 }

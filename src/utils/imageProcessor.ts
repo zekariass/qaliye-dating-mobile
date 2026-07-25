@@ -28,6 +28,27 @@ const isWebpAsset = (asset: ImagePickerAsset): boolean => {
   return uriExt === 'webp' || mimeType === 'image/webp';
 };
 
+export async function processWithCrop(
+  asset: ImagePickerAsset,
+  crop: { originX: number; originY: number; width: number; height: number },
+  outputWidth: number,
+  fileName: string,
+): Promise<ProcessedImage> {
+  if (isWebpAsset(asset) && crop.width === asset.width && crop.height === asset.height) {
+    return { uri: asset.uri, fileName, mimeType: 'image/webp' };
+  }
+
+  const result = await ImageManipulator.manipulateAsync(
+    asset.uri,
+    [
+      { crop: { originX: crop.originX, originY: crop.originY, width: crop.width, height: crop.height } },
+      { resize: { width: outputWidth } },
+    ],
+    { compress: QUALITY, format: ImageManipulator.SaveFormat.WEBP },
+  );
+  return { uri: result.uri, fileName, mimeType: 'image/webp' };
+}
+
 export async function processPrimaryPhoto(asset: ImagePickerAsset): Promise<ProcessedImage> {
   if (asset.width < MIN_PRIMARY_W || asset.height < MIN_PRIMARY_H) {
     throw new Error(

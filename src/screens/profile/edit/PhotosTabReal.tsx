@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ImageCropModal, type CropRegion } from '@/components/common/ImageCropModal';
 import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import { supabase } from '@/lib/supabase';
 import type { ProfilePhotoDto } from '@/types/profile';
 import { extractApiError, getApiErrorMessage, getApiErrorTitle } from '@/utils/apiError';
-import { processProfileEditPhoto } from '@/utils/imageProcessor';
+import { processWithCrop } from '@/utils/imageProcessor';
+import type { ImagePickerAsset } from 'expo-image-picker';
 import { AccountStatusCard } from './AccountStatusCard';
 import { SectionCard, SectionTitle } from './FormComponents';
 
@@ -54,6 +56,8 @@ export const PhotosTabReal = memo(function PhotosTabReal({
 }: Props) {
   const [actionSheetTarget, setActionSheetTarget] = useState<string | null>(null);
   const [localLoading, setLocalLoading] = useState(false);
+  const [cropAsset, setCropAsset] = useState<ImagePickerAsset | null>(null);
+  const [cropProcessing, setCropProcessing] = useState(false);
 
   const isBusy = isUploading || localLoading;
   const primaryPhoto = photos.find((p) => p.is_primary) ?? photos[0];
@@ -69,7 +73,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.85,
+      quality: 1,
     });
 
     if (result.canceled || !result.assets[0]) {
@@ -77,9 +81,16 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       return;
     }
 
+    setCropAsset(result.assets[0]);
+  }, []);
+
+  const handleCropConfirm = useCallback(async (crop: CropRegion) => {
+    if (!cropAsset) return;
+    setCropProcessing(true);
     try {
       setLocalLoading(true);
-      const processed = await processProfileEditPhoto(result.assets[0]);
+      const fileName = `profile_photo_${Date.now()}.webp`;
+      const processed = await processWithCrop(cropAsset, crop, 1080, fileName);
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -106,8 +117,10 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       themedError(getApiErrorTitle(detail.code), getApiErrorMessage(detail));
     } finally {
       setLocalLoading(false);
+      setCropProcessing(false);
+      setCropAsset(null);
     }
-  }, [photos, onRegisterPhoto]);
+  }, [cropAsset, photos.length, onRegisterPhoto]);
 
   const handleMakePrimary = useCallback(async (id: string) => {
     setActionSheetTarget(null);
@@ -340,6 +353,17 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       </View>
 
       <AccountStatusCard sem={sem} isOnboarded={isOnboarded} isVerified={isVerified} />
+
+      <ImageCropModal
+        visible={cropAsset !== null}
+        imageUri={cropAsset?.uri ?? ''}
+        imageWidth={cropAsset?.width ?? 1}
+        imageHeight={cropAsset?.height ?? 1}
+        aspectRatio={3 / 4}
+        onConfirm={handleCropConfirm}
+        onCancel={() => setCropAsset(null)}
+        processing={cropProcessing}
+      />
 
       {/* Action Sheet Modal */}
       <ActionSheetModal
