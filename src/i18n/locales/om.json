@@ -197,7 +197,9 @@
       "enterQaliye": "Qaliye seeni", "startDiscovering": "Argachuu jalqabi",
       "highlightMatches": "Filannoo keetiin kan hundaa'e walitti dhiyeenya hubataa",
       "highlightNearby": "Sitti dhihoo ykn diyaasporaa keessatti argaman namoota",
-      "highlightVerified": "Nageenyaaf beeksisa mirkaneessitan"
+      "highlightVerified": "Nageenyaaf beeksisa mirkaneessitan",
+      "enableNotifications": "Beeksisa dandeessaa",
+      "notificationsHint": "Walcinaa, ergaa, fi jaalala irratti beeksama argadhu"
     }
   },
   "notifications": {

@@ -3,25 +3,22 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Animated,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { completeOnboarding, fetchOnboardingStatus } from '@/api/onboardingApi';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useNotificationPermission } from '@/hooks/notifications/useNotificationPermission';
 import { useTheme } from '@/hooks/use-theme';
 import { useMeStore } from '@/stores/me-store';
-
-const HIGHLIGHT_KEYS = [
-  { icon: 'heart' as const, labelKey: 'onboarding.completion.highlightMatches', emoji: '💫' },
-  { icon: 'location' as const, labelKey: 'onboarding.completion.highlightNearby', emoji: '📍' },
-  { icon: 'shield-checkmark' as const, labelKey: 'onboarding.completion.highlightVerified', emoji: '✅' },
-];
 
 export default function CompletionStep() {
   const { t } = useTranslation();
@@ -35,6 +32,32 @@ export default function CompletionStep() {
   const [alreadyOnboarded, setAlreadyOnboarded] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notifRequested, setNotifRequested] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  const { status: notifStatus, requestPermission } = useNotificationPermission();
+  const notifVisible = Platform.OS !== 'web' && !notifRequested && notifStatus !== 'granted';
+
+  const handleEnableNotifications = useCallback(async () => {
+    if (notifLoading) return;
+    setNotifLoading(true);
+    try {
+      const granted = await requestPermission();
+      if (!granted) {
+        // Permission denied or module unavailable — open device settings
+        if (Platform.OS === 'ios') {
+          await Linking.openURL('app-settings:');
+        } else {
+          await Linking.openSettings();
+        }
+      }
+    } catch {
+      // silent — user can retry or skip
+    } finally {
+      setNotifRequested(true);
+      setNotifLoading(false);
+    }
+  }, [requestPermission, notifLoading]);
 
   const scaleAnim = useRef(new Animated.Value(0.7)).current;
   const fadeAnim  = useRef(new Animated.Value(0)).current;
@@ -170,44 +193,37 @@ export default function CompletionStep() {
         </Animated.View>
       </Animated.View>
 
-      {/* ── Text + features ── */}
+      {/* ── Text + actions ── */}
       <Animated.View style={{ opacity: fadeAnim, alignItems: 'center', width: '100%' }}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>🎉  YOU'RE ALL SET</Text>
-        </View>
-
-        <Text style={[styles.title, { color: th.text }]}>{t('onboarding.completion.allSet')}</Text>
-        <Text style={[styles.subtitle, { color: th.textSecondary }]}>
-          {t('onboarding.completion.readySubtitle')}
-        </Text>
-
-        {/* Feature highlights */}
-        <View style={styles.highlightList}>
-          {HIGHLIGHT_KEYS.map((h) => (
-            <View
-              key={h.labelKey}
-              style={[
-                styles.highlightCard,
-                {
-                  backgroundColor: mode === 'dark' ? th.backgroundElement : th.surface,
-                  borderColor: th.border,
-                },
-              ]}
-            >
-              <View style={[styles.highlightIconWrap, { backgroundColor: `${colors.primary}15` }]}>
-                <Ionicons name={h.icon} size={20} color={colors.primary} />
-              </View>
-              <Text style={[styles.highlightText, { color: th.text }]}>{t(h.labelKey)}</Text>
-              <Text style={styles.highlightEmoji}>{h.emoji}</Text>
-            </View>
-          ))}
-        </View>
+        <Text style={[styles.bigTitle, { color: th.text }]}>{t('onboarding.completion.allSet')}</Text>
 
         {error != null && (
           <View style={styles.errorBox}>
             <Ionicons name="alert-circle-outline" size={16} color="#FF6B6B" />
             <Text style={styles.errorText}>{error}</Text>
           </View>
+        )}
+
+        {notifVisible && (
+          <TouchableOpacity
+            style={[styles.notifCard, { backgroundColor: mode === 'dark' ? th.backgroundElement : th.surface, borderColor: th.border }]}
+            onPress={handleEnableNotifications}
+            disabled={notifLoading}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.notifIconWrap, { backgroundColor: `${colors.primary}15` }]}>
+              <Ionicons name="notifications-outline" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.notifTextWrap}>
+              <Text style={[styles.notifTitle, { color: th.text }]}>{t('onboarding.completion.enableNotifications')}</Text>
+              <Text style={[styles.notifSubtitle, { color: th.textSecondary }]}>{t('onboarding.completion.notificationsHint')}</Text>
+            </View>
+            {notifLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color={th.textSecondary} />
+            )}
+          </TouchableOpacity>
         )}
 
         <TouchableOpacity
@@ -287,62 +303,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  /* ── Badge ── */
-  badge: {
-    backgroundColor: `${colors.primary}18`,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginBottom: spacing.sm,
-  },
-  badgeText: {
-    color: colors.primary,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-  },
-
-  /* ── Text ── */
+  /* ── Title (pending state) ── */
   title: {
     fontSize: 26,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.sm,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.xl,
+    lineHeight: 21,
   },
 
-  /* ── Highlights ── */
-  highlightList: {
-    width: '100%',
-    gap: 8,
+  /* ── Big title ── */
+  bigTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    letterSpacing: -0.8,
+  },
+
+  /* ── Badge ── */
+  badge: {
+    backgroundColor: `${colors.primary}15`,
+    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
     marginBottom: spacing.md,
   },
-  highlightCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    gap: spacing.sm,
+  badgeText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
-  highlightIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  highlightText: { fontSize: 13, fontWeight: '600', flex: 1, lineHeight: 18 },
-  highlightEmoji: { fontSize: 18 },
 
   /* ── Pending ── */
   pendingBox: {
@@ -398,4 +396,37 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.45 },
   btnText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
+
+  /* ── Notification card ── */
+  notifCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    width: '100%',
+  },
+  notifIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  notifTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  notifTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  notifSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
 });

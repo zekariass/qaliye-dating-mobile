@@ -156,7 +156,16 @@ export function ImageCropModal({
         const touches = evt.nativeEvent.touches;
         const b = imgBoundsRef.current;
 
-        if (touches.length >= 2 && gestureRef.current.mode === 'resize') {
+        if (touches.length >= 2) {
+          // Transition move→resize: capture starting pinch state
+          if (gestureRef.current.mode !== 'resize') {
+            gestureRef.current.mode = 'resize';
+            gestureRef.current.startDist = getDistance(touches);
+            gestureRef.current.startCropW = cropWRef.current;
+            gestureRef.current.startCropH = cropHRef.current;
+            gestureRef.current.startCropX = cropXRef.current;
+            gestureRef.current.startCropY = cropYRef.current;
+          }
           const dist = getDistance(touches);
           const ratio = dist / gestureRef.current.startDist;
           let newW = Math.max(b.minCropW, Math.min(b.imgW, gestureRef.current.startCropW * ratio));
@@ -181,7 +190,13 @@ export function ImageCropModal({
           cropYRef.current = newY;
           cropWRef.current = newW;
           cropHRef.current = newH;
-        } else if (gestureRef.current.mode === 'move') {
+        } else {
+          // Transition resize→move: adjust start positions to prevent jump
+          if (gestureRef.current.mode !== 'move') {
+            gestureRef.current.mode = 'move';
+            gestureRef.current.startCropX = cropXRef.current - gs.dx;
+            gestureRef.current.startCropY = cropYRef.current - gs.dy;
+          }
           const newX = gestureRef.current.startCropX + gs.dx;
           const newY = gestureRef.current.startCropY + gs.dy;
           const minX = b.imgLeft;

@@ -292,7 +292,9 @@
       "startDiscovering": "Start Matching",
       "highlightMatches": "Smart matches based on your preferences",
       "highlightNearby": "People near you or anywhere in the diaspora",
-      "highlightVerified": "Verified profiles for a safer experience"
+      "highlightVerified": "Verified profiles for a safer experience",
+      "enableNotifications": "Enable notifications",
+      "notificationsHint": "Get notified about matches, messages, and likes"
     }
   },
   "notifications": {

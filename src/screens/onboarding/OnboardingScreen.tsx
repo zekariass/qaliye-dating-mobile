@@ -205,8 +205,9 @@ export default function OnboardingScreen() {
               <Ionicons name="chevron-back" size={20} color={th.text} />
             </TouchableOpacity>
           ) : (
-            <View style={[styles.brandMark, { backgroundColor: `${colors.primary}1A` }]}>
-              <Text style={[styles.brandLetter, { color: colors.primary }]}>Q</Text>
+            <View style={styles.brandText}>
+              <Text style={[styles.brandQ, { color: colors.primary }]}>Q</Text>
+              <Text style={[styles.brandRest, { color: th.text }]}>aliye</Text>
             </View>
           )}
 
@@ -423,18 +424,22 @@ const styles = StyleSheet.create({
     // borderColor + backgroundColor provided inline
   },
 
-  brandMark: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
+  brandText: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     flexShrink: 0,
   },
-  brandLetter: {
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: -1,
+  brandQ: {
+    fontSize: 20,
+    fontWeight: '800',
+    fontStyle: 'italic',
+    letterSpacing: -0.5,
+  },
+  brandRest: {
+    fontSize: 18,
+    fontWeight: '500',
+    fontStyle: 'italic',
+    letterSpacing: 0.3,
   },
 
   // ── Progress bar ────────────────────────────────────────────────────────────

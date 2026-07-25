@@ -57,6 +57,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
   const [actionSheetTarget, setActionSheetTarget] = useState<string | null>(null);
   const [localLoading, setLocalLoading] = useState(false);
   const [cropAsset, setCropAsset] = useState<ImagePickerAsset | null>(null);
+  const [cropIsPrimary, setCropIsPrimary] = useState(false);
   const [cropProcessing, setCropProcessing] = useState(false);
 
   const isBusy = isUploading || localLoading;
@@ -81,8 +82,9 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       return;
     }
 
+    setCropIsPrimary(photos.length === 0);
     setCropAsset(result.assets[0]);
-  }, []);
+  }, [photos.length]);
 
   const handleCropConfirm = useCallback(async (crop: CropRegion) => {
     if (!cropAsset) return;
@@ -359,7 +361,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
         imageUri={cropAsset?.uri ?? ''}
         imageWidth={cropAsset?.width ?? 1}
         imageHeight={cropAsset?.height ?? 1}
-        aspectRatio={3 / 4}
+        aspectRatio={cropIsPrimary ? 4 / 5 : 3 / 4}
         onConfirm={handleCropConfirm}
         onCancel={() => setCropAsset(null)}
         processing={cropProcessing}

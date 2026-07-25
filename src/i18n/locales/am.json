@@ -252,7 +252,9 @@
       "startDiscovering": "መፈለግ ይጀምሩ",
       "highlightMatches": "በምርጫዎ ላይ የተመሠረተ ብልህ ግጥሚያ",
       "highlightNearby": "በአቅራቢያ ወይም በዲያስፖራ ያሉ ሰዎች",
-      "highlightVerified": "ለበለጠ ደህንነት የተረጋገጡ መገለጫዎች"
+      "highlightVerified": "ለበለጠ ደህንነት የተረጋገጡ መገለጫዎች",
+      "enableNotifications": "ማሳወቂያዎችን ያንቁ",
+      "notificationsHint": "ስለ ግጥሚያዎች፣ መልዕክቶች እና ደግፎች ይሳወቁ"
     }
   },
   "notifications": {

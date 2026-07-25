@@ -252,7 +252,9 @@
       "startDiscovering": "ምርኣይ ጀምር",
       "highlightMatches": "ብምርጽኻ ዝተመርኮሰ ጥበባዊ ምትዕማቕ",
       "highlightNearby": "ኣብ ጎንኻ ወይ ኣብ ዲያስፖራ ዘለዉ ሰባት",
-      "highlightVerified": "ንበደህነት ዝተረጋገጹ መገለጽታት"
+      "highlightVerified": "ንበደህነት ዝተረጋገጹ መገለጽታት",
+      "enableNotifications": "ምልክትታት ኣንቅሩ",
+      "notificationsHint": "ብዛዕባ ምትዕማቓት፣ መልእኽትታትን ደገፍታትን ርከቡ"
     }
   },
   "notifications": {
