@@ -234,17 +234,17 @@ export function useSendMessage(matchId: string, currentUserId: string) {
         const errorMessage =
           error?.response?.data?.error?.message ?? error?.response?.data?.message ?? '';
 
+        if (CHAT_QUOTA_CODES.has(errorCode)) {
+          useChatStore.getState().removeOptimisticMessage(clientMessageId);
+          return { code: errorCode, message: errorMessage };
+        }
+
         if (responseStatus === 429) {
           const retryAfter = parseInt(
             error?.response?.headers?.['retry-after'] ?? '30',
             10,
           );
           rateLimitedUntil.current = Date.now() + retryAfter * 1000;
-        }
-
-        if (CHAT_QUOTA_CODES.has(errorCode)) {
-          useChatStore.getState().removeOptimisticMessage(clientMessageId);
-          return { code: errorCode, message: errorMessage };
         }
 
         useChatStore.getState().markMessageFailed(clientMessageId, errorCode);

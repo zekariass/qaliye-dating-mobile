@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import type { ForegroundBannerState, ValidatedNavIntent } from '@/types/notifications';
 
 const SOUND_ENABLED_KEY = 'qaliye_notification_sound_enabled';
+const LAST_HANDLED_NOTIF_ID_KEY = 'qaliye_last_handled_notification_id';
 
 type NotificationsState = {
   systemPermissionGranted: boolean | null;
@@ -19,6 +20,7 @@ type NotificationsState = {
   dismissForegroundBanner: () => void;
   setSoundEnabled: (enabled: boolean) => void;
   loadSoundPreference: () => Promise<void>;
+  loadLastHandledNotificationId: () => Promise<void>;
 };
 
 export const useNotificationsStore = create<NotificationsState>((set, get) => ({
@@ -30,7 +32,18 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
 
   setSystemPermissionGranted: (granted) => set({ systemPermissionGranted: granted }),
   setPendingNavIntent: (intent) => set({ pendingNavIntent: intent }),
-  setLastHandledNotificationId: (id) => set({ lastHandledNotificationId: id }),
+  setLastHandledNotificationId: (id) => {
+    set({ lastHandledNotificationId: id });
+    AsyncStorage.setItem(LAST_HANDLED_NOTIF_ID_KEY, id).catch(() => {});
+  },
+  loadLastHandledNotificationId: async () => {
+    try {
+      const value = await AsyncStorage.getItem(LAST_HANDLED_NOTIF_ID_KEY);
+      if (value !== null) {
+        set({ lastHandledNotificationId: value });
+      }
+    } catch {}
+  },
   setForegroundBanner: (banner) => set({ foregroundBanner: banner }),
   dismissForegroundBanner: () => set({ foregroundBanner: null }),
   setSoundEnabled: (enabled) => {

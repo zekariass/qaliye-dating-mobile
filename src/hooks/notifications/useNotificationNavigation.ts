@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import type * as NotificationsType from 'expo-notifications';
@@ -21,9 +21,11 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
   const router = useRouter();
   const lastHandledId = useNotificationsStore((s) => s.lastHandledNotificationId);
   const setLastHandledId = useNotificationsStore((s) => s.setLastHandledNotificationId);
+  const loadLastHandledNotificationId = useNotificationsStore((s) => s.loadLastHandledNotificationId);
   const pendingNavIntent = useNotificationsStore((s) => s.pendingNavIntent);
   const setPendingNavIntent = useNotificationsStore((s) => s.setPendingNavIntent);
   const processedOnce = useRef(false);
+  const [persistedIdLoaded, setPersistedIdLoaded] = useState(false);
 
   const navigate = useCallback(
     (intent: ValidatedNavIntent) => {
@@ -91,10 +93,24 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
     [lastHandledId, setLastHandledId, isAppReady, hasSession, navigate, setPendingNavIntent],
   );
 
+  // Load the persisted last-handled notification ID once on mount so that
+  // stale notification responses from a previous app session are not
+  // re-processed.  Without this, getLastNotificationResponse() on Android
+  // returns the last notification the user ever tapped — even days later —
+  // causing unwanted navigation to a chat screen after login.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    loadLastHandledNotificationId().finally(() => setPersistedIdLoaded(true));
+  }, [loadLastHandledNotificationId]);
+
   useEffect(() => {
     if (Platform.OS === 'web') return;
     if (!isAppReady) return;
     if (processedOnce.current) return;
+    // Wait until the persisted last-handled ID has been loaded from
+    // AsyncStorage so the deduplication check in handleResponse uses the
+    // correct value instead of the initial null.
+    if (!persistedIdLoaded) return;
 
     processedOnce.current = true;
 
@@ -102,7 +118,7 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
     if (lastResponse) {
       handleResponse(lastResponse);
     }
-  }, [isAppReady, handleResponse]);
+  }, [isAppReady, handleResponse, persistedIdLoaded]);
 
   useEffect(() => {
     if (Platform.OS === 'web' || !Expo) return;

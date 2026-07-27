@@ -573,7 +573,7 @@ export function MessageComposer({
             </View>
             <TouchableOpacity
               style={[styles.sendBtn, { backgroundColor: canSendVoice ? colors.primary : sendDisabledBg }]}
-              onPress={handleSendVoice}
+              onPressIn={handleSendVoice}
               disabled={!canSendVoice}
               accessibilityRole="button"
               accessibilityLabel={t('chat.sendVoiceMessage')}
@@ -670,7 +670,7 @@ export function MessageComposer({
                     : {}),
                 },
               ]}
-              onPress={handleSend}
+              onPressIn={handleSend}
               disabled={!canSend}
               activeOpacity={0.8}
               accessibilityRole="button"

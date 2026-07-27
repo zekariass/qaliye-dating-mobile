@@ -103,10 +103,18 @@ function deriveDeliveryStatus(
   return 'SENT';
 }
 
+type VmCacheEntry = {
+  vm: ChatMessageViewModel;
+  groupKey: string;
+  deliveryStatus: ServerDeliveryStatus | undefined;
+};
+type VmCache = WeakMap<ChatMessage, VmCacheEntry>;
+
 function buildListData(
   messages: ChatMessage[],
   receiptState: ReceiptState,
   participantIsTyping: boolean,
+  vmCache: VmCache,
 ): ChatListItem[] {
   const items: ChatListItem[] = [];
 
@@ -143,18 +151,29 @@ function buildListData(
     const isFirstInGroup = msg.senderUserId !== prevSenderId;
     const isLastInGroup = !nextSameGroup || (next && new Date(next.createdAt).toDateString() !== dateKey);
     const showTimestamp = !!isLastInGroup;
+    const deliveryStatus = deriveDeliveryStatus(msg, receiptState);
+    const groupKey = `${isFirstInGroup}_${!!isLastInGroup}_${showTimestamp}_${isFirstInGroup && !msg.isMine}`;
 
-    const vm: ChatMessageViewModel = {
-      ...msg,
-      deliveryStatus: deriveDeliveryStatus(msg, receiptState),
-      timeLabel: formatTime(msg.createdAt),
-      showAvatar: isFirstInGroup && !msg.isMine,
-      showTimestamp,
-      isFirstInGroup,
-      isLastInGroup: !!isLastInGroup,
-    };
+    // Reuse cached VM when the message object reference and grouping context
+    // haven't changed — this prevents all MessageBubble components from
+    // re-rendering when only one message is added or reconciled.
+    const cached = vmCache.get(msg);
+    if (cached && cached.groupKey === groupKey && cached.deliveryStatus === deliveryStatus) {
+      items.push({ kind: 'message', data: cached.vm });
+    } else {
+      const vm: ChatMessageViewModel = {
+        ...msg,
+        deliveryStatus,
+        timeLabel: formatTime(msg.createdAt),
+        showAvatar: isFirstInGroup && !msg.isMine,
+        showTimestamp,
+        isFirstInGroup,
+        isLastInGroup: !!isLastInGroup,
+      };
+      vmCache.set(msg, { vm, groupKey, deliveryStatus });
+      items.push({ kind: 'message', data: vm });
+    }
 
-    items.push({ kind: 'message', data: vm });
     prevSenderId = msg.senderUserId;
   }
 
@@ -272,6 +291,23 @@ export default function ChatScreen() {
   const avatarUrl = rawAvatar && rawAvatar.length > 0 ? rawAvatar : null;
   const isVerified = (params.isVerified as string) === '1';
 
+  // Guard: if there's no matchId, the route is invalid (e.g. stale notification
+  // or persisted navigation state). Redirect to the discovery tab instead of
+  // rendering a blank "Unknown User" chat screen.
+  useEffect(() => {
+    if (!matchId) {
+      router.replace('/(app)/(tabs)' as any);
+    }
+  }, [matchId, router]);
+
+  if (!matchId) {
+    return (
+      <View style={[styles.screen, { backgroundColor: th.background, justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   // ── Store selectors ──────────────────────────────────────────────────────
   const messages = useChatStore((s) => s.messages);
   const receiptState = useChatStore((s) => s.receiptState);
@@ -366,8 +402,10 @@ export default function ChatScreen() {
   );
 
   // ── Build list data ──────────────────────────────────────────────────────
+  const vmCacheRef = useRef<VmCache>(new WeakMap());
+
   const listData = useMemo(
-    () => buildListData(messages, receiptState, participantIsTyping),
+    () => buildListData(messages, receiptState, participantIsTyping, vmCacheRef.current),
     [messages, receiptState, participantIsTyping],
   );
 

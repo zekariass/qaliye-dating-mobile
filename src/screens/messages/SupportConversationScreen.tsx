@@ -745,7 +745,7 @@ function SupportComposer({
             </View>
             <TouchableOpacity
               style={[composerStyles.sendBtn, { backgroundColor: canSendVoice ? colors.primary : (isDark ? '#3A2060' : '#DDD0F8') }]}
-              onPress={handleSendVoice}
+              onPressIn={handleSendVoice}
               disabled={!canSendVoice}
               accessibilityRole="button"
               accessibilityLabel={t('support.sendVoiceMessage')}
@@ -800,7 +800,7 @@ function SupportComposer({
             </TouchableOpacity>
             <TouchableOpacity
               style={[composerStyles.sendBtn, { backgroundColor: canSend ? colors.primary : (isDark ? '#3A2060' : '#DDD0F8') }]}
-              onPress={handleSend}
+              onPressIn={handleSend}
               disabled={!canSend}
               accessibilityRole="button"
               accessibilityLabel={t('support.sendMessage')}
