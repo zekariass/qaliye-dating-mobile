@@ -49,6 +49,9 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
         case 'LIKE_RECEIVED':
           router.push('/(app)/(tabs)/likes' as any);
           break;
+        case 'SUPERLIKE_RECEIVED':
+          router.push('/(app)/(tabs)/likes' as any);
+          break;
         case 'ACCOUNT_ALERT':
           router.push('/(app)/settings' as any);
           break;

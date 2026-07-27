@@ -297,6 +297,7 @@ export default function DiscoverScreen() {
   const [superLikeExhausted, setSuperLikeExhausted] = useState(false);
   const [isRewinding, setIsRewinding] = useState(false);
   const [activePromotion, setActivePromotion] = useState<EligiblePromotionDto | null>(null);
+  const [modeSwitching, setModeSwitching] = useState(false);
   const viewMode = useDiscoveryStore((s) => s.viewMode);
   const setViewMode = useDiscoveryStore((s) => s.setViewMode);
   const router = useRouter();
@@ -344,6 +345,13 @@ export default function DiscoverScreen() {
     });
     return () => subscription.remove();
   }, []);
+
+  // Clear mode switching overlay after the new mode has rendered
+  useEffect(() => {
+    if (!modeSwitching) return;
+    const timer = setTimeout(() => setModeSwitching(false), 350);
+    return () => clearTimeout(timer);
+  }, [modeSwitching, viewMode]);
 
   const handleDismissPromotion = useCallback(() => {
     if (activePromotion) {
@@ -577,10 +585,10 @@ export default function DiscoverScreen() {
         { type: isSuperLike ? 'SUPER_LIKE' : direction, targetUserId: card.user_id },
         {
           onSuccess: (response) => {
-            if (response.isMatch && response.match) {
-              setMatchName(response.match.otherUser.displayName);
-              setMatchPhoto(response.match.otherUser.primaryPhotoUrl ?? undefined);
-              setMatchId(response.match.matchId);
+            if (response.is_match && response.match) {
+              setMatchName(response.match.other_user.display_name);
+              setMatchPhoto(response.match.other_user.primary_photo_url ?? undefined);
+              setMatchId(response.match.match_id);
               setMatchVisible(true);
             }
           },
@@ -622,9 +630,8 @@ export default function DiscoverScreen() {
     await scrollToTop();
     rewind(undefined, {
       onSuccess: (response) => {
-        const res = response as any;
-        const rawProfile    = res.restoredProfile ?? res.restored_profile;
-        const actionType    = res.reversedActionType ?? res.reversed_action_type;
+        const rawProfile    = response.restored_profile;
+        const actionType    = response.reversed_action_type;
         const dir: 'LIKE' | 'PASS' = actionType === 'PASS' ? 'PASS' : 'LIKE';
 
         const restoredCard: CardDto | null = rawProfile
@@ -731,7 +738,12 @@ export default function DiscoverScreen() {
         {/* Mode toggle — replaces Qaliye logo */}
         <TouchableOpacity
           style={styles.logoContainer}
-          onPress={() => setViewMode(viewMode === 'swipe' ? 'browse' : 'swipe')}
+          onPress={() => {
+            if (modeSwitching) return;
+            setModeSwitching(true);
+            setViewMode(viewMode === 'swipe' ? 'browse' : 'swipe');
+          }}
+          disabled={modeSwitching}
           activeOpacity={0.7}
           accessibilityLabel={viewMode === 'swipe' ? 'Switch to browse mode' : 'Switch to swipe mode'}
           accessibilityRole="button"
@@ -803,10 +815,10 @@ export default function DiscoverScreen() {
             isRefreshing={isRefetching}
             onSwitchToSwipe={() => setViewMode('swipe')}
             onMatch={(response) => {
-              if (response.isMatch && response.match) {
-                setMatchName(response.match.otherUser.displayName);
-                setMatchPhoto(response.match.otherUser.primaryPhotoUrl ?? undefined);
-                setMatchId(response.match.matchId);
+              if (response.is_match && response.match) {
+                setMatchName(response.match.other_user.display_name);
+                setMatchPhoto(response.match.other_user.primary_photo_url ?? undefined);
+                setMatchId(response.match.match_id);
                 setMatchVisible(true);
               }
             }}
@@ -942,11 +954,22 @@ export default function DiscoverScreen() {
         )}
       </View>
 
+      {/* ── Mode switching overlay ── */}
+      {modeSwitching && (
+        <View style={styles.modeSwitchOverlay} pointerEvents="none">
+          <View style={[styles.rewindSpinnerWrap, { backgroundColor: isDark ? th.backgroundElement : th.surface }]}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Switching…</Text>
+          </View>
+        </View>
+      )}
+
       {/* ── Overlays ───────────────────────────────── */}
       <MatchCelebrationOverlay
         visible={matchVisible}
         name={matchName}
         photoUrl={matchPhoto}
+        myPhotoUrl={profileDto?.primary_photo_url ?? undefined}
         onSendMessage={() => {
           setMatchVisible(false);
           onReviewMatch();
@@ -1099,6 +1122,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+
+  // ── Mode switch overlay ──────────────────────────────────────────────
+  modeSwitchOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.20)',
+    zIndex: 50,
   },
 
   // ── Rewind overlay ─────────────────────────────────────────────────────

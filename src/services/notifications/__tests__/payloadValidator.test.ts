@@ -107,6 +107,12 @@ describe('buildNavIntent', () => {
     expect(intent?.screen).toBe('likes');
   });
 
+  it('routes SUPERLIKE_RECEIVED to likes screen', () => {
+    const payload = validatePayload({ notification_type: 'SUPERLIKE_RECEIVED' })!;
+    const intent = buildNavIntent(payload);
+    expect(intent?.screen).toBe('likes');
+  });
+
   it('routes ACCOUNT_ALERT to settings screen', () => {
     const payload = validatePayload({ notification_type: 'ACCOUNT_ALERT' })!;
     const intent = buildNavIntent(payload);

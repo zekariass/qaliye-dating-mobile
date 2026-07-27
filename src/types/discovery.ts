@@ -65,40 +65,40 @@ export type DiscoveryFeedResponse = {
 };
 
 export type MatchedUserSummaryDto = {
-  userId: string;
-  displayName: string;
-  primaryPhotoUrl: string;
+  user_id: string;
+  display_name: string;
+  primary_photo_url: string;
 };
 
 export type MatchSummaryDto = {
-  matchId: string;
-  matchedAt: string;
-  rewindEligibleUntil: string;
-  otherUser: MatchedUserSummaryDto;
+  match_id: string;
+  matched_at: string;
+  rewind_eligible_until: string;
+  other_user: MatchedUserSummaryDto;
 };
 
 export type SwipeActionResponse = {
-  actionId: string;
-  actionType: 'LIKE' | 'PASS' | 'SUPER_LIKE';
+  action_id: string;
+  action_type: 'LIKE' | 'PASS' | 'SUPER_LIKE';
   status: string;
-  isMatch: boolean;
+  is_match: boolean;
   match: MatchSummaryDto | null;
-  dailyLikesRemaining: number | null;
-  dailySuperLikesRemaining: number | null;
-  superLikeCreditsRemaining: number | null;
-  createdAt: string;
+  daily_likes_remaining: number | null;
+  daily_super_likes_remaining: number | null;
+  super_like_credits_remaining: number | null;
+  created_at: string;
   idempotent: boolean;
 };
 
 export type RewindResponse = {
-  reversedActionId: string;
-  reversedActionType: string;
-  reversedTargetUserId: string;
-  matchCancelled: boolean;
-  matchId: string | null;
-  dailyRewindsRemaining: number;
-  restoredProfile: DiscoveryProfileDto | null;
-  reversedAt: string;
+  reversed_action_id: string;
+  reversed_action_type: string;
+  reversed_target_user_id: string;
+  match_cancelled: boolean;
+  match_id: string | null;
+  daily_rewinds_remaining: number;
+  restored_profile: DiscoveryProfileDto | null;
+  reversed_at: string;
 };
 
 export type DiscoveryPreferencesDto = {

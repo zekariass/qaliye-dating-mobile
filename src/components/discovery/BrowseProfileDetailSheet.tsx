@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
@@ -16,6 +16,13 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Reanimated, {
+    withTiming as reanimatedWithTiming,
+    Easing as REasing,
+    useAnimatedStyle,
+    useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import VerifiedBadge from '@/components/common/VerifiedBadge';
@@ -62,6 +69,49 @@ export default function BrowseProfileDetailSheet({
   const [actionTaken, setActionTaken] = useState<'LIKE' | 'PASS' | 'SUPER_LIKE' | null>(null);
   const confirmOpacity = useState(new Animated.Value(0))[0];
   const buttonsOpacity = useState(new Animated.Value(1))[0];
+
+  // ── Hero photo navigation state ──
+  const heroPhotos = (card?.photos ?? []).map((p) => p.image_url).filter(Boolean);
+  const [heroPhotoIndex, setHeroPhotoIndex] = useState(0);
+  const heroSlideX = useSharedValue(0);
+  const heroSlideDir = useRef<'next' | 'prev'>('next');
+  const heroSkipSlide = useRef(true);
+
+  useEffect(() => {
+    setHeroPhotoIndex(0);
+    heroSkipSlide.current = true;
+  }, [card?.user_id]);
+
+  useEffect(() => {
+    if (heroSkipSlide.current) {
+      heroSkipSlide.current = false;
+      heroSlideX.value = 0;
+      return;
+    }
+    const startOffset = heroSlideDir.current === 'next' ? SCREEN_W : -SCREEN_W;
+    heroSlideX.value = startOffset;
+    heroSlideX.value = reanimatedWithTiming(0, { duration: 280, easing: REasing.out(REasing.cubic) });
+  }, [heroPhotoIndex]);
+
+  const heroPanGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-15, 15])
+    .runOnJS(true)
+    .onEnd((e) => {
+      if (e.translationX < -30 && heroPhotoIndex < heroPhotos.length - 1) {
+        heroSlideDir.current = 'next';
+        setHeroPhotoIndex((i) => Math.min(i + 1, heroPhotos.length - 1));
+      } else if (e.translationX > 30 && heroPhotoIndex > 0) {
+        heroSlideDir.current = 'prev';
+        setHeroPhotoIndex((i) => Math.max(i - 1, 0));
+      }
+    });
+
+  const heroPhotoGesture = Gesture.Race(heroPanGesture);
+
+  const heroSlideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: heroSlideX.value }],
+  }));
 
   // Reset state when sheet is reopened
   useEffect(() => {
@@ -141,7 +191,7 @@ export default function BrowseProfileDetailSheet({
 
   if (!card) return null;
 
-  const primaryPhoto = card.photos?.[0]?.image_url ?? null;
+  const currentHeroPhoto = heroPhotos.length > 0 ? heroPhotos[Math.min(heroPhotoIndex, heroPhotos.length - 1)] : null;
 
   return (
     <Modal
@@ -152,7 +202,8 @@ export default function BrowseProfileDetailSheet({
       statusBarTranslucent
     >
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <View style={[styles.container, { backgroundColor: th.background }]}>
+      <GestureHandlerRootView style={styles.container}>
+      <View style={[{ backgroundColor: th.background, flex: 1 }]}>
         {/* ── Header (floating over hero) ── */}
         <View style={[styles.header, { paddingTop: safeTop + 4 }]}>
           <TouchableOpacity
@@ -173,35 +224,53 @@ export default function BrowseProfileDetailSheet({
           showsVerticalScrollIndicator={false}
           bounces
         >
-          {/* Hero photo */}
-          <View style={styles.heroWrap}>
-            {primaryPhoto ? (
-              <Image
-                source={{ uri: primaryPhoto }}
-                style={styles.heroPhoto}
-                contentFit="cover"
-                transition={200}
-                cachePolicy="memory-disk"
+          {/* Hero photo — swipe horizontally to browse photos */}
+          <GestureDetector gesture={heroPhotoGesture}>
+            <View style={styles.heroWrap}>
+              <Reanimated.View style={[styles.heroPhoto, heroSlideStyle]}>
+                {currentHeroPhoto ? (
+                  <Image
+                    source={{ uri: currentHeroPhoto }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <View style={[StyleSheet.absoluteFill, styles.heroPlaceholder]}>
+                    <Ionicons name="person" size={64} color={colors.primaryLight} />
+                  </View>
+                )}
+              </Reanimated.View>
+
+              {/* Gradient overlay */}
+              <LinearGradient
+                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.85)']}
+                locations={[0.4, 1]}
+                style={styles.heroOverlay}
               />
-            ) : (
-              <View style={[styles.heroPhoto, styles.heroPlaceholder]}>
-                <Ionicons name="person" size={64} color={colors.primaryLight} />
-              </View>
-            )}
 
-            {/* Gradient overlay */}
-            <LinearGradient
-              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.85)']}
-              locations={[0.4, 1]}
-              style={styles.heroOverlay}
-            />
+              {/* Photo indicator dots — top right corner */}
+              {heroPhotos.length > 1 && (
+                <View style={styles.heroDotsWrap}>
+                  {heroPhotos.map((_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.heroDot,
+                        i === heroPhotoIndex ? styles.heroDotActive : styles.heroDotInactive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
 
-            {/* Verified badge */}
-            {card.is_verified && (
-              <View style={styles.heroVerified}>
-                <VerifiedBadge size={20} />
-              </View>
-            )}
+              {/* Verified badge */}
+              {card.is_verified && (
+                <View style={[styles.heroVerified, heroPhotos.length > 1 && { top: 84 }]}>
+                  <VerifiedBadge size={20} />
+                </View>
+              )}
 
             {/* Name + age + location */}
             <View style={styles.heroInfo}>
@@ -222,6 +291,7 @@ export default function BrowseProfileDetailSheet({
               ) : null}
             </View>
           </View>
+          </GestureDetector>
 
           {/* Loading overlay while fetching enriched data */}
           {profileLoading && (
@@ -345,6 +415,7 @@ export default function BrowseProfileDetailSheet({
           )}
         </View>
       </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -382,6 +453,7 @@ const styles = StyleSheet.create({
     width: SCREEN_W,
     height: HERO_H,
     position: 'relative',
+    overflow: 'hidden',
   },
   heroPhoto: {
     width: '100%',
@@ -398,6 +470,28 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 140,
+  },
+  heroDotsWrap: {
+    position: 'absolute',
+    top: 60,
+    right: 14,
+    flexDirection: 'row',
+    gap: 4,
+    zIndex: 4,
+  },
+  heroDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+  },
+  heroDotActive: {
+    backgroundColor: colors.primary,
+    borderWidth: 0,
+  },
+  heroDotInactive: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   heroVerified: {
     position: 'absolute',

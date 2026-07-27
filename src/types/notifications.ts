@@ -4,6 +4,7 @@ export type NotificationType =
   | 'CHAT_MESSAGE'
   | 'MATCH_CREATED'
   | 'LIKE_RECEIVED'
+  | 'SUPERLIKE_RECEIVED'
   | 'ACCOUNT_ALERT'
   | 'MARKETING';
 

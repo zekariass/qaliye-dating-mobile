@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
+import { upsertInboxItem } from '@/hooks/messages/useInbox';
 import { Expo } from '@/services/notifications/notificationsModule';
 import {
     buildNavIntent,
@@ -36,7 +37,17 @@ export function useForegroundNotifications(options?: ForegroundNotificationOptio
             match_id && options?.currentMatchId === match_id;
 
           if (!isCurrentChat) {
-            queryClient.invalidateQueries({ queryKey: ['chat-inbox'] });
+            const title = notification.request.content.title ?? '';
+            const body = notification.request.content.body ?? '';
+            if (match_id) {
+              upsertInboxItem(queryClient, match_id, {
+                preview: body || title,
+                senderDisplayName: title || undefined,
+                createdAt: new Date().toISOString(),
+              });
+            } else {
+              queryClient.invalidateQueries({ queryKey: ['chat-inbox'] });
+            }
           }
 
           if (!isCurrentChat) {
@@ -52,6 +63,11 @@ export function useForegroundNotifications(options?: ForegroundNotificationOptio
           break;
 
         case 'LIKE_RECEIVED':
+          queryClient.invalidateQueries({ queryKey: ['likes'] });
+          showBanner(notification, payload);
+          break;
+
+        case 'SUPERLIKE_RECEIVED':
           queryClient.invalidateQueries({ queryKey: ['likes'] });
           showBanner(notification, payload);
           break;

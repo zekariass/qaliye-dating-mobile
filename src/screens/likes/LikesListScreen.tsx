@@ -2,15 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  Image,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -202,10 +202,12 @@ interface LikeCardProps {
   onPress:        () => void;
   onUnsend:       () => void;
   isUnsending:    boolean;
+  onLikeBack:     () => void;
+  isLikingBack:   boolean;
   activityStatus?: ActivityStatus | null;
 }
 
-function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, activityStatus }: LikeCardProps) {
+function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack, isLikingBack, activityStatus }: LikeCardProps) {
   const { card, textPrimary, textMuted, purple, chipBg } = useLikesTheme();
   const location = formatLocation(item);
 
@@ -252,13 +254,18 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, activitySt
         {isReceived && (
           <TouchableOpacity
             style={[styles.overlayBtn, overlayBtnShadow, { backgroundColor: card }]}
-            onPress={() => {}}
+            onPress={onLikeBack}
+            disabled={isLikingBack}
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel={`Like back ${item.display_name}`}
             hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
           >
-            <Ionicons name="heart" size={17} color={purple} />
+            {isLikingBack ? (
+              <ActivityIndicator size="small" color={purple} />
+            ) : (
+              <Ionicons name="heart" size={17} color={purple} />
+            )}
           </TouchableOpacity>
         )}
 
@@ -566,6 +573,55 @@ export default function LikesListScreen() {
 
   const { mutateAsync: swipeAction, isPending: isSwiping } = useSwipeAction();
   const [unsendingId, setUnsendingId] = useState<string | null>(null);
+  const [likingBackId, setLikingBackId] = useState<string | null>(null);
+
+  const handleLikeBack = useCallback(
+    async (item: LikeItemDto) => {
+      setLikingBackId(item.action_id);
+      try {
+        const response = await swipeAction({ type: 'LIKE', targetUserId: item.user_id });
+        if (response.is_match && response.match) {
+          themedAlert({
+            title: "It's a Match!",
+            message: `You and ${item.display_name} are now matched.`,
+            icon: 'heart',
+            iconColor: colors.secondary,
+            buttons: [
+              {
+                text: 'Send Message',
+                onPress: () => {
+                  router.push({
+                    pathname: '/(app)/chat' as any,
+                    params: {
+                      matchId: response.match!.match_id,
+                      displayName: item.display_name,
+                      avatarUrl: item.primary_photo_url ?? '',
+                      isVerified: item.is_verified ? '1' : '0',
+                    },
+                  });
+                },
+              },
+              { text: 'Keep Swiping', style: 'cancel' },
+            ],
+          });
+        } else {
+          themedAlert({
+            title: 'Like sent',
+            message: `Your like has been sent to ${item.display_name}.`,
+            icon: 'heart-outline',
+            iconColor: colors.primary,
+            buttons: [{ text: 'OK' }],
+          });
+        }
+        refetch();
+      } catch (err: any) {
+        themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
+      } finally {
+        setLikingBackId(null);
+      }
+    },
+    [swipeAction, refetch, router],
+  );
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -640,16 +696,19 @@ export default function LikesListScreen() {
       }
       return (
         <LikeCard
+          key={item.action_id}
           item={item}
           isReceived={activeTab === 'received'}
           onPress={() => handleCardPress(item.user_id)}
           onUnsend={() => handleUnsend(item)}
           isUnsending={unsendingId === item.action_id}
+          onLikeBack={() => handleLikeBack(item)}
+          isLikingBack={likingBackId === item.action_id}
           activityStatus={getStatus(item.user_id, item.activity_status)}
         />
       );
     },
-    [activeTab, canSeeWhoLikedYou, handleCardPress, handleBlurredCardPress, handleUnsend, unsendingId, getStatus],
+    [activeTab, canSeeWhoLikedYou, handleCardPress, handleBlurredCardPress, handleUnsend, handleLikeBack, unsendingId, likingBackId, getStatus],
   );
 
   const renderFooter = useCallback(() => {

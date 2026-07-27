@@ -24,8 +24,14 @@ export function useNotificationSetup(userId: string | undefined) {
     (s) => s.systemPermissionGranted,
   );
 
+  const soundEnabled = useNotificationsStore((s) => s.soundEnabled);
+  const loadSoundPreference = useNotificationsStore((s) => s.loadSoundPreference);
   const channelSetupDone = useRef(false);
   const tokenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    loadSoundPreference();
+  }, [loadSoundPreference]);
 
   useEffect(() => {
     if (!Expo) return;
@@ -33,11 +39,11 @@ export function useNotificationSetup(userId: string | undefined) {
       handleNotification: async () => ({
         shouldShowBanner: false,
         shouldShowList: false,
-        shouldPlaySound: false,
+        shouldPlaySound: soundEnabled,
         shouldSetBadge: false,
       }),
     });
-  }, []);
+  }, [soundEnabled]);
 
   const tryRegister = useCallback(
     async (token: string) => {

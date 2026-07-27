@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as NativeSplash from 'expo-splash-screen';
@@ -192,6 +193,8 @@ interface OrbSpec {
 function FloatingOrb({ size, color, startX, startY, dx, dy, duration, delay }: OrbSpec) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
+  const heartScale = useSharedValue(1);
+  const heartOpacity = useSharedValue(0.5);
 
   useEffect(() => {
     translateX.value = withDelay(
@@ -217,10 +220,39 @@ function FloatingOrb({ size, color, startX, startY, dx, dy, duration, delay }: O
         true,
       ),
     );
+
+    heartScale.value = withDelay(
+      delay + 300,
+      withRepeat(
+        withSequence(
+          withTiming(1.15, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        true,
+      ),
+    );
+
+    heartOpacity.value = withDelay(
+      delay + 300,
+      withRepeat(
+        withSequence(
+          withTiming(0.7, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0.35, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        true,
+      ),
+    );
   }, []);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }, { translateY: translateY.value }],
+  }));
+
+  const heartStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+    opacity: heartOpacity.value,
   }));
 
   return (
@@ -237,7 +269,11 @@ function FloatingOrb({ size, color, startX, startY, dx, dy, duration, delay }: O
           top: startY,
         },
       ]}
-    />
+    >
+      <Animated.View style={[styles.orbHeart, heartStyle]}>
+        <Ionicons name="heart" size={size * 0.28} color="rgba(255,255,255,0.9)" />
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -334,6 +370,12 @@ const styles = StyleSheet.create({
   },
   orb: {
     position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orbHeart: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   center: {
     flex: 1,

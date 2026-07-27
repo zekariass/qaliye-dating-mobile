@@ -16,6 +16,7 @@ export async function setupAndroidNotificationChannel(): Promise<void> {
     enableVibrate: true,
     enableLights: true,
     lightColor: '#8A2CFF',
+    sound: 'notification.mp3',
     lockscreenVisibility: Expo.AndroidNotificationVisibility.PRIVATE,
     bypassDnd: false,
     showBadge: true,

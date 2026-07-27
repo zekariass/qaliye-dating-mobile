@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
@@ -15,12 +15,16 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
 import { useMatches } from '@/hooks/discovery/useMatches';
+import { inboxQueryKey } from '@/hooks/messages/useInbox';
 import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
+import type { InboxItem } from '@/types/chat';
 import type { MatchItemDto } from '@/types/discovery';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -142,6 +146,7 @@ interface MatchCardProps {
   onPress:        () => void;
   onMessagePress: () => void;
   activityStatus?: ActivityStatus | null;
+  unreadCount?:   number;
 }
 
 const MatchCard = React.memo(function MatchCard({
@@ -150,6 +155,7 @@ const MatchCard = React.memo(function MatchCard({
   onPress,
   onMessagePress,
   activityStatus,
+  unreadCount,
 }: MatchCardProps) {
   const { colors: th, mode } = useTheme();
   const isDark    = mode === 'dark';
@@ -203,6 +209,15 @@ const MatchCard = React.memo(function MatchCard({
           >
             <Ionicons name="chatbubble-ellipses" size={15} color="#FFF" />
           </TouchableOpacity>
+
+          {/* Unread message count badge */}
+          {!!unreadCount && unreadCount > 0 && (
+            <View style={styles.msgCountBadge} pointerEvents="none">
+              <Text style={styles.msgCountText}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* ── Info section ── */}
@@ -413,6 +428,7 @@ export default function MatchesListScreen() {
   const insets = useSafeAreaInsets();
   const { colors: th } = useTheme();
   const router = useRouter();
+  const qc = useQueryClient();
 
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
   const { getStatus } = useActivityStatuses(visibleIds);
@@ -429,6 +445,20 @@ export default function MatchesListScreen() {
     isLoading, isError, isFetching,
     fetchNextPage, hasNextPage, isFetchingNextPage, refetch,
   } = useMatches();
+
+  const inboxUnreadMap = useMemo<Record<string, number>>(() => {
+    const data = qc.getQueryData<{ pages: Array<{ items: InboxItem[] }> }>(
+      inboxQueryKey('ALL'),
+    );
+    if (!data) return {};
+    const map: Record<string, number> = {};
+    for (const page of data.pages) {
+      for (const inboxItem of page.items) {
+        if (inboxItem.unreadCount > 0) map[inboxItem.matchId] = inboxItem.unreadCount;
+      }
+    }
+    return map;
+  }, [qc, items]);
 
   const handleCardPress = useCallback(
     (userId: string, matchId?: string) => {
@@ -459,14 +489,16 @@ export default function MatchesListScreen() {
   const renderItem = useCallback(
     ({ item, index }: { item: MatchItemDto; index: number }) => (
       <MatchCard
+        key={item.match_id}
         item={item}
         index={index}
         onPress={() => handleCardPress(item.user_id, item.match_id)}
         onMessagePress={() => handleMessagePress(item)}
         activityStatus={getStatus(item.user_id, item.activity_status)}
+        unreadCount={inboxUnreadMap[item.match_id]}
       />
     ),
-    [handleCardPress, handleMessagePress, getStatus],
+    [handleCardPress, handleMessagePress, getStatus, inboxUnreadMap],
   );
 
   const renderFooter = useCallback(() => {
@@ -682,6 +714,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderWidth:     2,
     borderColor:     '#FFF',
+  },
+
+  msgCountBadge: {
+    position:          'absolute',
+    top:               2,
+    right:             2,
+    minWidth:          18,
+    height:            18,
+    borderRadius:      9,
+    backgroundColor:   '#E53935',
+    borderWidth:       1.5,
+    borderColor:       '#FFF',
+    alignItems:        'center',
+    justifyContent:    'center',
+    paddingHorizontal: 3,
+  },
+
+  msgCountText: {
+    color:      '#FFF',
+    fontSize:   10,
+    fontWeight: '800',
+    lineHeight: 13,
   },
 
   footerLoader: {

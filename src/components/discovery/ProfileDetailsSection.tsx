@@ -135,8 +135,9 @@ export default function ProfileDetailsSection({ card }: Props) {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
 
-  const detailSurface = isDark ? th.backgroundElement : th.surface;
+  const detailSurface = th.background;
   const detailIconBg  = isDark ? th.backgroundSelected : '#F3EEFF';
+  const mutedBorder   = isDark ? 'rgba(46,31,80,0.25)' : 'rgba(233,221,248,0.35)';
 
   const boolLabel = (v: boolean | undefined | null): string | null =>
     v == null ? null : v ? 'Yes' : 'No';
@@ -200,7 +201,7 @@ export default function ProfileDetailsSection({ card }: Props) {
           <Text style={[styles.sectionTitle, { color: th.text }]}>
             {t('discovery.aboutUser', { name: card.display_name })}
           </Text>
-          <View style={[styles.bioCard, { backgroundColor: detailSurface, borderColor: th.border }]}>
+          <View style={[styles.bioCard, { backgroundColor: detailSurface, borderColor: mutedBorder }]}>
             <Text style={[styles.bioText, { color: th.text }]}>{card.bio}</Text>
           </View>
         </View>
@@ -210,7 +211,7 @@ export default function ProfileDetailsSection({ card }: Props) {
       {card.prompt_answers && card.prompt_answers.length > 0 ? (
         <View style={styles.section}>
           {card.prompt_answers.map((pa, idx) => (
-            <View key={idx} style={[styles.bioCard, { backgroundColor: detailSurface, borderColor: th.border }]}>
+            <View key={idx} style={[styles.bioCard, { backgroundColor: detailSurface, borderColor: mutedBorder }]}>
               <Text style={[styles.promptQuestion, { color: th.textMuted }]}>{pa.promptText}</Text>
               <Text style={[styles.bioText, { color: th.text }]}>{pa.answerText}</Text>
             </View>
@@ -225,9 +226,9 @@ export default function ProfileDetailsSection({ card }: Props) {
           group={group}
           surfaceBg={detailSurface}
           iconBg={detailIconBg}
-          borderCol={th.border}
+          borderCol={mutedBorder}
           textCol={th.text}
-          mutedCol={th.textMuted}
+          mutedCol={th.textSecondary}
           card={card}
           t={t}
         />
@@ -307,13 +308,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   detailLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.2,
     marginBottom: 3,
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
   },
 

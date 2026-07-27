@@ -19,6 +19,7 @@ import {
     useUpdateNotificationPreferences,
 } from '@/hooks/notifications/useNotificationPreferences';
 import { useTheme } from '@/hooks/use-theme';
+import { useNotificationsStore } from '@/stores/notifications-store';
 import type { NotificationPreferencesPatch } from '@/types/notifications';
 
 const MARKETING_CONSENT_VERSION = '1.0';
@@ -67,6 +68,8 @@ export function NotificationSettingsSection() {
   const { data: prefs, isLoading: isLoadingPrefs, isError } = useNotificationPreferences();
   const { mutate: updatePrefs, isPending: isUpdating } = useUpdateNotificationPreferences();
   const [pendingField, setPendingField] = useState<keyof NotificationPreferencesPatch | null>(null);
+  const soundEnabled = useNotificationsStore((s) => s.soundEnabled);
+  const setSoundEnabled = useNotificationsStore((s) => s.setSoundEnabled);
 
   const permGranted = permStatus === 'granted';
   const permDenied = permStatus === 'denied';
@@ -322,6 +325,19 @@ export function NotificationSettingsSection() {
             onValueChange={handleMessagePreview}
             disabled={categoryDisabled}
             isLoading={pendingField === 'messagePreviewEnabled' && isUpdating}
+          />
+
+          <View style={[styles.divider, { borderColor: th.border }]} />
+
+          <PreferenceRow
+            label={t('notifications.sound', 'Notification sound')}
+            sublabel={t(
+              'notifications.soundSub',
+              'Play a sound when a notification arrives',
+            )}
+            value={soundEnabled}
+            onValueChange={setSoundEnabled}
+            disabled={categoryDisabled}
           />
         </>
       )}

@@ -12,6 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
     Easing,
     runOnJS,
@@ -46,7 +47,7 @@ interface BrowseItem {
   is_verified: boolean;
   city: string;
   country_name: string;
-  primary_photo: string | null;
+  photos: string[];
   relationship_intention: string;
   bio?: string;
 }
@@ -60,7 +61,7 @@ function mapCardToBrowseItem(card: CardDto): BrowseItem {
     is_verified: card.is_verified,
     city: card.city,
     country_name: card.country_name,
-    primary_photo: card.photos?.[0]?.image_url ?? null,
+    photos: (card.photos ?? []).map((p) => p.image_url).filter(Boolean),
     relationship_intention: card.relationship_intention,
     bio: card.bio,
   };
@@ -122,6 +123,54 @@ function BrowseProfileCard({
   const [animating, setAnimating] = useState(false);
   const actionType = useSharedValue<'none' | 'pass' | 'like' | 'super_like'>('none');
 
+  const photos = item.photos;
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const photoSlideX = useSharedValue(0);
+  const slideDirRef = useRef<'next' | 'prev'>('next');
+  const skipSlideRef = useRef(true);
+
+  // Reset photo index when the item (user) changes
+  useEffect(() => {
+    setPhotoIndex(0);
+    skipSlideRef.current = true;
+  }, [item.user_id]);
+
+  // Slide animation when photoIndex changes
+  useEffect(() => {
+    if (skipSlideRef.current) {
+      skipSlideRef.current = false;
+      photoSlideX.value = 0;
+      return;
+    }
+    const startOffset = slideDirRef.current === 'next' ? CARD_W : -CARD_W;
+    photoSlideX.value = startOffset;
+    photoSlideX.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
+  }, [photoIndex]);
+
+  const currentPhoto = photos.length > 0 ? photos[Math.min(photoIndex, photos.length - 1)] : null;
+
+  const photoPanGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-15, 15])
+    .runOnJS(true)
+    .onEnd((e) => {
+      if (e.translationX < -30 && photoIndex < photos.length - 1) {
+        slideDirRef.current = 'next';
+        setPhotoIndex((i) => Math.min(i + 1, photos.length - 1));
+      } else if (e.translationX > 30 && photoIndex > 0) {
+        slideDirRef.current = 'prev';
+        setPhotoIndex((i) => Math.max(i - 1, 0));
+      }
+    });
+
+  const photoTapGesture = Gesture.Tap()
+    .runOnJS(true)
+    .onEnd(() => {
+      onPress(item.user_id);
+    });
+
+  const photoGesture = Gesture.Race(photoPanGesture, photoTapGesture);
+
   const locationText = useMemo(() => {
     const sameCountry = myCountry !== '' && item.country_name === myCountry;
     const place = sameCountry
@@ -176,6 +225,10 @@ function BrowseProfileCard({
     opacity: cardOpacity.value,
   }));
 
+  const photoSlideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: photoSlideX.value }],
+  }));
+
   const likeStampStyle = useAnimatedStyle(() => ({
     opacity: actionType.value === 'like' ? stampOpacity.value : 0,
     transform: [{ rotateZ: '-20deg' }],
@@ -193,42 +246,58 @@ function BrowseProfileCard({
 
   return (
     <Animated.View style={[styles.card, { backgroundColor: cardBg }, cardAnimatedStyle]}>
-      {/* Photo — tappable to view profile */}
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => onPress(item.user_id)}
-        disabled={animating || isActing}
-        accessibilityLabel={`View ${item.display_name}'s profile`}
-        accessibilityRole="button"
-      >
-        <View style={styles.photoWrap}>
-          {item.primary_photo ? (
-            <Image
-              source={{ uri: item.primary_photo }}
-              style={styles.photo}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
+      {/* Photo — tap to view profile, swipe horizontally to browse photos */}
+      <GestureDetector gesture={photoGesture}>
+        <Animated.View
+          accessibilityLabel={`View ${item.display_name}'s profile`}
+          accessibilityRole="button"
+        >
+          <View style={styles.photoWrap}>
+            <Animated.View style={[styles.photo, photoSlideStyle]}>
+              {currentPhoto ? (
+                <Image
+                  source={{ uri: currentPhoto }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  transition={200}
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <View style={[StyleSheet.absoluteFill, styles.photoPlaceholder]}>
+                  <Ionicons name="person" size={48} color={colors.primaryLight} />
+                </View>
+              )}
+            </Animated.View>
+
+            {/* Gradient overlay for text readability */}
+            <LinearGradient
+              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.80)']}
+              locations={[0.35, 1]}
+              style={styles.photoOverlay}
             />
-          ) : (
-            <View style={[styles.photo, styles.photoPlaceholder]}>
-              <Ionicons name="person" size={48} color={colors.primaryLight} />
-            </View>
-          )}
 
-          {/* Gradient overlay for text readability */}
-          <LinearGradient
-            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.80)']}
-            locations={[0.35, 1]}
-            style={styles.photoOverlay}
-          />
+            {/* Photo indicator dots — top right corner */}
+            {photos.length > 1 && (
+              <View style={styles.photoDotsWrap}>
+                {photos.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.photoDot,
+                      i === photoIndex ? styles.photoDotActive : styles.photoDotInactive,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
 
-          {/* Verified badge — top right */}
-          {item.is_verified && (
-            <View style={styles.verifiedWrap}>
-              <VerifiedBadge size={18} />
-            </View>
-          )}
+            {/* Verified badge — top right (below dots) */}
+            {item.is_verified && (
+              <View style={[styles.verifiedWrap, photos.length > 1 && { top: 34 }] }>
+                <VerifiedBadge size={18} />
+              </View>
+            )}
+          </View>
 
           {/* Action stamps — LIKE / PASS / SUPER LIKE */}
           <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]} pointerEvents="none">
@@ -259,8 +328,8 @@ function BrowseProfileCard({
               </View>
             ) : null}
           </View>
-        </View>
-      </TouchableOpacity>
+        </Animated.View>
+      </GestureDetector>
 
       {/* Info section */}
       <View style={styles.infoSection}>
@@ -451,7 +520,7 @@ export default function BrowseModeGrid({
       }
       try {
         const response = await swipeAction({ type, targetUserId: userId });
-        if ((type === 'LIKE' || type === 'SUPER_LIKE') && response.isMatch && onMatch) {
+        if ((type === 'LIKE' || type === 'SUPER_LIKE') && response.is_match && onMatch) {
           onMatch(response);
         }
       } catch {
@@ -703,6 +772,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: CARD_H,
     position: 'relative',
+    overflow: 'hidden',
   },
   photo: {
     width: '100%',
@@ -719,6 +789,28 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 100,
+  },
+  photoDotsWrap: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    gap: 4,
+    zIndex: 4,
+  },
+  photoDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+  },
+  photoDotActive: {
+    backgroundColor: colors.primary,
+    borderWidth: 0,
+  },
+  photoDotInactive: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   verifiedWrap: {
     position: 'absolute',

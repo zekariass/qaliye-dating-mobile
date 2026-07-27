@@ -14,7 +14,8 @@ function getTypeIcon(intent: ValidatedNavIntent | null): React.ComponentProps<ty
   switch (intent.type) {
     case 'CHAT_MESSAGE': return 'chatbubble-outline';
     case 'MATCH_CREATED': return 'heart-outline';
-    case 'LIKE_RECEIVED': return 'heart-outline';
+    case 'LIKE_RECEIVED':
+    case 'SUPERLIKE_RECEIVED': return 'heart-outline';
     case 'ACCOUNT_ALERT': return 'alert-circle-outline';
     case 'MARKETING': return 'gift-outline';
     default: return 'notifications-outline';
@@ -67,6 +68,7 @@ export function NotificationBanner() {
         router.push('/(app)/(tabs)/matches' as any);
         break;
       case 'LIKE_RECEIVED':
+      case 'SUPERLIKE_RECEIVED':
         router.push('/(app)/(tabs)/likes' as any);
         break;
       case 'ACCOUNT_ALERT':

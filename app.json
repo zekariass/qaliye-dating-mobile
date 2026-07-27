@@ -10,7 +10,7 @@
     "ios": {
       "bundleIdentifier": "com.qaliye.app",
       "supportsTablet": false,
-      "appStoreUrl": "https://apps.apple.com/app/id6741631870",
+      "appStoreUrl": "https://apps.apple.com/app/id6794608729",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "Qaliye needs access to your photos to let you add a profile photo.",
@@ -51,7 +51,8 @@
           "icon": "./assets/images/android-icon-monochrome.png",
           "color": "#8A2CFF",
           "defaultChannel": "qaliye-default",
-          "notificationPermission": "Qaliye sends notifications about matches, messages, and likes."
+          "notificationPermission": "Qaliye sends notifications about matches, messages, and likes.",
+          "sounds": ["./assets/sounds/notification.mp3"]
         }
       ],
       [
@@ -93,7 +94,9 @@
         {
           "microphonePermission": "Qaliye needs access to your microphone to record voice messages in support chat."
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

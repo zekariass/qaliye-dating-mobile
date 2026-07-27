@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
 
 import type { InboxFilter } from '@/api/chat/chatApi';
-import { useInbox } from '@/hooks/messages/useInbox';
+import { upsertInboxItem, useInbox } from '@/hooks/messages/useInbox';
 import { supabase } from '@/lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 
 // ---------------------------------------------------------------------------
 // Hook — subscribes to user:<userId>:inbox for inbox update notifications
@@ -13,13 +14,16 @@ export function useInboxChannel(
   filter: InboxFilter,
 ) {
   const { invalidate, removeMatch } = useInbox(filter);
+  const queryClient = useQueryClient();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Stable refs so the channel subscription doesn't recreate on filter change
   const invalidateRef = useRef(invalidate);
   const removeMatchRef = useRef(removeMatch);
+  const queryClientRef = useRef(queryClient);
   invalidateRef.current = invalidate;
   removeMatchRef.current = removeMatch;
+  queryClientRef.current = queryClient;
 
   // ── Keep Realtime auth token in sync with the Supabase session ──────────
   useEffect(() => {
@@ -54,16 +58,31 @@ export function useInboxChannel(
         config: { private: true },
       });
 
-      channel.on('broadcast', { event: 'inbox.match.updated' }, () => {
-        invalidateRef.current();
+      channel.on('broadcast', { event: 'inbox.match.updated' }, (payload) => {
+        const p = payload?.payload;
+        const matchId = p?.matchId ?? p?.match_id;
+        const preview = p?.preview ?? p?.lastMessage ?? p?.last_message;
+        const senderDisplayName = p?.senderDisplayName ?? p?.sender_display_name;
+        const createdAt = p?.createdAt ?? p?.created_at ?? new Date().toISOString();
+
+        if (matchId) {
+          upsertInboxItem(queryClientRef.current, matchId, {
+            preview,
+            senderDisplayName,
+            createdAt,
+          });
+        } else {
+          invalidateRef.current();
+        }
       });
 
       channel.on('broadcast', { event: 'inbox.match.removed' }, (payload) => {
         const matchId = payload?.payload?.matchId ?? payload?.payload?.match_id;
         if (matchId) {
           removeMatchRef.current(matchId);
+        } else {
+          invalidateRef.current();
         }
-        invalidateRef.current();
       });
 
       channel.subscribe();

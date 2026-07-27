@@ -8,6 +8,7 @@ const SUPPORTED_TYPES: NotificationType[] = [
   'CHAT_MESSAGE',
   'MATCH_CREATED',
   'LIKE_RECEIVED',
+  'SUPERLIKE_RECEIVED',
   'ACCOUNT_ALERT',
   'MARKETING',
 ];
@@ -58,6 +59,8 @@ export function buildNavIntent(
     case 'MATCH_CREATED':
       return { type, match_id, screen: 'matches' };
     case 'LIKE_RECEIVED':
+      return { type, discovery_action_id, screen: 'likes' };
+    case 'SUPERLIKE_RECEIVED':
       return { type, discovery_action_id, screen: 'likes' };
     case 'ACCOUNT_ALERT':
       return { type, screen: 'settings' };

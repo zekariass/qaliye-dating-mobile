@@ -1,27 +1,42 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Dimensions,
     Keyboard,
     KeyboardAvoidingView,
     Modal,
     Platform,
     Pressable,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Reanimated, {
+    withTiming as reanimatedWithTiming,
+    Easing as REasing,
+    useAnimatedStyle,
+    useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ReportType } from '@/api/safety/safetyApi';
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { themedAlert, themedError, themedSuccess } from '@/components/common/ThemedAlert';
-import { AppTheme, colors, radius, spacing } from '@/constants/theme';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
+import MorePhotosSection from '@/components/discovery/MorePhotosSection';
+import { CardDto } from '@/components/discovery/ProfileCard';
+import ProfileDetailsSection from '@/components/discovery/ProfileDetailsSection';
+import { colors, radius, spacing } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
 import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
 import { useUnmatch } from '@/hooks/matches/useUnmatch';
@@ -31,14 +46,15 @@ import { useReportUser } from '@/hooks/safety/useReportUser';
 import { useTheme } from '@/hooks/use-theme';
 import {
     mapOtherUserProfileDtoToView,
-    OtherUserDetailGroup,
     OtherUserRelationStatus,
 } from '@/utils/profileMappers';
 
 import AppTabBar from '@/components/layout/AppTabBar';
-import ProfileHeroGallery from './ProfileHeroGallery';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const HERO_H = Math.round(SCREEN_W * 1.1);
 
 const STATUS_META: Record<NonNullable<OtherUserRelationStatus>, { label: string; icon: IoniconName; chipBg: string; chipColor: string }> = {
   matched:       { label: 'Matched',   icon: 'heart-circle',  chipBg: '#EFE4FF', chipColor: colors.primary },
@@ -48,17 +64,9 @@ const STATUS_META: Record<NonNullable<OtherUserRelationStatus>, { label: string;
 
 const ACTION_META: Record<NonNullable<OtherUserRelationStatus>, { primary: { icon: IoniconName; color: string; label: string }; secondary?: { icon: IoniconName; color: string; label: string } }> = {
   matched:       { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: 'Unmatch' } },
-  like_sent:     { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: 'Unsend Like' } },
+  like_sent:     { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: 'Cancel Like' } },
   like_received: { primary: { icon: 'close-circle', color: colors.danger, label: 'Decline' }, secondary: { icon: 'heart', color: colors.heartPink, label: 'Like Back' } },
 };
-
-const SHEET_SHADOW = {
-  shadowColor: '#000',
-  shadowOpacity: 0.07,
-  shadowRadius: 18,
-  shadowOffset: { width: 0, height: -4 },
-  elevation: 7,
-} as const;
 
 const REPORT_OPTIONS: { type: ReportType; label: string }[] = [
   { type: 'FAKE_PROFILE',              label: 'Fake Profile' },
@@ -151,7 +159,7 @@ export default function OtherUserProfileScreen() {
     try {
       const result = await swipeAction({ type: 'LIKE', targetUserId: userId });
       invalidateLikesAndDiscovery();
-      if (result.isMatch && result.match) {
+      if (result.is_match && result.match) {
         themedAlert({
           title: "It's a Match!",
           message: `You and ${profile?.name ?? 'this user'} are now matched.`,
@@ -290,8 +298,81 @@ export default function OtherUserProfileScreen() {
     );
   };
 
-  const addressCardBg     = isDark ? th.backgroundSelected : '#F3EEFF';
-  const addressCardBorder = isDark ? th.border : '#DDD0F8';
+  // ── Hero photo navigation state (must be before early returns) ──
+  const heroPhotos = profile?.images ?? [];
+  const [heroPhotoIndex, setHeroPhotoIndex] = useState(0);
+  const heroSlideX = useSharedValue(0);
+  const heroSlideDir = useRef<'next' | 'prev'>('next');
+  const heroSkipSlide = useRef(true);
+
+  useEffect(() => {
+    setHeroPhotoIndex(0);
+    heroSkipSlide.current = true;
+  }, [userId]);
+
+  useEffect(() => {
+    if (heroSkipSlide.current) {
+      heroSkipSlide.current = false;
+      heroSlideX.value = 0;
+      return;
+    }
+    const startOffset = heroSlideDir.current === 'next' ? SCREEN_W : -SCREEN_W;
+    heroSlideX.value = startOffset;
+    heroSlideX.value = reanimatedWithTiming(0, { duration: 280, easing: REasing.out(REasing.cubic) });
+  }, [heroPhotoIndex]);
+
+  const heroPanGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-15, 15])
+    .runOnJS(true)
+    .onEnd((e) => {
+      if (e.translationX < -30 && heroPhotoIndex < heroPhotos.length - 1) {
+        heroSlideDir.current = 'next';
+        setHeroPhotoIndex((i) => Math.min(i + 1, heroPhotos.length - 1));
+      } else if (e.translationX > 30 && heroPhotoIndex > 0) {
+        heroSlideDir.current = 'prev';
+        setHeroPhotoIndex((i) => Math.max(i - 1, 0));
+      }
+    });
+
+  const heroPhotoGesture = Gesture.Race(heroPanGesture);
+
+  const heroSlideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: heroSlideX.value }],
+  }));
+
+  // Build CardDto for ProfileDetailsSection + MorePhotosSection
+  const cardDto: CardDto | null = useMemo(() => {
+    if (!profile || !dto) return null;
+    return {
+      user_id: profile.userId,
+      display_name: profile.name,
+      age: profile.age ?? 0,
+      distance_km: null,
+      is_verified: profile.verified,
+      relationship_intention: dto.relationship_intention ?? '',
+      residency_type: dto.residency_type ?? '',
+      city: dto.address?.city ?? '',
+      country_name: dto.address?.country_name ?? '',
+      photos: profile.images.map((url) => ({ image_url: url })),
+      bio: profile.bio ?? undefined,
+      gender: dto.gender,
+      height_cm: dto.height_cm ?? undefined,
+      ethnicities: dto.ethnicities,
+      languages: dto.languages,
+      nationality: dto.nationality ?? undefined,
+      religion: dto.religion ?? undefined,
+      education_level: dto.education_level ?? undefined,
+      occupation: dto.occupation ?? undefined,
+      marital_status: dto.marital_status ?? undefined,
+      has_children: dto.has_children ?? undefined,
+      wants_children: dto.wants_children ?? undefined,
+      smoking: dto.smoking ?? undefined,
+      drinking: dto.drinking ?? undefined,
+      activity_level: dto.activity_level ?? undefined,
+      interests: profile.interests,
+    };
+  }, [profile, dto]);
 
   if (isLoading) {
     return (
@@ -324,202 +405,256 @@ export default function OtherUserProfileScreen() {
     );
   }
 
+  const currentHeroPhoto = heroPhotos.length > 0 ? heroPhotos[Math.min(heroPhotoIndex, heroPhotos.length - 1)] : null;
+
   const statusMeta = profile.status ? STATUS_META[profile.status] : null;
   const actionMeta = profile.status ? ACTION_META[profile.status] : null;
 
   return (
     <View style={[styles.screen, { backgroundColor: th.background }]}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces
-      >
-        {/* Hero gallery */}
-        <ProfileHeroGallery
-          images={profile.images}
-          safeTop={safeTop}
-          onBack={() => router.back()}
-          onMore={() => setMenuVisible(true)}
-        />
-
-        {/* Overlapping profile content sheet */}
-        <View style={[styles.sheet, { backgroundColor: th.surface }, SHEET_SHADOW]}>
-
-          {/* Name · Age · Verified */}
-          <View style={styles.nameRow}>
-            <Text style={[styles.nameText, { color: th.text }]}>
-              {profile.name},
-            </Text>
-            {profile.age != null && (
-              <Text style={[styles.ageText, { color: th.text }]}> {profile.age}</Text>
-            )}
-            {profile.verified && (
-              <Ionicons
-                name="checkmark-circle"
-                size={22}
-                color={colors.verifiedBlue}
-                style={styles.verifiedIcon}
-                accessibilityLabel="Verified profile"
-              />
-            )}
-          </View>
-          {!!activityStatus && activityStatus !== 'HIDDEN' && activityStatus !== 'OFFLINE' && (
-            <ActivityStatusIndicator
-              status={activityStatus}
-              showLabel
-              size={9}
-              labelColor={isDark ? '#9CA3AF' : '#7C6EA0'}
-              style={styles.activityStatus}
-            />
-          )}
-
-          {/* Status badge */}
-          {statusMeta && (
-            <View style={[styles.statusChip, { backgroundColor: statusMeta.chipBg }]}>
-              <Ionicons name={statusMeta.icon} size={13} color={statusMeta.chipColor} />
-              <Text style={[styles.statusChipText, { color: statusMeta.chipColor }]}>{statusMeta.label}</Text>
-            </View>
-          )}
-
-          {/* Location */}
-          {!!profile.location && (
-            <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={15} color={colors.primary} />
-              <Text style={[styles.locationText, { color: th.textSecondary }]} numberOfLines={1}>
-                {profile.location}
-              </Text>
-            </View>
-          )}
-
-          {/* Bio */}
-          {!!profile.bio && (
-            <Text style={[styles.bio, { color: th.textSecondary }]}>{profile.bio}</Text>
-          )}
-
-          {/* Address card */}
-          {!!profile.address && (
-            <View
-              style={[
-                styles.addressCard,
-                { backgroundColor: addressCardBg, borderColor: addressCardBorder },
-              ]}
-            >
-              <View style={[styles.addressIconWrap, { backgroundColor: colors.primary }]}>
-                <Ionicons name="location" size={16} color="#FFF" />
-              </View>
-              <View style={styles.addressBody}>
-                <Text style={[styles.addressLabel, { color: th.textMuted }]}>Address</Text>
-                <Text style={[styles.addressValue, { color: th.text }]}>{profile.address}</Text>
-              </View>
-            </View>
-          )}
-
-          {/* Grouped detail sections */}
-          {profile.detailGroups.map((group) => (
-            <DetailGroupSection
-              key={group.title}
-              group={group}
-              interests={profile.interests}
-              th={th}
-              isDark={isDark}
-            />
-          ))}
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <GestureHandlerRootView style={styles.screen}>
+      <View style={{ flex: 1, backgroundColor: th.background }}>
+        {/* ── Header (floating over hero) ── */}
+        <View style={[styles.header, { paddingTop: safeTop + 4 }]}>
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
+            <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={() => setMenuVisible(true)}
+            activeOpacity={0.8}
+            accessibilityLabel="More options"
+            accessibilityRole="button"
+          >
+            <Ionicons name="ellipsis-horizontal" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
-      </ScrollView>
 
-      {/* Fixed floating action buttons */}
-      {actionMeta && (
-        <View style={[styles.fixedActionButtonsRow, { bottom: safeBottom + 72 }]}>
-          {profile?.status === 'matched' ? (
-            <>
-              <TouchableOpacity
-                style={[
-                  styles.actionTextButton,
-                  { backgroundColor: colors.primary, opacity: isSwiping ? 0.6 : 1 },
-                ]}
-                onPress={() => {
-                  if (resolvedMatchId) {
-                    router.push({
-                      pathname: '/(app)/chat' as any,
-                      params: {
-                        matchId: resolvedMatchId,
-                        displayName: profile?.name ?? '',
-                        avatarUrl: profile?.images?.[0] ?? '',
-                        isVerified: profile?.verified ? '1' : '0',
-                      },
-                    });
-                  }
-                }}
-                activeOpacity={0.82}
-                accessibilityRole="button"
-                accessibilityLabel="Chat"
-              >
-                <Ionicons name="chatbubble-ellipses" size={15} color="#FFF" style={{ marginRight: 6 }} />
-                <Text style={styles.actionTextButtonLabel}>Chat</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.actionTextButton,
-                  { opacity: isUnmatching ? 0.6 : 1 },
-                ]}
-                onPress={handleUnmatch}
-                disabled={isUnmatching}
-                activeOpacity={0.82}
-                accessibilityRole="button"
-                accessibilityLabel="Unmatch"
-              >
-                {isUnmatching ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+        {/* ── Scrollable content ── */}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={{ paddingBottom: safeBottom + 100 }}
+          showsVerticalScrollIndicator={false}
+          bounces
+        >
+          {/* Hero photo — swipe horizontally to browse photos */}
+          <GestureDetector gesture={heroPhotoGesture}>
+            <View style={styles.heroWrap}>
+              <Reanimated.View style={[styles.heroPhoto, heroSlideStyle]}>
+                {currentHeroPhoto ? (
+                  <Image
+                    source={{ uri: currentHeroPhoto }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                  />
                 ) : (
-                  <>
-                    <Ionicons name="heart-dislike" size={15} color="#FFF" style={{ marginRight: 6 }} />
-                    <Text style={styles.actionTextButtonLabel}>Unmatch</Text>
-                  </>
+                  <View style={[StyleSheet.absoluteFill, styles.heroPlaceholder]}>
+                    <Ionicons name="person" size={64} color={colors.primaryLight} />
+                  </View>
                 )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity
-              style={[styles.actionIconButton, { backgroundColor: colors.danger, opacity: isSwiping ? 0.6 : 1 }]}
-              onPress={handlePass}
-              disabled={isSwiping}
-              activeOpacity={0.82}
-              accessibilityRole="button"
-              accessibilityLabel={actionMeta.primary.label}
-            >
-              {isSwiping ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Ionicons name={actionMeta.primary.icon} size={22} color="#FFF" />
+              </Reanimated.View>
+
+              {/* Gradient overlay */}
+              <LinearGradient
+                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.85)']}
+                locations={[0.4, 1]}
+                style={styles.heroOverlay}
+              />
+
+              {/* Verified badge */}
+              {profile.verified && (
+                <View style={styles.heroVerified}>
+                  <VerifiedBadge size={20} />
+                </View>
               )}
-            </TouchableOpacity>
+
+              {/* Photo indicator dots — bottom right */}
+              {heroPhotos.length > 1 && (
+                <View style={styles.heroDotsWrap}>
+                  {heroPhotos.map((_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.heroDot,
+                        i === heroPhotoIndex ? styles.heroDotActive : styles.heroDotInactive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* Name + age + location */}
+              <View style={styles.heroInfo}>
+                <Text style={styles.heroName} numberOfLines={1}>
+                  {profile.name}
+                  {profile.age != null && <Text style={styles.heroAge}>  · {profile.age}</Text>}
+                </Text>
+                {!!profile.location && (
+                  <View style={styles.heroLocationRow}>
+                    <Ionicons name="location" size={12} color="rgba(255,255,255,0.85)" />
+                    <Text style={styles.heroLocationText} numberOfLines={1}>
+                      {profile.location}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </GestureDetector>
+
+          {/* Status chip + activity status */}
+          {(statusMeta || (!!activityStatus && activityStatus !== 'HIDDEN' && activityStatus !== 'OFFLINE')) && (
+            <View style={styles.belowHeroRow}>
+              {statusMeta && (
+                <View style={[styles.statusChip, { backgroundColor: statusMeta.chipBg }]}>
+                  <Ionicons name={statusMeta.icon} size={13} color={statusMeta.chipColor} />
+                  <Text style={[styles.statusChipText, { color: statusMeta.chipColor }]}>{statusMeta.label}</Text>
+                </View>
+              )}
+              {!!activityStatus && activityStatus !== 'HIDDEN' && activityStatus !== 'OFFLINE' && (
+                <ActivityStatusIndicator
+                  status={activityStatus}
+                  showLabel
+                  size={9}
+                  labelColor={isDark ? '#9CA3AF' : '#7C6EA0'}
+                />
+              )}
+            </View>
           )}
-          {actionMeta.secondary && (() => {
-            const secondary = actionMeta.secondary;
-            const isPrimary = secondary.label === 'Like Back';
-            return (
+
+          {/* Profile details */}
+          {cardDto && (
+            <>
+              <ProfileDetailsSection card={cardDto} />
+              <MorePhotosSection photos={cardDto.photos} />
+            </>
+          )}
+        </ScrollView>
+
+        {/* Fixed floating action buttons */}
+        {actionMeta && (
+          <View style={[styles.fixedActionButtonsRow, { bottom: safeBottom + 72 }]}>
+            {profile?.status === 'matched' ? (
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.actionTextButton,
+                    { backgroundColor: colors.primary, opacity: isSwiping ? 0.6 : 1 },
+                  ]}
+                  onPress={() => {
+                    if (resolvedMatchId) {
+                      router.push({
+                        pathname: '/(app)/chat' as any,
+                        params: {
+                          matchId: resolvedMatchId,
+                          displayName: profile?.name ?? '',
+                          avatarUrl: profile?.images?.[0] ?? '',
+                          isVerified: profile?.verified ? '1' : '0',
+                        },
+                      });
+                    }
+                  }}
+                  activeOpacity={0.82}
+                  accessibilityRole="button"
+                  accessibilityLabel="Chat"
+                >
+                  <Ionicons name="chatbubble-ellipses" size={15} color="#FFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.actionTextButtonLabel}>Chat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.actionTextButton,
+                    { opacity: isUnmatching ? 0.6 : 1 },
+                  ]}
+                  onPress={handleUnmatch}
+                  disabled={isUnmatching}
+                  activeOpacity={0.82}
+                  accessibilityRole="button"
+                  accessibilityLabel="Unmatch"
+                >
+                  {isUnmatching ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="heart-dislike" size={15} color="#FFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.actionTextButtonLabel}>Unmatch</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : profile?.status === 'like_sent' ? (
               <TouchableOpacity
-                style={[styles.actionIconButton, { backgroundColor: isPrimary ? colors.primary : th.surface, opacity: isSwiping ? 0.6 : 1 }]}
-                onPress={handleLikeBack}
+                style={[
+                  styles.actionTextButton,
+                  { opacity: isSwiping ? 0.6 : 1 },
+                ]}
+                onPress={handlePass}
                 disabled={isSwiping}
                 activeOpacity={0.82}
                 accessibilityRole="button"
-                accessibilityLabel={secondary.label}
+                accessibilityLabel="Cancel Like"
               >
                 {isSwiping ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <Ionicons name={secondary.icon} size={22} color="#FFF" />
+                  <>
+                    <Ionicons name="heart-dislike" size={15} color="#FFF" style={{ marginRight: 6 }} />
+                    <Text style={styles.actionTextButtonLabel}>Cancel Like</Text>
+                  </>
                 )}
               </TouchableOpacity>
-            );
-          })()}
-        </View>
-      )}
+            ) : (
+              <TouchableOpacity
+                style={[styles.actionIconButton, { backgroundColor: colors.danger, opacity: isSwiping ? 0.6 : 1 }]}
+                onPress={handlePass}
+                disabled={isSwiping}
+                activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel={actionMeta.primary.label}
+              >
+                {isSwiping ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Ionicons name={actionMeta.primary.icon} size={22} color="#FFF" />
+                )}
+              </TouchableOpacity>
+            )}
+            {actionMeta.secondary && (() => {
+              const secondary = actionMeta.secondary;
+              const isPrimary = secondary.label === 'Like Back';
+              return (
+                <TouchableOpacity
+                  style={[styles.actionIconButton, { backgroundColor: isPrimary ? colors.primary : th.surface, opacity: isSwiping ? 0.6 : 1 }]}
+                  onPress={handleLikeBack}
+                  disabled={isSwiping}
+                  activeOpacity={0.82}
+                  accessibilityRole="button"
+                  accessibilityLabel={secondary.label}
+                >
+                  {isSwiping ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Ionicons name={secondary.icon} size={22} color="#FFF" />
+                  )}
+                </TouchableOpacity>
+              );
+            })()}
+          </View>
+        )}
 
-      {/* Fixed floating bottom nav */}
-      <AppTabBar activeTab="profile" />
+        {/* Fixed floating bottom nav */}
+        <AppTabBar activeTab="profile" />
+      </View>
+      </GestureHandlerRootView>
 
       {/* Dropdown menu */}
       <Modal
@@ -720,232 +855,155 @@ export default function OtherUserProfileScreen() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Grouped detail section (full-width rows with dividers)
-// ---------------------------------------------------------------------------
-function DetailGroupSection({
-  group, interests, th, isDark,
-}: {
-  group: OtherUserDetailGroup;
-  interests: string[];
-  th: AppTheme;
-  isDark: boolean;
-}) {
-  const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';
-  const regularItems = group.items.filter((i) => i.id !== 'interests');
-  const hasInterests = group.items.some((i) => i.id === 'interests') && interests.length > 0;
-
-  if (regularItems.length === 0 && !hasInterests) return null;
-
-  return (
-    <View style={styles.groupSection}>
-      <Text style={[styles.groupLabel, { color: colors.primary }]}>{group.title}</Text>
-      <View style={[styles.listCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-        {regularItems.map((item, idx) => {
-          const iconName = item.icon as React.ComponentProps<typeof Ionicons>['name'];
-          return (
-            <View key={item.id}>
-              {idx > 0 && <View style={[styles.rowDivider, { backgroundColor: th.border }]} />}
-              <View style={styles.listRow}>
-                <View style={[styles.rowIconWrap, { backgroundColor: iconBg }]}>
-                  <Ionicons name={iconName} size={16} color={colors.primary} />
-                </View>
-                <View style={styles.rowBody}>
-                  <Text style={[styles.rowLabel, { color: th.textMuted }]}>{item.label}</Text>
-                  <Text style={[styles.rowValue, { color: th.text }]}>{item.value}</Text>
-                </View>
-              </View>
-            </View>
-          );
-        })}
-        {hasInterests && (
-          <View>
-            {regularItems.length > 0 && <View style={[styles.rowDivider, { backgroundColor: th.border }]} />}
-            <View style={styles.listRow}>
-              <View style={[styles.rowIconWrap, { backgroundColor: iconBg }]}>
-                <Ionicons name="color-palette-outline" size={16} color={colors.primary} />
-              </View>
-              <View style={[styles.rowBody, { gap: 6 }]}>
-                <Text style={[styles.rowLabel, { color: th.textMuted }]}>Interests</Text>
-                <View style={styles.chipWrap}>
-                  {interests.map((interest) => (
-                    <View key={interest} style={[styles.chip, { backgroundColor: iconBg, borderColor: th.border }]}>
-                      <Text style={[styles.chipText, { color: colors.primary }]}>{interest}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 150 },
   centered: { alignItems: 'center', justifyContent: 'center' },
 
+  // ── Error / loading states ──
   errorText: {
     fontSize: 16,
     fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 20,
+    marginTop: 12,
   },
   retryBtn: {
-    paddingVertical: 10,
+    marginTop: 16,
     paddingHorizontal: 24,
-    marginBottom: 8,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   retryBtnText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
   backBtn: {
-    paddingVertical: 8,
+    marginTop: 10,
     paddingHorizontal: 24,
+    paddingVertical: 8,
   },
   backBtnText: {
     fontSize: 14,
     fontWeight: '500',
   },
 
-  sheet: {
-    marginTop: -30,
-    borderTopLeftRadius: 38,
-    borderTopRightRadius: 38,
-    paddingTop: 22,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xl,
-    minHeight: 500,
-  },
-
-  nameRow: {
+  // ── Header ──
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 30,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    paddingHorizontal: 14,
+    paddingBottom: 8,
   },
-  nameText: {
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  ageText: {
-    fontSize: 28,
-    fontWeight: '400',
-    letterSpacing: -0.5,
-  },
-  verifiedIcon: { marginLeft: 6 },
-
-  activityStatus: {
-    marginBottom: 8,
-    marginTop: -2,
-  },
-
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 12,
-  },
-  locationText: { fontSize: 13 },
-
-  bio: {
-    fontSize: 14,
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-
-  addressCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    padding: 14,
-    gap: 12,
-    marginBottom: 20,
-  },
-  addressIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
   },
-  addressBody: { flex: 1 },
-  addressLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-    marginBottom: 2,
-  },
-  addressValue: { fontSize: 15, fontWeight: '600' },
 
-  groupSection: {
-    gap: 8,
-    marginBottom: 16,
-  },
-  groupLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  listCard: {
-    borderRadius: radius.md,
-    borderWidth: 1,
+  // ── Hero ──
+  heroWrap: {
+    width: SCREEN_W,
+    height: HERO_H,
+    position: 'relative',
     overflow: 'hidden',
   },
-  listRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 12,
+  heroPhoto: {
+    width: '100%',
+    height: '100%',
   },
-  rowDivider: {
-    height: 1,
-    marginHorizontal: 14,
-  },
-  rowIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  heroPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
+    backgroundColor: colors.backgroundLavender,
   },
-  rowBody: { flex: 1 },
-  rowLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-    marginBottom: 3,
+  heroOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 140,
   },
-  rowValue: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  chipWrap: {
+  heroDotsWrap: {
+    position: 'absolute',
+    bottom: 14,
+    right: 14,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    gap: 4,
+    zIndex: 4,
   },
-  chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+  heroDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+  },
+  heroDotActive: {
+    backgroundColor: colors.primary,
+    borderWidth: 0,
+  },
+  heroDotInactive: {
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
+    borderColor: colors.primary,
   },
-  chipText: {
-    fontSize: 12,
+  heroVerified: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    zIndex: 3,
+  },
+  heroInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+    zIndex: 2,
+  },
+  heroName: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.4,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  heroAge: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.85)',
+  },
+  heroLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 4,
+  },
+  heroLocationText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
     fontWeight: '600',
   },
 
+  // ── Below hero ──
+  belowHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
   statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -954,13 +1012,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     gap: 5,
-    marginBottom: 10,
   },
   statusChipText: {
     fontSize: 12,
     fontWeight: '700',
   },
 
+  // ── Action buttons ──
   fixedActionButtonsRow: {
     position: 'absolute',
     left: 0,
@@ -971,43 +1029,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginBottom: 8,
   },
-  actionIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.32,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 14,
-  },
   actionTextButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 120,
-    height: 40,
-    borderRadius: 20,
-    paddingHorizontal: 21,
+    height: 52,
+    borderRadius: 26,
+    paddingHorizontal: 28,
     backgroundColor: colors.danger,
-    shadowColor: colors.danger,
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 14,
   },
   actionTextButtonLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFF',
-    letterSpacing: 0.2,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  actionIconButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
+  // ── Dropdown menu ──
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.18)',
+    backgroundColor: 'rgba(0,0,0,0.40)',
   },
   dropdownCard: {
     position: 'absolute',
@@ -1017,29 +1064,30 @@ const styles = StyleSheet.create({
     minWidth: 180,
     shadowColor: '#000',
     shadowOpacity: 0.22,
-    shadowRadius: 18,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 14,
-    overflow: 'hidden',
+    elevation: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
   },
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   dropdownItemText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   dropdownDivider: {
     height: StyleSheet.hairlineWidth,
   },
 
+  // ── Report modal ──
   reportKAV: {
     flex: 1,
-    justifyContent: 'flex-end',
   },
   reportBackdrop: {
     flex: 1,
@@ -1052,26 +1100,25 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
     paddingTop: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: -4 },
-    elevation: 20,
+    elevation: 16,
   },
   reportHandle: {
     width: 40,
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 3,
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   reportTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     marginBottom: 4,
   },
   reportSubtitle: {
-    fontSize: 13,
-    fontWeight: '400',
+    fontSize: 14,
     marginBottom: 16,
   },
   reportDropdownBtn: {
@@ -1085,10 +1132,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   reportDropdownValue: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '500',
     flex: 1,
-    marginRight: 8,
   },
   reportOptionsList: {
     maxHeight: 220,
@@ -1101,13 +1147,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
     paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   reportOptionLabel: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '500',
-    flex: 1,
   },
   reportInput: {
     borderWidth: 1,
@@ -1115,17 +1160,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 12,
     paddingBottom: 12,
-    fontSize: 14,
-    lineHeight: 20,
-    minHeight: 88,
-    maxHeight: 130,
+    fontSize: 15,
+    minHeight: 90,
+    textAlignVertical: 'top',
   },
   reportCharCount: {
-    fontSize: 11,
-    fontWeight: '500',
-    alignSelf: 'flex-end',
+    fontSize: 12,
+    textAlign: 'right',
     marginTop: 4,
-    marginBottom: 4,
+    marginBottom: 12,
   },
   reportSubmitBtn: {
     height: 52,
@@ -1133,11 +1176,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    marginBottom: 20,
   },
   reportSubmitLabel: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
-    color: '#FFF',
+    fontWeight: '700',
   },
 });

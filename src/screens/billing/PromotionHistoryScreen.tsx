@@ -3,13 +3,13 @@ import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -44,7 +44,14 @@ function formatDate(iso: string | null): string {
 function RedemptionItem({ item }: { item: UserRedemptionDto }) {
   const { colors: th } = useTheme();
   const { t } = useTranslation();
-  const cfg = STATUS_CONFIG[item.status] ?? STATUS_CONFIG.RESERVED;
+
+  const hasExpired =
+    item.status === 'FULFILLED' &&
+    item.expired_at != null &&
+    new Date(item.expired_at).getTime() < Date.now();
+
+  const effectiveStatus: RedemptionStatus = hasExpired ? 'EXPIRED' : item.status;
+  const cfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.RESERVED;
 
   const actionDate =
     item.fulfilled_at ??
@@ -87,7 +94,7 @@ function RedemptionItem({ item }: { item: UserRedemptionDto }) {
         ]}
       >
         <Text style={[styles.statusText, { color: cfg.color }]}>
-          {statusLabel[item.status]}
+          {statusLabel[effectiveStatus]}
         </Text>
       </View>
     </View>

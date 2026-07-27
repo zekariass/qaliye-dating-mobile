@@ -12,7 +12,20 @@
           "package_name": "com.qaliye.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "92774223454-9n6ch8nm834u476ags2kinmq99dgbivq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.qaliye.app",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "92774223454-18vpu3rf051ek4jqf6l4m8ctuurjlnsv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD21DVKsRhk2j-jqUJI3M1eLtcGOoYZFys"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "92774223454-18vpu3rf051ek4jqf6l4m8ctuurjlnsv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
