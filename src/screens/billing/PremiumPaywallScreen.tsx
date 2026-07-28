@@ -53,7 +53,7 @@ export default function PremiumPaywallScreen() {
   const { purchase, purchaseState, isPurchasing } = useRevenueCatPurchase();
   const { restore, restoreState, restoreResult, isRestoring } = useRevenueCatRestore();
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder();
-  const { promotions: eligiblePromotions } = useEligiblePromotions();
+  const { data: eligiblePromotions = [] } = useEligiblePromotions();
   const { mutate: redeemPromotion, isPending: isRedeeming } = useRedeemPromotion();
   const [claimingKey, setClaimingKey] = useState<string | null>(null);
 
@@ -297,13 +297,15 @@ export default function PremiumPaywallScreen() {
                 return (
                   <View
                     key={cp.campaign_key}
-                    style={[styles.claimableBanner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}
+                    style={[styles.claimableBanner, { backgroundColor: colors.primary, borderColor: colors.primary }]}
                   >
-                    <Ionicons name="gift-outline" size={18} color={colors.primary} />
+                    <View style={styles.claimableIconCircle}>
+                      <Ionicons name="gift" size={22} color="#FFFFFF" />
+                    </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.claimableName, { color: th.text }]}>{cp.name}</Text>
+                      <Text style={styles.claimableName}>{cp.name}</Text>
                       {cp.description ? (
-                        <Text style={[styles.claimableDesc, { color: th.textSecondary }]} numberOfLines={2}>
+                        <Text style={styles.claimableDesc} numberOfLines={2}>
                           {cp.description}
                         </Text>
                       ) : null}
@@ -315,7 +317,7 @@ export default function PremiumPaywallScreen() {
                       accessibilityRole="button"
                     >
                       {isClaiming ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <ActivityIndicator size="small" color={colors.primary} />
                       ) : (
                         <Text style={styles.claimBtnText}>
                           {t('promotion.claimNow', 'Claim now')}
@@ -512,35 +514,50 @@ const styles = StyleSheet.create({
   claimableBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 2,
+    padding: 16,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  claimableIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   claimableName: {
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 2,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 3,
   },
   claimableDesc: {
     fontSize: 12,
     lineHeight: 16,
+    color: 'rgba(255,255,255,0.85)',
   },
   claimBtn: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#FFFFFF',
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    minWidth: 80,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    minWidth: 90,
     alignItems: 'center',
   },
   claimBtnDisabled: {
     opacity: 0.6,
   },
   claimBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '800',
   },
   unavailableCard: {
     borderRadius: 14,

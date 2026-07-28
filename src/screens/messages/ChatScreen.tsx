@@ -56,6 +56,7 @@ import type {
 import {
     getImageChatMsgsStatus,
     getVoiceChatMsgsStatus,
+    QUOTA_ERROR_CODES,
 } from '@/utils/entitlements';
 import { processChatImage } from '@/utils/imageProcessor';
 
@@ -427,7 +428,8 @@ export default function ChatScreen() {
       stopTyping();
       const quotaError = await sendWithAttachments(text, files, undefined, voiceDurationsMs);
       if (quotaError) {
-        showQuotaUpsell(quotaError.message);
+        const type = quotaError.code === QUOTA_ERROR_CODES.VOICE_CHAT_MSGS ? 'voice' : 'image';
+        showQuotaUpsell(type);
       } else {
         refreshEntitlements();
       }
@@ -453,7 +455,8 @@ export default function ChatScreen() {
       stopTyping();
       const quotaError = await sendWithAttachments(text, [file], undefined, [rec.durationMs]);
       if (quotaError) {
-        showQuotaUpsell(quotaError.message);
+        const type = quotaError.code === QUOTA_ERROR_CODES.VOICE_CHAT_MSGS ? 'voice' : 'image';
+        showQuotaUpsell(type);
       } else {
         refreshEntitlements();
       }
@@ -471,20 +474,27 @@ export default function ChatScreen() {
   const imageQuotaStatus = getImageChatMsgsStatus(entitlements);
 
   const showQuotaUpsell = useCallback(
-    (message: string) => {
+    (type: 'voice' | 'image') => {
+      const isVoice = type === 'voice';
       themedAlert({
-        title: 'Daily limit reached',
-        message: message || 'You have reached your daily limit for this message type.',
-        icon: 'lock-closed-outline',
+        title: isVoice ? 'Voice Message Limit Reached' : 'Image Message Limit Reached',
+        message: isVoice
+          ? "You've used all your daily voice messages. Upgrade to Premium for unlimited voice messages."
+          : "You've used all your daily image messages. Upgrade to Premium for unlimited image messages.",
+        icon: isVoice ? 'mic-outline' : 'image-outline',
         iconColor: colors.warning,
         buttons: [
           {
-            text: 'Upgrade to Premium',
+            text: 'Go Premium',
+            style: 'default',
+            icon: 'crown',
+            iconFamily: 'material',
+            iconColor: '#FFD700',
             onPress: () => {
               router.push('/(app)/premium' as any);
             },
           },
-          { text: 'Not now', style: 'cancel' },
+          { text: 'Cancel', style: 'cancel' },
         ],
       });
     },
@@ -493,10 +503,7 @@ export default function ChatScreen() {
 
   const handleQuotaExceeded = useCallback(
     (type: 'voice' | 'image') => {
-      const msg = type === 'voice'
-        ? 'You have reached your daily voice message limit.'
-        : 'You have reached your daily image message limit.';
-      showQuotaUpsell(msg);
+      showQuotaUpsell(type);
     },
     [showQuotaUpsell],
   );

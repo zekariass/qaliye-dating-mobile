@@ -20,7 +20,7 @@ const BTN = 48;
 export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLike, disabled }: Props) {
   const { colors: th } = useTheme();
   return (
-    <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.28)' }]}>
+    <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
       <View style={styles.container}>
         {/* Rewind */}
         <TouchableOpacity
@@ -92,7 +92,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
 const styles = StyleSheet.create({
   backdrop: {
     padding: 10,
-    borderRadius: 18,
+    borderRadius: 25,
     alignSelf: 'center',
   },
   container: {

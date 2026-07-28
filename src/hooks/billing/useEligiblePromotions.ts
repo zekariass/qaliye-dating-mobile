@@ -3,42 +3,140 @@ import { useCallback, useMemo } from 'react';
 
 import { fetchEligiblePromotions } from '@/api/billing/billingApi';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
+import type { CampaignRecord } from '@/stores/promotion-store';
+import { usePromotionStore } from '@/stores/promotion-store';
 import type { EligiblePromotionDto } from '@/types/billing';
 import { isActiveSubscription, isPremiumPlan } from '@/types/billing';
 
 export const PROMOTIONS_KEY = ['billing', 'promotions'] as const;
 
-export function selectPromotionToDisplay(
-  promotions: EligiblePromotionDto[],
-): EligiblePromotionDto | null {
-  if (!promotions.length) return null;
+// ─── Supported filter sets ───────────────────────────────────────────────────
+const SUPPORTED_TRIGGER_TYPES = new Set(['USER_CLAIM', 'PURCHASE']);
+const SUPPORTED_ELIGIBILITY_TYPES = new Set([
+  'ANY_ELIGIBLE_USER',
+  'NEW_USER',
+  'NEVER_SUBSCRIBED',
+  'NO_ACTIVE_SUBSCRIPTION',
+]);
+const SUPPORTED_BENEFIT_TYPES = new Set(['FREE_PREMIUM', 'DISCOUNT']);
 
-  // 1. USER_CLAIM with canRedeem = true
-  const claimable = promotions.find(
-    (p) => p.trigger_type === 'USER_CLAIM' && p.can_redeem,
-  );
-  if (claimable) return claimable;
-
-  // 2. FREE_PREMIUM (any trigger)
-  const freePremium = promotions.find((p) => p.benefit_type === 'FREE_PREMIUM');
-  if (freePremium) return freePremium;
-
-  // 3. PURCHASE ending soonest
-  const purchaseWithEnd = promotions
-    .filter((p) => p.trigger_type === 'PURCHASE' && p.ends_at != null)
-    .sort(
-      (a, b) =>
-        new Date(a.ends_at!).getTime() - new Date(b.ends_at!).getTime(),
-    );
-  if (purchaseWithEnd.length > 0) return purchaseWithEnd[0];
-
-  // 4. Any remaining PURCHASE discount
-  return promotions.find((p) => p.trigger_type === 'PURCHASE') ?? null;
+// ─── Date helpers ────────────────────────────────────────────────────────────
+export function parseUtcDate(iso: string | null | undefined): Date | null {
+  if (!iso) return null;
+  try {
+    // Handle Postgres timestamp format: "2026-07-21 01:08:04.701158+00" → "2026-07-21T01:08:04.701158+00"
+    const normalized = iso.includes('T') ? iso : iso.replace(' ', 'T');
+    const d = new Date(normalized);
+    return isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
 }
 
-export function useEligiblePromotions() {
+// ─── Structural validity (required fields + supported types) ─────────────────
+export function isPromoStructurallyValid(p: EligiblePromotionDto): boolean {
+  if (!p.campaign_key || !p.status || !p.trigger_type || !p.benefit_type) return false;
+  if (!p.eligibility_type || !p.starts_at) return false;
+  if (!SUPPORTED_TRIGGER_TYPES.has(p.trigger_type)) return false;
+  if (!SUPPORTED_ELIGIBILITY_TYPES.has(p.eligibility_type)) return false;
+  if (!SUPPORTED_BENEFIT_TYPES.has(p.benefit_type)) return false;
+  if (parseUtcDate(p.starts_at) === null) return false;
+  if (p.ends_at !== null && parseUtcDate(p.ends_at) === null) return false;
+  return true;
+}
+
+// ─── Temporal validity (status + time bounds) ────────────────────────────────
+export function isPromoCurrentlyValid(p: EligiblePromotionDto, now: Date): boolean {
+  if (p.status !== 'ACTIVE') return false;
+  const startsAt = parseUtcDate(p.starts_at);
+  if (!startsAt || now < startsAt) return false;
+  if (p.ends_at !== null) {
+    const endsAt = parseUtcDate(p.ends_at);
+    if (!endsAt || now >= endsAt) return false;
+  }
+  return true;
+}
+
+// ─── Cooldown sequence based on remaining campaign lifetime ──────────────────
+const H24 = 24 * 3600_000;
+const D3 = 3 * 24 * 3600_000;
+const D7 = 7 * 24 * 3600_000;
+
+export function getCooldownSequence(endsAt: string | null, now: Date): number[] {
+  if (!endsAt) return [H24, D3, D7, Infinity];
+  const endsAtDate = parseUtcDate(endsAt);
+  if (!endsAtDate) return [H24, D3, D7, Infinity];
+  const remainingMs = endsAtDate.getTime() - now.getTime();
+  if (remainingMs < H24)  return [Infinity];           // ≤1 show; dismiss → permanent
+  if (remainingMs < D3)   return [H24, Infinity];      // 24h cooldown, then permanent
+  if (remainingMs <= D7)  return [H24, D3, Infinity];  // 24h + 3-day, then permanent
+  return [H24, D3, D7, Infinity];                      // full sequence
+}
+
+// ─── Per-campaign display gate ───────────────────────────────────────────────
+export function canShowCampaign(
+  p: EligiblePromotionDto,
+  record: CampaignRecord,
+  userId: string,
+  store: { isShownThisSession: (u: string, k: string) => boolean },
+  now: Date,
+): boolean {
+  if (record.permanentlyHidden) return false;
+  if (record.claimedOrRedeemed) return false;
+  if (store.isShownThisSession(userId, p.campaign_key)) return false;
+
+  const cooldowns = getCooldownSequence(p.ends_at, now);
+  const count = record.dismissalCount;
+  if (count >= cooldowns.length) return false;
+
+  if (count > 0) {
+    const cooldownMs = cooldowns[count - 1];
+    if (cooldownMs === Infinity) return false;
+    const dismissedAt = parseUtcDate(record.lastDismissedAt);
+    if (dismissedAt && now.getTime() - dismissedAt.getTime() < cooldownMs) return false;
+  }
+
+  // Short-lived: < 24h remaining → at most 1 total display
+  if (p.ends_at) {
+    const endsAt = parseUtcDate(p.ends_at);
+    if (endsAt) {
+      if (now >= endsAt) return false;
+      if (endsAt.getTime() - now.getTime() < H24 && record.lastShownAt) return false;
+    }
+  }
+
+  return true;
+}
+
+// ─── Deterministic campaign selection ────────────────────────────────────────
+function categoryOf(p: EligiblePromotionDto): number {
+  if (p.trigger_type === 'USER_CLAIM' && p.benefit_type === 'FREE_PREMIUM') return 0;
+  if (p.benefit_type === 'FREE_PREMIUM') return 1;
+  if (p.trigger_type === 'PURCHASE' && p.benefit_type === 'DISCOUNT') return 2;
+  return 3;
+}
+
+export function selectPromotion(candidates: EligiblePromotionDto[]): EligiblePromotionDto | null {
+  if (!candidates.length) return null;
+  return [...candidates].sort((a, b) => {
+    const catDiff = categoryOf(a) - categoryOf(b);
+    if (catDiff !== 0) return catDiff;
+    const priDiff = (b.priority ?? 0) - (a.priority ?? 0);
+    if (priDiff !== 0) return priDiff;
+    const aStart = parseUtcDate(a.starts_at)?.getTime() ?? 0;
+    const bStart = parseUtcDate(b.starts_at)?.getTime() ?? 0;
+    if (bStart !== aStart) return bStart - aStart; // newer first
+    return a.campaign_key.localeCompare(b.campaign_key);
+  })[0] ?? null;
+}
+
+export { selectPromotion as selectPromotionToDisplay };
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+export function useEligiblePromotions(userId?: string) {
   const qc = useQueryClient();
   const { entitlements } = useEntitlements();
+  const store = usePromotionStore();
 
   const query = useQuery<EligiblePromotionDto[]>({
     queryKey: PROMOTIONS_KEY,
@@ -47,11 +145,6 @@ export function useEligiblePromotions() {
     retry: 1,
   });
 
-  const refreshPromotions = useCallback(
-    () => qc.invalidateQueries({ queryKey: PROMOTIONS_KEY }),
-    [qc],
-  );
-
   const hasActivePremium = useMemo(
     () =>
       isPremiumPlan(entitlements?.plan) &&
@@ -59,15 +152,75 @@ export function useEligiblePromotions() {
     [entitlements?.plan, entitlements?.subscription],
   );
 
-  const promotions = useMemo(
-    () => (hasActivePremium ? [] : query.data ?? []),
-    [hasActivePremium, query.data],
-  );
+  const tryShowPromotion = useCallback(async (): Promise<EligiblePromotionDto | null> => {
+    console.log('[promo] tryShowPromotion called, userId:', userId, 'hasActivePremium:', hasActivePremium);
+    if (!userId) {
+      console.log('[promo] blocked: no userId');
+      return null;
+    }
+    if (hasActivePremium) {
+      console.log('[promo] blocked: has active premium');
+      return null;
+    }
+    if (!store.acquireDisplayLock()) {
+      console.log('[promo] blocked: display lock held');
+      return null;
+    }
+
+    try {
+      const fresh = await qc.fetchQuery<EligiblePromotionDto[]>({
+        queryKey: PROMOTIONS_KEY,
+        queryFn: fetchEligiblePromotions,
+        staleTime: 0,
+      });
+      console.log('[promo] fresh promotions:', fresh?.length, JSON.stringify(fresh?.map(p => ({ key: p.campaign_key, status: p.status, trigger: p.trigger_type, canRedeem: p.can_redeem }))));
+
+      if (hasActivePremium) {
+        console.log('[promo] blocked: premium after fetch');
+        return null;
+      }
+
+      const now = new Date();
+      const displayable = fresh.filter((p) => {
+        const structValid = isPromoStructurallyValid(p);
+        if (!structValid) {
+          console.log('[promo] structurally invalid:', p.campaign_key, 'status:', p.status, 'trigger:', p.trigger_type, 'eligibility:', p.eligibility_type, 'benefit:', p.benefit_type, 'starts_at:', p.starts_at);
+          return false;
+        }
+        const timeValid = isPromoCurrentlyValid(p, now);
+        if (!timeValid) {
+          console.log('[promo] not currently valid:', p.campaign_key, 'status:', p.status, 'starts_at:', p.starts_at, 'ends_at:', p.ends_at, 'now:', now.toISOString());
+          return false;
+        }
+        const record = store.getRecord(userId, p.campaign_key);
+        const canShow = canShowCampaign(p, record, userId, store, now);
+        if (!canShow) {
+          console.log('[promo] canShowCampaign false:', p.campaign_key, 'record:', JSON.stringify(record), 'sessionShown:', store.isShownThisSession(userId, p.campaign_key));
+          return false;
+        }
+        console.log('[promo] displayable:', p.campaign_key);
+        return true;
+      });
+
+      console.log('[promo] displayable count:', displayable.length);
+      const selected = selectPromotion(displayable);
+      console.log('[promo] selected:', selected?.campaign_key ?? 'none');
+      if (!selected) return null;
+
+      store.recordShown(userId, selected.campaign_key);
+      store.markShownThisSession(userId, selected.campaign_key);
+      return selected;
+    } catch (err) {
+      console.log('[promo] error in tryShowPromotion:', err);
+      return null;
+    } finally {
+      store.releaseDisplayLock();
+    }
+  }, [userId, hasActivePremium, store, qc]);
 
   return {
     ...query,
-    promotions,
-    refreshPromotions,
-    selectedPromotion: selectPromotionToDisplay(promotions),
+    hasActivePremium,
+    tryShowPromotion,
   };
 }

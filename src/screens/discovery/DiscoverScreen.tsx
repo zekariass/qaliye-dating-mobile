@@ -32,11 +32,14 @@ import MatchCelebrationOverlay from '@/components/discovery/MatchCelebrationOver
 import MorePhotosSection from '@/components/discovery/MorePhotosSection';
 import { CardDto } from '@/components/discovery/ProfileCard';
 import ProfileDetailsSection from '@/components/discovery/ProfileDetailsSection';
+import { BANNER_H, PromotionBanner } from '@/components/discovery/PromotionBanner';
 import { SwipeIcon } from '@/components/layout/AppTabBar';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useActivateBoost } from '@/hooks/billing/useActivateBoost';
 import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
+import { usePromotionBanner } from '@/hooks/billing/usePromotionBanner';
 import { mapProfileToCard, useDiscoveryProfiles } from '@/hooks/discovery/useDiscoveryProfiles';
 import { useRewind } from '@/hooks/discovery/useRewind';
 import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
@@ -49,11 +52,11 @@ import { usePromotionStore } from '@/stores/promotion-store';
 import type { EligiblePromotionDto } from '@/types/billing';
 import { isPremiumPlan } from '@/types/billing';
 import {
+    canLike as checkCanLike,
     canRewind as checkCanRewind,
     canSuperLike as checkCanSuperLike,
     getBoostStatus,
     getQuotaErrorType,
-    getRewindsStatus,
     isQuotaError
 } from '@/utils/entitlements';
 
@@ -267,6 +270,119 @@ const boostStyles = StyleSheet.create({
 });
 
 // ---------------------------------------------------------------------------
+// Insufficient-balance modal (shared by Like, Super Like, Rewind)
+// ---------------------------------------------------------------------------
+type InsufficientBalanceContext = 'LIKES' | 'SUPER_LIKES' | 'REWINDS';
+
+const BALANCE_CONTEXT_CONFIG: Record<InsufficientBalanceContext, {
+  title: string;
+  message: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  iconColor: string;
+  creditsShopFocus?: string;
+}> = {
+  LIKES: {
+    title: 'No More Likes',
+    message: "You've used all your daily likes.",
+    icon: 'heart-outline',
+    iconColor: colors.heartPink,
+  },
+  SUPER_LIKES: {
+    title: 'No More Super Likes',
+    message: "You've used all your Super Likes.",
+    icon: 'star-outline',
+    iconColor: colors.warning,
+    creditsShopFocus: 'SUPERLIKE',
+  },
+  REWINDS: {
+    title: 'No More Rewinds',
+    message: "You've used all your Rewinds.",
+    icon: 'arrow-undo-outline',
+    iconColor: colors.primary,
+    creditsShopFocus: 'REWIND',
+  },
+};
+
+function showInsufficientBalanceModal(
+  context: InsufficientBalanceContext,
+  hasPremium: boolean,
+  router: ReturnType<typeof useRouter>,
+) {
+  const config = BALANCE_CONTEXT_CONFIG[context];
+  const creditsShopParams = config.creditsShopFocus
+    ? { pathname: '/(app)/credits-shop' as const, params: { focus: config.creditsShopFocus } }
+    : { pathname: '/(app)/credits-shop' as const };
+
+  // Likes don't have credits — only show Go Premium
+  if (context === 'LIKES') {
+    themedAlert({
+      title: config.title,
+      message: `${config.message} Upgrade to Premium for unlimited likes.`,
+      icon: config.icon,
+      iconColor: config.iconColor,
+      buttons: [
+        {
+          text: 'Go Premium',
+          style: 'default',
+          icon: 'crown',
+          iconFamily: 'material',
+          iconColor: '#FFD700',
+          onPress: () => router.push('/(app)/premium' as any),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    });
+    return;
+  }
+
+  if (hasPremium) {
+    themedAlert({
+      title: config.title,
+      message: `${config.message} Visit the Credits Shop to buy more.`,
+      icon: config.icon,
+      iconColor: config.iconColor,
+      buttons: [
+        {
+          text: 'Buy More Credits',
+          style: 'default',
+          icon: 'hand-coin-outline',
+          iconFamily: 'material',
+          iconColor: '#F59E0B',
+          onPress: () => router.push(creditsShopParams as any),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    });
+  } else {
+    themedAlert({
+      title: config.title,
+      message: `${config.message} Upgrade to Premium or buy credits separately.`,
+      icon: config.icon,
+      iconColor: config.iconColor,
+      buttons: [
+        {
+          text: 'Go Premium',
+          style: 'default',
+          icon: 'crown',
+          iconFamily: 'material',
+          iconColor: '#FFD700',
+          onPress: () => router.push('/(app)/premium' as any),
+        },
+        {
+          text: 'Buy Credits',
+          style: 'default',
+          icon: 'hand-coin-outline',
+          iconFamily: 'material',
+          iconColor: '#F59E0B',
+          onPress: () => router.push(creditsShopParams as any),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
 
 export default function DiscoverScreen() {
   const { t } = useTranslation();
@@ -294,7 +410,6 @@ export default function DiscoverScreen() {
   const [matchId, setMatchId] = useState<string | null>(null);
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const [syncingCards, setSyncingCards] = useState(false);
-  const [superLikeExhausted, setSuperLikeExhausted] = useState(false);
   const [isRewinding, setIsRewinding] = useState(false);
   const [activePromotion, setActivePromotion] = useState<EligiblePromotionDto | null>(null);
   const [modeSwitching, setModeSwitching] = useState(false);
@@ -321,19 +436,98 @@ export default function DiscoverScreen() {
   const { mutate: rewind } = useRewind();
   const { entitlements, refreshEntitlements } = useEntitlements();
 
-  const { selectedPromotion } = useEligiblePromotions();
-  const canShowPromotion = usePromotionStore((s) => s.canShow);
-  const recordShown = usePromotionStore((s) => s.recordShown);
-  const recordDismissed = usePromotionStore((s) => s.recordDismissed);
+  const userId = useCurrentUserId();
+  const { tryShowPromotion, hasActivePremium } = useEligiblePromotions(userId);
+  const {
+    promotions: bannerPromotions,
+    currentIndex: bannerIndex,
+    isVisible: bannerVisible,
+    dismiss: dismissBanner,
+    onSwipeToIndex: bannerSwipeToIndex,
+    onInteractionStart: bannerInteractionStart,
+    onInteractionEnd: bannerInteractionEnd,
+  } = usePromotionBanner(userId, hasActivePremium);
+  const recordExplicitDismissal = usePromotionStore((s) => s.recordExplicitDismissal);
+  const markClaimedOrRedeemed = usePromotionStore((s) => s.markClaimedOrRedeemed);
+  const clearSessionForUser = usePromotionStore((s) => s.clearSessionForUser);
+
+  const matchVisibleRef = useRef(false);
+  const activePromotionRef = useRef<EligiblePromotionDto | null>(null);
+  const pendingPromotionRef = useRef<EligiblePromotionDto | null>(null);
+  const isFirstFocusRef = useRef(true);
+  const prevUserIdRef = useRef<string | undefined>(undefined);
+  const hasTriggeredMatchPromotionRef = useRef(false);
+
+  // ── Promotion banner height animation ───────────────────────────────────────
+  const bannerHeightSV = useSharedValue(0);
+
+  useEffect(() => {
+    bannerHeightSV.value = bannerVisible
+      ? withTiming(BANNER_H, { duration: 300, easing: Easing.out(Easing.ease) })
+      : withTiming(0, { duration: 300, easing: Easing.inOut(Easing.ease) });
+  }, [bannerVisible, bannerHeightSV]);
+
+  useEffect(() => { matchVisibleRef.current = matchVisible; }, [matchVisible]);
+  useEffect(() => { activePromotionRef.current = activePromotion; }, [activePromotion]);
+
+  useEffect(() => {
+    if (userId !== prevUserIdRef.current) {
+      isFirstFocusRef.current = true;
+      hasTriggeredMatchPromotionRef.current = false;
+      if (prevUserIdRef.current) {
+        clearSessionForUser(prevUserIdRef.current);
+        pendingPromotionRef.current = null;
+        setActivePromotion(null);
+      }
+      prevUserIdRef.current = userId;
+    }
+  }, [userId, clearSessionForUser]);
+
+  useEffect(() => {
+    if (hasActivePremium && (activePromotion || pendingPromotionRef.current)) {
+      setActivePromotion(null);
+      pendingPromotionRef.current = null;
+    }
+  }, [hasActivePremium, activePromotion]);
+
+  useEffect(() => {
+    if (!matchVisible) {
+      const pending = pendingPromotionRef.current;
+      if (pending && !activePromotionRef.current) {
+        pendingPromotionRef.current = null;
+        setActivePromotion(pending);
+      }
+    }
+  }, [matchVisible]);
+
+  const handleTryShowPromotion = useCallback(async () => {
+    console.log('[promo] handleTryShowPromotion called, userId:', userId, 'activePromo:', !!activePromotionRef.current, 'matchVisible:', matchVisibleRef.current);
+    if (!userId) return;
+    if (activePromotionRef.current) return;
+    const promo = await tryShowPromotion();
+    console.log('[promo] handleTryShowPromotion result:', promo?.campaign_key ?? 'null');
+    if (!promo) return;
+    if (matchVisibleRef.current) {
+      console.log('[promo] deferring to pending (match visible)');
+      pendingPromotionRef.current = promo;
+      return;
+    }
+    console.log('[promo] setting active promotion');
+    setActivePromotion(promo);
+  }, [tryShowPromotion, userId]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!selectedPromotion) return;
-      if (activePromotion) return;
-      if (!canShowPromotion(selectedPromotion.campaign_key)) return;
-      setActivePromotion(selectedPromotion);
-      recordShown(selectedPromotion.campaign_key);
-    }, [selectedPromotion, activePromotion, canShowPromotion, recordShown]),
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
+        return;
+      }
+      const pending = pendingPromotionRef.current;
+      if (pending && !activePromotionRef.current && !matchVisibleRef.current) {
+        pendingPromotionRef.current = null;
+        setActivePromotion(pending);
+      }
+    }, []),
   );
 
   // Reset to swipe mode when app returns from background to active
@@ -353,12 +547,28 @@ export default function DiscoverScreen() {
     return () => clearTimeout(timer);
   }, [modeSwitching, viewMode]);
 
-  const handleDismissPromotion = useCallback(() => {
-    if (activePromotion) {
-      recordDismissed(activePromotion.campaign_key);
+  const handleExplicitDismissPromotion = useCallback(() => {
+    if (activePromotion && userId) {
+      recordExplicitDismissal(userId, activePromotion.campaign_key);
     }
     setActivePromotion(null);
-  }, [activePromotion, recordDismissed]);
+  }, [activePromotion, userId, recordExplicitDismissal]);
+
+  const handleProgrammaticClosePromotion = useCallback(() => {
+    setActivePromotion(null);
+  }, []);
+
+  const handlePromotionSuccess = useCallback((campaignKey: string) => {
+    if (userId) {
+      markClaimedOrRedeemed(userId, campaignKey);
+    }
+    setActivePromotion(null);
+  }, [userId, markClaimedOrRedeemed]);
+
+  const handleBannerTap = useCallback(() => {
+    dismissBanner();
+    router.push('/(app)/premium' as any);
+  }, [dismissBanner, router]);
   const { data: profileDto } = useCurrentProfile();
   const isIncognito = profileDto?.discovery_mode === 'INCOGNITO';
 
@@ -431,36 +641,45 @@ export default function DiscoverScreen() {
     if (hasPremium) {
       themedAlert({
         title: 'No Boost Credits',
-        message: 'You have an active Premium subscription but no Boost credits. Visit the Credits Shop to buy more.',
+        message: "You've used all your Boosts. Visit the Credits Shop to buy more.",
         icon: 'rocket-outline',
         iconColor: colors.primary,
         buttons: [
-          { text: 'Cancel', style: 'cancel' },
           {
-            text: 'Buy Boost Credit',
+            text: 'Buy More Credits',
             style: 'default',
-            onPress: () => router.push('/(app)/credits-shop' as any),
+            icon: 'hand-coin-outline',
+            iconFamily: 'material',
+            iconColor: '#F59E0B',
+            onPress: () => router.push({ pathname: '/(app)/credits-shop', params: { focus: 'BOOST' } } as any),
           },
+          { text: 'Cancel', style: 'cancel' },
         ],
       });
     } else {
       themedAlert({
         title: 'No Boost Credits',
-        message: 'You need Boost credits to activate a Boost. Upgrade to Premium or buy Boost credits separately.',
+        message: "You've used all your Boosts. Upgrade to Premium or buy credits separately.",
         icon: 'rocket-outline',
         iconColor: colors.primary,
         buttons: [
-          { text: 'Cancel', style: 'cancel' },
           {
-            text: 'Buy Premium',
+            text: 'Go Premium',
             style: 'default',
+            icon: 'crown',
+            iconFamily: 'material',
+            iconColor: '#FFD700',
             onPress: () => router.push('/(app)/premium' as any),
           },
           {
-            text: 'Buy Boost Credit',
+            text: 'Buy Credits',
             style: 'default',
-            onPress: () => router.push('/(app)/credits-shop' as any),
+            icon: 'hand-coin-outline',
+            iconFamily: 'material',
+            iconColor: '#F59E0B',
+            onPress: () => router.push({ pathname: '/(app)/credits-shop', params: { focus: 'BOOST' } } as any),
           },
+          { text: 'Cancel', style: 'cancel' },
         ],
       });
     }
@@ -513,6 +732,14 @@ export default function DiscoverScreen() {
   const TOTAL_TAB = TAB_BAR_PADDING + TAB_BAR_H + Math.max(safeBottom, 12);
   const CARD_AREA_H = SCREEN_H - HEADER_H - TOTAL_TAB - 12;
 
+  const headerContainerStyle = useAnimatedStyle(() => ({
+    height: HEADER_H + bannerHeightSV.value,
+  }));
+
+  const cardAreaAnimStyle = useAnimatedStyle(() => ({
+    height: CARD_AREA_H - bannerHeightSV.value,
+  }));
+
   const topCard = displayQueue[0] ?? null;
 
   // Fetch full profile for the top card to get lifestyle fields (activity_level,
@@ -544,34 +771,6 @@ export default function DiscoverScreen() {
     [],
   );
 
-  // ── Super Like exhaustion action sheet ──────────────────────────────────────
-  useEffect(() => {
-    if (!superLikeExhausted) return;
-    themedAlert({
-      title: 'Super Likes',
-      message: "You've used all your Super Likes.",
-      icon: 'star-outline',
-      iconColor: colors.warning,
-      buttons: [
-        {
-          text: 'Buy Super Likes',
-          onPress: () => {
-            setSuperLikeExhausted(false);
-            router.push({ pathname: '/(app)/credits-shop', params: { focus: 'SUPERLIKE' } } as any);
-          },
-        },
-        {
-          text: 'Upgrade to Premium',
-          onPress: () => {
-            setSuperLikeExhausted(false);
-            router.push('/(app)/premium' as any);
-          },
-        },
-        { text: 'Not now', style: 'cancel', onPress: () => setSuperLikeExhausted(false) },
-      ],
-    });
-  }, [superLikeExhausted, router]);
-
   // ── Swipe handler ───────────────────────────────────────────────────────────
   const handleSwipe = useCallback(
     (direction: 'LIKE' | 'PASS', card: CardDto) => {
@@ -590,6 +789,10 @@ export default function DiscoverScreen() {
               setMatchPhoto(response.match.other_user.primary_photo_url ?? undefined);
               setMatchId(response.match.match_id);
               setMatchVisible(true);
+              if (!hasTriggeredMatchPromotionRef.current) {
+                hasTriggeredMatchPromotionRef.current = true;
+                handleTryShowPromotion();
+              }
             }
           },
           onError: (e) => {
@@ -599,30 +802,25 @@ export default function DiscoverScreen() {
               shownIdsRef.current.delete(card.user_id);
               setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
               setDisplayQueue((prev) => [card, ...prev]);
-              setSuperLikeExhausted(true);
+              showInsufficientBalanceModal('SUPER_LIKES', isPremiumPlan(entitlements?.plan), router);
             } else if (direction === 'LIKE' || errorType === 'LIKES') {
               shownIdsRef.current.delete(card.user_id);
               setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
               setDisplayQueue((prev) => [card, ...prev]);
-              router.push('/(app)/premium' as any);
+              showInsufficientBalanceModal('LIKES', isPremiumPlan(entitlements?.plan), router);
             }
           },
         },
       );
     },
-    [swipe, router, onReviewMatch],
+    [swipe, router, onReviewMatch, handleTryShowPromotion, entitlements],
   );
 
   // ── Rewind handler ──────────────────────────────────────────────────────────
   const handleRewind = useCallback(async () => {
     if (isRewindingRef.current) return;
     if (!checkCanRewind(entitlements)) {
-      const status = getRewindsStatus(entitlements);
-      if (status.creditsAvailable > 0) {
-        router.push('/(app)/premium' as any);
-      } else {
-        router.push({ pathname: '/(app)/credits-shop', params: { focus: 'REWIND' } } as any);
-      }
+      showInsufficientBalanceModal('REWINDS', isPremiumPlan(entitlements?.plan), router);
       return;
     }
     isRewindingRef.current = true;
@@ -661,12 +859,7 @@ export default function DiscoverScreen() {
         isRewindingRef.current = false;
         setIsRewinding(false);
         if (isQuotaError(e)) {
-          const status = getRewindsStatus(entitlements);
-          if (status.creditsAvailable > 0) {
-            router.push('/(app)/premium' as any);
-          } else {
-            router.push({ pathname: '/(app)/credits-shop', params: { focus: 'REWIND' } } as any);
-          }
+          showInsufficientBalanceModal('REWINDS', isPremiumPlan(entitlements?.plan), router);
         }
       },
     });
@@ -679,19 +872,23 @@ export default function DiscoverScreen() {
   }, [scrollToTop]);
 
   const handleLike = useCallback(async () => {
+    if (!checkCanLike(entitlements)) {
+      showInsufficientBalanceModal('LIKES', isPremiumPlan(entitlements?.plan), router);
+      return;
+    }
     await scrollToTop();
     cardStackRef.current?.triggerSwipe('LIKE');
-  }, [scrollToTop]);
+  }, [scrollToTop, entitlements, router]);
 
   const handleSuperLike = useCallback(async () => {
     if (!checkCanSuperLike(entitlements)) {
-      setSuperLikeExhausted(true);
+      showInsufficientBalanceModal('SUPER_LIKES', isPremiumPlan(entitlements?.plan), router);
       return;
     }
     pendingSuperLikeRef.current = true;
     await scrollToTop();
     cardStackRef.current?.triggerSwipe('LIKE');
-  }, [scrollToTop, entitlements]);
+  }, [scrollToTop, entitlements, router]);
 
   // Keep the suspense loader visible while we are fetching or while the API
   // has already returned cards but they have not yet been synced into the
@@ -734,6 +931,7 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: th.background }]} edges={['top']}>
       {/* ── Header ─────────────────────────────────── */}
+      <Animated.View style={[{ overflow: 'hidden' }, headerContainerStyle]}>
       <View style={styles.header}>
         {/* Mode toggle — replaces Qaliye logo */}
         <TouchableOpacity
@@ -804,6 +1002,19 @@ export default function DiscoverScreen() {
         </TouchableOpacity>
       </View>
 
+      {bannerPromotions.length > 0 && (
+        <PromotionBanner
+          promotions={bannerPromotions}
+          currentIndex={bannerIndex}
+          onDismiss={dismissBanner}
+          onTap={handleBannerTap}
+          onSwipeToIndex={bannerSwipeToIndex}
+          onInteractionStart={bannerInteractionStart}
+          onInteractionEnd={bannerInteractionEnd}
+        />
+      )}
+      </Animated.View>
+
       {/* ── Main content (scrollable + fixed buttons) ── */}
       <View style={styles.main}>
         {viewMode === 'browse' ? (
@@ -820,6 +1031,10 @@ export default function DiscoverScreen() {
                 setMatchPhoto(response.match.other_user.primary_photo_url ?? undefined);
                 setMatchId(response.match.match_id);
                 setMatchVisible(true);
+                if (!hasTriggeredMatchPromotionRef.current) {
+                  hasTriggeredMatchPromotionRef.current = true;
+                  handleTryShowPromotion();
+                }
               }
             }}
             onRewind={() => {}}
@@ -859,7 +1074,7 @@ export default function DiscoverScreen() {
           bounces
         >
           {/* Card zone — fixed height filling available space */}
-          <View style={[styles.cardArea, { height: CARD_AREA_H }]}>
+          <Animated.View style={[styles.cardArea, cardAreaAnimStyle]}>
 
             {showAnimation ? (
               <FindingMatchesAnimation
@@ -928,7 +1143,7 @@ export default function DiscoverScreen() {
                 <ScrollHint color="#FFFFFF" />
               </View>
             )}
-          </View>
+          </Animated.View>
 
           {/* Profile details — below card, visible when scrolling */}
           {enrichedTopCard && (
@@ -989,7 +1204,9 @@ export default function DiscoverScreen() {
       {/* ── Promotion alert — temporary, non-blocking ── */}
       <PromotionAlert
         promotion={activePromotion}
-        onDismiss={handleDismissPromotion}
+        onExplicitDismiss={handleExplicitDismissPromotion}
+        onProgrammaticClose={handleProgrammaticClosePromotion}
+        onSuccess={handlePromotionSuccess}
       />
     </SafeAreaView>
   );

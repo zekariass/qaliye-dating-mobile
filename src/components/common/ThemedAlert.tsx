@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createRef, useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -19,6 +19,9 @@ export type ThemedAlertButton = {
   text: string;
   style?: 'default' | 'cancel' | 'destructive';
   onPress?: () => void;
+  icon?: React.ComponentProps<typeof Ionicons>['name'] | (string & {});
+  iconFamily?: 'ionicons' | 'material';
+  iconColor?: string;
 };
 
 export type ThemedAlertOptions = {
@@ -144,6 +147,21 @@ export function ThemedAlert() {
                   ]}
                   onPress={() => handlePress(btn)}
                 >
+                  {btn.icon ? (
+                    btn.iconFamily === 'material' ? (
+                      <MaterialCommunityIcons
+                        name={btn.icon as any}
+                        size={16}
+                        color={btn.iconColor ?? (isDestructive ? colors.danger : colors.primary)}
+                      />
+                    ) : (
+                      <Ionicons
+                        name={btn.icon as any}
+                        size={16}
+                        color={btn.iconColor ?? (isDestructive ? colors.danger : colors.primary)}
+                      />
+                    )
+                  ) : null}
                   <Text
                     style={[
                       styles.buttonText,
@@ -211,12 +229,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   button: {
+    flexDirection: 'row',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: radius.sm,
     borderWidth: 1,
     minWidth: 100,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   buttonCancel: {
     // no special bg — outlined

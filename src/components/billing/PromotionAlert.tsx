@@ -21,7 +21,9 @@ import { extractApiError } from '@/utils/apiError';
 
 type Props = {
   promotion: EligiblePromotionDto | null;
-  onDismiss: () => void;
+  onExplicitDismiss: () => void;
+  onProgrammaticClose: () => void;
+  onSuccess: (campaignKey: string) => void;
 };
 
 const PROMOTION_ERROR_MESSAGES: Record<string, string> = {
@@ -60,7 +62,7 @@ function formatEndDate(endsAt: string | null): string | null {
   }
 }
 
-export function PromotionAlert({ promotion, onDismiss }: Props) {
+export function PromotionAlert({ promotion, onExplicitDismiss, onProgrammaticClose, onSuccess }: Props) {
   const { t } = useTranslation();
   const { colors: th } = useTheme();
   const { bottom } = useSafeAreaInsets();
@@ -82,7 +84,7 @@ export function PromotionAlert({ promotion, onDismiss }: Props) {
     redeem(promotion!.campaign_key, {
       onSuccess: (data) => {
         setIsClaiming(false);
-        onDismiss();
+        onSuccess(promotion!.campaign_key);
         themedSuccess(
           t('promotion.claimSuccessTitle', 'Premium Activated!'),
           data.message ||
@@ -102,13 +104,13 @@ export function PromotionAlert({ promotion, onDismiss }: Props) {
           t('promotion.claimErrorTitle', 'Claim Failed'),
           errorMsg,
         );
-        onDismiss();
+        onProgrammaticClose();
       },
     });
   }
 
   function handleViewOffer() {
-    onDismiss();
+    onProgrammaticClose();
     router.push('/(app)/premium' as any);
   }
 
@@ -118,9 +120,9 @@ export function PromotionAlert({ promotion, onDismiss }: Props) {
       transparent
       animationType="fade"
       statusBarTranslucent
-      onRequestClose={onDismiss}
+      onRequestClose={onExplicitDismiss}
     >
-      <Pressable style={styles.backdrop} onPress={onDismiss}>
+      <Pressable style={styles.backdrop} onPress={onExplicitDismiss}>
         <Pressable
           style={[
             styles.sheet,
@@ -227,7 +229,7 @@ export function PromotionAlert({ promotion, onDismiss }: Props) {
 
             <Pressable
               style={[styles.secondaryBtn, { borderColor: th.border }]}
-              onPress={onDismiss}
+              onPress={onExplicitDismiss}
               disabled={isClaiming || isRedeeming}
               accessibilityRole="button"
               accessibilityLabel={t('promotion.notNow', 'Not now')}

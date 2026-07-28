@@ -131,6 +131,7 @@ function normalizeClaimablePromotion(raw: Record<string, unknown>): ClaimablePro
     description: (raw.description ?? null) as string | null,
     duration_days: (raw.durationDays ?? raw.duration_days ?? null) as number | null,
     ends_at: (raw.endsAt ?? raw.ends_at ?? null) as string | null,
+    target_gender: (raw.targetGender ?? raw.target_gender ?? null) as 'MALE' | 'FEMALE' | null,
   };
 }
 
@@ -399,7 +400,9 @@ function normalizeEligiblePromotion(raw: Record<string, unknown>): EligiblePromo
     campaign_key: (raw.campaignKey ?? raw.campaign_key ?? '') as string,
     name: (raw.name ?? '') as string,
     description: (raw.description ?? null) as string | null,
+    status: (raw.status ?? 'ACTIVE') as string,
     trigger_type: (raw.triggerType ?? raw.trigger_type ?? 'PURCHASE') as PromotionTriggerType,
+    eligibility_type: (raw.eligibilityType ?? raw.eligibility_type ?? 'ANY_ELIGIBLE_USER') as string | null,
     benefit_type: (raw.benefitType ?? raw.benefit_type ?? 'DISCOUNT') as PromotionBenefitType,
     discount_type: (raw.discountType ?? raw.discount_type ?? null) as PromotionDiscountType | null,
     discount_value: (raw.discountValue ?? raw.discount_value ?? null) as number | null,
@@ -409,8 +412,11 @@ function normalizeEligiblePromotion(raw: Record<string, unknown>): EligiblePromo
     max_redemptions: (raw.maxRedemptions ?? raw.max_redemptions ?? null) as number | null,
     reserved_count: (raw.reservedCount ?? raw.reserved_count ?? 0) as number,
     fulfilled_count: (raw.fulfilledCount ?? raw.fulfilled_count ?? 0) as number,
+    starts_at: (raw.startsAt ?? raw.starts_at ?? '1970-01-01T00:00:00Z') as string | null,
     ends_at: (raw.endsAt ?? raw.ends_at ?? null) as string | null,
-    can_redeem: (raw.canRedeem ?? raw.can_redeem ?? false) as boolean,
+    target_gender: (raw.targetGender ?? raw.target_gender ?? null) as 'MALE' | 'FEMALE' | null,
+    can_redeem: (raw.canRedeem ?? raw.can_redeem ?? true) as boolean,
+    priority: typeof raw.priority === 'number' ? (raw.priority as number) : 0,
   };
 }
 
@@ -434,12 +440,14 @@ function normalizeUserRedemption(raw: Record<string, unknown>): UserRedemptionDt
     cancelled_at: (raw.cancelledAt ?? raw.cancelled_at ?? null) as string | null,
     expired_at: (raw.expiredAt ?? raw.expired_at ?? null) as string | null,
     failure_code: (raw.failureCode ?? raw.failure_code ?? null) as string | null,
+    eligibility_gender: (raw.eligibilityGender ?? raw.eligibility_gender ?? null) as 'MALE' | 'FEMALE' | null,
   };
 }
 
 export async function fetchEligiblePromotions(): Promise<EligiblePromotionDto[]> {
   const res = await apiClient.get<unknown>(`${BASE}/promotions`);
   const raw = res.data;
+  console.log('[promo] RAW API response:', JSON.stringify(raw, null, 2));
   const items = Array.isArray(raw) ? raw : [];
   return items.map((item) => normalizeEligiblePromotion(item as Record<string, unknown>));
 }

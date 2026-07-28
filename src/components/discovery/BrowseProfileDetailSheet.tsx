@@ -107,7 +107,15 @@ export default function BrowseProfileDetailSheet({
       }
     });
 
-  const heroPhotoGesture = Gesture.Race(heroPanGesture);
+  const heroTapGesture = Gesture.Tap()
+    .runOnJS(true)
+    .onEnd(() => {
+      if (heroPhotos.length <= 1) return;
+      heroSlideDir.current = 'next';
+      setHeroPhotoIndex((i) => (i + 1) % heroPhotos.length);
+    });
+
+  const heroPhotoGesture = Gesture.Race(heroPanGesture, heroTapGesture);
 
   const heroSlideStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: heroSlideX.value }],
@@ -443,7 +451,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
   },

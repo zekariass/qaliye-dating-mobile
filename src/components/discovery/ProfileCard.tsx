@@ -311,17 +311,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   bar: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   barActive: {
     backgroundColor: colors.primary,
   },
   barInactive: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderWidth: 1,
-    borderColor: colors.primary,
+    backgroundColor: '#FFFFFF',
   },
   stamp: {
     position: 'absolute',

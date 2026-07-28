@@ -13,101 +13,165 @@ jest.mock('zustand/middleware', () => {
 
 import { usePromotionStore } from '../promotion-store';
 
+const USER = 'user-1';
+const CAM = 'promo_a';
+
 describe('promotion-store', () => {
   beforeEach(() => {
-    usePromotionStore.setState({ presentations: {} });
+    usePromotionStore.setState({ records: {} });
+    usePromotionStore.getState().clearSessionForUser(USER);
   });
 
-  describe('canShow', () => {
-    it('returns true for a campaign with no record', () => {
-      expect(usePromotionStore.getState().canShow('promo_a')).toBe(true);
-    });
-
-    it('returns false within the show cooldown window', () => {
-      const now = Date.now();
-      usePromotionStore.setState({
-        presentations: {
-          promo_a: { lastShownAt: now - 5_000, dismissedUntil: null },
-        },
-      });
-      expect(usePromotionStore.getState().canShow('promo_a')).toBe(false);
-    });
-
-    it('returns true after cooldown window has passed', () => {
-      const thirtyOneMinutesAgo = Date.now() - 31 * 60 * 1000;
-      usePromotionStore.setState({
-        presentations: {
-          promo_a: { lastShownAt: thirtyOneMinutesAgo, dismissedUntil: null },
-        },
-      });
-      expect(usePromotionStore.getState().canShow('promo_a')).toBe(true);
-    });
-
-    it('returns false when dismissedUntil is in the future', () => {
-      usePromotionStore.setState({
-        presentations: {
-          promo_a: {
-            lastShownAt: Date.now() - 60 * 60 * 1000,
-            dismissedUntil: Date.now() + 60 * 60 * 1000,
-          },
-        },
-      });
-      expect(usePromotionStore.getState().canShow('promo_a')).toBe(false);
-    });
-
-    it('returns true when dismissedUntil has expired and cooldown has passed', () => {
-      const longAgo = Date.now() - 3 * 60 * 60 * 1000;
-      usePromotionStore.setState({
-        presentations: {
-          promo_a: {
-            lastShownAt: longAgo,
-            dismissedUntil: longAgo + 60 * 1000,
-          },
-        },
-      });
-      expect(usePromotionStore.getState().canShow('promo_a')).toBe(true);
+  // ─── getRecord ────────────────────────────────────────────────────────────
+  describe('getRecord', () => {
+    it('returns default record for unknown user+campaign', () => {
+      const r = usePromotionStore.getState().getRecord(USER, CAM);
+      expect(r.dismissalCount).toBe(0);
+      expect(r.permanentlyHidden).toBe(false);
+      expect(r.claimedOrRedeemed).toBe(false);
+      expect(r.lastShownAt).toBeNull();
+      expect(r.lastDismissedAt).toBeNull();
     });
   });
 
+  // ─── recordShown ──────────────────────────────────────────────────────────
   describe('recordShown', () => {
-    it('creates a record with correct structure', () => {
-      const before = Date.now();
-      usePromotionStore.getState().recordShown('promo_a');
-      const after = Date.now();
-      const p = usePromotionStore.getState().presentations['promo_a'];
-      expect(p).toBeDefined();
-      expect(p.lastShownAt).toBeGreaterThanOrEqual(before);
-      expect(p.lastShownAt).toBeLessThanOrEqual(after);
-      expect(p.dismissedUntil).toBeNull();
+    it('sets lastShownAt to a recent ISO string', () => {
+      const before = new Date().toISOString();
+      usePromotionStore.getState().recordShown(USER, CAM);
+      const after = new Date().toISOString();
+      const r = usePromotionStore.getState().getRecord(USER, CAM);
+      expect(r.lastShownAt).not.toBeNull();
+      expect(r.lastShownAt! >= before).toBe(true);
+      expect(r.lastShownAt! <= after).toBe(true);
     });
 
-    it('preserves existing dismissedUntil when recording shown', () => {
-      const dismissedUntil = Date.now() + 5_000;
-      usePromotionStore.setState({
-        presentations: { promo_a: { lastShownAt: 0, dismissedUntil } },
-      });
-      usePromotionStore.getState().recordShown('promo_a');
-      expect(usePromotionStore.getState().presentations['promo_a'].dismissedUntil).toBe(dismissedUntil);
+    it('does not change dismissalCount', () => {
+      usePromotionStore.getState().recordShown(USER, CAM);
+      expect(usePromotionStore.getState().getRecord(USER, CAM).dismissalCount).toBe(0);
+    });
+
+    it('is isolated per user', () => {
+      usePromotionStore.getState().recordShown('user-A', CAM);
+      expect(usePromotionStore.getState().getRecord('user-B', CAM).lastShownAt).toBeNull();
     });
   });
 
-  describe('recordDismissed', () => {
-    it('sets dismissedUntil approximately 2 hours in the future', () => {
-      usePromotionStore.getState().recordShown('promo_a');
-      const before = Date.now();
-      usePromotionStore.getState().recordDismissed('promo_a');
-      const after = Date.now();
-      const p = usePromotionStore.getState().presentations['promo_a'];
-      const expectedMin = before + 2 * 60 * 60 * 1000;
-      const expectedMax = after + 2 * 60 * 60 * 1000;
-      expect(p.dismissedUntil).toBeGreaterThanOrEqual(expectedMin);
-      expect(p.dismissedUntil).toBeLessThanOrEqual(expectedMax);
+  // ─── recordExplicitDismissal ───────────────────────────────────────────────
+  describe('recordExplicitDismissal', () => {
+    it('increments dismissalCount on each call', () => {
+      usePromotionStore.getState().recordExplicitDismissal(USER, CAM);
+      expect(usePromotionStore.getState().getRecord(USER, CAM).dismissalCount).toBe(1);
+      usePromotionStore.getState().recordExplicitDismissal(USER, CAM);
+      expect(usePromotionStore.getState().getRecord(USER, CAM).dismissalCount).toBe(2);
     });
 
-    it('makes canShow return false immediately after dismiss', () => {
-      usePromotionStore.getState().recordShown('promo_a');
-      usePromotionStore.getState().recordDismissed('promo_a');
-      expect(usePromotionStore.getState().canShow('promo_a')).toBe(false);
+    it('sets lastDismissedAt to a recent ISO string', () => {
+      const before = new Date().toISOString();
+      usePromotionStore.getState().recordExplicitDismissal(USER, CAM);
+      const after = new Date().toISOString();
+      const r = usePromotionStore.getState().getRecord(USER, CAM);
+      expect(r.lastDismissedAt).not.toBeNull();
+      expect(r.lastDismissedAt! >= before).toBe(true);
+      expect(r.lastDismissedAt! <= after).toBe(true);
+    });
+
+    it('does not set permanentlyHidden', () => {
+      usePromotionStore.getState().recordExplicitDismissal(USER, CAM);
+      expect(usePromotionStore.getState().getRecord(USER, CAM).permanentlyHidden).toBe(false);
+    });
+  });
+
+  // ─── markClaimedOrRedeemed ─────────────────────────────────────────────────
+  describe('markClaimedOrRedeemed', () => {
+    it('sets claimedOrRedeemed to true', () => {
+      usePromotionStore.getState().markClaimedOrRedeemed(USER, CAM);
+      expect(usePromotionStore.getState().getRecord(USER, CAM).claimedOrRedeemed).toBe(true);
+    });
+  });
+
+  // ─── markPermanentlyHidden ─────────────────────────────────────────────────
+  describe('markPermanentlyHidden', () => {
+    it('sets permanentlyHidden to true', () => {
+      usePromotionStore.getState().markPermanentlyHidden(USER, CAM);
+      expect(usePromotionStore.getState().getRecord(USER, CAM).permanentlyHidden).toBe(true);
+    });
+  });
+
+  // ─── session tracking ─────────────────────────────────────────────────────
+  describe('session tracking', () => {
+    it('starts with no session-shown campaigns', () => {
+      expect(usePromotionStore.getState().isShownThisSession(USER, CAM)).toBe(false);
+    });
+
+    it('marks and detects session-shown campaigns', () => {
+      usePromotionStore.getState().markShownThisSession(USER, CAM);
+      expect(usePromotionStore.getState().isShownThisSession(USER, CAM)).toBe(true);
+    });
+
+    it('is isolated per user', () => {
+      usePromotionStore.getState().markShownThisSession('user-A', CAM);
+      expect(usePromotionStore.getState().isShownThisSession('user-B', CAM)).toBe(false);
+    });
+
+    it('clears session for a user on clearSessionForUser', () => {
+      usePromotionStore.getState().markShownThisSession(USER, CAM);
+      usePromotionStore.getState().clearSessionForUser(USER);
+      expect(usePromotionStore.getState().isShownThisSession(USER, CAM)).toBe(false);
+    });
+
+    it('does not clear session of other users on clearSessionForUser', () => {
+      usePromotionStore.getState().markShownThisSession('user-A', CAM);
+      usePromotionStore.getState().clearSessionForUser('user-B');
+      expect(usePromotionStore.getState().isShownThisSession('user-A', CAM)).toBe(true);
+    });
+  });
+
+  // ─── display lock ─────────────────────────────────────────────────────────
+  describe('display lock', () => {
+    it('is not held initially', () => {
+      expect(usePromotionStore.getState().isDisplayLockHeld()).toBe(false);
+    });
+
+    it('acquires the lock and returns true', () => {
+      expect(usePromotionStore.getState().acquireDisplayLock()).toBe(true);
+      expect(usePromotionStore.getState().isDisplayLockHeld()).toBe(true);
+    });
+
+    it('returns false when already held', () => {
+      usePromotionStore.getState().acquireDisplayLock();
+      expect(usePromotionStore.getState().acquireDisplayLock()).toBe(false);
+    });
+
+    it('releases the lock', () => {
+      usePromotionStore.getState().acquireDisplayLock();
+      usePromotionStore.getState().releaseDisplayLock();
+      expect(usePromotionStore.getState().isDisplayLockHeld()).toBe(false);
+    });
+
+    it('clearSessionForUser also releases the lock', () => {
+      usePromotionStore.getState().acquireDisplayLock();
+      usePromotionStore.getState().clearSessionForUser(USER);
+      expect(usePromotionStore.getState().isDisplayLockHeld()).toBe(false);
+    });
+
+    it('can be re-acquired after release', () => {
+      usePromotionStore.getState().acquireDisplayLock();
+      usePromotionStore.getState().releaseDisplayLock();
+      expect(usePromotionStore.getState().acquireDisplayLock()).toBe(true);
+    });
+  });
+
+  // ─── record isolation ─────────────────────────────────────────────────────
+  describe('record isolation', () => {
+    it('different campaigns do not share records', () => {
+      usePromotionStore.getState().recordExplicitDismissal(USER, 'camp_a');
+      expect(usePromotionStore.getState().getRecord(USER, 'camp_b').dismissalCount).toBe(0);
+    });
+
+    it('same campaign but different users have separate records', () => {
+      usePromotionStore.getState().markClaimedOrRedeemed('user-X', CAM);
+      expect(usePromotionStore.getState().getRecord('user-Y', CAM).claimedOrRedeemed).toBe(false);
     });
   });
 });

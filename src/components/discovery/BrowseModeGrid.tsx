@@ -799,9 +799,9 @@ const styles = StyleSheet.create({
     zIndex: 4,
   },
   photoDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
   },
   photoDotActive: {
     backgroundColor: colors.primary,
@@ -809,8 +809,6 @@ const styles = StyleSheet.create({
   },
   photoDotInactive: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: colors.primary,
   },
   verifiedWrap: {
     position: 'absolute',

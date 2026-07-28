@@ -303,6 +303,12 @@ export type RedemptionStatus = 'RESERVED' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED
 
 export type PromotionTriggerType = 'USER_CLAIM' | 'PURCHASE' | 'AUTO_ON_SIGNUP';
 export type PromotionBenefitType = 'FREE_PREMIUM' | 'DISCOUNT';
+export type PromotionEligibilityType =
+  | 'ANY_ELIGIBLE_USER'
+  | 'NEW_USER'
+  | 'NEVER_SUBSCRIBED'
+  | 'NO_ACTIVE_SUBSCRIPTION'
+  | (string & {});
 export type PromotionDiscountType = 'PERCENTAGE' | 'FIXED';
 
 export type OfferPromotionDto = {
@@ -335,7 +341,9 @@ export type EligiblePromotionDto = {
   campaign_key: string;
   name: string;
   description: string | null;
+  status: string;
   trigger_type: PromotionTriggerType;
+  eligibility_type: PromotionEligibilityType | null;
   benefit_type: PromotionBenefitType;
   discount_type: PromotionDiscountType | null;
   discount_value: number | null;
@@ -345,9 +353,11 @@ export type EligiblePromotionDto = {
   max_redemptions: number | null;
   reserved_count: number;
   fulfilled_count: number;
+  starts_at: string | null;
   ends_at: string | null;
   target_gender: 'MALE' | 'FEMALE' | null;
   can_redeem: boolean;
+  priority: number;
 };
 
 export type UserRedemptionDto = {

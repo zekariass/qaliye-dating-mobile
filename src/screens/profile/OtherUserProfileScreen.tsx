@@ -335,7 +335,15 @@ export default function OtherUserProfileScreen() {
       }
     });
 
-  const heroPhotoGesture = Gesture.Race(heroPanGesture);
+  const heroTapGesture = Gesture.Tap()
+    .runOnJS(true)
+    .onEnd(() => {
+      if (heroPhotos.length <= 1) return;
+      heroSlideDir.current = 'next';
+      setHeroPhotoIndex((i) => (i + 1) % heroPhotos.length);
+    });
+
+  const heroPhotoGesture = Gesture.Race(heroPanGesture, heroTapGesture);
 
   const heroSlideStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: heroSlideX.value }],
