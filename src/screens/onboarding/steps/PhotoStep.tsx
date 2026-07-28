@@ -294,14 +294,27 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
         const userId = session.user.id;
 
         setUploadStatus('Uploading photos…');
-        const uploads = await Promise.all([
+        const uploadTasks: { uri: string; fileName: string; photoOrder: number }[] = [
           ...(newPrimary
-            ? [uploadOneToSupabase(userId, newPrimary.uri, newPrimary.fileName, 0)]
+            ? [{ uri: newPrimary.uri, fileName: newPrimary.fileName, photoOrder: 0 }]
             : []),
-          ...localCards.map(({ slot, i }) =>
-            uploadOneToSupabase(userId, slot.photo.uri, slot.photo.fileName, i + 1),
-          ),
-        ]);
+          ...localCards.map(({ slot, i }) => ({
+              uri: slot.photo.uri,
+              fileName: slot.photo.fileName,
+              photoOrder: i + 1,
+            })),
+        ];
+        const uploads: { storageBucket: string; storagePath: string; photoOrder: number }[] = [];
+        for (let i = 0; i < uploadTasks.length; i++) {
+          setUploadStatus(`Uploading photo ${i + 1} of ${uploadTasks.length}…`);
+          const result = await uploadOneToSupabase(
+            userId,
+            uploadTasks[i].uri,
+            uploadTasks[i].fileName,
+            uploadTasks[i].photoOrder,
+          );
+          uploads.push(result);
+        }
 
         setUploadStatus('Registering photos…');
         await batchRegisterProfilePhotos({
