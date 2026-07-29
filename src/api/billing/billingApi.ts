@@ -441,6 +441,8 @@ function normalizeUserRedemption(raw: Record<string, unknown>): UserRedemptionDt
     expired_at: (raw.expiredAt ?? raw.expired_at ?? null) as string | null,
     failure_code: (raw.failureCode ?? raw.failure_code ?? null) as string | null,
     eligibility_gender: (raw.eligibilityGender ?? raw.eligibility_gender ?? null) as 'MALE' | 'FEMALE' | null,
+    subscription_status: (raw.subscriptionStatus ?? raw.subscription_status ?? null) as string | null,
+    subscription_period_end: (raw.subscriptionPeriodEnd ?? raw.subscription_period_end ?? null) as string | null,
   };
 }
 
@@ -466,8 +468,11 @@ export async function fetchPromotionRedemptions(params?: {
   if (params?.page_size != null) queryParams.pageSize = params.page_size;
   const res = await apiClient.get<unknown>(`${BASE}/promotions/redemptions`, { params: queryParams });
   const raw = res.data;
+  console.log('[redemptions] RAW API response:', JSON.stringify(raw, null, 2));
   const items = Array.isArray(raw) ? raw : [];
-  return items.map((item) => normalizeUserRedemption(item as Record<string, unknown>));
+  const normalized = items.map((item) => normalizeUserRedemption(item as Record<string, unknown>));
+  console.log('[redemptions] NORMALIZED:', JSON.stringify(normalized, null, 2));
+  return normalized;
 }
 
 export async function redeemPromotion(campaignKey: string): Promise<RedeemPromotionResponse> {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
+    Linking,
     Platform,
     Pressable,
     ScrollView,
@@ -237,45 +238,23 @@ export default function PremiumPaywallScreen() {
             )}
 
             {isPremium && (
-              <View style={[styles.alreadyActiveBanner, { backgroundColor: (isFreePremium ? colors.warning : colors.success) + '18' }]}>
-                <Ionicons name={isFreePremium ? 'gift' : 'checkmark-circle'} size={20} color={isFreePremium ? colors.warning : colors.success} />
-                <Text style={[styles.alreadyActiveText, { color: th.text }]}>
-                  {isFreePremium
-                    ? t('billing.freePremiumActive', 'You are currently using Free Premium.')
-                    : t('billing.alreadyPremium', 'You already have Premium access.')}
-                </Text>
-              </View>
-            )}
-
-            {!isPremium && (
-              <View style={[styles.featuresCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-                <Text style={[styles.sectionTitle, { color: th.text }]}>
-                  {t('billing.premiumFeatures', 'Premium features')}
-                </Text>
-                {getPlanLimitDisplays(entitlements).map((item) => (
-                  <View key={item.label} style={styles.featureRow}>
-                    <Ionicons name={item.icon} size={16} color={colors.primary} />
-                    <Text style={[styles.featureLabel, { color: th.text }]}>{item.label}</Text>
-                    <Text style={[styles.featureValue, { color: colors.primary }]}>{item.formatted}</Text>
+              <View style={[styles.activePremiumCard, { backgroundColor: (isFreePremium ? colors.warning : colors.success) + '14', borderColor: (isFreePremium ? colors.warning : colors.success) + '40' }]}>
+                <View style={styles.activePremiumHeader}>
+                  <View style={[styles.activePremiumIconCircle, { backgroundColor: (isFreePremium ? colors.warning : colors.success) + '22' }]}>
+                    <Ionicons name={isFreePremium ? 'gift' : 'checkmark-circle'} size={28} color={isFreePremium ? colors.warning : colors.success} />
                   </View>
-                ))}
-                {entitlements?.features && (
-                  <>
-                    <View style={styles.featureRow}>
-                      <Ionicons name={FEATURE_ICONS.see_who_liked_you} size={16} color={colors.primary} />
-                      <Text style={[styles.featureLabel, { color: th.text }]}>See who liked you</Text>
-                    </View>
-                    {entitlements.features.advanced_filters && (
-                      <View style={styles.featureRow}>
-                        <Ionicons name={FEATURE_ICONS.advanced_filters} size={16} color={colors.primary} />
-                        <Text style={[styles.featureLabel, { color: th.text }]}>Advanced filters</Text>
-                      </View>
-                    )}
-                  </>
-                )}
-                <View style={styles.featureRow}>
-                  <Ionicons name={FEATURE_ICONS.incognito_mode} size={16} color={colors.primary} />
-                  <Text style={[styles.featureLabel, { color: th.text }]}>Private mode (Incognito)</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.activePremiumTitle, { color: th.text }]}>
+                      {isFreePremium
+                        ? t('billing.freePremiumActiveTitle', "You're on Free Premium")
+                        : t('billing.alreadyPremiumTitle', "You're on Premium")}
+                    </Text>
+                    <Text style={[styles.activePremiumSubtitle, { color: th.textSecondary }]}>
+                      {isFreePremium
+                        ? t('billing.freePremiumActiveBody', 'Enjoy your premium features. Upgrade to a paid plan to keep them after your free period ends.')
+                        : t('billing.alreadyPremiumBody', 'You have full premium access. Manage your subscription below.')}
+                    </Text>
+                  </View>
                 </View>
               </View>
             )}
@@ -289,10 +268,11 @@ export default function PremiumPaywallScreen() {
                 );
               if (!allClaimable.length) return null;
               return allClaimable.map((cp) => {
-                const isEligible = eligiblePromotions.some(
+                const matchingPromo = eligiblePromotions.find(
                   (p) => p.campaign_key === cp.campaign_key && p.can_redeem,
                 );
-                if (!isEligible) return null;
+                if (!matchingPromo) return null;
+                if (isPremium && matchingPromo.trigger_type === 'USER_CLAIM') return null;
                 const isClaiming = claimingKey === cp.campaign_key;
                 return (
                   <View
@@ -329,7 +309,7 @@ export default function PremiumPaywallScreen() {
               });
             })()}
 
-            {(noOffers || offersError) && !isPremium ? (
+            {(!isPremium || isFreePremium) && ((noOffers || offersError) ? (
               <View style={[styles.unavailableCard, { backgroundColor: th.surface, borderColor: th.border }]}>
                 <Ionicons name="alert-circle-outline" size={28} color={th.textSecondary} />
                 <Text style={[styles.unavailableTitle, { color: th.text }]}>
@@ -355,8 +335,8 @@ export default function PremiumPaywallScreen() {
                             rcPackage={rcPackage}
                             isSelected={selectedOfferId === backendOffer.id}
                             isActive={activeOfferId === backendOffer.id}
-                            disabled={isPremium && activeOfferId !== backendOffer.id}
-                            hasActivePremium={isPremium}
+                            disabled={false}
+                            hasActivePremium={false}
                             onSelect={() => handleSelectOffer(backendOffer.id)}
                             onPurchase={handlePurchase}
                             isPurchasing={isBusy}
@@ -373,8 +353,8 @@ export default function PremiumPaywallScreen() {
                             offer={offer}
                             isSelected={selectedOfferId === offer.id}
                             isActive={activeOfferId === offer.id}
-                            disabled={isPremium && activeOfferId !== offer.id}
-                            hasActivePremium={isPremium}
+                            disabled={false}
+                            hasActivePremium={false}
                             onSelect={() => handleSelectOffer(offer.id)}
                             onPurchase={handlePurchase}
                             isPurchasing={isBusy}
@@ -392,8 +372,8 @@ export default function PremiumPaywallScreen() {
                         offer={offer}
                         isSelected={selectedOfferId === offer.id}
                         isActive={activeOfferId === offer.id}
-                        disabled={isPremium && activeOfferId !== offer.id}
-                        hasActivePremium={isPremium}
+                        disabled={false}
+                        hasActivePremium={false}
                         onSelect={() => handleSelectOffer(offer.id)}
                         onPurchase={handlePurchase}
                         isPurchasing={isBusy}
@@ -432,29 +412,83 @@ export default function PremiumPaywallScreen() {
                   </View>
                 )}
               </>
-            )}
+            ))}
 
-            {Platform.OS !== 'web' && (
+            <View style={styles.legalRow}>
               <Pressable
-                style={styles.restoreBtn}
-                onPress={() => restore()}
-                disabled={isRestoring}
-                accessibilityRole="button"
+                onPress={() => Linking.openURL('https://www.qaliye.com/en/privacy')}
+                accessibilityRole="link"
               >
-                {isRestoring ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Text style={[styles.restoreText, { color: colors.primary }]}>
-                    {t('billing.restorePurchases', 'Restore Purchases')}
-                  </Text>
-                )}
+                <Text style={[styles.legalLink, { color: th.textSecondary }]}>
+                  {t('billing.privacyPolicy', 'Privacy')}
+                </Text>
               </Pressable>
-            )}
+              <Text style={[styles.legalDot, { color: th.textMuted }]}>•</Text>
+              <Pressable
+                onPress={() => Linking.openURL('https://www.qaliye.com/en/terms')}
+                accessibilityRole="link"
+              >
+                <Text style={[styles.legalLink, { color: th.textSecondary }]}>
+                  {t('billing.terms', 'Terms')}
+                </Text>
+              </Pressable>
+              {Platform.OS !== 'web' && (
+                <>
+                  <Text style={[styles.legalDot, { color: th.textMuted }]}>•</Text>
+                  <Pressable
+                    onPress={() => restore()}
+                    disabled={isRestoring}
+                    accessibilityRole="button"
+                  >
+                    {isRestoring ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <Text style={[styles.legalLink, { color: colors.primary }]}>
+                        {t('billing.restorePurchases', 'Restore')}
+                      </Text>
+                    )}
+                  </Pressable>
+                </>
+              )}
+            </View>
 
             {restoreState === 'done' && (
               <Text style={[styles.restoreDone, { color: colors.success }]}>
                 {t('billing.restoreDone', 'Restore complete. Check your plan status above.')}
               </Text>
+            )}
+
+            {!isPremium && (
+              <View style={[styles.featuresCard, { backgroundColor: th.surface, borderColor: th.border }]}>
+                <Text style={[styles.sectionTitle, { color: th.text }]}>
+                  {t('billing.premiumFeatures', 'Premium features')}
+                </Text>
+                {getPlanLimitDisplays(entitlements).map((item) => (
+                  <View key={item.label} style={styles.featureRow}>
+                    <Ionicons name={item.icon} size={16} color={colors.primary} />
+                    <Text style={[styles.featureLabel, { color: th.text }]}>{item.label}</Text>
+                    <Text style={[styles.featureValue, { color: colors.primary }]}>{item.formatted}</Text>
+                  </View>
+                ))}
+                {entitlements?.features && (
+                  <>
+                    <View style={styles.featureRow}>
+                      <Ionicons name={FEATURE_ICONS.see_who_liked_you} size={16} color={colors.primary} />
+                      <Text style={[styles.featureLabel, { color: th.text }]}>See who liked you</Text>
+                    </View>
+                    {entitlements.features.advanced_filters && (
+                      <View style={styles.featureRow}>
+                        <Ionicons name={FEATURE_ICONS.advanced_filters} size={16} color={colors.primary} />
+                        <Text style={[styles.featureLabel, { color: th.text }]}>Advanced filters</Text>
+                      </View>
+                    )}
+                  </>
+                )}
+                <View style={styles.featureRow}>
+                  <Ionicons name={FEATURE_ICONS.incognito_mode} size={16} color={colors.primary} />
+                  <Text style={[styles.featureLabel, { color: th.text }]}>Private mode (Incognito)</Text>
+                </View>
+              </View>
             )}
           </>
         )}
@@ -501,6 +535,32 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   alreadyActiveText: { flex: 1, fontSize: 13, fontWeight: '500' },
+  activePremiumCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 18,
+  },
+  activePremiumHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  activePremiumIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activePremiumTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  activePremiumSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
   featuresCard: {
     borderRadius: 14,
     borderWidth: 1,
@@ -571,4 +631,18 @@ const styles = StyleSheet.create({
   restoreBtn: { alignItems: 'center', paddingVertical: 12 },
   restoreText: { fontSize: 14, fontWeight: '500' },
   restoreDone: { textAlign: 'center', fontSize: 13 },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 8,
+  },
+  legalLink: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  legalDot: {
+    fontSize: 13,
+  },
 });

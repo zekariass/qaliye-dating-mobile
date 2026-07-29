@@ -58,10 +58,7 @@ function formatLimitValue(quota: QuotaInfo, creditsAvailable: number): string {
   if (limit === null || limit === undefined) return 'Unlimited';
   const remaining = quota.remaining ?? 0;
   const total = remaining + creditsAvailable;
-  if (creditsAvailable > 0) {
-    return `${total}`;
-  }
-  return `${remaining}/${limit}`;
+  return `${total}`;
 }
 
 export function EntitlementSummary({

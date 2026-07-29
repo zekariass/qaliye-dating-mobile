@@ -45,19 +45,35 @@ function RedemptionItem({ item }: { item: UserRedemptionDto }) {
   const { colors: th } = useTheme();
   const { t } = useTranslation();
 
+  const computedExpiry =
+    item.expired_at ??
+    item.subscription_period_end ??
+    (item.fulfilled_at && item.duration_days
+      ? new Date(
+          new Date(item.fulfilled_at).getTime() +
+            item.duration_days * 24 * 60 * 60 * 1000,
+        ).toISOString()
+      : null);
+
   const hasExpired =
     item.status === 'FULFILLED' &&
-    item.expired_at != null &&
-    new Date(item.expired_at).getTime() < Date.now();
+    (
+      item.subscription_status === 'EXPIRED' ||
+      (computedExpiry != null && new Date(computedExpiry).getTime() < Date.now())
+    );
+
+  console.log('[redemptions] ITEM:', item.campaign_name, 'status:', item.status, 'subStatus:', item.subscription_status, 'subPeriodEnd:', item.subscription_period_end, 'expiredAt:', item.expired_at, 'fulfilledAt:', item.fulfilled_at, 'durationDays:', item.duration_days, 'computedExpiry:', computedExpiry, 'hasExpired:', hasExpired);
 
   const effectiveStatus: RedemptionStatus = hasExpired ? 'EXPIRED' : item.status;
   const cfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.RESERVED;
 
   const actionDate =
-    item.fulfilled_at ??
-    item.cancelled_at ??
-    item.expired_at ??
-    item.reserved_at;
+    hasExpired
+      ? computedExpiry
+      : item.fulfilled_at ??
+        item.cancelled_at ??
+        item.expired_at ??
+        item.reserved_at;
 
   const statusLabel: Record<RedemptionStatus, string> = {
     FULFILLED: t('promotion.history.statusFulfilled', 'Active'),

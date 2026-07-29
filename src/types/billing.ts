@@ -380,6 +380,8 @@ export type UserRedemptionDto = {
   expired_at: string | null;
   failure_code: string | null;
   eligibility_gender: 'MALE' | 'FEMALE' | null;
+  subscription_status: string | null;
+  subscription_period_end: string | null;
 };
 
 export type RedeemPromotionResponse = {

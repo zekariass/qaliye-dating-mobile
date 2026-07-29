@@ -178,8 +178,9 @@
       "searchPlaceholder": "Magaalaa kee barbaadi...", "noResults": "Magaalaa hin argamne. Qajeelcha biraa yaali.", "gpsError": "Bakka argachuu hin dandeenye. Maaloo qottaan yaali.", "or": "ykn", "selectCityError": "Maaloo dursa magaalaa filadhu."
     },
     "photo": {
-      "title": "Suuraalee kee", "subtitle": "Suuraa beeksisa fi suuraa kaardii tokko irra darbee barbaachisu.",
+      "title": "Suuraalee kee", "subtitle": "Suuraa beeksisa barbaachisa. Suuraaleen kaardii filannoo garuu gargaaru.",
       "profileAvatar": "SUURA BEEKISA", "profilePhoto": "Suuraa beeksisa", "profilePhotoDesc": "Akkataa suuraa keettin mul'ata. Gara 4:5 sirreessame.",
+      "required": "Barbaachisa", "optional": "Filannoo",
       "discoveryCards": "KAARDII ARGACHUU", "cardHint": "Kunis suuraa swipe kaardii keerraa mul'atu. Suuraalee ulaa (3:4) gaariidha.",
       "add": "Dabalbi", "uploadAndContinue": "Ol ka'i fi itti fufi", "continue": "Itti fufi", "uploading": "Ol ka'aa jira...", "reviewNote": "Suuraaleen dursa gaarumfamaa jiru. Kun yeroo muraasa fudhata."
     },
@@ -300,6 +301,10 @@
     "restoreDone": "Deebi'insi xumurame. Sadarkaa karoora kee olitti ilaali.",
     "alreadyPremium": "Duraan Premium qabda.",
     "freePremiumActive": "Premium Bilaataa",
+    "freePremiumActiveTitle": "Premium Bilaataa irratti jirta",
+    "freePremiumActiveBody": "Faayidaalee Premium kee galmaa'i. Yeroo bilaa kee xumuree booda itti fufuuf karoora kaffaltii fili.",
+    "alreadyPremiumTitle": "Premium irratti jirta",
+    "alreadyPremiumBody": "Daangaa hin qabne Premium qabda. Karoora kee gidduu jalatti bulchi.",
     "premiumFeatures": "Faayidaalee Premium",
     "choosePlan": "Karoora Filadhu",
     "offersUnavailable": "Gamaggamaa hin argamne",

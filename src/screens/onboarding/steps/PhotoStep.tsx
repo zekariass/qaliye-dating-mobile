@@ -1,38 +1,49 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Dimensions,
     Image,
+    Modal,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 
-import { batchRegisterProfilePhotos, deleteProfilePhoto, fetchProfilePhotos } from '@/api/profile/profileApi';
+import { deleteProfilePhoto, fetchProfilePhotos, registerProfilePhoto } from '@/api/profile/profileApi';
 import { ImageCropModal, type CropRegion } from '@/components/common/ImageCropModal';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import type { ProfilePhotoDto } from '@/types/profile';
-import { extractApiError } from '@/utils/apiError';
-import { ProcessedImage, processWithCrop } from '@/utils/imageProcessor';
+import { extractApiError, getApiErrorMessage } from '@/utils/apiError';
+import type { ProcessedImage } from '@/utils/imageProcessor';
+import { processWithCrop } from '@/utils/imageProcessor';
 import type { ImagePickerAsset } from 'expo-image-picker';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Props = { onComplete: () => Promise<void>; isCompleted: boolean };
 
-type CardSlot =
-  | { kind: 'local'; photo: ProcessedImage }
-  | { kind: 'server'; url: string; id: string }
-  | null;
+type UploadStatus = 'idle' | 'queued' | 'uploading' | 'success' | 'error';
+
+type PhotoSlot = {
+  uri: string | null;
+  serverId: string | null;
+  status: UploadStatus;
+  processed: ProcessedImage | null;
+  errorMessage: string | null;
+};
+
+type CardSlot = PhotoSlot | null;
 
 const MAX_CARDS = 6;
+const MAX_CONCURRENT_UPLOADS = 2;
+const SUCCESS_BORDER_DURATION = 3000;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -82,30 +93,36 @@ async function uploadOneToSupabase(
   return { storageBucket: STORAGE_BUCKET, storagePath, photoOrder };
 }
 
+function emptySlots(): CardSlot[] {
+  return Array(MAX_CARDS).fill(null);
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function PhotoStep({ onComplete, isCompleted }: Props) {
+export default function PhotoStep({ onComplete }: Props) {
   const { t } = useTranslation();
   const { colors: th } = useTheme();
   const screenW = Dimensions.get('window').width;
 
   // Primary photo
   const [existingPrimary, setExistingPrimary] = useState<ProfilePhotoDto | null>(null);
-  const [newPrimary, setNewPrimary] = useState<ProcessedImage | null>(null);
-  const [primaryProcessing, setPrimaryProcessing] = useState(false);
+  const [primarySlot, setPrimarySlot] = useState<PhotoSlot>({
+    uri: null, serverId: null, status: 'idle', processed: null, errorMessage: null,
+  });
+  const [isDeletingPrimary, setIsDeletingPrimary] = useState(false);
 
-  // Card photos — 6 fixed slots
-  const [cardSlots, setCardSlots] = useState<CardSlot[]>(Array(MAX_CARDS).fill(null));
-  const [processingCardIdx, setProcessingCardIdx] = useState<number | null>(null);
+  // Card photos
+  const [cardSlots, setCardSlots] = useState<CardSlot[]>(emptySlots());
+  const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
 
   const [isLoadingExisting, setIsLoadingExisting] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  // Deletion loading states
-  const [isDeletingPrimary, setIsDeletingPrimary] = useState(false);
-  const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
+  const [errorModal, setErrorModal] = useState<{
+    slotKey: string;
+    message: string;
+    isPrimary: boolean;
+    slotIdx: number;
+  } | null>(null);
 
   // Crop modal state
   const [cropState, setCropState] = useState<{
@@ -115,12 +132,28 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
   } | null>(null);
   const [cropProcessing, setCropProcessing] = useState(false);
 
-  // Load existing photos on mount
+  // Upload queue management
+  const uploadQueue = useRef<Array<() => Promise<void>>>([]);
+  const activeUploads = useRef(0);
+  const uploadCancelRefs = useRef<Record<string, boolean>>({});
+  const successTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  // ─── Load existing photos on mount ──────────────────────────────────────────
+
   useEffect(() => {
     fetchProfilePhotos()
       .then(({ photos }) => {
         const primary = photos.find((p) => p.is_primary);
-        if (primary) setExistingPrimary(primary);
+        if (primary) {
+          setExistingPrimary(primary);
+          setPrimarySlot({
+            uri: primary.signed_url,
+            serverId: primary.id,
+            status: 'idle',
+            processed: null,
+            errorMessage: null,
+          });
+        }
         const cards = photos
           .filter((p) => !p.is_primary)
           .sort((a, b) => a.photo_order - b.photo_order);
@@ -128,7 +161,13 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
           setCardSlots((prev) => {
             const next = [...prev];
             cards.slice(0, MAX_CARDS).forEach((c, i) => {
-              next[i] = { kind: 'server', url: c.signed_url, id: c.id };
+              next[i] = {
+                uri: c.signed_url,
+                serverId: c.id,
+                status: 'idle',
+                processed: null,
+                errorMessage: null,
+              };
             });
             return next;
           });
@@ -138,9 +177,115 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
       .finally(() => setIsLoadingExisting(false));
   }, []);
 
+  // ─── Cleanup timers on unmount ──────────────────────────────────────────────
+
+  useEffect(() => {
+    return () => {
+      Object.values(successTimers.current).forEach(clearTimeout);
+    };
+  }, []);
+
+  // ─── Upload queue processor ─────────────────────────────────────────────────
+
+  const processQueue = useCallback(() => {
+    while (activeUploads.current < MAX_CONCURRENT_UPLOADS && uploadQueue.current.length > 0) {
+      const task = uploadQueue.current.shift()!;
+      activeUploads.current++;
+      task().finally(() => {
+        activeUploads.current--;
+        processQueue();
+      });
+    }
+  }, []);
+
+  const enqueueUpload = useCallback((task: () => Promise<void>) => {
+    uploadQueue.current.push(task);
+    processQueue();
+  }, [processQueue]);
+
+  // ─── Core upload logic ──────────────────────────────────────────────────────
+
+  const doUpload = useCallback(async (
+    slotKey: string,
+    processed: ProcessedImage,
+    photoOrder: number,
+    isPrimary: boolean,
+    onSlotUpdate: (updater: (prev: PhotoSlot) => PhotoSlot) => void,
+  ) => {
+    if (uploadCancelRefs.current[slotKey]) {
+      delete uploadCancelRefs.current[slotKey];
+      return;
+    }
+
+    onSlotUpdate((prev) => ({ ...prev, status: 'uploading' }));
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+      const userId = session.user.id;
+
+      if (uploadCancelRefs.current[slotKey]) {
+        delete uploadCancelRefs.current[slotKey];
+        onSlotUpdate((prev) => ({ ...prev, status: 'idle', uri: null, processed: null, errorMessage: null }));
+        return;
+      }
+
+      const uploaded = await uploadOneToSupabase(
+        userId, processed.uri, processed.fileName, photoOrder,
+      );
+
+      if (uploadCancelRefs.current[slotKey]) {
+        delete uploadCancelRefs.current[slotKey];
+        onSlotUpdate((prev) => ({ ...prev, status: 'idle', uri: null, processed: null, errorMessage: null }));
+        return;
+      }
+
+      const dto = await registerProfilePhoto({
+        storage_bucket: uploaded.storageBucket,
+        storage_path: uploaded.storagePath,
+        photo_order: photoOrder,
+        is_primary: isPrimary,
+      });
+
+      if (uploadCancelRefs.current[slotKey]) {
+        delete uploadCancelRefs.current[slotKey];
+        onSlotUpdate((prev) => ({ ...prev, status: 'idle', uri: null, processed: null, errorMessage: null }));
+        return;
+      }
+
+      onSlotUpdate((prev) => ({
+        ...prev,
+        uri: dto.signed_url,
+        serverId: dto.id,
+        status: 'success',
+      }));
+
+      if (isPrimary) setExistingPrimary(dto);
+
+      successTimers.current[slotKey] = setTimeout(() => {
+        onSlotUpdate((prev) => (prev.status === 'success' ? { ...prev, status: 'idle' } : prev));
+        delete successTimers.current[slotKey];
+      }, SUCCESS_BORDER_DURATION);
+
+    } catch (err) {
+      if (uploadCancelRefs.current[slotKey]) {
+        delete uploadCancelRefs.current[slotKey];
+        onSlotUpdate((prev) => ({ ...prev, status: 'idle', uri: null, processed: null, errorMessage: null }));
+        return;
+      }
+      const detail = extractApiError(err);
+      const msg = getApiErrorMessage(detail);
+      onSlotUpdate((prev) => ({ ...prev, status: 'error', errorMessage: msg }));
+      setErrorModal({ slotKey, message: msg, isPrimary, slotIdx: isPrimary ? 0 : photoOrder - 1 });
+    }
+  }, []);
+
   // ─── Pickers ───────────────────────────────────────────────────────────────
 
   const pickPrimary = useCallback(async () => {
+    if (primarySlot.status === 'uploading' || primarySlot.status === 'queued') return;
     setError(null);
     if (!(await requestLibraryPermission())) {
       setError('Photo library access is required.');
@@ -157,9 +302,11 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
       return;
     }
     setCropState({ asset, mode: 'primary' });
-  }, []);
+  }, [primarySlot.status]);
 
   const pickCard = useCallback(async (slotIdx: number) => {
+    const slot = cardSlots[slotIdx];
+    if (slot && (slot.status === 'uploading' || slot.status === 'queued')) return;
     setError(null);
     if (!(await requestLibraryPermission())) {
       setError('Photo library access is required.');
@@ -169,75 +316,120 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
       mediaTypes: ['images'],
       quality: 1,
     });
-    if (result.canceled || result.assets.length === 0) {
-      console.warn('[pickCard] Picker returned canceled or empty', { canceled: result.canceled, assetCount: result.assets?.length });
-      return;
-    }
+    if (result.canceled || result.assets.length === 0) return;
     const asset = result.assets[0];
     if (asset.width < 720 || asset.height < 960) {
       setError('Image too small. Upload at least 720 × 960 px for card photos.');
       return;
     }
     setCropState({ asset, mode: 'card', cardIdx: slotIdx });
-  }, []);
+  }, [cardSlots]);
+
+  // ─── Crop confirm: process image, show preview, enqueue upload ──────────────
 
   const handleCropConfirm = useCallback(async (crop: CropRegion) => {
     if (!cropState) return;
     setCropProcessing(true);
     try {
+      const processed = await processWithCrop(
+        cropState.asset,
+        crop,
+        1080,
+        cropState.mode === 'primary'
+          ? 'profile_avatar.webp'
+          : `swipe_photo_${(cropState.cardIdx ?? 0) + 1}.webp`,
+      );
+
       if (cropState.mode === 'primary') {
-        setPrimaryProcessing(true);
-        const processed = await processWithCrop(
-          cropState.asset, crop, 1080, 'profile_avatar.webp',
+        const slotKey = 'primary';
+        setPrimarySlot({
+          uri: processed.uri,
+          serverId: null,
+          status: 'queued',
+          processed,
+          errorMessage: null,
+        });
+        enqueueUpload(() =>
+          doUpload(slotKey, processed, 0, true, (updater) =>
+            setPrimarySlot((prev) => updater(prev)),
+          ),
         );
-        setNewPrimary(processed);
       } else if (cropState.mode === 'card' && cropState.cardIdx != null) {
-        setProcessingCardIdx(cropState.cardIdx);
-        const processed = await processWithCrop(
-          cropState.asset, crop, 1080, `swipe_photo_${cropState.cardIdx + 1}.webp`,
-        );
+        const idx = cropState.cardIdx;
+        const slotKey = `card_${idx}`;
         setCardSlots((prev) => {
           const next = [...prev];
-          next[cropState.cardIdx!] = { kind: 'local', photo: processed };
+          next[idx] = { uri: processed.uri, serverId: null, status: 'queued', processed, errorMessage: null };
           return next;
         });
+        enqueueUpload(() =>
+          doUpload(slotKey, processed, idx + 1, false, (updater) =>
+            setCardSlots((prev) => {
+              const next = [...prev];
+              if (next[idx]) next[idx] = updater(next[idx]!);
+              return next;
+            }),
+          ),
+        );
       }
     } catch (e: unknown) {
       setError((e as Error).message);
     } finally {
       setCropProcessing(false);
-      setPrimaryProcessing(false);
-      setProcessingCardIdx(null);
       setCropState(null);
     }
-  }, [cropState]);
+  }, [cropState, enqueueUpload, doUpload]);
 
-  // ─── Delete handlers ───────────────────────────────────────────────────────
+  // ─── Cancel / Delete handlers ───────────────────────────────────────────────
 
-  const handleDeletePrimary = useCallback(async () => {
-    if (newPrimary) {
-      // Local selection — just clear, no API call
-      setNewPrimary(null);
+  const handleCancelPrimary = useCallback(() => {
+    const slotKey = 'primary';
+    if (primarySlot.status === 'uploading' || primarySlot.status === 'queued') {
+      uploadCancelRefs.current[slotKey] = true;
+      setPrimarySlot({ uri: null, serverId: null, status: 'idle', processed: null, errorMessage: null });
+      if (successTimers.current[slotKey]) {
+        clearTimeout(successTimers.current[slotKey]);
+        delete successTimers.current[slotKey];
+      }
       return;
     }
-    if (!existingPrimary) return;
-    setIsDeletingPrimary(true);
-    setError(null);
-    try {
-      await deleteProfilePhoto(existingPrimary.id);
-      setExistingPrimary(null);
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setError(err?.response?.data?.message ?? err?.message ?? 'Failed to delete photo.');
-    } finally {
-      setIsDeletingPrimary(false);
+    if (primarySlot.status === 'error') {
+      setPrimarySlot({ uri: null, serverId: null, status: 'idle', processed: null, errorMessage: null });
+      return;
     }
-  }, [existingPrimary, newPrimary]);
+    if (primarySlot.serverId && existingPrimary) {
+      setIsDeletingPrimary(true);
+      setError(null);
+      deleteProfilePhoto(existingPrimary.id)
+        .then(() => {
+          setExistingPrimary(null);
+          setPrimarySlot({ uri: null, serverId: null, status: 'idle', processed: null, errorMessage: null });
+        })
+        .catch(() => setError('Failed to delete photo.'))
+        .finally(() => setIsDeletingPrimary(false));
+    }
+  }, [primarySlot, existingPrimary]);
 
-  const handleDeleteCard = useCallback(async (slotIdx: number) => {
+  const handleCancelCard = useCallback((slotIdx: number) => {
     const slot = cardSlots[slotIdx];
     if (!slot) return;
-    if (slot.kind === 'local') {
+    const slotKey = `card_${slotIdx}`;
+
+    if (slot.status === 'uploading' || slot.status === 'queued') {
+      uploadCancelRefs.current[slotKey] = true;
+      setCardSlots((prev) => {
+        const next = [...prev];
+        next[slotIdx] = null;
+        return next;
+      });
+      if (successTimers.current[slotKey]) {
+        clearTimeout(successTimers.current[slotKey]);
+        delete successTimers.current[slotKey];
+      }
+      return;
+    }
+
+    if (slot.status === 'error') {
       setCardSlots((prev) => {
         const next = [...prev];
         next[slotIdx] = null;
@@ -245,104 +437,94 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
       });
       return;
     }
-    setDeletingCardId(slot.id);
-    setError(null);
-    try {
-      await deleteProfilePhoto(slot.id);
-      setCardSlots((prev) => {
-        const next = [...prev];
-        next[slotIdx] = null;
-        return next;
-      });
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setError(err?.response?.data?.message ?? err?.message ?? 'Failed to delete photo.');
-    } finally {
-      setDeletingCardId(null);
+
+    if (slot.serverId) {
+      setDeletingCardId(slot.serverId);
+      setError(null);
+      deleteProfilePhoto(slot.serverId)
+        .then(() => {
+          setCardSlots((prev) => {
+            const next = [...prev];
+            next[slotIdx] = null;
+            return next;
+          });
+        })
+        .catch(() => setError('Failed to delete photo.'))
+        .finally(() => setDeletingCardId(null));
     }
   }, [cardSlots]);
+
+  // ─── Retry handler ──────────────────────────────────────────────────────────
+
+  const handleRetry = useCallback((slotIdx: number) => {
+    const slot = cardSlots[slotIdx];
+    if (!slot || !slot.processed) return;
+    const slotKey = `card_${slotIdx}`;
+
+    setCardSlots((prev) => {
+      const next = [...prev];
+      if (next[slotIdx]) next[slotIdx] = { ...next[slotIdx]!, status: 'queued', errorMessage: null };
+      return next;
+    });
+
+    enqueueUpload(() =>
+      doUpload(slotKey, slot.processed!, slotIdx + 1, false, (updater) =>
+        setCardSlots((prev) => {
+          const next = [...prev];
+          if (next[slotIdx]) next[slotIdx] = updater(next[slotIdx]!);
+          return next;
+        }),
+      ),
+    );
+  }, [cardSlots, enqueueUpload, doUpload]);
+
+  const handleRetryPrimary = useCallback(() => {
+    if (!primarySlot.processed) return;
+    const slotKey = 'primary';
+
+    setPrimarySlot((prev) => ({ ...prev, status: 'queued', errorMessage: null }));
+
+    enqueueUpload(() =>
+      doUpload(slotKey, primarySlot.processed!, 0, true, (updater) =>
+        setPrimarySlot((prev) => updater(prev)),
+      ),
+    );
+  }, [primarySlot, enqueueUpload, doUpload]);
 
   // ─── Submit ────────────────────────────────────────────────────────────────
 
   const isRejected = existingPrimary?.moderation_status === 'REJECTED';
 
   const handleSubmit = useCallback(async () => {
-    const hasPrimary = existingPrimary !== null || newPrimary !== null;
-    const hasCard = cardSlots.some((s) => s !== null);
-    if (!hasPrimary || !hasCard) {
-      setError('One profile photo and at least one card photo are required.');
+    const hasPrimary = primarySlot.uri != null && primarySlot.status !== 'error';
+    if (!hasPrimary) {
+      setError('A profile photo is required.');
       return;
     }
-    if (isRejected && !newPrimary) { setError('Your profile photo was rejected. Please upload a new one.'); return; }
+    if (isRejected) {
+      setError('Your profile photo was rejected. Please delete it and upload a new one.');
+      return;
+    }
 
     setError(null);
-    setIsSubmitting(true);
     try {
-      const localCards = cardSlots
-        .map((slot, i) => ({ slot, i }))
-        .filter((x): x is { slot: { kind: 'local'; photo: ProcessedImage }; i: number } =>
-          x.slot?.kind === 'local',
-        );
-
-      const hasNewPhotos = newPrimary !== null || localCards.length > 0;
-
-      if (hasNewPhotos) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session) throw new Error('Not authenticated');
-        const userId = session.user.id;
-
-        setUploadStatus('Uploading photos…');
-        const uploadTasks: { uri: string; fileName: string; photoOrder: number }[] = [
-          ...(newPrimary
-            ? [{ uri: newPrimary.uri, fileName: newPrimary.fileName, photoOrder: 0 }]
-            : []),
-          ...localCards.map(({ slot, i }) => ({
-              uri: slot.photo.uri,
-              fileName: slot.photo.fileName,
-              photoOrder: i + 1,
-            })),
-        ];
-        const uploads: { storageBucket: string; storagePath: string; photoOrder: number }[] = [];
-        for (let i = 0; i < uploadTasks.length; i++) {
-          setUploadStatus(`Uploading photo ${i + 1} of ${uploadTasks.length}…`);
-          const result = await uploadOneToSupabase(
-            userId,
-            uploadTasks[i].uri,
-            uploadTasks[i].fileName,
-            uploadTasks[i].photoOrder,
-          );
-          uploads.push(result);
-        }
-
-        setUploadStatus('Registering photos…');
-        await batchRegisterProfilePhotos({
-          photos: uploads.map((u) => ({
-            storage_bucket: u.storageBucket,
-            storage_path: u.storagePath,
-            photo_order: u.photoOrder,
-            is_primary: u.photoOrder === 0,
-          })),
-        });
-      }
-
       await onComplete();
     } catch (e: unknown) {
-      const detail = extractApiError(e);
-      setError(detail.message);
-    } finally {
-      setIsSubmitting(false);
-      setUploadStatus('');
+      setError((e as Error).message);
     }
-  }, [existingPrimary, newPrimary, cardSlots, isRejected, onComplete]);
+  }, [primarySlot, isRejected, onComplete]);
 
   // ─── Derived ───────────────────────────────────────────────────────────────
 
-  const primaryUri = newPrimary?.uri ?? existingPrimary?.signed_url ?? null;
+  const primaryUri = primarySlot.uri;
   const hasPrimary = primaryUri != null;
   const filledCards = cardSlots.filter(Boolean).length;
-  const canSubmit = !isSubmitting && (!isRejected || newPrimary !== null);
+
+  const primaryBusy = primarySlot.status === 'uploading' || primarySlot.status === 'queued';
+  const anyCardBusy = cardSlots.some((s) => s && (s.status === 'uploading' || s.status === 'queued'));
+  const anyCardError = cardSlots.some((s) => s && s.status === 'error');
+  const primaryError = primarySlot.status === 'error';
+  const canSubmit = !primaryBusy && !anyCardBusy && !primaryError && !anyCardError && !isRejected && hasPrimary;
 
   const GAP = 8;
   const cardWidth = Math.floor((screenW - spacing.md * 2 - GAP * 2) / 3);
@@ -370,24 +552,54 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
       </Text>
 
       {/* ── Primary Avatar ─────────────────────────────────────────────────── */}
-      <Text style={[styles.sectionLabel, { color: th.textMuted }]}>{t('onboarding.photo.profileAvatar')}</Text>
+      <View style={styles.sectionRow}>
+        <Text style={[styles.sectionLabel, { color: th.textMuted, marginBottom: 0, marginTop: 0 }]}>{t('onboarding.photo.profileAvatar')}</Text>
+        <View style={styles.requiredBadge}>
+          <Text style={styles.requiredBadgeText}>*</Text>
+          <Text style={styles.requiredBadgeText}>{t('onboarding.photo.required')}</Text>
+        </View>
+      </View>
       <View style={[styles.primaryRow, { backgroundColor: th.surface, borderColor: th.border }]}>
         <TouchableOpacity
-          onPress={pickPrimary}
+          onPress={() => {
+            if (primarySlot.status === 'error') {
+              setErrorModal({ slotKey: 'primary', message: primarySlot.errorMessage ?? 'Upload failed', isPrimary: true, slotIdx: 0 });
+            } else {
+              pickPrimary();
+            }
+          }}
           activeOpacity={0.8}
+          disabled={primaryBusy || isDeletingPrimary}
           style={[
             styles.primarySlot,
-            { backgroundColor: th.backgroundElement, borderColor: hasPrimary ? colors.primary : th.border },
+            {
+              backgroundColor: th.backgroundElement,
+              borderColor: getSlotBorderColor(primarySlot.status, hasPrimary),
+            },
           ]}
         >
-          {primaryProcessing ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : primaryUri ? (
+          {primaryUri ? (
             <>
               <Image source={{ uri: primaryUri }} style={styles.fill} />
+              {(primaryBusy) && (
+                <View style={styles.uploadOverlay}>
+                  <ActivityIndicator color="#FFF" size="small" />
+                  <Text style={styles.uploadingText}>Uploading…</Text>
+                </View>
+              )}
+              {primarySlot.status === 'success' && (
+                <View style={styles.successBadge}>
+                  <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                </View>
+              )}
+              {primarySlot.status === 'error' && (
+                <View style={styles.errorBadge}>
+                  <Ionicons name="alert-circle" size={20} color="#EF4444" />
+                </View>
+              )}
               <TouchableOpacity
-                style={[styles.deleteBadge, isDeletingPrimary && { opacity: 0.7 }]}
-                onPress={handleDeletePrimary}
+                style={styles.deleteBadge}
+                onPress={handleCancelPrimary}
                 hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
               >
                 {isDeletingPrimary ? (
@@ -413,8 +625,7 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
           <Text style={[styles.primaryInfoMeta, { color: th.textMuted }]}>
             4:5 · min 720×900 px · WebP 1080×1350
           </Text>
-          {/* Moderation status */}
-          {existingPrimary != null && !newPrimary && (
+          {existingPrimary != null && primarySlot.status !== 'error' && (
             <View style={styles.moderationRow}>
               <View style={[styles.moderationDot, { backgroundColor: moderationColor(existingPrimary.moderation_status) }]} />
               <Text style={[styles.moderationStatus, { color: moderationColor(existingPrimary.moderation_status) }]}>
@@ -432,7 +643,10 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
 
       {/* ── Card Photos ────────────────────────────────────────────────────── */}
       <View style={styles.sectionRow}>
-        <Text style={[styles.sectionLabel, { color: th.textMuted }]}>{t('onboarding.photo.discoveryCards')}</Text>
+        <View style={styles.sectionLeft}>
+          <Text style={[styles.sectionLabel, { color: th.textMuted, marginBottom: 0, marginTop: 0 }]}>{t('onboarding.photo.discoveryCards')}</Text>
+          <Text style={styles.optionalText}>{t('onboarding.photo.optional')}</Text>
+        </View>
         <Text style={[styles.sectionCount, { color: filledCards > 0 ? colors.primary : th.textMuted }]}>
           {filledCards} / {MAX_CARDS}
         </Text>
@@ -443,54 +657,74 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
 
       <View style={[styles.cardGrid, { gap: GAP }]}>
         {cardSlots.map((slot, i) => {
-          const isProcessing = processingCardIdx === i;
-          const slotUri = slot?.kind === 'server' ? slot.url : slot?.kind === 'local' ? slot.photo.uri : null;
-          const isLocal = slot?.kind === 'local';
-          const isServer = slot?.kind === 'server';
+          const slotUri = slot?.uri ?? null;
+          const isBusy = slot != null && (slot.status === 'uploading' || slot.status === 'queued');
+          const isError = slot?.status === 'error';
+          const isSuccess = slot?.status === 'success';
+          const hasServer = slot?.serverId != null;
 
           return (
-            <TouchableOpacity
-              key={i}
-              onPress={() => {
-                if (isProcessing || isServer) return;
-                pickCard(i);
-              }}
-              activeOpacity={isServer ? 1 : 0.75}
-              style={[
-                styles.cardSlot,
-                {
-                  width: cardWidth,
-                  height: cardHeight,
-                  backgroundColor: th.surface,
-                  borderColor: slotUri ? colors.primary : th.border,
-                },
-              ]}
-            >
-              {isProcessing ? (
-                <ActivityIndicator color={colors.primary} />
-              ) : slotUri ? (
-                <>
-                  <Image source={{ uri: slotUri }} style={styles.fill} />
-                  <TouchableOpacity
-                    style={styles.removeBtn}
-                    onPress={() => handleDeleteCard(i)}
-                    hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-                  >
-                    <View style={styles.removeBtnInner}>
-                      {isServer && deletingCardId === slot?.id ? (
-                        <ActivityIndicator color="#FFF" size={10} />
-                      ) : (
-                        <Ionicons name="close" size={12} color="#FFF" />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <View style={styles.slotEmpty}>
-                  <Ionicons name="add" size={26} color={th.textMuted} />
-                </View>
-              )}
-            </TouchableOpacity>
+            <View key={i} style={styles.cardSlotWrapper}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (isError) {
+                    setErrorModal({ slotKey: `card_${i}`, message: slot?.errorMessage ?? 'Upload failed', isPrimary: false, slotIdx: i });
+                  } else if (!isBusy && !hasServer && !slotUri) {
+                    pickCard(i);
+                  }
+                }}
+                activeOpacity={slotUri ? 1 : 0.75}
+                disabled={isBusy || hasServer || (!!slotUri && !isError)}
+                style={[
+                  styles.cardSlot,
+                  {
+                    width: cardWidth,
+                    height: cardHeight,
+                    backgroundColor: th.surface,
+                    borderColor: getSlotBorderColor(slot?.status ?? 'idle', !!slotUri),
+                  },
+                ]}
+              >
+                {slotUri ? (
+                  <>
+                    <Image source={{ uri: slotUri }} style={styles.fill} />
+                    {isBusy && (
+                      <View style={styles.uploadOverlay}>
+                        <ActivityIndicator color="#FFF" size="small" />
+                        <Text style={styles.uploadingText}>Uploading…</Text>
+                      </View>
+                    )}
+                    {isSuccess && (
+                      <View style={styles.successBadge}>
+                        <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                      </View>
+                    )}
+                    {isError && (
+                      <View style={styles.errorBadge}>
+                        <Ionicons name="alert-circle" size={20} color="#EF4444" />
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      style={styles.removeBtn}
+                      onPress={() => handleCancelCard(i)}
+                      hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+                    >
+                      <View style={styles.removeBtnInner}>
+                        {hasServer && deletingCardId === slot?.serverId ? (
+                          <ActivityIndicator color="#FFF" size={10} />
+                        ) : (
+                          <Ionicons name="close" size={12} color="#FFF" />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <View style={styles.slotEmpty}>
+                    <Ionicons name="add" size={26} color={th.textMuted} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
           );
         })}
       </View>
@@ -507,6 +741,13 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
         </View>
       )}
 
+      {(primaryError || anyCardError) && (
+        <View style={styles.errorBox}>
+          <Ionicons name="alert-circle-outline" size={16} color="#FF6B6B" />
+          <Text style={styles.errorText}>Some photos failed to upload. Tap the photo to retry or remove it.</Text>
+        </View>
+      )}
+
       {/* ── Submit ─────────────────────────────────────────────────────────── */}
       <TouchableOpacity
         style={[styles.btn, !canSubmit && styles.btnDisabled]}
@@ -514,16 +755,9 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
         disabled={!canSubmit}
         activeOpacity={0.85}
       >
-        {isSubmitting ? (
-          <View style={styles.submitRow}>
-            <ActivityIndicator color="#FFF" size="small" />
-            <Text style={styles.btnText}>{uploadStatus || t('onboarding.photo.uploading')}</Text>
-          </View>
-        ) : (
-          <Text style={styles.btnText}>
-            {newPrimary || cardSlots.some((s) => s?.kind === 'local') ? t('onboarding.photo.uploadAndContinue') : t('onboarding.photo.continue')}
-          </Text>
-        )}
+        <Text style={styles.btnText}>
+          {t('onboarding.photo.continue')}
+        </Text>
       </TouchableOpacity>
 
       <View style={[styles.reviewNote, { backgroundColor: th.surface, borderColor: th.border }]}>
@@ -542,8 +776,87 @@ export default function PhotoStep({ onComplete, isCompleted }: Props) {
         onCancel={() => setCropState(null)}
         processing={cropProcessing}
       />
+
+      {/* ── Upload Error Modal ──────────────────────────────────────────────── */}
+      <Modal
+        visible={errorModal !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setErrorModal(null)}
+      >
+        <View style={styles.errorModalOverlay}>
+          <View style={[styles.errorModalCard, { backgroundColor: th.surface }]}>
+            <View style={styles.errorModalIcon}>
+              <Ionicons name="alert-circle" size={40} color="#EF4444" />
+            </View>
+            <Text style={[styles.errorModalTitle, { color: th.text }]}>
+              Upload failed
+            </Text>
+            <Text style={[styles.errorModalMessage, { color: th.textSecondary }]}>
+              {errorModal?.message}
+            </Text>
+            <View style={styles.errorModalActions}>
+              <TouchableOpacity
+                style={[styles.errorModalBtn, styles.errorModalBtnSecondary, { borderColor: th.border }]}
+                onPress={() => {
+                  if (errorModal?.isPrimary) {
+                    handleCancelPrimary();
+                  } else if (errorModal) {
+                    handleCancelCard(errorModal.slotIdx);
+                  }
+                  setErrorModal(null);
+                }}
+              >
+                <Text style={[styles.errorModalBtnText, { color: th.textSecondary }]}>
+                  Remove
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.errorModalBtn, styles.errorModalBtnPrimary]}
+                onPress={() => {
+                  if (errorModal?.isPrimary) {
+                    handleRetryPrimary();
+                  } else if (errorModal) {
+                    handleRetry(errorModal.slotIdx);
+                  }
+                  setErrorModal(null);
+                }}
+              >
+                <Text style={styles.errorModalBtnTextPrimary}>
+                  Retry
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.errorModalClose}
+              onPress={() => setErrorModal(null)}
+              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            >
+              <Text style={[styles.errorModalCloseText, { color: th.textMuted }]}>
+                Dismiss
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
+}
+
+// ─── Slot border color helper ────────────────────────────────────────────────
+
+function getSlotBorderColor(status: UploadStatus, hasUri: boolean): string {
+  switch (status) {
+    case 'uploading':
+    case 'queued':
+      return colors.primary;
+    case 'success':
+      return '#22C55E';
+    case 'error':
+      return '#EF4444';
+    default:
+      return hasUri ? colors.primary : 'transparent';
+  }
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
@@ -570,7 +883,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
+  sectionLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   sectionCount: { fontSize: 12, fontWeight: '700' },
+  requiredBadge: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  requiredBadgeText: { color: '#EF4444', fontSize: 11, fontWeight: '700' },
+  optionalText: { color: '#9CA3AF', fontSize: 11, fontWeight: '600' },
 
   // Primary row
   primaryRow: {
@@ -601,18 +918,54 @@ const styles = StyleSheet.create({
   // Card grid
   cardHint: { fontSize: 13, lineHeight: 18, marginBottom: spacing.sm },
   cardGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  cardSlotWrapper: { marginBottom: 8 },
   cardSlot: {
     borderRadius: radius.md,
     borderWidth: 1.5,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
   },
 
   fill: { width: '100%', height: '100%', resizeMode: 'cover' },
   slotEmpty: { alignItems: 'center', gap: 4 },
   slotEmptyText: { fontSize: 10, fontWeight: '600' },
+
+  // Upload overlay
+  uploadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  uploadingText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+
+  // Success badge
+  successBadge: {
+    position: 'absolute',
+    bottom: 5,
+    left: 5,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 10,
+    padding: 1,
+  },
+
+  // Error badge
+  errorBadge: {
+    position: 'absolute',
+    bottom: 5,
+    left: 5,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 10,
+    padding: 1,
+  },
+
+  // Delete / cancel button
   deleteBadge: {
     position: 'absolute',
     bottom: 5,
@@ -635,7 +988,7 @@ const styles = StyleSheet.create({
   },
   cardMeta: { fontSize: 10, letterSpacing: 0.2, marginTop: 2, marginBottom: spacing.md },
 
-  // Error
+  // Global error
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -664,7 +1017,6 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.45 },
   btnText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
-  submitRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 
   // Review note
   reviewNote: {
@@ -677,4 +1029,69 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   reviewNoteText: { fontSize: 12, flex: 1, lineHeight: 18 },
+
+  // Error modal
+  errorModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  errorModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  errorModalIcon: {
+    marginBottom: spacing.sm,
+  },
+  errorModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  errorModalMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  errorModalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+    marginBottom: spacing.sm,
+  },
+  errorModalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.full,
+    alignItems: 'center',
+  },
+  errorModalBtnSecondary: {
+    borderWidth: 1,
+  },
+  errorModalBtnPrimary: {
+    backgroundColor: colors.primary,
+  },
+  errorModalBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  errorModalBtnTextPrimary: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  errorModalClose: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+  },
+  errorModalCloseText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });

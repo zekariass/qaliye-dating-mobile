@@ -20,7 +20,7 @@ interface ProfileHeaderProps {
 
 const AVATAR_SIZE = 120;
 const AVATAR_RADIUS = 18;
-const CIRCLE_BTN = 44;
+const CIRCLE_BTN = 38;
 
 export default function ProfileHeader({
   avatarUri,
@@ -43,21 +43,35 @@ export default function ProfileHeader({
       <View style={[styles.lavenderGlow, { height: safeTop + 160, backgroundColor: th.backgroundSelected }]} />
 
       <View style={[styles.topRow, { paddingTop: safeTop + 8 }]}>
-        <Pressable
-          style={[styles.circleBtn, { backgroundColor: th.surface }]}
-          onPress={() => router.back()}
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-        >
-          <Ionicons name="chevron-back" size={22} color={th.text} />
-        </Pressable>
-
-        {showPremium && (
-          <View style={[styles.premiumBadge, { backgroundColor: th.surface }]}>
-            <Ionicons name="diamond" size={16} color={colors.primary} />
-            <Text style={[styles.premiumText, { color: colors.primary }]}>{premiumLabel}</Text>
-          </View>
-        )}
+        <View style={styles.topLeft}>
+          {showPremium ? (
+            <View style={[styles.premiumBadge, { backgroundColor: th.surface }]}>
+              <Ionicons name="diamond" size={16} color={colors.primary} />
+              <Text style={[styles.premiumText, { color: colors.primary }]}>{premiumLabel}</Text>
+            </View>
+          ) : (
+            <View style={styles.topLeftLinks}>
+              <Pressable
+                style={[styles.linkBtn, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/(app)/premium' as any)}
+                accessibilityLabel="Go Premium"
+                accessibilityRole="button"
+              >
+                <Ionicons name="diamond" size={14} color="#FFFFFF" />
+                <Text style={styles.linkBtnText}>Go Premium</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.linkBtn, { backgroundColor: th.surface }]}
+                onPress={() => router.push('/(app)/credits-shop' as any)}
+                accessibilityLabel="Credits Shop"
+                accessibilityRole="button"
+              >
+                <Ionicons name="sparkles" size={14} color={colors.primary} />
+                <Text style={[styles.linkBtnText, { color: colors.primary }]}>Credits</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
 
         <View style={styles.topRight}>
           <Pressable
@@ -66,7 +80,7 @@ export default function ProfileHeader({
             accessibilityLabel="Edit Profile"
             accessibilityRole="button"
           >
-            <Ionicons name="pencil" size={22} color="#FFFFFF" />
+            <Ionicons name="pencil" size={16} color="#FFFFFF" />
           </Pressable>
 
           <Pressable
@@ -75,7 +89,7 @@ export default function ProfileHeader({
             accessibilityLabel="Settings"
             accessibilityRole="button"
           >
-            <Ionicons name="settings" size={22} color="#FFFFFF" />
+            <Ionicons name="settings" size={16} color="#FFFFFF" />
           </Pressable>
         </View>
       </View>
@@ -139,10 +153,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 12,
   },
+  topLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  topLeftLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   topRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  linkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 16,
+  },
+  linkBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   circleBtn: {
     width: CIRCLE_BTN,

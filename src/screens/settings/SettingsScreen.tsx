@@ -188,128 +188,7 @@ export default function SettingsScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: safeBottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
-          <Text style={[styles.sectionTitle, { color: th.text }]}>
-            {t('settings.appearance', 'Appearance')}
-          </Text>
-          <Text style={[styles.sectionSubtitle, { color: th.textSecondary }]}>
-            {t('settings.themeSubtitle', 'Choose how the app looks to you.')}
-          </Text>
-
-          {THEME_OPTIONS.map((option, idx) => {
-            const isActive = mode === option.key;
-            return (
-              <Pressable
-                key={option.key}
-                style={[
-                  styles.optionRow,
-                  idx > 0 && { borderTopWidth: 1, borderTopColor: th.border },
-                ]}
-                onPress={() => setMode(option.key)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: isActive }}
-                accessibilityLabel={option.label}
-              >
-                <View style={[styles.iconCircle, { backgroundColor: th.backgroundSelected }]}>
-                  <Ionicons name={option.icon} size={18} color={th.text} />
-                </View>
-                <Text style={[styles.optionLabel, { color: th.text }]}>{option.label}</Text>
-                <View
-                  style={[
-                    styles.radio,
-                    { borderColor: isActive ? colors.primary : th.border },
-                    isActive && { backgroundColor: colors.primary },
-                  ]}
-                >
-                  {isActive && <Ionicons name="checkmark" size={12} color="#fff" />}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
-          <Text style={[styles.sectionTitle, { color: th.text }]}>
-            {t('settings.privacy', 'Privacy')}
-          </Text>
-          <Text style={[styles.sectionSubtitle, { color: th.textSecondary }]}>
-            {t('settings.privacySubtitle', 'Control what others can see about you.')}
-          </Text>
-          <View style={styles.optionRow}>
-            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="eye-outline" size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.optionLabel, { color: th.text }]}>
-                {t('settings.activityStatus', 'Online Status')}
-              </Text>
-              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                {t('settings.activityStatusSub', 'Show others when you’re online')}
-              </Text>
-            </View>
-            <Switch
-              value={showActivityStatus}
-              onValueChange={updateVisibility}
-              disabled={isUpdatingVisibility}
-              trackColor={{ false: th.border, true: colors.primary + 'AA' }}
-              thumbColor={showActivityStatus ? colors.primary : th.textMuted}
-            />
-          </View>
-          <Pressable
-            style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
-            onPress={() => router.push('/(app)/blocked-users' as any)}
-            accessibilityRole="button"
-            accessibilityLabel="Blocked users"
-          >
-            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="ban-outline" size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.optionLabel, { color: th.text }]}>Blocked Users</Text>
-              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                Manage users you've blocked
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
-          </Pressable>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
-          <Text style={[styles.sectionTitle, { color: th.text }]}>
-            {t('settings.discovery', 'Discovery')}
-          </Text>
-          <Pressable
-            testID="review-passed-profiles-row"
-            style={styles.optionRow}
-            onPress={() => setRevisitSheetVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel={t('settings.revisitPassedProfiles', 'Review passed profiles')}
-          >
-            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="refresh-outline" size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.optionLabel, { color: th.text }]}>
-                {t('settings.revisitPassedProfiles', 'Review passed profiles')}
-              </Text>
-              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                {t(
-                  'settings.revisitPassedProfilesSub',
-                  'Bring back profiles you previously passed that are still eligible.',
-                )}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
-          </Pressable>
-        </View>
-
-        <ReviewPassedProfilesSheet
-          visible={revisitSheetVisible}
-          onClose={() => setRevisitSheetVisible(false)}
-        />
-
-        <NotificationSettingsSection />
-
+        {/* ── Subscription & Credits ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
           <Text style={[styles.sectionTitle, { color: th.text }]}>
             {t('billing.settingsSection', 'Subscription & Credits')}
@@ -444,27 +323,43 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
+        {/* ── Notifications ── */}
+        <NotificationSettingsSection />
+
+        {/* ── Discovery ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Text style={[styles.sectionTitle, { color: th.text }]}>
+            {t('settings.discovery', 'Discovery')}
+          </Text>
           <Pressable
+            testID="review-passed-profiles-row"
             style={styles.optionRow}
-            onPress={rateUs}
+            onPress={() => setRevisitSheetVisible(true)}
             accessibilityRole="button"
-            accessibilityLabel={t('settings.rateUs', 'Rate Us')}
+            accessibilityLabel={t('settings.revisitPassedProfiles', 'Review passed profiles')}
           >
-            <View style={[styles.iconCircle, { backgroundColor: '#FFF7ED' }]}>
-              <Ionicons name="star-outline" size={18} color="#F59E0B" />
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="refresh-outline" size={18} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.optionLabel, { color: th.text }]}>
-                {t('settings.rateUs', 'Rate Us')}
+                {t('settings.revisitPassedProfiles', 'Review passed profiles')}
               </Text>
               <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                {t('settings.rateUsSub', 'Love Qaliye? Leave us a review')}
+                {t(
+                  'settings.revisitPassedProfilesSub',
+                  'Bring back profiles you previously passed that are still eligible.',
+                )}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
           </Pressable>
         </View>
+
+        <ReviewPassedProfilesSheet
+          visible={revisitSheetVisible}
+          onClose={() => setRevisitSheetVisible(false)}
+        />
 
         {/* ── Language ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
@@ -495,6 +390,118 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
+        {/* ── Appearance ── */}
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Text style={[styles.sectionTitle, { color: th.text }]}>
+            {t('settings.appearance', 'Appearance')}
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: th.textSecondary }]}>
+            {t('settings.themeSubtitle', 'Choose how the app looks to you.')}
+          </Text>
+
+          {THEME_OPTIONS.map((option, idx) => {
+            const isActive = mode === option.key;
+            return (
+              <Pressable
+                key={option.key}
+                style={[
+                  styles.optionRow,
+                  idx > 0 && { borderTopWidth: 1, borderTopColor: th.border },
+                ]}
+                onPress={() => setMode(option.key)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isActive }}
+                accessibilityLabel={option.label}
+              >
+                <View style={[styles.iconCircle, { backgroundColor: th.backgroundSelected }]}>
+                  <Ionicons name={option.icon} size={18} color={th.text} />
+                </View>
+                <Text style={[styles.optionLabel, { color: th.text }]}>{option.label}</Text>
+                <View
+                  style={[
+                    styles.radio,
+                    { borderColor: isActive ? colors.primary : th.border },
+                    isActive && { backgroundColor: colors.primary },
+                  ]}
+                >
+                  {isActive && <Ionicons name="checkmark" size={12} color="#fff" />}
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* ── Privacy ── */}
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Text style={[styles.sectionTitle, { color: th.text }]}>
+            {t('settings.privacy', 'Privacy')}
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: th.textSecondary }]}>
+            {t('settings.privacySubtitle', 'Control what others can see about you.')}
+          </Text>
+          <View style={styles.optionRow}>
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="eye-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('settings.activityStatus', 'Online Status')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('settings.activityStatusSub', "Show others when you're online")}
+              </Text>
+            </View>
+            <Switch
+              value={showActivityStatus}
+              onValueChange={updateVisibility}
+              disabled={isUpdatingVisibility}
+              trackColor={{ false: th.border, true: colors.primary + 'AA' }}
+              thumbColor={showActivityStatus ? colors.primary : th.textMuted}
+            />
+          </View>
+          <Pressable
+            style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
+            onPress={() => router.push('/(app)/blocked-users' as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Blocked users"
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="ban-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>Blocked Users</Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                Manage users you've blocked
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+        </View>
+
+        {/* ── Rate Us ── */}
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Pressable
+            style={styles.optionRow}
+            onPress={rateUs}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.rateUs', 'Rate Us')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: '#FFF7ED' }]}>
+              <Ionicons name="star-outline" size={18} color="#F59E0B" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('settings.rateUs', 'Rate Us')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('settings.rateUsSub', 'Love Qaliye? Leave us a review')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+        </View>
+
+        {/* ── Account ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
           <Text style={[styles.sectionTitle, { color: th.text }]}>
             {t('settings.account', 'Account')}
