@@ -27,6 +27,7 @@ import type {
     QuotaInfo,
     RedeemPromotionResponse,
     RedemptionStatus,
+    SubscriptionProvider,
     SubscriptionStatus,
     UserRedemptionDto,
     VerificationField,
@@ -64,6 +65,7 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
     subscription: subRaw
       ? {
           status: (subRaw.status ?? 'NONE') as SubscriptionStatus,
+          provider: (subRaw.provider ?? subRaw.Provider) as SubscriptionProvider | undefined,
           billing_interval_count: (subRaw.billing_interval_count ?? subRaw.billingIntervalCount) as number | undefined,
           billing_interval_unit: (subRaw.billing_interval_unit ?? subRaw.billingIntervalUnit) as BillingIntervalUnit | undefined,
           expires_at: (subRaw.expires_at ?? subRaw.expiresAt) as string | undefined,

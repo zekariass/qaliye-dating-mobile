@@ -23,6 +23,7 @@ import { colors } from '@/constants/theme';
 import { useCreateOrder } from '@/hooks/billing/useCreateOrder';
 import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
+import { useManageSubscription } from '@/hooks/billing/useManageSubscription';
 import { useOffers } from '@/hooks/billing/useOffers';
 import { usePaymentOptions } from '@/hooks/billing/usePaymentOptions';
 import { useRedeemPromotion } from '@/hooks/billing/useRedeemPromotion';
@@ -32,7 +33,7 @@ import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useTheme } from '@/hooks/use-theme';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
 import type { ClaimablePromotionDto, PaymentMethodDto } from '@/types/billing';
-import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
+import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan, type SubscriptionProvider } from '@/types/billing';
 import { extractApiError } from '@/utils/apiError';
 import { getPlanLimitDisplays } from '@/utils/entitlements';
 
@@ -109,6 +110,8 @@ export default function PremiumPaywallScreen() {
       );
     }
   }, [restoreResult, t]);
+
+  const { manage: manageSubscription, isManaging: isManagingSub, error: manageSubError } = useManageSubscription();
 
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [showMethodSheet, setShowMethodSheet] = useState(false);
@@ -262,6 +265,43 @@ export default function PremiumPaywallScreen() {
                     </Text>
                   </View>
                 </View>
+                {isPremium && !isFreePremium && (() => {
+                  const provider = entitlements?.subscription?.provider as SubscriptionProvider | undefined;
+                  const isRCProvider = provider === 'GOOGLE_PLAY' || provider === 'APPLE_APP_STORE' || provider === 'REVENUECAT';
+                  if (isRCProvider && provider) {
+                    return (
+                      <>
+                        <Pressable
+                          style={[styles.manageSubBtn, { backgroundColor: colors.primary }]}
+                          onPress={() => manageSubscription(provider)}
+                          disabled={isManagingSub}
+                          accessibilityRole="button"
+                        >
+                          {isManagingSub ? (
+                            <ActivityIndicator color="#FFFFFF" size="small" />
+                          ) : (
+                            <>
+                              <Ionicons name="settings-outline" size={16} color="#FFFFFF" />
+                              <Text style={styles.manageSubBtnText}>
+                                {t('billing.manageSubscription', 'Manage Subscription')}
+                              </Text>
+                            </>
+                          )}
+                        </Pressable>
+                        {manageSubError && (
+                          <Text style={[styles.manageSubError, { color: colors.danger }]}>
+                            {manageSubError}
+                          </Text>
+                        )}
+                      </>
+                    );
+                  }
+                  return (
+                    <Text style={[styles.localPaymentNote, { color: th.textSecondary }]}>
+                      {t('billing.localPaymentNote', 'Paid using a local payment method.')}
+                    </Text>
+                  );
+                })()}
               </View>
             )}
 
@@ -608,6 +648,31 @@ const styles = StyleSheet.create({
   activePremiumSubtitle: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  manageSubBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  manageSubBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  manageSubError: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  localPaymentNote: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginTop: 10,
   },
   featuresLink: {
     flexDirection: 'row',

@@ -124,6 +124,11 @@ export async function getRevenueCatCustomerInfo(): Promise<CustomerInfo | null> 
   }
 }
 
+export async function getRevenueCatManagementURL(): Promise<string | null> {
+  const info = await getRevenueCatCustomerInfo();
+  return info?.managementURL ?? null;
+}
+
 export { PURCHASES_ERROR_CODE };
 export type { CustomerInfo, PurchasesOfferings, PurchasesPackage };
 

@@ -71,8 +71,21 @@ export type PaymentChannelOptionDto = {
   display_name: string;
 };
 
+export type SubscriptionProvider =
+  | 'GOOGLE_PLAY'
+  | 'APPLE_APP_STORE'
+  | 'REVENUECAT'
+  | 'PROMOTION'
+  | 'TELEBIRR'
+  | 'CBE_BIRR'
+  | 'CHAPA'
+  | 'ARIFPAY'
+  | 'BANK_TRANSFER'
+  | 'STRIPE';
+
 export type SubscriptionInfo = {
   status: SubscriptionStatus;
+  provider?: SubscriptionProvider;
   billing_interval_count?: number;
   billing_interval_unit?: BillingIntervalUnit;
   expires_at?: string;

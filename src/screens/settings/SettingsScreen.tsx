@@ -31,7 +31,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useRateUs } from '@/hooks/useRateUs';
 import { LANGUAGE_LABELS, LANGUAGE_LIST, useLanguageStore } from '@/stores/language-store';
 import { ThemeMode, useThemeStore } from '@/stores/theme-store';
-import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
+import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 import { extractApiError, getApiErrorTitle } from '@/utils/apiError';
 import { getBoostStatus, getRewindsStatus, getSuperLikesStatus } from '@/utils/entitlements';
 
@@ -216,24 +216,26 @@ export default function SettingsScreen() {
               )}
             </View>
           )}
-          <Pressable
-            style={[styles.optionRow, { borderTopWidth: entitlements ? 1 : 0, borderTopColor: th.border }]}
-            onPress={() => router.push('/(app)/premium' as any)}
-            accessibilityRole="button"
-          >
-            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="diamond-outline" size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.optionLabel, { color: th.text }]}>
-                {t('billing.manageSubscription', 'Manage Subscription')}
-              </Text>
-              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                {t('billing.manageSubscriptionSub', 'View plans and upgrade')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
-          </Pressable>
+          {isPremiumPlan(entitlements?.plan) && isActiveSubscription(entitlements?.subscription) && (
+            <Pressable
+              style={[styles.optionRow, { borderTopWidth: entitlements ? 1 : 0, borderTopColor: th.border }]}
+              onPress={() => router.push('/(app)/premium' as any)}
+              accessibilityRole="button"
+            >
+              <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="diamond-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.optionLabel, { color: th.text }]}>
+                  {t('billing.manageSubscription', 'Manage Subscription')}
+                </Text>
+                <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                  {t('billing.manageSubscriptionSub', 'View plans and upgrade')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+            </Pressable>
+          )}
           <Pressable
             style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
             onPress={() => router.push('/(app)/credits-shop' as any)}
@@ -254,39 +256,6 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
           </Pressable>
-          {Platform.OS === 'android' && (
-            <Pressable
-              style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
-              onPress={() => router.push('/(app)/payment-activity' as any)}
-              accessibilityRole="button"
-              accessibilityLabel={t('billing.paymentActivity', 'Payment Activity')}
-            >
-              <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
-                <Ionicons name="receipt-outline" size={18} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.optionLabel, { color: th.text }]}>
-                  {t('billing.paymentActivity', 'Payment Activity')}
-                </Text>
-                <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                  {pendingCount > 0
-                    ? t('billing.pendingOrdersSub', '{{count}} pending order', { count: pendingCount })
-                    : t('billing.paymentActivitySub', 'View your payment history')}
-                </Text>
-              </View>
-              {requiresActionCount > 0 && (
-                <View style={[styles.badge, { backgroundColor: colors.warning }]}>
-                  <Text style={styles.badgeText}>{requiresActionCount}</Text>
-                </View>
-              )}
-              {pendingCount > 0 && requiresActionCount === 0 && (
-                <View style={[styles.badge, { backgroundColor: colors.textMuted }]}>
-                  <Text style={styles.badgeText}>{pendingCount}</Text>
-                </View>
-              )}
-              <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
-            </Pressable>
-          )}
           <Pressable
             style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
             onPress={() => router.push('/(app)/promotions' as any)}

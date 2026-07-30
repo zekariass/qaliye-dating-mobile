@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import PremiumBadgeModal from '@/components/billing/PremiumBadgeModal';
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { isFreePremiumPlan, isPremiumPlan, type BillingPlan } from '@/types/billing';
@@ -31,6 +33,7 @@ export default function ProfileHeader({
   const { top: safeTop } = useSafeAreaInsets();
   const router = useRouter();
   const { colors: th } = useTheme();
+  const [badgeModalVisible, setBadgeModalVisible] = useState(false);
 
   const showPremium = isPremiumPlan(plan);
   const premiumLabel = isFreePremiumPlan(plan) ? 'Free Premium' : 'Premium';
@@ -43,10 +46,15 @@ export default function ProfileHeader({
         <View style={styles.topLeft}>
           {showPremium ? (
             <View style={styles.topLeftLinks}>
-              <View style={[styles.premiumBadge, { backgroundColor: colors.primary }]}>
+              <Pressable
+                style={[styles.premiumBadge, { backgroundColor: colors.primary }]}
+                onPress={() => setBadgeModalVisible(true)}
+                accessibilityLabel="Premium status"
+                accessibilityRole="button"
+              >
                 <Ionicons name="diamond" size={16} color="#FFFFFF" />
                 <Text style={[styles.premiumText, { color: '#FFFFFF' }]}>{premiumLabel}</Text>
-              </View>
+              </Pressable>
               <Pressable
                 style={[styles.linkBtn, { backgroundColor: '#FFD700' }]}
                 onPress={() => router.push('/(app)/credits-shop' as any)}
@@ -142,6 +150,11 @@ export default function ProfileHeader({
           </View>
         </View>
       </View>
+
+      <PremiumBadgeModal
+        visible={badgeModalVisible}
+        onClose={() => setBadgeModalVisible(false)}
+      />
     </View>
   );
 }

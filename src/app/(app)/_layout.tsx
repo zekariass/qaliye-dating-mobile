@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
 import { ThemedAlert } from '@/components/common/ThemedAlert';
 import { NotificationBanner } from '@/components/notifications/NotificationBanner';
@@ -48,11 +50,7 @@ export default function AppLayout() {
   useSignedUrlRefresh();
 
   if (isBootstrapping || (hasActiveSession && (meStatus === 'idle' || meStatus === 'loading'))) {
-    return (
-      <View style={[errStyles.container, { backgroundColor: th.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <SplashStyleLoader isDark={th.background !== '#FFFFFF'} />;
   }
 
   if (!hasActiveSession) {
@@ -210,5 +208,207 @@ const errStyles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+});
+
+function SplashStyleLoader({ isDark }: { isDark: boolean }) {
+  const heartScale = useSharedValue(1);
+  const ring1Scale = useSharedValue(0.6);
+  const ring1Opacity = useSharedValue(0.5);
+  const ring2Scale = useSharedValue(0.6);
+  const ring2Opacity = useSharedValue(0.5);
+  const ring3Scale = useSharedValue(0.6);
+  const ring3Opacity = useSharedValue(0.5);
+  const shimmerX = useSharedValue(-140);
+
+  useEffect(() => {
+    // Heartbeat: double-pump pattern (lub-dub) then rest, repeating
+    heartScale.value = withRepeat(
+      withSequence(
+        withTiming(1.12, { duration: 180, easing: Easing.out(Easing.quad) }),
+        withTiming(1.0, { duration: 120, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1.15, { duration: 180, easing: Easing.out(Easing.quad) }),
+        withTiming(1.0, { duration: 120, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1.0, { duration: 800 }),
+      ),
+      -1,
+      true,
+    );
+
+    // Three ripple rings expanding outward, staggered
+    const ringAnim = (scale: Animated.SharedValue<number>, opacity: Animated.SharedValue<number>, delay: number) => {
+      scale.value = withDelay(
+        delay,
+        withRepeat(
+          withSequence(
+            withTiming(1.8, { duration: 2400, easing: Easing.out(Easing.cubic) }),
+            withTiming(0.6, { duration: 0 }),
+          ),
+          -1,
+          false,
+        ),
+      );
+      opacity.value = withDelay(
+        delay,
+        withRepeat(
+          withSequence(
+            withTiming(0, { duration: 2400, easing: Easing.inOut(Easing.ease) }),
+            withTiming(0.5, { duration: 0 }),
+          ),
+          -1,
+          false,
+        ),
+      );
+    };
+
+    ringAnim(ring1Scale, ring1Opacity, 0);
+    ringAnim(ring2Scale, ring2Opacity, 800);
+    ringAnim(ring3Scale, ring3Opacity, 1600);
+
+    // Shimmer bar
+    shimmerX.value = withRepeat(
+      withTiming(210, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      false,
+    );
+  }, []);
+
+  const heartStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+  }));
+
+  const ring1Style = useAnimatedStyle(() => ({
+    transform: [{ scale: ring1Scale.value }],
+    opacity: ring1Opacity.value,
+  }));
+
+  const ring2Style = useAnimatedStyle(() => ({
+    transform: [{ scale: ring2Scale.value }],
+    opacity: ring2Opacity.value,
+  }));
+
+  const ring3Style = useAnimatedStyle(() => ({
+    transform: [{ scale: ring3Scale.value }],
+    opacity: ring3Opacity.value,
+  }));
+
+  const shimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shimmerX.value }],
+  }));
+
+  const BOTH_ICON = require('@/assets/images/loader/loader-icon-male-and-female.webp');
+  const HEART_SIZE = 130;
+  const ICON_SIZE = 70;
+  const RING_BASE = 130;
+
+  return (
+    <View style={splashStyles.root}>
+      <LinearGradient
+        colors={isDark
+          ? ['#0D0712', '#1A0B2E', '#2A0B4F']
+          : ['#2A0B4F', colors.primaryDark, colors.secondary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={splashStyles.fill}
+      />
+      <LinearGradient
+        colors={['rgba(255,255,255,0.10)', 'rgba(255,255,255,0)']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={splashStyles.overlay}
+      />
+
+      <View style={splashStyles.center}>
+        <View style={splashStyles.heartContainer}>
+          {/* Expanding ripple rings */}
+          <Animated.View style={[splashStyles.ring, { width: RING_BASE, height: RING_BASE, borderRadius: RING_BASE / 2 }, ring1Style]} />
+          <Animated.View style={[splashStyles.ring, { width: RING_BASE, height: RING_BASE, borderRadius: RING_BASE / 2 }, ring2Style]} />
+          <Animated.View style={[splashStyles.ring, { width: RING_BASE, height: RING_BASE, borderRadius: RING_BASE / 2 }, ring3Style]} />
+
+          {/* Pulsing heart with combined icon */}
+          <Animated.View style={heartStyle}>
+            <View style={splashStyles.heartWrap}>
+              <Ionicons name="heart" size={HEART_SIZE} color="rgba(255,79,163,0.9)" />
+              <View style={splashStyles.heartIconWrap}>
+                <Image source={BOTH_ICON} style={{ width: ICON_SIZE, height: ICON_SIZE }} resizeMode="contain" />
+              </View>
+            </View>
+          </Animated.View>
+        </View>
+      </View>
+
+      <View style={splashStyles.bottom}>
+        <View style={splashStyles.progressTrack}>
+          <Animated.View style={[splashStyles.shimmer, shimmerStyle]} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const splashStyles = StyleSheet.create({
+  root: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  fill: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  overlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    opacity: 0.6,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heartContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heartWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heartIconWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ring: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  bottom: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+  },
+  progressTrack: {
+    width: 140,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    overflow: 'hidden',
+  },
+  shimmer: {
+    width: 60,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.9)',
   },
 });
