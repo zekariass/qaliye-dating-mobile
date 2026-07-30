@@ -331,6 +331,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/theme';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
+import { useDiscoveryCounts } from '@/hooks/discovery/useDiscoveryCounts';
 import { useInbox } from '@/hooks/messages/useInbox';
 import { useInboxChannel } from '@/hooks/messages/useInboxChannel';
 import { useTheme } from '@/hooks/use-theme';
@@ -447,6 +448,16 @@ export function SwipeIcon({
   );
 }
 
+function CountLabel({ count }: { count: number }) {
+  if (count <= 0) return null;
+  const label = count > 99 ? '99+' : String(count);
+  return (
+    <View style={styles.countCircle}>
+      <Text style={styles.countCircleText}>{label}</Text>
+    </View>
+  );
+}
+
 function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   const label = count > 99 ? '99+' : String(count);
@@ -475,6 +486,11 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
     () => inboxItems.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0),
     [inboxItems],
   );
+
+  // Discovery counts for tab badges (matches + received likes)
+  const { data: discoveryCounts } = useDiscoveryCounts();
+  const matchesCount = discoveryCounts?.matches_count ?? 0;
+  const receivedLikesCount = discoveryCounts?.received_likes_count ?? 0;
 
   const isDark = mode === 'dark';
 
@@ -591,11 +607,23 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
 
               <View style={styles.iconWrap}>
                 {route.name === 'matches' ? (
-                  <MatchesIcon
-                    active={isFocused}
-                    color={iconColor}
-                    inactiveFill={swipeInactiveFill}
-                  />
+                  <>
+                    <MatchesIcon
+                      active={isFocused}
+                      color={iconColor}
+                      inactiveFill={swipeInactiveFill}
+                    />
+                    <CountLabel count={matchesCount} />
+                  </>
+                ) : route.name === 'likes' ? (
+                  <>
+                    <Ionicons
+                      name={tabIcon(route.name, isFocused)}
+                      size={23}
+                      color={iconColor}
+                    />
+                    <CountLabel count={receivedLikesCount} />
+                  </>
                 ) : route.name === 'index' ? (
                   viewMode === 'browse' ? (
                     <Ionicons name="grid-outline" size={23} color={iconColor} />
@@ -676,6 +704,7 @@ const styles = StyleSheet.create({
     height: 26,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   matchesIconWrap: {
     width: 34,
@@ -747,6 +776,24 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 12,
+  },
+  countCircle: {
+    position: 'absolute',
+    top: -7,
+    right: -10,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  countCircleText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    lineHeight: 12,
   },
   badge: {
     position: 'absolute',

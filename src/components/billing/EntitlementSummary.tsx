@@ -156,8 +156,8 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 14,
     borderWidth: 1,
-    padding: 14,
-    gap: 10,
+    padding: 10,
+    gap: 6,
   },
   planRow: {
     flexDirection: 'row',

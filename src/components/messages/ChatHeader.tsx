@@ -114,7 +114,6 @@ export function ChatHeader({
               status={activityStatus}
               showLabel
               size={8}
-              labelColor={onlineTextColor}
             />
           </View>
         </View>

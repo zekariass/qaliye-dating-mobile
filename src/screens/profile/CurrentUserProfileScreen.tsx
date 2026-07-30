@@ -52,7 +52,6 @@ export default function CurrentUserProfileScreen() {
         displayName={profile.displayName}
         age={profile.age}
         isVerified={profile.isVerified}
-        location={profile.location}
         isIncognito={dto.discovery_mode === 'INCOGNITO'}
         plan={entitlements?.plan ?? null}
       />

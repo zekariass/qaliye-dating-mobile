@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -15,6 +16,15 @@ export const PROFILE_TABS = [
 
 export type ProfileTab = (typeof PROFILE_TABS)[number];
 
+const TAB_ICONS: Record<ProfileTab, React.ComponentProps<typeof Ionicons>['name']> = {
+  Details: 'information-circle-outline',
+  Bio: 'document-text-outline',
+  Photo: 'images-outline',
+  Lifestyle: 'sparkles-outline',
+  Status: 'pulse-outline',
+  Preferences: 'options-outline',
+};
+
 interface ProfileTabBarProps {
   activeTab: ProfileTab;
   onTabChange: (tab: ProfileTab) => void;
@@ -22,7 +32,8 @@ interface ProfileTabBarProps {
 
 export default function ProfileTabBar({ activeTab, onTabChange }: ProfileTabBarProps) {
   const scrollRef = useRef<ScrollView>(null);
-  const { colors: th } = useTheme();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
 
   const handlePress = useCallback(
     (tab: ProfileTab) => {
@@ -32,7 +43,7 @@ export default function ProfileTabBar({ activeTab, onTabChange }: ProfileTabBarP
   );
 
   return (
-    <View style={[styles.wrapper, { backgroundColor: th.surface }]}>
+    <View style={[styles.wrapper, { backgroundColor: th.background }]}>
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -45,58 +56,73 @@ export default function ProfileTabBar({ activeTab, onTabChange }: ProfileTabBarP
           return (
             <Pressable
               key={tab}
-              style={styles.tab}
+              style={[
+                styles.tab,
+                isActive && [
+                  styles.tabActive,
+                  {
+                    backgroundColor: isDark ? th.backgroundSelected : '#F3EEFF',
+                    borderColor: isDark ? 'rgba(138,44,255,0.3)' : 'rgba(138,44,255,0.15)',
+                  },
+                ],
+              ]}
               onPress={() => handlePress(tab)}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
               accessibilityLabel={tab}
             >
-              <Text style={[styles.label, { color: th.textMuted }, isActive && styles.labelActive]}>
+              <Ionicons
+                name={TAB_ICONS[tab]}
+                size={15}
+                color={isActive ? colors.primary : th.textMuted}
+                style={styles.tabIcon}
+              />
+              <Text
+                style={[
+                  styles.label,
+                  { color: isActive ? colors.primary : th.textMuted },
+                  isActive && styles.labelActive,
+                ]}
+              >
                 {tab}
               </Text>
-              {isActive && <View style={styles.indicator} />}
             </Pressable>
           );
         })}
       </ScrollView>
-      <View style={[styles.bottomBorder, { backgroundColor: th.border }]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
   },
   scrollContent: {
-    paddingHorizontal: 8,
-    gap: 24,
+    paddingHorizontal: 16,
+    gap: 8,
   },
   tab: {
-    paddingVertical: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  tabActive: {
+    borderWidth: 1,
+  },
+  tabIcon: {
+    marginRight: 6,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#9CA3AF',
+    fontSize: 13.5,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   labelActive: {
-    color: colors.primary,
-    fontWeight: '700',
-  },
-  indicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: colors.primary,
-  },
-  bottomBorder: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#E9DDF8',
+    fontWeight: '800',
   },
 });

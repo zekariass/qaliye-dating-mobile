@@ -533,7 +533,6 @@ export default function OtherUserProfileScreen() {
                   status={activityStatus}
                   showLabel
                   size={9}
-                  labelColor={isDark ? '#9CA3AF' : '#7C6EA0'}
                 />
               )}
             </View>

@@ -24,6 +24,7 @@ function clearAllLocalState() {
   useNotificationsStore.getState().setPendingNavIntent(null);
   useNotificationsStore.getState().setForegroundBanner(null);
   useNotificationsStore.getState().setLastHandledNotificationId('');
+  useDiscoveryStore.getState().setViewMode('swipe');
 }
 
 export function useDeleteAccount() {

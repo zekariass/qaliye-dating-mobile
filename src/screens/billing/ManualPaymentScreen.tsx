@@ -343,10 +343,15 @@ export default function ManualPaymentScreen() {
               </Text>
             </View>
 
-            <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
-              <Text style={[styles.cardTitle, { color: th.text }]}>
-                {t('billing.verifyPaymentTitle', 'Verify Your Payment')}
-              </Text>
+            <View style={[styles.verifyCard, { backgroundColor: th.surface, borderColor: colors.primary + '40' }]}>
+              <View style={styles.verifyHeader}>
+                <View style={styles.verifyIconCircle}>
+                  <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" />
+                </View>
+                <Text style={[styles.verifyTitle, { color: th.text }]}>
+                  {t('billing.verifyPaymentTitle', 'Verify Your Payment')}
+                </Text>
+              </View>
 
               {fields.length > 0 ? (
                 fields.map((field) => (
@@ -358,7 +363,7 @@ export default function ManualPaymentScreen() {
                     <TextInput
                       style={[
                         styles.input,
-                        { color: th.text, borderColor: th.border, backgroundColor: th.backgroundElement },
+                        { color: th.text, borderColor: colors.primary + '50', backgroundColor: th.backgroundElement },
                       ]}
                       value={fieldValues[field.name] ?? ''}
                       onChangeText={(v) => handleFieldChange(field.name, v)}
@@ -463,7 +468,7 @@ export default function ManualPaymentScreen() {
             {order.can_contact_support && (order.status === 'REJECTED' || order.status === 'MANUAL_REVIEW' || order.status === 'ADMIN_REVIEW' || order.status === 'REVIEW_REQUIRED') && (
               <Pressable
                 style={[styles.refreshBtn, { borderColor: th.border }]}
-                onPress={() => router.push('/(app)/support' as any)}
+                onPress={() => router.push('/(app)/support-conversation' as any)}
                 accessibilityRole="button"
               >
                 <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
@@ -594,15 +599,37 @@ const styles = StyleSheet.create({
   },
   amountLabel: { fontSize: 13 },
   amountValue: { fontSize: 15, fontWeight: '700' },
-  fieldGroup: { gap: 4 },
-  fieldLabel: { fontSize: 13, fontWeight: '600' },
+  verifyCard: {
+    borderRadius: 14,
+    borderWidth: 2,
+    padding: 16,
+    gap: 14,
+  },
+  verifyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 2,
+  },
+  verifyIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verifyTitle: { fontSize: 17, fontWeight: '800' },
+  fieldGroup: { gap: 6 },
+  fieldLabel: { fontSize: 14, fontWeight: '700' },
   fieldHint: { fontSize: 12, lineHeight: 16 },
   input: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontWeight: '500',
   },
   primaryBtn: {
     flexDirection: 'row',

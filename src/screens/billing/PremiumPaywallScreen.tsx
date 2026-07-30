@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Linking,
+    Modal,
     Platform,
     Pressable,
     ScrollView,
@@ -14,9 +15,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EntitlementSummary } from '@/components/billing/EntitlementSummary';
 import { OfferCard } from '@/components/billing/OfferCard';
 import { PaymentMethodSheet } from '@/components/billing/PaymentMethodSheet';
+import { PurchaseSuccessModal } from '@/components/billing/PurchaseSuccessModal';
 import { themedAlert, themedError, themedSuccess } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
 import { useCreateOrder } from '@/hooks/billing/useCreateOrder';
@@ -47,11 +48,18 @@ export default function PremiumPaywallScreen() {
   const { top, bottom } = useSafeAreaInsets();
   const { colors: th } = useTheme();
 
-  const { entitlements, isLoading: loadingEntitlements } = useEntitlements();
+  const { entitlements, isLoading: loadingEntitlements, refreshEntitlements } = useEntitlements();
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshEntitlements();
+    }, [refreshEntitlements]),
+  );
+
   const { subscriptionOffers, isLoading: loadingOffers, isError: offersError } = useOffers('SUBSCRIPTION');
   const { paymentMethods, resolvedMarketCountryCode } = usePaymentOptions();
   const { reconciledOffers, localOffers, isLoadingRc, hasRcPaymentMethod } = useRevenueCatReconcile(subscriptionOffers, paymentMethods);
-  const { purchase, purchaseState, isPurchasing } = useRevenueCatPurchase();
+  const { purchase, purchaseState, isPurchasing, reset } = useRevenueCatPurchase();
   const { restore, restoreState, restoreResult, isRestoring } = useRevenueCatRestore();
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder();
   const { data: eligiblePromotions = [] } = useEligiblePromotions();
@@ -104,6 +112,7 @@ export default function PremiumPaywallScreen() {
 
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [showMethodSheet, setShowMethodSheet] = useState(false);
+  const [showFeaturesModal, setShowFeaturesModal] = useState(false);
 
   const isGlobalMarket = subscriptionOffers.some((o) => o.country_code === 'GLOBAL');
   const isPremium = isPremiumPlan(entitlements?.plan) && isActiveSubscription(entitlements?.subscription);
@@ -200,6 +209,13 @@ export default function PremiumPaywallScreen() {
       : subscriptionOffers.length === 0
   );
 
+  const selectedOffer = subscriptionOffers.find((o) => o.id === selectedOfferId) ?? null;
+  const confirmedFeatureName = selectedOffer
+    ? `Premium${selectedOffer.billing_interval_count && selectedOffer.billing_interval_unit
+        ? ` · ${selectedOffer.billing_interval_count} ${selectedOffer.billing_interval_unit.toLowerCase()}${selectedOffer.billing_interval_count > 1 ? 's' : ''}`
+        : ''}`
+    : 'Premium';
+
   return (
     <View style={[styles.screen, { backgroundColor: th.background, paddingTop: top }]}>
       <View style={styles.header}>
@@ -227,16 +243,6 @@ export default function PremiumPaywallScreen() {
           </View>
         ) : (
           <>
-            {entitlements && (
-              <EntitlementSummary
-                entitlements={entitlements}
-                textColor={th.text}
-                secondaryColor={th.textSecondary}
-                surfaceColor={th.surface}
-                borderColor={th.border}
-              />
-            )}
-
             {isPremium && (
               <View style={[styles.activePremiumCard, { backgroundColor: (isFreePremium ? colors.warning : colors.success) + '14', borderColor: (isFreePremium ? colors.warning : colors.success) + '40' }]}>
                 <View style={styles.activePremiumHeader}>
@@ -321,7 +327,7 @@ export default function PremiumPaywallScreen() {
               </View>
             ) : (
               <>
-                <Text style={[styles.sectionTitle, { color: th.text, marginTop: 10 }]}>
+                <Text style={[styles.sectionTitle, { color: th.text, marginTop: 4 }]}>
                   {t('billing.choosePlan', 'Choose a plan')}
                 </Text>
 
@@ -394,14 +400,6 @@ export default function PremiumPaywallScreen() {
                   </View>
                 )}
 
-                {purchaseState === 'confirmed' && (
-                  <View style={[styles.alreadyActiveBanner, { backgroundColor: colors.success + '18' }]}>
-                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                    <Text style={[styles.alreadyActiveText, { color: th.text }]}>
-                      {t('billing.purchaseConfirmed', 'Purchase confirmed! Premium is now active.')}
-                    </Text>
-                  </View>
-                )}
 
                 {purchaseState === 'pending' && (
                   <View style={[styles.alreadyActiveBanner, { backgroundColor: colors.warning + '18' }]}>
@@ -459,36 +457,18 @@ export default function PremiumPaywallScreen() {
             )}
 
             {!isPremium && (
-              <View style={[styles.featuresCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-                <Text style={[styles.sectionTitle, { color: th.text }]}>
+              <Pressable
+                style={[styles.featuresLink, { borderColor: colors.primary + '40' }]}
+                onPress={() => setShowFeaturesModal(true)}
+                accessibilityRole="button"
+                accessibilityLabel="View premium features"
+              >
+                <Ionicons name="diamond" size={18} color={colors.primary} />
+                <Text style={[styles.featuresLinkText, { color: th.text }]}>
                   {t('billing.premiumFeatures', 'Premium features')}
                 </Text>
-                {getPlanLimitDisplays(entitlements).map((item) => (
-                  <View key={item.label} style={styles.featureRow}>
-                    <Ionicons name={item.icon} size={16} color={colors.primary} />
-                    <Text style={[styles.featureLabel, { color: th.text }]}>{item.label}</Text>
-                    <Text style={[styles.featureValue, { color: colors.primary }]}>{item.formatted}</Text>
-                  </View>
-                ))}
-                {entitlements?.features && (
-                  <>
-                    <View style={styles.featureRow}>
-                      <Ionicons name={FEATURE_ICONS.see_who_liked_you} size={16} color={colors.primary} />
-                      <Text style={[styles.featureLabel, { color: th.text }]}>See who liked you</Text>
-                    </View>
-                    {entitlements.features.advanced_filters && (
-                      <View style={styles.featureRow}>
-                        <Ionicons name={FEATURE_ICONS.advanced_filters} size={16} color={colors.primary} />
-                        <Text style={[styles.featureLabel, { color: th.text }]}>Advanced filters</Text>
-                      </View>
-                    )}
-                  </>
-                )}
-                <View style={styles.featureRow}>
-                  <Ionicons name={FEATURE_ICONS.incognito_mode} size={16} color={colors.primary} />
-                  <Text style={[styles.featureLabel, { color: th.text }]}>Private mode (Incognito)</Text>
-                </View>
-              </View>
+                <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+              </Pressable>
             )}
           </>
         )}
@@ -504,6 +484,74 @@ export default function PremiumPaywallScreen() {
         secondaryColor={th.textSecondary}
         backgroundColor={th.background}
       />
+
+      <PurchaseSuccessModal
+        visible={purchaseState === 'confirmed'}
+        onClose={() => {
+          if (reset) reset();
+          router.replace('/(app)/balances' as any);
+        }}
+        title={t('billing.purchaseConfirmedTitle', 'Premium Active!')}
+        message={t('billing.purchaseConfirmedMsg', 'Your premium subscription is now active. Enjoy all the premium features!')}
+        icon="checkmark-circle"
+        featureName={confirmedFeatureName}
+      />
+
+      {/* Premium Features Modal */}
+      <Modal
+        visible={showFeaturesModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFeaturesModal(false)}
+      >
+        <Pressable style={featModalStyles.backdrop} onPress={() => setShowFeaturesModal(false)}>
+          <Pressable
+            style={[featModalStyles.card, { backgroundColor: th.surface }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.sectionTitle, { color: th.text, fontSize: 18 }]}>
+                {t('billing.premiumFeatures', 'Premium features')}
+              </Text>
+              <Pressable
+                style={[styles.closeBtn, { backgroundColor: th.backgroundElement }]}
+                onPress={() => setShowFeaturesModal(false)}
+                hitSlop={12}
+              >
+                <Ionicons name="close" size={18} color={th.text} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {getPlanLimitDisplays(entitlements).map((item) => (
+                <View key={item.label} style={styles.featureRow}>
+                  <Ionicons name={item.icon} size={18} color={colors.primary} />
+                  <Text style={[styles.featureLabel, { color: th.text }]}>{item.label}</Text>
+                  <Text style={[styles.featureValue, { color: colors.primary }]}>{item.formatted}</Text>
+                </View>
+              ))}
+              {entitlements?.features && (
+                <>
+                  <View style={styles.featureRow}>
+                    <Ionicons name={FEATURE_ICONS.see_who_liked_you} size={18} color={colors.primary} />
+                    <Text style={[styles.featureLabel, { color: th.text }]}>See who liked you</Text>
+                  </View>
+                  {entitlements.features.advanced_filters && (
+                    <View style={styles.featureRow}>
+                      <Ionicons name={FEATURE_ICONS.advanced_filters} size={18} color={colors.primary} />
+                      <Text style={[styles.featureLabel, { color: th.text }]}>Advanced filters</Text>
+                    </View>
+                  )}
+                </>
+              )}
+              <View style={styles.featureRow}>
+                <Ionicons name={FEATURE_ICONS.incognito_mode} size={18} color={colors.primary} />
+                <Text style={[styles.featureLabel, { color: th.text }]}>Private mode (Incognito)</Text>
+              </View>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -525,7 +573,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { fontSize: 18, fontWeight: '700' },
-  content: { paddingHorizontal: 16, gap: 8 },
+  content: { paddingHorizontal: 16, gap: 4 },
   centered: { paddingVertical: 60, alignItems: 'center' },
   alreadyActiveBanner: {
     flexDirection: 'row',
@@ -538,7 +586,7 @@ const styles = StyleSheet.create({
   activePremiumCard: {
     borderRadius: 16,
     borderWidth: 1,
-    padding: 18,
+    padding: 12,
   },
   activePremiumHeader: {
     flexDirection: 'row',
@@ -561,6 +609,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  featuresLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  featuresLinkText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+  },
   featuresCard: {
     borderRadius: 14,
     borderWidth: 1,
@@ -568,16 +631,22 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionTitle: { fontSize: 15, fontWeight: '700' },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
   featureLabel: { flex: 1, fontSize: 14 },
   featureValue: { fontSize: 14, fontWeight: '700' },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   claimableBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     borderRadius: 16,
     borderWidth: 2,
-    padding: 16,
+    padding: 12,
     shadowColor: colors.primary,
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -644,5 +713,22 @@ const styles = StyleSheet.create({
   },
   legalDot: {
     fontSize: 13,
+  },
+});
+
+const featModalStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 20,
+    padding: 20,
+    maxHeight: '80%',
   },
 });

@@ -19,11 +19,14 @@ import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
+import { useDiscoveryCounts } from '@/hooks/discovery/useDiscoveryCounts';
 import { useLikes } from '@/hooks/discovery/useLikes';
 import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
+import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
 import type { LikeDirection, LikeItemDto } from '@/types/discovery';
+import { formatDistance } from '@/utils/formatDistance';
 
 // ─── Layout constants (identical to MatchesListScreen) ────────────────────────
 // NOTE: useWindowDimensions causes a runtime error in this RN version.
@@ -44,12 +47,11 @@ function tabToDirection(tab: Tab): LikeDirection {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatLocation(item: LikeItemDto): string | null {
-  const parts: string[] = [];
-  if (item.city) parts.push(item.city);
-  if (item.region) parts.push(item.region);
-  if (item.country_name) parts.push(item.country_name);
-  return parts.length > 0 ? parts.join(', ') : null;
+function formatLocation(item: LikeItemDto, myCountry: string): string | null {
+  if (myCountry && item.country_name === myCountry) {
+    return item.city ?? null;
+  }
+  return item.country_name ?? null;
 }
 
 // ─── Theme helper (mirrors MatchesListScreen's useMatchesTheme) ───────────────
@@ -99,9 +101,11 @@ const overlayBtnShadow = Platform.select({
 interface SegmentedControlProps {
   active:   Tab;
   onChange: (tab: Tab) => void;
+  receivedCount: number;
+  sentCount: number;
 }
 
-function SegmentedControl({ active, onChange }: SegmentedControlProps) {
+function SegmentedControl({ active, onChange, receivedCount, sentCount }: SegmentedControlProps) {
   const { textMuted, purple, segBg, segActiveBg, segBorder } = useLikesTheme();
 
   const isReceived = active === 'received';
@@ -127,6 +131,11 @@ function SegmentedControl({ active, onChange }: SegmentedControlProps) {
         <Text style={[segStyles.tabText, { color: isReceived ? purple : textMuted }, isReceived && segStyles.tabTextActive]}>
           Received Likes
         </Text>
+        {receivedCount > 0 && (
+          <View style={[segStyles.countBadge, { backgroundColor: isReceived ? purple : textMuted }]}>
+            <Text style={segStyles.countBadgeText}>{receivedCount > 99 ? '99+' : receivedCount}</Text>
+          </View>
+        )}
         {isReceived && <View style={[segStyles.activeBar, { backgroundColor: purple }]} />}
       </TouchableOpacity>
 
@@ -147,6 +156,11 @@ function SegmentedControl({ active, onChange }: SegmentedControlProps) {
         <Text style={[segStyles.tabText, { color: isSent ? purple : textMuted }, isSent && segStyles.tabTextActive]}>
           Sent Likes
         </Text>
+        {sentCount > 0 && (
+          <View style={[segStyles.countBadge, { backgroundColor: isSent ? purple : textMuted }]}>
+            <Text style={segStyles.countBadgeText}>{sentCount > 99 ? '99+' : sentCount}</Text>
+          </View>
+        )}
         {isSent && <View style={[segStyles.activeBar, { backgroundColor: purple }]} />}
       </TouchableOpacity>
 
@@ -191,6 +205,20 @@ const segStyles = StyleSheet.create({
     height:       3,
     borderRadius: 2,
   },
+  countBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
+  },
+  countBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });
 
 // ─── LikeCard ─────────────────────────────────────────────────────────────────
@@ -205,11 +233,12 @@ interface LikeCardProps {
   onLikeBack:     () => void;
   isLikingBack:   boolean;
   activityStatus?: ActivityStatus | null;
+  myCountry:      string;
 }
 
-function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack, isLikingBack, activityStatus }: LikeCardProps) {
+function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack, isLikingBack, activityStatus, myCountry }: LikeCardProps) {
   const { card, textPrimary, textMuted, purple, chipBg } = useLikesTheme();
-  const location = formatLocation(item);
+  const location = formatLocation(item, myCountry);
 
   return (
     <TouchableOpacity
@@ -232,15 +261,6 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
           <View style={[styles.cardImage, styles.photoPlaceholder]}>
             <Ionicons name="person" size={36} color="#999" />
           </View>
-        )}
-
-        {/* Activity status dot */}
-        {(activityStatus === 'ONLINE' || activityStatus === 'RECENTLY_ACTIVE') && (
-          <ActivityStatusIndicator
-            status={activityStatus}
-            size={11}
-            style={styles.statusDot}
-          />
         )}
 
         {/* Super-like star badge */}
@@ -300,7 +320,7 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
             </Text>
             {item.distance_km !== null && (
               <Text style={[styles.distanceText, { color: textMuted }]} numberOfLines={1}>
-                {item.distance_km} km
+                {formatDistance(item.distance_km)}
               </Text>
             )}
           </View>
@@ -339,6 +359,20 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
           )}
         </View>
 
+        {/* Activity status */}
+        {activityStatus && activityStatus !== 'HIDDEN' ? (
+          <ActivityStatusIndicator
+            status={activityStatus}
+            showLabel
+            size={8}
+            labelFontSize={11}
+          />
+        ) : (
+          <Text style={[styles.chipText, { color: textMuted, fontSize: 11 }]} numberOfLines={1}>
+            Offline now
+          </Text>
+        )}
+
       </View>
     </TouchableOpacity>
   );
@@ -368,9 +402,9 @@ function BlurredLikeCard({ item, onPress }: BlurredLikeCardProps) {
         {item.primary_photo_url ? (
           <Image
             source={{ uri: item.primary_photo_url }}
-            style={[styles.cardImage, { opacity: isDark ? 0.15 : 0.5 }]}
+            style={[styles.cardImage, { opacity: isDark ? 0.25 : 0.6 }]}
             resizeMode="cover"
-            blurRadius={isDark ? 8 : 10}
+            blurRadius={isDark ? 35 : 40}
           />
         ) : (
           <View style={[styles.cardImage, styles.photoPlaceholder]}>
@@ -557,6 +591,12 @@ export default function LikesListScreen() {
   const canSeeWhoLikedYou = entitlements?.features?.see_who_liked_you ?? false;
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
   const { getStatus } = useActivityStatuses(visibleIds);
+  const { data: myProfile } = useCurrentProfile();
+  const myCountry = myProfile?.address?.country_name ?? '';
+
+  const { data: discoveryCounts } = useDiscoveryCounts();
+  const receivedLikesCount = discoveryCounts?.received_likes_count ?? 0;
+  const sentLikesCount = discoveryCounts?.sent_likes_count ?? 0;
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
   const onViewableItemsChanged = useRef(
@@ -705,10 +745,11 @@ export default function LikesListScreen() {
           onLikeBack={() => handleLikeBack(item)}
           isLikingBack={likingBackId === item.action_id}
           activityStatus={getStatus(item.user_id, item.activity_status)}
+          myCountry={myCountry}
         />
       );
     },
-    [activeTab, canSeeWhoLikedYou, handleCardPress, handleBlurredCardPress, handleUnsend, handleLikeBack, unsendingId, likingBackId, getStatus],
+    [activeTab, canSeeWhoLikedYou, handleCardPress, handleBlurredCardPress, handleUnsend, handleLikeBack, unsendingId, likingBackId, getStatus, myCountry],
   );
 
   const renderFooter = useCallback(() => {
@@ -722,7 +763,7 @@ export default function LikesListScreen() {
 
   const listHeader = (
     <View style={styles.segHeader}>
-      <SegmentedControl active={activeTab} onChange={setActiveTab} />
+      <SegmentedControl active={activeTab} onChange={setActiveTab} receivedCount={receivedLikesCount} sentCount={sentLikesCount} />
     </View>
   );
 
@@ -827,9 +868,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom:   8,
     left:     8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 9,
-    padding: 2,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
   },
 
   overlayBtn: {

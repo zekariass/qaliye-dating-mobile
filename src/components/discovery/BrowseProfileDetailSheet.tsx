@@ -25,6 +25,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
 import MorePhotosSection from '@/components/discovery/MorePhotosSection';
 import { CardDto } from '@/components/discovery/ProfileCard';
@@ -33,6 +34,7 @@ import { colors } from '@/constants/theme';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useTheme } from '@/hooks/use-theme';
+import { formatDistance } from '@/utils/formatDistance';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const HERO_H = Math.round(SCREEN_W * 1.1);
@@ -292,11 +294,19 @@ export default function BrowseProfileDetailSheet({
                   <Text style={styles.heroLocationText} numberOfLines={1}>
                     {locationText}
                     {card.distance_km != null && card.distance_km > 0
-                      ? `  ·  ${card.distance_km} km`
+                      ? `  ·  ${formatDistance(card.distance_km)}`
                       : ''}
                   </Text>
                 </View>
               ) : null}
+              {card.activity_status && card.activity_status !== 'HIDDEN' && (
+                <ActivityStatusIndicator
+                  status={card.activity_status}
+                  showLabel
+                  size={9}
+                  labelFontSize={13}
+                />
+              )}
             </View>
           </View>
           </GestureDetector>

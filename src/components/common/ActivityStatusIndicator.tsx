@@ -9,26 +9,31 @@ interface Props {
   showLabel?: boolean;
   /** Dot diameter in dp (default 8) */
   size?: number;
-  /** Override label text colour */
+  /** Override label text colour. Defaults to the dot colour. */
   labelColor?: string;
+  /** Label font size (default 12) */
+  labelFontSize?: number;
   style?: StyleProp<ViewStyle>;
 }
 
 const DOT_COLOR: Partial<Record<ActivityStatus, string>> = {
   ONLINE: '#22C55E',
   RECENTLY_ACTIVE: '#F59E0B',
+  OFFLINE: '#9CA3AF',
 };
 
 const STATUS_LABEL: Partial<Record<ActivityStatus, string>> = {
   ONLINE: 'Online',
-  RECENTLY_ACTIVE: 'Recently active',
+  RECENTLY_ACTIVE: 'Recently online',
+  OFFLINE: 'Offline now',
 };
 
 export function ActivityStatusIndicator({
   status,
   showLabel = false,
   size = 8,
-  labelColor = '#6B7280',
+  labelColor,
+  labelFontSize = 12,
   style,
 }: Props) {
   if (!status || status === 'HIDDEN') return null;
@@ -37,6 +42,8 @@ export function ActivityStatusIndicator({
   const label = showLabel ? STATUS_LABEL[status] : undefined;
 
   if (!dotColor && !label) return null;
+
+  const effectiveLabelColor = labelColor ?? dotColor ?? '#6B7280';
 
   return (
     <View style={[styles.row, style]}>
@@ -50,7 +57,12 @@ export function ActivityStatusIndicator({
         />
       )}
       {!!label && (
-        <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
+        <Text
+          style={[styles.label, { color: effectiveLabelColor, fontSize: labelFontSize }]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
       )}
     </View>
   );

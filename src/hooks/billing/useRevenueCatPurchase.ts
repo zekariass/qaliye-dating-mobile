@@ -7,7 +7,7 @@ import {
     type PurchasesPackage,
 } from '@/services/billing/revenueCatService';
 import type { EntitlementResponse } from '@/types/billing';
-import { isActiveSubscription, isPremiumPlan } from '@/types/billing';
+import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 import { ENTITLEMENTS_KEY } from './useEntitlements';
 
 const POLL_ATTEMPTS = 8;
@@ -50,6 +50,12 @@ async function pollForEntitlementChange(
   return false;
 }
 
+export type CreditsDelta = {
+  boosts: number;
+  superLikes: number;
+  rewinds: number;
+};
+
 export type RcPurchaseState =
   | 'idle'
   | 'purchasing'
@@ -63,6 +69,7 @@ export function useRevenueCatPurchase() {
   const qc = useQueryClient();
   const [purchaseState, setPurchaseState] = useState<RcPurchaseState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [creditsDelta, setCreditsDelta] = useState<CreditsDelta | null>(null);
 
   const mutation = useMutation<void, Error, { pkg: PurchasesPackage; productType: 'SUBSCRIPTION' | 'CONSUMABLE' }>({
     mutationFn: async ({ pkg, productType }) => {
@@ -71,6 +78,7 @@ export function useRevenueCatPurchase() {
 
       const beforeEntitlements = qc.getQueryData<EntitlementResponse>(ENTITLEMENTS_KEY);
       const beforeCredits = beforeEntitlements ? totalCredits(beforeEntitlements) : 0;
+      const before = beforeEntitlements?.credits;
 
       const { cancelled } = await purchaseRevenueCatPackage(pkg);
 
@@ -85,10 +93,21 @@ export function useRevenueCatPurchase() {
       const confirmed = await pollForEntitlementChange(
         qc,
         isSubscription
-          ? (e) => isPremiumPlan(e.plan) && isActiveSubscription(e.subscription)
+          ? (e) => isPremiumPlan(e.plan) && !isFreePremiumPlan(e.plan) && isActiveSubscription(e.subscription)
           : (e) => totalCredits(e) > beforeCredits,
         isSubscription ? 'subscription' : 'consumable',
       );
+
+      if (confirmed && !isSubscription && before) {
+        const afterEntitlements = qc.getQueryData<EntitlementResponse>(ENTITLEMENTS_KEY);
+        if (afterEntitlements) {
+          setCreditsDelta({
+            boosts: afterEntitlements.credits.boosts_available - before.boosts_available,
+            superLikes: afterEntitlements.credits.super_likes_available - before.super_likes_available,
+            rewinds: afterEntitlements.credits.rewinds_available - before.rewinds_available,
+          });
+        }
+      }
 
       setPurchaseState(confirmed ? 'confirmed' : 'pending');
     },
@@ -101,6 +120,7 @@ export function useRevenueCatPurchase() {
   const reset = useCallback(() => {
     setPurchaseState('idle');
     setErrorMessage(null);
+    setCreditsDelta(null);
     mutation.reset();
   }, [mutation]);
 
@@ -131,6 +151,7 @@ export function useRevenueCatPurchase() {
     purchaseAsync: mutation.mutateAsync,
     purchaseState,
     errorMessage,
+    creditsDelta,
     reset,
     isPurchasing: mutation.isPending,
   };

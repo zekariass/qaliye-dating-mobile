@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/constants/theme';
+import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { sanitizeInterests, translateInterest } from '@/utils/interests';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
@@ -35,23 +35,42 @@ interface LifestyleContentProps {
 
 export default function LifestyleContent({ profile }: LifestyleContentProps) {
   const { t } = useTranslation();
-  const { colors: th } = useTheme();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
   const items = buildLifestyleItems(profile);
   const interests = sanitizeInterests(profile.interests);
 
+  const surfaceBg = th.surface;
+  const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';
+  const borderCol = isDark ? 'rgba(46,31,80,0.22)' : 'rgba(233,221,248,0.5)';
+  const textCol = th.text;
+  const mutedCol = th.textSecondary;
+
   return (
     <View style={styles.container}>
-      <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+      <View
+        style={[
+          styles.listCard,
+          {
+            backgroundColor: surfaceBg,
+            borderColor: borderCol,
+            ...Platform.select({
+              ios: { shadowColor: '#8A2CFF', shadowOpacity: isDark ? 0.15 : 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } },
+              android: { elevation: 3 },
+            }) as any,
+          },
+        ]}
+      >
         {items.map((item, idx) => (
           <View key={item.label}>
-            {idx > 0 && <View style={[styles.divider, { backgroundColor: th.border }]} />}
-            <View style={styles.row}>
-              <View style={[styles.iconCircle, { backgroundColor: th.backgroundSelected }]}>
-                <Ionicons name={item.icon} size={18} color={colors.primary} />
+            {idx > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
+            <View style={styles.listRow}>
+              <View style={[styles.detailIconWrap, { backgroundColor: iconBg, borderColor: borderCol }]}>
+                <Ionicons name={item.icon} size={17} color={colors.primary} />
               </View>
-              <View style={styles.textCol}>
-                <Text style={[styles.label, { color: th.textSecondary }]}>{item.label}</Text>
-                <Text style={[styles.value, { color: th.text }]}>{item.value}</Text>
+              <View style={styles.detailBody}>
+                <Text style={[styles.detailLabel, { color: mutedCol }]}>{item.label}</Text>
+                <Text style={[styles.detailValue, { color: textCol }]}>{item.value}</Text>
               </View>
             </View>
           </View>
@@ -59,17 +78,17 @@ export default function LifestyleContent({ profile }: LifestyleContentProps) {
 
         {interests.length > 0 && (
           <View>
-            {items.length > 0 && <View style={[styles.divider, { backgroundColor: th.border }]} />}
-            <View style={styles.row}>
-              <View style={[styles.iconCircle, { backgroundColor: th.backgroundSelected }]}>
-                <Ionicons name="color-palette-outline" size={18} color={colors.primary} />
+            {items.length > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
+            <View style={styles.listRow}>
+              <View style={[styles.detailIconWrap, { backgroundColor: iconBg, borderColor: borderCol }]}>
+                <Ionicons name="color-palette-outline" size={17} color={colors.primary} />
               </View>
-              <View style={styles.textCol}>
-                <Text style={[styles.label, { color: th.textSecondary }]}>{t('interests.label')}</Text>
+              <View style={[styles.detailBody, { gap: 8 }]}>
+                <Text style={[styles.detailLabel, { color: mutedCol }]}>{t('interests.label')}</Text>
                 <View style={styles.chipWrap}>
                   {interests.map((interest) => (
-                    <View key={interest} style={[styles.chip, { backgroundColor: th.backgroundSelected, borderColor: th.border }]}>
-                      <Text style={[styles.chipText, { color: colors.primary }]}>{translateInterest(interest, t)}</Text>
+                    <View key={interest} style={[styles.chip, { backgroundColor: iconBg, borderColor: borderCol }]}>
+                      <Text style={[styles.chipText, { color: textCol }]}>{translateInterest(interest, t)}</Text>
                     </View>
                   ))}
                 </View>
@@ -84,59 +103,58 @@ export default function LifestyleContent({ profile }: LifestyleContentProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 8,
-    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingTop: 20,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+  listCard: {
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#E9DDF8',
-    padding: 16,
-    gap: 4,
+    overflow: 'hidden',
   },
-  row: {
+  listRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#F3EEFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textCol: {
-    flex: 1,
-    gap: 2,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
-    letterSpacing: 0.2,
-  },
-  value: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1B1340',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 14,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#E9DDF8',
+    marginHorizontal: 16,
+  },
+  detailIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  detailBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  detailValue: {
+    fontSize: 15.5,
+    fontWeight: '700',
+    letterSpacing: -0.1,
   },
   chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 4,
+    gap: 7,
   },
   chip: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
   },

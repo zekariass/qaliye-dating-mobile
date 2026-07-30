@@ -129,6 +129,10 @@ export default function AppLayout() {
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen
+          name="balances"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
           name="premium"
           options={{ animation: 'slide_from_bottom' }}
         />

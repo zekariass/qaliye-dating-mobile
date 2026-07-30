@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 2,
     padding: 14,
-    marginBottom: 6,
+    marginBottom: 2,
     gap: 12,
   },
   selectedCard: {

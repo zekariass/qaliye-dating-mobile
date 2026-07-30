@@ -1,5 +1,6 @@
 import { apiClient } from '@/api/apiClient';
 import type {
+    DiscoveryCountsDto,
     DiscoveryFeedResponse,
     DiscoveryPreferencesDto,
     LikeDirection,
@@ -10,7 +11,7 @@ import type {
     RewindResponse,
     SwipeActionResponse,
     UpdateDiscoveryPreferencesPayload,
-    UpdateDiscoveryPreferencesResponse,
+    UpdateDiscoveryPreferencesResponse
 } from '@/types/discovery';
 
 const BASE = '/api/v1/discovery';
@@ -110,5 +111,10 @@ export async function fetchLikes(
   const res = await apiClient.get<LikesPageResponse>(`${BASE}/likes`, {
     params: { direction, page: String(page), size: String(size) },
   });
+  return res.data;
+}
+
+export async function fetchDiscoveryCounts(): Promise<DiscoveryCountsDto> {
+  const res = await apiClient.get<DiscoveryCountsDto>(`${BASE}/counts`);
   return res.data;
 }

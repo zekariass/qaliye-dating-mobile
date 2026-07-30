@@ -207,6 +207,12 @@ export type LikesPageResponse = {
   direction: LikeDirection;
 };
 
+export type DiscoveryCountsDto = {
+  received_likes_count: number;
+  sent_likes_count: number;
+  matches_count: number;
+};
+
 export type RevisitCount = 10 | 20 | 30;
 
 export type RevisitPassedProfilesResponse = {

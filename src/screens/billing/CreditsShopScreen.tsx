@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EntitlementSummary } from '@/components/billing/EntitlementSummary';
 import { OfferCard } from '@/components/billing/OfferCard';
 import { PaymentMethodSheet } from '@/components/billing/PaymentMethodSheet';
+import { PurchaseSuccessModal } from '@/components/billing/PurchaseSuccessModal';
 import { themedError } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
 import { useCreateOrder } from '@/hooks/billing/useCreateOrder';
@@ -66,7 +66,7 @@ export default function CreditsShopScreen() {
   const { consumableOffers, isLoading: loadingOffers } = useOffers('CONSUMABLE');
   const { paymentMethods } = usePaymentOptions();
   const { reconciledOffers, localOffers, isLoadingRc, hasRcPaymentMethod } = useRevenueCatReconcile(consumableOffers, paymentMethods);
-  const { purchase, purchaseState, isPurchasing } = useRevenueCatPurchase();
+  const { purchase, purchaseState, isPurchasing, reset, creditsDelta } = useRevenueCatPurchase();
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder();
 
   const isBusy = isPurchasing || isCreatingOrder || purchaseState === 'purchasing' || purchaseState === 'processing';
@@ -161,6 +161,15 @@ export default function CreditsShopScreen() {
   const hasActivePremium = isPremiumPlan(entitlements?.plan) && isActiveSubscription(entitlements?.subscription);
   const isUnlimitedForTab = !isLoading && hasActivePremium && entitlements?.plan_limits?.[TAB_TO_PLAN_LIMIT_KEY[activeTab]] === null;
 
+  const confirmedFeatureName = TABS.find((tab) => tab.key === activeTab)?.label ?? activeTab;
+  const confirmedQuantity = creditsDelta
+    ? activeTab === 'BOOST'
+      ? `+${creditsDelta.boosts}`
+      : activeTab === 'SUPERLIKE'
+        ? `+${creditsDelta.superLikes}`
+        : `+${creditsDelta.rewinds}`
+    : undefined;
+
   return (
     <View style={[styles.screen, { backgroundColor: th.background, paddingTop: top }]}>
       <View style={styles.header}>
@@ -215,25 +224,6 @@ export default function CreditsShopScreen() {
           </View>
         ) : (
           <>
-            {entitlements && (
-              <EntitlementSummary
-                entitlements={entitlements}
-                textColor={th.text}
-                secondaryColor={th.textSecondary}
-                surfaceColor={th.surface}
-                borderColor={th.border}
-              />
-            )}
-
-            {purchaseState === 'confirmed' && (
-              <View style={[styles.successBanner, { backgroundColor: colors.success + '18' }]}>
-                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                <Text style={[styles.successText, { color: th.text }]}>
-                  {t('billing.creditsPurchaseConfirmed', 'Credits added to your account!')}
-                </Text>
-              </View>
-            )}
-
             {isUnlimitedForTab ? (
               <View style={[styles.unavailableCard, { backgroundColor: th.surface, borderColor: th.border }]}>
                 <Ionicons name="infinite" size={32} color={colors.success} />
@@ -347,6 +337,19 @@ export default function CreditsShopScreen() {
         textColor={th.text}
         secondaryColor={th.textSecondary}
         backgroundColor={th.background}
+      />
+
+      <PurchaseSuccessModal
+        visible={purchaseState === 'confirmed'}
+        onClose={() => {
+          reset();
+          router.replace('/(app)/balances' as any);
+        }}
+        title={t('billing.creditsPurchaseConfirmedTitle', 'Credits Added!')}
+        message={t('billing.creditsPurchaseConfirmedMsg', 'Your credits have been added to your account. Enjoy!')}
+        icon="add-circle"
+        featureName={confirmedFeatureName}
+        amount={confirmedQuantity}
       />
     </View>
   );

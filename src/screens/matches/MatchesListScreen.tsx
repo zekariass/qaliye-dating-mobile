@@ -22,19 +22,20 @@ import { colors, radius, spacing } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
 import { useMatches } from '@/hooks/discovery/useMatches';
 import { inboxQueryKey } from '@/hooks/messages/useInbox';
+import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
 import type { InboxItem } from '@/types/chat';
 import type { MatchItemDto } from '@/types/discovery';
+import { formatDistance } from '@/utils/formatDistance';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatLocation(item: MatchItemDto): string | null {
-  const parts: string[] = [];
-  if (item.city) parts.push(item.city);
-  if (item.region) parts.push(item.region);
-  if (item.country_name) parts.push(item.country_name);
-  return parts.length > 0 ? parts.join(', ') : null;
+function formatLocation(item: MatchItemDto, myCountry: string): string | null {
+  if (myCountry && item.country_name === myCountry) {
+    return item.city ?? null;
+  }
+  return item.country_name ?? null;
 }
 
 function formatRelativeTime(iso: string | null | undefined): string {
@@ -147,6 +148,7 @@ interface MatchCardProps {
   onMessagePress: () => void;
   activityStatus?: ActivityStatus | null;
   unreadCount?:   number;
+  myCountry:      string;
 }
 
 const MatchCard = React.memo(function MatchCard({
@@ -156,12 +158,13 @@ const MatchCard = React.memo(function MatchCard({
   onMessagePress,
   activityStatus,
   unreadCount,
+  myCountry,
 }: MatchCardProps) {
   const { colors: th, mode } = useTheme();
   const isDark    = mode === 'dark';
   const chipBg    = isDark ? '#2E1F50' : colors.backgroundLavender;
   const enterDelay = Math.min(index * 60, 360);
-  const location   = formatLocation(item);
+  const location   = formatLocation(item, myCountry);
 
   return (
     <Animated.View entering={FadeInDown.delay(enterDelay).duration(400)}>
@@ -185,18 +188,6 @@ const MatchCard = React.memo(function MatchCard({
               <Ionicons name="person" size={40} color="#999" />
             </View>
           )}
-
-          {/* Activity status dot */}
-          {(activityStatus === 'ONLINE' || activityStatus === 'RECENTLY_ACTIVE') && (
-            <ActivityStatusIndicator
-              status={activityStatus}
-              size={11}
-              style={styles.statusDot}
-            />
-          )}
-
-          {/* Unread dot */}
-          {item.is_unread && <View style={styles.unreadDot} />}
 
           {/* Floating message button */}
           <TouchableOpacity
@@ -260,14 +251,14 @@ const MatchCard = React.memo(function MatchCard({
                   ]}
                 >
                   <Text style={[styles.distanceText, { color: colors.primary }]}>
-                    {item.distance_km} km
+                    {formatDistance(item.distance_km)}
                   </Text>
                 </View>
               )}
             </View>
           )}
 
-          {/* Status chip: New Match! / last message time */}
+          {/* Status chip: New Match! / last message time / activity status */}
           {item.has_conversation && item.last_message_at ? (
             <View style={[styles.chip, { backgroundColor: chipBg }]}>
               <Ionicons
@@ -286,13 +277,17 @@ const MatchCard = React.memo(function MatchCard({
                 New Match!
               </Text>
             </View>
+          ) : activityStatus && activityStatus !== 'HIDDEN' ? (
+            <ActivityStatusIndicator
+              status={activityStatus}
+              showLabel
+              size={8}
+              labelFontSize={11}
+            />
           ) : (
-            <View style={[styles.chip, { backgroundColor: chipBg }]}>
-              <Ionicons name="heart-outline" size={11} color={colors.primary} />
-              <Text style={[styles.chipText, { color: colors.primary }]} numberOfLines={1}>
-                {formatRelativeTime(item.matched_at)}
-              </Text>
-            </View>
+            <Text style={[styles.chipText, { color: th.textSecondary, fontSize: 11 }]} numberOfLines={1}>
+              Offline now
+            </Text>
           )}
 
         </View>
@@ -429,6 +424,8 @@ export default function MatchesListScreen() {
   const { colors: th } = useTheme();
   const router = useRouter();
   const qc = useQueryClient();
+  const { data: myProfile } = useCurrentProfile();
+  const myCountry = myProfile?.address?.country_name ?? '';
 
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
   const { getStatus } = useActivityStatuses(visibleIds);
@@ -496,9 +493,10 @@ export default function MatchesListScreen() {
         onMessagePress={() => handleMessagePress(item)}
         activityStatus={getStatus(item.user_id, item.activity_status)}
         unreadCount={inboxUnreadMap[item.match_id]}
+        myCountry={myCountry}
       />
     ),
-    [handleCardPress, handleMessagePress, getStatus, inboxUnreadMap],
+    [handleCardPress, handleMessagePress, getStatus, inboxUnreadMap, myCountry],
   );
 
   const renderFooter = useCallback(() => {
@@ -610,9 +608,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom:   8,
     left:     8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 9,
-    padding: 2,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
   },
 
   msgBtn: {
@@ -702,18 +701,6 @@ const styles = StyleSheet.create({
     alignItems:      'center',
     justifyContent:  'center',
     backgroundColor: '#E5E5E5',
-  },
-
-  unreadDot: {
-    position:        'absolute',
-    top:             8,
-    left:            8,
-    width:           10,
-    height:          10,
-    borderRadius:    5,
-    backgroundColor: colors.primary,
-    borderWidth:     2,
-    borderColor:     '#FFF',
   },
 
   msgCountBadge: {

@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect } from 'expo-router';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/constants/theme';
 import { useBootstrapApp } from '@/hooks/auth/useBootstrapApp';
@@ -29,10 +29,23 @@ export default function Auth() {
     }
   }, [hasActiveSession, meStatus, fetchMe]);
 
+  const [countdown, setCountdown] = useState(Math.ceil(OVERLAY_DURATION_MS / 1000));
+
+  const dismissOverlay = useCallback(() => {
+    setAccountJustDeleted(false);
+  }, [setAccountJustDeleted]);
+
   useEffect(() => {
     if (!accountJustDeleted) return;
+    setCountdown(Math.ceil(OVERLAY_DURATION_MS / 1000));
+    const interval = setInterval(() => {
+      setCountdown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
     const timer = setTimeout(() => setAccountJustDeleted(false), OVERLAY_DURATION_MS);
-    return () => clearTimeout(timer);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
   }, [accountJustDeleted, setAccountJustDeleted]);
 
   if (isBootstrapping) return null;
@@ -61,6 +74,16 @@ export default function Auth() {
       >
         <View style={deletedOverlay.backdrop}>
           <View style={[deletedOverlay.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+            <Pressable
+              onPress={dismissOverlay}
+              style={({ pressed }) => [
+                deletedOverlay.closeBtn,
+                { backgroundColor: colors.danger + '15', opacity: pressed ? 0.6 : 1 },
+              ]}
+              hitSlop={12}
+            >
+              <Ionicons name="close" size={24} color={colors.danger} />
+            </Pressable>
             <View style={[deletedOverlay.iconCircle, { backgroundColor: colors.danger + '20' }]}>
               <Ionicons name="checkmark-circle-outline" size={28} color={colors.danger} />
             </View>
@@ -72,6 +95,9 @@ export default function Auth() {
                 'settings.accountDeletedOverlayBody',
                 'Your account and all associated data have been permanently deleted. You will be signed out shortly.',
               )}
+            </Text>
+            <Text style={[deletedOverlay.countdown, { color: th.textSecondary }]}>
+              {countdown}s
             </Text>
           </View>
         </View>
@@ -89,6 +115,7 @@ const deletedOverlay = StyleSheet.create({
     padding: spacing.lg,
   },
   card: {
+    position: 'relative',
     width: '100%',
     maxWidth: 340,
     borderRadius: radius.lg,
@@ -114,5 +141,20 @@ const deletedOverlay = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countdown: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 2,
   },
 });

@@ -28,6 +28,7 @@ import { ChatHeader } from '@/components/messages/ChatHeader';
 import { DateSeparator } from '@/components/messages/DateSeparator';
 import { MessageBubble } from '@/components/messages/MessageBubble';
 import { MessageComposer } from '@/components/messages/MessageComposer';
+import { NotificationPromptModal } from '@/components/notifications/NotificationPromptModal';
 import { colors } from '@/constants/theme';
 import { useChatMetadataPoller } from '@/hooks/activity/useChatMetadataPoller';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
@@ -41,6 +42,7 @@ import { INBOX_QUERY_KEY } from '@/hooks/messages/useInbox';
 import { useReceipts } from '@/hooks/messages/useReceipts';
 import { useSendMessage } from '@/hooks/messages/useSendMessage';
 import { useTypingIndicator } from '@/hooks/messages/useTypingIndicator';
+import { useNotificationPrompt } from '@/hooks/notifications/useNotificationPrompt';
 import { useBlockUser } from '@/hooks/safety/useBlockUser';
 import { useReportUser } from '@/hooks/safety/useReportUser';
 import { useTheme } from '@/hooks/use-theme';
@@ -345,6 +347,7 @@ export default function ChatScreen() {
   const { mutate: reportUser, isPending: isReporting } = useReportUser();
   const { mutate: clearMessages, isPending: isClearing } = useClearChatMessages();
   const { entitlements, refreshEntitlements } = useEntitlements();
+  const notifPrompt = useNotificationPrompt();
 
   const handleMatchEnded = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: [INBOX_QUERY_KEY] });
@@ -416,11 +419,12 @@ export default function ChatScreen() {
     (text: string) => {
       stopTyping();
       send(text);
+      notifPrompt.onMessage();
       setTimeout(() => {
         listRef.current?.scrollToOffset({ offset: 0, animated: true });
       }, 50);
     },
-    [send, stopTyping],
+    [send, stopTyping, notifPrompt],
   );
 
   const handleSendWithAttachments = useCallback(
@@ -1031,6 +1035,13 @@ export default function ChatScreen() {
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Notification prompt — shown on first message send */}
+      <NotificationPromptModal
+        visible={notifPrompt.visible}
+        onEnable={notifPrompt.handleEnable}
+        onDismiss={notifPrompt.handleDismiss}
+      />
     </KeyboardAvoidingView>
   );
 }

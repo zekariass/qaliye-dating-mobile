@@ -2,8 +2,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { likeProfile, passProfile, superLikeProfile } from '@/api/discovery/discoveryApi';
 import { ENTITLEMENTS_KEY } from '@/hooks/billing/useEntitlements';
+import { DISCOVERY_COUNTS_KEY } from '@/hooks/discovery/useDiscoveryCounts';
 import { INBOX_QUERY_KEY } from '@/hooks/messages/useInbox';
-import { SwipeActionResponse } from '@/types/discovery';
+import { type DiscoveryCountsDto, SwipeActionResponse } from '@/types/discovery';
 import { generateUUID } from '@/utils/uuid';
 
 export type SwipeType = 'LIKE' | 'PASS' | 'SUPER_LIKE';
@@ -25,6 +26,16 @@ export function useSwipeAction() {
     onSuccess: (data, variables) => {
       if (variables.type === 'LIKE' || variables.type === 'SUPER_LIKE') {
         qc.invalidateQueries({ queryKey: ENTITLEMENTS_KEY });
+        // Optimistically increment sentLikesCount — no extra poll needed
+        qc.setQueryData<DiscoveryCountsDto>(DISCOVERY_COUNTS_KEY, (prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sent_likes_count: prev.sent_likes_count + 1,
+            // If it's a match, also increment matches_count
+            ...(data.is_match ? { matches_count: prev.matches_count + 1 } : {}),
+          };
+        });
       }
       qc.invalidateQueries({ queryKey: ['profile', 'user', variables.targetUserId] });
       qc.invalidateQueries({ queryKey: ['discovery', 'likes'] });

@@ -23,6 +23,7 @@ import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import type { ActivityStatus } from '@/types/activity';
+import { formatDistance } from '@/utils/formatDistance';
 
 const SWIPE_THRESHOLD = 120;
 
@@ -175,12 +176,11 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
 
   const locationText = (() => {
     const sameCountry = myCountry !== '' && card.country_name === myCountry;
-    const parts = sameCountry
-      ? [card.city, card.country_name].filter(Boolean)
-      : [card.country_name].filter(Boolean);
-    const place = parts.length > 0 ? parts.join(', ') : card.residency_type;
+    const place = sameCountry
+      ? (card.city ?? card.residency_type)
+      : (card.country_name ?? card.residency_type);
     if (card.distance_km != null && card.distance_km > 0) {
-      return `${place} · ${card.distance_km} km`;
+      return `${place} · ${formatDistance(card.distance_km)}`;
     }
     return place;
   })();
@@ -249,7 +249,9 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
               {card.activity_status && card.activity_status !== 'HIDDEN' && card.activity_status !== 'OFFLINE' && (
                 <ActivityStatusIndicator
                   status={card.activity_status}
+                  showLabel
                   size={10}
+                  labelFontSize={13}
                   style={styles.statusDot}
                 />
               )}

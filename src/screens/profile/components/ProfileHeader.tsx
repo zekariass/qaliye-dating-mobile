@@ -13,21 +13,18 @@ interface ProfileHeaderProps {
   displayName: string;
   age: number;
   isVerified: boolean;
-  location: string;
   isIncognito?: boolean;
   plan?: BillingPlan | null;
 }
 
 const AVATAR_SIZE = 120;
 const AVATAR_RADIUS = 18;
-const CIRCLE_BTN = 38;
 
 export default function ProfileHeader({
   avatarUri,
   displayName,
   age,
   isVerified,
-  location,
   isIncognito = false,
   plan = null,
 }: ProfileHeaderProps) {
@@ -45,9 +42,20 @@ export default function ProfileHeader({
       <View style={[styles.topRow, { paddingTop: safeTop + 8 }]}>
         <View style={styles.topLeft}>
           {showPremium ? (
-            <View style={[styles.premiumBadge, { backgroundColor: th.surface }]}>
-              <Ionicons name="diamond" size={16} color={colors.primary} />
-              <Text style={[styles.premiumText, { color: colors.primary }]}>{premiumLabel}</Text>
+            <View style={styles.topLeftLinks}>
+              <View style={[styles.premiumBadge, { backgroundColor: colors.primary }]}>
+                <Ionicons name="diamond" size={16} color="#FFFFFF" />
+                <Text style={[styles.premiumText, { color: '#FFFFFF' }]}>{premiumLabel}</Text>
+              </View>
+              <Pressable
+                style={[styles.linkBtn, { backgroundColor: '#FFD700' }]}
+                onPress={() => router.push('/(app)/credits-shop' as any)}
+                accessibilityLabel="Buy Credits"
+                accessibilityRole="button"
+              >
+                <Ionicons name="sparkles" size={14} color="#5B4500" />
+                <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>Buy Credits</Text>
+              </Pressable>
             </View>
           ) : (
             <View style={styles.topLeftLinks}>
@@ -61,37 +69,27 @@ export default function ProfileHeader({
                 <Text style={styles.linkBtnText}>Go Premium</Text>
               </Pressable>
               <Pressable
-                style={[styles.linkBtn, { backgroundColor: th.surface }]}
+                style={[styles.linkBtn, { backgroundColor: '#FFD700' }]}
                 onPress={() => router.push('/(app)/credits-shop' as any)}
-                accessibilityLabel="Credits Shop"
+                accessibilityLabel="Buy Credits"
                 accessibilityRole="button"
               >
-                <Ionicons name="sparkles" size={14} color={colors.primary} />
-                <Text style={[styles.linkBtnText, { color: colors.primary }]}>Credits</Text>
+                <Ionicons name="sparkles" size={14} color="#5B4500" />
+                <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>Buy Credits</Text>
               </Pressable>
             </View>
           )}
         </View>
 
-        <View style={styles.topRight}>
-          <Pressable
-            style={[styles.circleBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.push('/(app)/edit-profile' as any)}
-            accessibilityLabel="Edit Profile"
-            accessibilityRole="button"
-          >
-            <Ionicons name="pencil" size={16} color="#FFFFFF" />
-          </Pressable>
-
-          <Pressable
-            style={[styles.circleBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.push('/(app)/settings' as any)}
-            accessibilityLabel="Settings"
-            accessibilityRole="button"
-          >
-            <Ionicons name="settings" size={16} color="#FFFFFF" />
-          </Pressable>
-        </View>
+        <Pressable
+          style={[styles.balancesBtn, { backgroundColor: colors.primary }]}
+          onPress={() => router.push('/(app)/balances' as any)}
+          accessibilityLabel="View Balances"
+          accessibilityRole="button"
+        >
+          <Ionicons name="wallet-outline" size={15} color="#FFFFFF" />
+          <Text style={[styles.balancesBtnText, { color: '#FFFFFF' }]}>Balances</Text>
+        </Pressable>
       </View>
 
       <View style={styles.infoRow}>
@@ -116,18 +114,32 @@ export default function ProfileHeader({
               />
             )}
           </View>
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={14} color={colors.primary} />
-            <Text style={[styles.locationText, { color: th.textSecondary }]} numberOfLines={2}>
-              {location}
-            </Text>
-          </View>
           {isIncognito && (
             <View style={[styles.incognitoBadge, { backgroundColor: th.backgroundSelected }]}>
               <Ionicons name="eye-off" size={12} color={colors.primary} />
               <Text style={[styles.incognitoText, { color: colors.primary }]}>Private mode</Text>
             </View>
           )}
+          <View style={styles.actionRow}>
+            <Pressable
+              style={[styles.actionBtn, { borderColor: th.border, borderWidth: 1 }]}
+              onPress={() => router.push('/(app)/edit-profile' as any)}
+              accessibilityLabel="Edit Profile"
+              accessibilityRole="button"
+            >
+              <Ionicons name="pencil" size={14} color={th.textSecondary} />
+              <Text style={[styles.actionBtnText, { color: th.textSecondary }]}>Edit</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.actionBtn, { borderColor: th.border, borderWidth: 1 }]}
+              onPress={() => router.push('/(app)/settings' as any)}
+              accessibilityLabel="Settings"
+              accessibilityRole="button"
+            >
+              <Ionicons name="settings" size={14} color={th.textSecondary} />
+              <Text style={[styles.actionBtnText, { color: th.textSecondary }]}>Settings</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </View>
@@ -162,10 +174,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  topRight: {
+  balancesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+  },
+  balancesBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   linkBtn: {
     flexDirection: 'row',
@@ -179,19 +198,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-  circleBtn: {
-    width: CIRCLE_BTN,
-    height: CIRCLE_BTN,
-    borderRadius: CIRCLE_BTN / 2,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
   },
   infoRow: {
     flexDirection: 'row',
@@ -226,15 +232,24 @@ const styles = StyleSheet.create({
     color: '#1B1340',
     letterSpacing: -0.5,
   },
-  locationRow: {
+  actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
+    marginTop: 2,
   },
-  locationText: {
-    fontSize: 13,
-    color: '#6B7280',
-    flex: 1,
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
+  },
+  actionBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   incognitoBadge: {
     flexDirection: 'row',

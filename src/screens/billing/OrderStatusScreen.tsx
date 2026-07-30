@@ -56,8 +56,7 @@ export default function OrderStatusScreen() {
   }, [checkoutUrl]);
 
   const handleDone = useCallback(() => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/(app)/(tabs)' as any);
+    router.replace('/(app)/balances' as any);
   }, [router]);
 
   return (

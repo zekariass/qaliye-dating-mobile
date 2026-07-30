@@ -6,6 +6,7 @@ import {
     ActivityIndicator,
     AppState,
     Dimensions,
+    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -34,6 +35,7 @@ import { CardDto } from '@/components/discovery/ProfileCard';
 import ProfileDetailsSection from '@/components/discovery/ProfileDetailsSection';
 import { BANNER_H, PromotionBanner } from '@/components/discovery/PromotionBanner';
 import { SwipeIcon } from '@/components/layout/AppTabBar';
+import { NotificationPromptModal } from '@/components/notifications/NotificationPromptModal';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useActivateBoost } from '@/hooks/billing/useActivateBoost';
@@ -43,6 +45,7 @@ import { usePromotionBanner } from '@/hooks/billing/usePromotionBanner';
 import { mapProfileToCard, useDiscoveryProfiles } from '@/hooks/discovery/useDiscoveryProfiles';
 import { useRewind } from '@/hooks/discovery/useRewind';
 import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
+import { useNotificationPrompt } from '@/hooks/notifications/useNotificationPrompt';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useTheme } from '@/hooks/use-theme';
@@ -124,11 +127,17 @@ function RippleRing({ delay, accentColor }: { delay: number; accentColor: string
   );
 }
 
-function FindingMatchesAnimation({ accentColor, textColor, subtitleColor }: {
+function FindingMatchesAnimation({ accentColor, textColor, subtitleColor, gender }: {
   accentColor: string;
   textColor: string;
   subtitleColor: string;
+  gender?: string;
 }) {
+  const loaderIcon = !gender || (gender !== 'MALE' && gender !== 'FEMALE')
+    ? require('@/assets/images/loader/loader-icon-male-and-female.webp')
+    : gender === 'MALE'
+      ? require('@/assets/images/loader/loader-icon-female.webp')
+      : require('@/assets/images/loader/loader-icon-male.webp');
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 0 }}>
       <View style={{ width: RING_MAX, height: RING_MAX, alignItems: 'center', justifyContent: 'center' }}>
@@ -148,7 +157,7 @@ function FindingMatchesAnimation({ accentColor, textColor, subtitleColor }: {
             zIndex: 10,
           }}
         >
-          <Ionicons name="person" size={46} color={accentColor} />
+          <Image source={loaderIcon} style={{ width: 128, height: 128 }} resizeMode="contain" />
         </View>
       </View>
       <Text style={{ color: textColor, fontSize: 18, fontWeight: '700', marginTop: 8, textAlign: 'center', letterSpacing: -0.3 }}>
@@ -433,6 +442,7 @@ export default function DiscoverScreen() {
 
   const { mutate: swipe } = useSwipeAction();
   const { onMatch: onReviewMatch } = useReviewPrompt();
+  const notifPrompt = useNotificationPrompt();
   const { mutate: rewind } = useRewind();
   const { entitlements, refreshEntitlements } = useEntitlements();
 
@@ -784,6 +794,9 @@ export default function DiscoverScreen() {
         { type: isSuperLike ? 'SUPER_LIKE' : direction, targetUserId: card.user_id },
         {
           onSuccess: (response) => {
+            if (direction === 'LIKE') {
+              notifPrompt.onLike();
+            }
             if (response.is_match && response.match) {
               setMatchName(response.match.other_user.display_name);
               setMatchPhoto(response.match.other_user.primary_photo_url ?? undefined);
@@ -813,7 +826,7 @@ export default function DiscoverScreen() {
         },
       );
     },
-    [swipe, router, onReviewMatch, handleTryShowPromotion, entitlements],
+    [swipe, router, onReviewMatch, handleTryShowPromotion, entitlements, notifPrompt],
   );
 
   // ── Rewind handler ──────────────────────────────────────────────────────────
@@ -1081,6 +1094,7 @@ export default function DiscoverScreen() {
                 accentColor={colors.primary}
                 textColor={th.text}
                 subtitleColor={th.textSecondary}
+                gender={profileDto?.gender}
               />
             ) : isEmpty ? (
               <View style={styles.emptyWrap}>
@@ -1207,6 +1221,13 @@ export default function DiscoverScreen() {
         onExplicitDismiss={handleExplicitDismissPromotion}
         onProgrammaticClose={handleProgrammaticClosePromotion}
         onSuccess={handlePromotionSuccess}
+      />
+
+      {/* ── Notification prompt — shown on first like ── */}
+      <NotificationPromptModal
+        visible={notifPrompt.visible}
+        onEnable={notifPrompt.handleEnable}
+        onDismiss={notifPrompt.handleDismiss}
       />
     </SafeAreaView>
   );

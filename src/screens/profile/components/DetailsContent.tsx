@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { memo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/constants/theme';
+import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
@@ -82,63 +81,49 @@ function buildDetails(p: CurrentUserProfile): DetailItem[] {
   return items;
 }
 
-interface DetailCellProps {
-  item: DetailItem;
-  cardBg: string;
-  iconBg: string;
-  borderColor: string;
-  labelColor: string;
-  valueColor: string;
-}
-
-const DetailCell = memo(function DetailCell({
-  item,
-  cardBg,
-  iconBg,
-  borderColor,
-  labelColor,
-  valueColor,
-}: DetailCellProps) {
-  return (
-    <View style={[styles.cell, { backgroundColor: cardBg, borderColor }]}>
-      <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
-        <Ionicons name={item.icon} size={18} color={colors.primary} />
-      </View>
-      <Text style={[styles.cellLabel, { color: labelColor }]}>{item.label}</Text>
-      <Text style={[styles.cellValue, { color: valueColor }]} numberOfLines={2}>
-        {item.value}
-      </Text>
-    </View>
-  );
-});
-
 interface DetailsContentProps {
   profile: CurrentUserProfile;
 }
 
 export default function DetailsContent({ profile }: DetailsContentProps) {
-  const { colors: th } = useTheme();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
   const details = buildDetails(profile);
 
-  const cardBg = th.surface;
-  const iconBg = th.backgroundSelected;
-  const borderColor = th.border;
-  const labelColor = th.textSecondary;
-  const valueColor = th.text;
+  const surfaceBg = th.surface;
+  const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';
+  const borderCol = isDark ? 'rgba(46,31,80,0.22)' : 'rgba(233,221,248,0.5)';
+  const textCol = th.text;
+  const mutedCol = th.textSecondary;
 
   return (
     <View style={styles.container}>
-      <View style={styles.grid}>
+      <View
+        style={[
+          styles.listCard,
+          {
+            backgroundColor: surfaceBg,
+            borderColor: borderCol,
+            ...Platform.select({
+              ios: { shadowColor: '#8A2CFF', shadowOpacity: isDark ? 0.15 : 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } },
+              android: { elevation: 3 },
+            }) as any,
+          },
+        ]}
+      >
         {details.map((item, idx) => (
-          <DetailCell
-            key={idx}
-            item={item}
-            cardBg={cardBg}
-            iconBg={iconBg}
-            borderColor={borderColor}
-            labelColor={labelColor}
-            valueColor={valueColor}
-          />
+          <View key={idx}>
+            {idx > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
+            <View style={styles.listRow}>
+              <View style={[styles.detailIconWrap, { backgroundColor: iconBg, borderColor: borderCol }]}>
+                <Ionicons name={item.icon} size={17} color={colors.primary} />
+              </View>
+              <View style={styles.detailBody}>
+                <Text style={[styles.detailLabel, { color: mutedCol }]}>{item.label}</Text>
+                <Text style={[styles.detailValue, { color: textCol }]}>{item.value}</Text>
+              </View>
+            </View>
+          </View>
         ))}
       </View>
     </View>
@@ -147,36 +132,48 @@ export default function DetailsContent({ profile }: DetailsContentProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 8,
-    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingTop: 20,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  cell: {
-    width: '48%',
-    borderRadius: 14,
+  listCard: {
+    borderRadius: radius.lg,
     borderWidth: 1,
-    padding: 14,
-    gap: 3,
+    overflow: 'hidden',
   },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 14,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 16,
+  },
+  detailIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+  },
+  detailBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
     marginBottom: 4,
+    textTransform: 'uppercase',
   },
-  cellLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    letterSpacing: 0.2,
-  },
-  cellValue: {
-    fontSize: 14,
+  detailValue: {
+    fontSize: 15.5,
     fontWeight: '700',
+    letterSpacing: -0.1,
   },
 });

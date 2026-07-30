@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { readInstallationId } from '@/services/notifications/installationId';
 import { useBillingStore } from '@/stores/billing-store';
 import { useChatStore } from '@/stores/chat-store';
+import { useDiscoveryStore } from '@/stores/discovery-store';
 import { useMeStore } from '@/stores/me-store';
 import { useNotificationsStore } from '@/stores/notifications-store';
 
@@ -39,6 +40,7 @@ export function useSignOutWithDeactivation() {
     useNotificationsStore.getState().setPendingNavIntent(null);
     useNotificationsStore.getState().setForegroundBanner(null);
     useNotificationsStore.getState().setLastHandledNotificationId('');
+    useDiscoveryStore.getState().setViewMode('swipe');
 
     router.replace('/auth' as never);
   }, [router]);

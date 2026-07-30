@@ -18,6 +18,7 @@ import { fetchOnboardingStatus } from '@/api/onboardingApi';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
+import { useDiscoveryStore } from '@/stores/discovery-store';
 import { LANGUAGE_LABELS, LANGUAGE_LIST, useLanguageStore } from '@/stores/language-store';
 import { useMeStore } from '@/stores/me-store';
 import { OnboardingStatus, OnboardingStep } from '@/types/api';
@@ -152,6 +153,7 @@ export default function OnboardingScreen() {
   const handleSignOut = useCallback(async () => {
     await supabase.auth.signOut();
     clearMe();
+    useDiscoveryStore.getState().setViewMode('swipe');
     router.replace('/auth' as never);
   }, [clearMe, router]);
 

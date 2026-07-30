@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/constants/theme';
+import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
@@ -49,40 +49,64 @@ interface StatusContentProps {
 }
 
 export default function StatusContent({ profile }: StatusContentProps) {
-  const { colors: th } = useTheme();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
   const router = useRouter();
   const items = buildStatusItems(profile);
   const showCompleteBtn = profile.profileCompletionScore < 100;
 
+  const surfaceBg = th.surface;
+  const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';
+  const borderCol = isDark ? 'rgba(46,31,80,0.22)' : 'rgba(233,221,248,0.5)';
+  const textCol = th.text;
+  const mutedCol = th.textSecondary;
+
   return (
     <View style={styles.container}>
-      <View style={styles.grid}>
-        {items.map((item) => (
-          <View key={item.label} style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
-            <View style={styles.cardTop}>
-              <View style={[styles.iconCircle, { backgroundColor: th.backgroundSelected }]}>
-                <Ionicons name={item.icon} size={18} color={colors.primary} />
+      <View
+        style={[
+          styles.listCard,
+          {
+            backgroundColor: surfaceBg,
+            borderColor: borderCol,
+            ...Platform.select({
+              ios: { shadowColor: '#8A2CFF', shadowOpacity: isDark ? 0.15 : 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } },
+              android: { elevation: 3 },
+            }) as any,
+          },
+        ]}
+      >
+        {items.map((item, idx) => (
+          <View key={item.label}>
+            {idx > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
+            <View style={styles.listRow}>
+              <View style={[styles.detailIconWrap, { backgroundColor: iconBg, borderColor: borderCol }]}>
+                <Ionicons name={item.icon} size={17} color={colors.primary} />
               </View>
-              <View
-                style={[
-                  styles.statusDot,
-                  { backgroundColor: item.active ? colors.success : '#D1D5DB' },
-                ]}
-              />
+              <View style={styles.detailBody}>
+                <Text style={[styles.detailLabel, { color: mutedCol }]}>{item.label}</Text>
+                <View style={styles.valueRow}>
+                  <Text style={[styles.detailValue, { color: textCol }]}>{item.value}</Text>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      { backgroundColor: item.active ? colors.success : '#D1D5DB' },
+                    ]}
+                  />
+                </View>
+                {item.label === 'Profile Completion' && showCompleteBtn && (
+                  <Pressable
+                    style={[styles.completeBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => router.push('/(app)/edit-profile' as any)}
+                    accessibilityLabel="Complete your profile"
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.completeBtnText}>Complete Profile</Text>
+                    <Ionicons name="arrow-forward" size={14} color="#fff" />
+                  </Pressable>
+                )}
+              </View>
             </View>
-            <Text style={[styles.label, { color: th.textSecondary }]}>{item.label}</Text>
-            <Text style={[styles.value, { color: th.text }]}>{item.value}</Text>
-            {item.label === 'Profile Completion' && showCompleteBtn && (
-              <Pressable
-                style={[styles.completeBtn, { backgroundColor: colors.primary }]}
-                onPress={() => router.push('/(app)/edit-profile' as any)}
-                accessibilityLabel="Complete your profile"
-                accessibilityRole="button"
-              >
-                <Text style={styles.completeBtnText}>Complete Profile</Text>
-                <Ionicons name="arrow-forward" size={14} color="#fff" />
-              </Pressable>
-            )}
           </View>
         ))}
       </View>
@@ -92,59 +116,66 @@ export default function StatusContent({ profile }: StatusContentProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 8,
-    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingTop: 20,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  card: {
-    width: '47%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+  listCard: {
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#E9DDF8',
-    padding: 16,
-    gap: 6,
+    overflow: 'hidden',
   },
-  cardTop: {
+  listRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 14,
   },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#F3EEFF',
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 16,
+  },
+  detailIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+  },
+  detailBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  detailValue: {
+    fontSize: 15.5,
+    fontWeight: '700',
+    letterSpacing: -0.1,
+  },
+  valueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
   },
-  label: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
-    letterSpacing: 0.2,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1B1340',
-  },
   completeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    marginTop: 4,
+    marginTop: 8,
     paddingVertical: 7,
     paddingHorizontal: 12,
     borderRadius: 10,

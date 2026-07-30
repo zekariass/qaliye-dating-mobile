@@ -21,6 +21,7 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 
+import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
 import BrowseProfileDetailSheet from '@/components/discovery/BrowseProfileDetailSheet';
 import { CardDto } from '@/components/discovery/ProfileCard';
@@ -30,7 +31,9 @@ import { useRewind } from '@/hooks/discovery/useRewind';
 import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
+import type { ActivityStatus } from '@/types/activity';
 import type { SwipeActionResponse } from '@/types/discovery';
+import { formatDistance } from '@/utils/formatDistance';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - spacing.md * 2;
@@ -50,6 +53,7 @@ interface BrowseItem {
   photos: string[];
   relationship_intention: string;
   bio?: string;
+  activity_status?: ActivityStatus;
 }
 
 function mapCardToBrowseItem(card: CardDto): BrowseItem {
@@ -64,6 +68,7 @@ function mapCardToBrowseItem(card: CardDto): BrowseItem {
     photos: (card.photos ?? []).map((p) => p.image_url).filter(Boolean),
     relationship_intention: card.relationship_intention,
     bio: card.bio,
+    activity_status: card.activity_status,
   };
 }
 
@@ -322,11 +327,19 @@ function BrowseProfileCard({
                 <Text style={styles.locationText} numberOfLines={1}>
                   {locationText}
                   {item.distance_km != null && item.distance_km > 0
-                    ? `  ·  ${item.distance_km} km`
+                    ? `  ·  ${formatDistance(item.distance_km)}`
                     : ''}
                 </Text>
               </View>
             ) : null}
+            {item.activity_status && item.activity_status !== 'HIDDEN' && item.activity_status !== 'OFFLINE' && (
+              <ActivityStatusIndicator
+                status={item.activity_status}
+                showLabel
+                size={8}
+                labelFontSize={11}
+              />
+            )}
           </View>
         </Animated.View>
       </GestureDetector>
