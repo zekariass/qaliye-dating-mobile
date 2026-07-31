@@ -12,6 +12,7 @@ type Props = {
   isSelected: boolean;
   isActive?: boolean;
   disabled?: boolean;
+  isBestValue?: boolean;
   hasActivePremium?: boolean;
   onSelect: () => void;
   onPurchase: () => void;
@@ -30,12 +31,17 @@ function intervalLabel(count?: number, unit?: BillingIntervalUnit): string {
   return `Every ${count} ${u}s`;
 }
 
+function planDisplayName(productCode: string): string {
+  return productCode.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
 export function OfferCard({
   offer,
   rcPackage,
   isSelected,
   isActive = false,
   disabled = false,
+  isBestValue = false,
   hasActivePremium = false,
   onSelect,
   onPurchase,
@@ -48,12 +54,9 @@ export function OfferCard({
 }: Props) {
   const { t } = useTranslation();
 
-  // Suppress all promotional pricing display when user already has active premium.
   const promotion = hasActivePremium ? null : (offer.promotion ?? null);
   const effectivePrice = hasActivePremium ? null : (offer.effective_display_price ?? null);
 
-  // Determine the actual discounted price and the original price to strike through.
-  // Only show strikethrough + badge when the discounted price differs from the original.
   const discountedPrice = rcPackage
     ? null
     : promotion?.effective_display_price ?? effectivePrice ?? null;
@@ -71,64 +74,85 @@ export function OfferCard({
     : null;
 
   const autoRenewLabel = offer.product_type === 'SUBSCRIPTION'
-    ? (offer.auto_renew ? 'Auto-renews' : 'One-time access')
+    ? (offer.auto_renew ? t('billing.renewsAutomatically', 'Renews automatically') : t('billing.oneTimeAccess', 'One-time access'))
     : null;
+
+  const isLocked = storeUnavailable || disabled;
 
   return (
     <Pressable
       style={[
         styles.card,
-        { backgroundColor: surfaceColor, borderColor: isActive ? colors.success : (isSelected ? colors.primary : borderColor) },
+        {
+          backgroundColor: surfaceColor,
+          borderColor: isActive ? colors.success : (isSelected ? colors.primary : borderColor),
+          shadowColor: colors.primary,
+        },
         isSelected && !isActive && !disabled && styles.selectedCard,
         isActive && styles.activeCard,
-        (storeUnavailable || disabled) && styles.unavailableCard,
+        isLocked && styles.lockedCard,
       ]}
-      onPress={storeUnavailable || isActive || disabled ? undefined : onSelect}
+      onPress={isLocked ? undefined : onSelect}
       accessibilityRole="radio"
       accessibilityState={{ selected: isSelected || isActive, disabled: disabled || storeUnavailable }}
     >
-      <View style={styles.left}>
-        <Text style={[styles.productCode, { color: textColor }]} numberOfLines={1}>
-          {offer.product_code.replace(/_/g, ' ')}
+      {(isSelected || isActive) && (
+        <View style={[
+          styles.checkBadge,
+          { backgroundColor: isActive ? colors.success : colors.primary },
+        ]}>
+          <Ionicons name="checkmark" size={12} color="#fff" />
+        </View>
+      )}
+
+      <View style={[styles.iconRing, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}25` }]}>
+        <Ionicons name="diamond" size={22} color={colors.primary} />
+      </View>
+
+      <View style={styles.body}>
+        <Text style={[styles.title, { color: textColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+          {planDisplayName(offer.product_code)}
         </Text>
         {interval && (
           <Text style={[styles.interval, { color: secondaryColor }]}>{interval}</Text>
         )}
         {autoRenewLabel && (
-          <Text style={[styles.autoRenew, { color: secondaryColor }]}>{autoRenewLabel}</Text>
+          <Text style={[styles.renew, { color: secondaryColor }]}>{autoRenewLabel}</Text>
+        )}
+        {isBestValue && !isActive && (
+          <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+            <Text style={styles.badgeText}>{t('billing.bestValue', 'Best value')}</Text>
+          </View>
+        )}
+        {hasDiscount && !isBestValue && !isActive && (
+          <View style={[styles.promoBadge, { backgroundColor: colors.warning + '22' }]}>
+            <Text style={[styles.promoBadgeText, { color: colors.warning }]}>{t('promotion.offer.discount', 'Promo')}</Text>
+          </View>
         )}
       </View>
 
-      <View style={styles.right}>
+      <View style={styles.priceCol}>
         {originalPrice && (
-          <Text style={[styles.originalPrice, { color: secondaryColor }]}>
-            {originalPrice}
-          </Text>
+          <Text style={[styles.originalPrice, { color: secondaryColor }]}>{originalPrice}</Text>
         )}
         <Text style={[styles.price, { color: storeUnavailable ? secondaryColor : (isSelected ? colors.primary : textColor) }]}>
           {displayPrice}
         </Text>
-        {hasDiscount && (
-          <View style={styles.discountBadge}>
-            <Text style={styles.discountBadgeText}>
-              {t('promotion.offer.discount', 'Promo')}
-            </Text>
-          </View>
-        )}
+
         {storeUnavailable ? (
-          <View style={styles.unavailableBtn}>
+          <View style={[styles.lockedPill, { borderColor: secondaryColor }]}>
             <Ionicons name="storefront-outline" size={12} color={secondaryColor} />
-            <Text style={[styles.unavailableText, { color: secondaryColor }]}>Store unavailable</Text>
+            <Text style={[styles.lockedText, { color: secondaryColor }]}>{t('billing.storeUnavailable', 'Store unavailable')}</Text>
           </View>
         ) : disabled ? (
-          <View style={[styles.unavailableBtn, { borderColor: secondaryColor }]}>
+          <View style={[styles.lockedPill, { borderColor: secondaryColor }]}>
             <Ionicons name="lock-closed-outline" size={12} color={secondaryColor} />
-            <Text style={[styles.unavailableText, { color: secondaryColor }]}>Current plan active</Text>
+            <Text style={[styles.lockedText, { color: secondaryColor }]}>{t('billing.currentPlanActive', 'Current plan active')}</Text>
           </View>
         ) : isActive ? (
-          <View style={[styles.activeBtn, { borderColor: colors.success }]}>
+          <View style={[styles.activePill, { borderColor: colors.success }]}>
             <Ionicons name="checkmark-circle" size={12} color={colors.success} />
-            <Text style={[styles.activeText, { color: colors.success }]}>Active</Text>
+            <Text style={[styles.activeText, { color: colors.success }]}>{t('billing.active', 'Active')}</Text>
           </View>
         ) : isSelected && (
           <Pressable
@@ -143,91 +167,111 @@ export function OfferCard({
             ) : (
               <>
                 <Ionicons name="card-outline" size={14} color="#fff" />
-                <Text style={styles.buyText}>Buy</Text>
+                <Text style={styles.buyText}>{t('billing.buyNow', 'Buy Now')}</Text>
               </>
             )}
           </Pressable>
         )}
       </View>
-
-      {(isSelected || isActive) && (
-        <View style={styles.checkBadge}>
-          <Ionicons name="checkmark-circle" size={20} color={isActive ? colors.success : colors.primary} />
-        </View>
-      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  originalPrice: {
-    fontSize: 12,
-    textDecorationLine: 'line-through',
-    opacity: 0.7,
-  },
-  discountBadge: {
-    backgroundColor: colors.warning + '22',
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  discountBadgeText: {
-    color: colors.warning,
-    fontSize: 10,
-    fontWeight: '700',
-  },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
+    gap: 14,
+    borderRadius: 16,
     borderWidth: 2,
-    padding: 14,
-    marginBottom: 2,
-    gap: 12,
+    padding: 16,
+    shadowOpacity: 0,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 0,
   },
   selectedCard: {
-    shadowColor: colors.primary,
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    shadowOpacity: 0.18,
+    elevation: 5,
   },
   activeCard: {
     opacity: 0.95,
   },
-  left: {
-    flex: 1,
-    gap: 2,
+  lockedCard: {
+    opacity: 0.6,
   },
-  right: {
-    alignItems: 'flex-end',
-    gap: 6,
+  checkBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  productCode: {
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'capitalize',
+  iconRing: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  body: { flex: 1, gap: 4 },
+  title: {
+    fontSize: 15,
+    fontWeight: '800',
   },
   interval: {
-    fontSize: 12,
+    fontSize: 13,
   },
-  autoRenew: {
+  renew: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 2,
+  },
+  badgeText: {
+    color: '#fff',
     fontSize: 11,
+    fontWeight: '800',
+  },
+  promoBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 2,
+  },
+  promoBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  priceCol: { alignItems: 'flex-end', gap: 6 },
+  originalPrice: {
+    fontSize: 13,
+    textDecorationLine: 'line-through',
     opacity: 0.7,
   },
   price: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
   },
   buyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 999,
-    minWidth: 64,
+    minWidth: 72,
     justifyContent: 'center',
   },
   buyBtnDisabled: {
@@ -236,9 +280,9 @@ const styles = StyleSheet.create({
   buyText: {
     color: '#fff',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  activeBtn: {
+  activePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -249,17 +293,9 @@ const styles = StyleSheet.create({
   },
   activeText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  checkBadge: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-  },
-  unavailableCard: {
-    opacity: 0.6,
-  },
-  unavailableBtn: {
+  lockedPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -267,10 +303,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#ccc',
   },
-  unavailableText: {
+  lockedText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });

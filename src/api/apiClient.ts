@@ -14,6 +14,9 @@ import { useNotificationsStore } from '@/stores/notifications-store';
 export const apiClient = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_BASE_URL,
   timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 let isSigningOutOnAccountDeleted = false;
@@ -60,6 +63,12 @@ apiClient.interceptors.request.use(async (config) => {
   const {
     data: { session },
   } = await supabase.auth.getSession();
+
+  // Ensure Content-Type is set for requests with a body (unless multipart, which is set per-request)
+  if (config.data && !config.headers?.['Content-Type'] && !config.headers?.['content-type']) {
+    config.headers['Content-Type'] = 'application/json';
+  }
+
   if (session?.access_token) {
     config.headers.Authorization = `Bearer ${session.access_token}`;
     if (__DEV__) {
@@ -69,6 +78,7 @@ apiClient.interceptors.request.use(async (config) => {
       );
       if (config.data) {
         console.log(`[API] request data:`, typeof config.data === 'string' ? config.data : JSON.stringify(config.data));
+        console.log(`[API] Content-Type:`, config.headers['Content-Type'] ?? config.headers['content-type'] ?? 'not set');
       }
     }
   } else if (__DEV__) {

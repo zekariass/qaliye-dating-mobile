@@ -177,6 +177,9 @@ function normalizeChannel(raw: unknown): PaymentChannelOptionDto {
   return {
     channel: (ch.code ?? ch.channel ?? '') as PaymentChannel,
     display_name: (ch.display_name ?? ch['displayName'] ?? ch.code ?? ch.channel ?? '') as string,
+    active_online_method_code: (ch.active_online_method_code ?? ch['activeOnlineMethodCode'] ?? null) as string | null,
+    display_order: (ch.display_order ?? ch['displayOrder']) as number | undefined,
+    method_count: (ch.method_count ?? ch['methodCount']) as number | undefined,
   };
 }
 
@@ -241,6 +244,7 @@ function normalizePaymentMethod(raw: Record<string, unknown>): PaymentMethodDto 
     payment_instructions: (raw.payment_instructions ?? raw['paymentInstructions'] ?? raw['paymentInstructionsHtml'] ?? raw['payment_information'] ?? raw['paymentInformation'] ?? raw['payment_instructions_html'] ?? raw['paymentInformationHtml'] ?? null) as string | null,
     display_order: (raw.display_order ?? raw['displayOrder'] ?? 0) as number,
     verification_params: normalizeVerificationParams(verificationRaw),
+    logo_url: (raw.logo_url ?? raw['logoUrl'] ?? null) as string | null,
   };
   return method;
 }
@@ -259,6 +263,7 @@ export async function fetchPaymentOptions(
     billing_country_code: (data.billing_country_code ?? data['billingCountryCode'] ?? '') as string,
     resolved_market_country_code: (data.resolved_market_country_code ?? data['resolvedMarketCountryCode'] ?? '') as string,
     fallback_to_global: (data.fallback_to_global ?? data['fallbackToGlobal'] ?? false) as boolean,
+    active_online_method_code: (data.active_online_method_code ?? data['activeOnlineMethodCode'] ?? null) as string | null,
     payment_methods: rawMethods.map(normalizePaymentMethod),
   };
 }
@@ -269,6 +274,7 @@ function normalizeOrderResponse(raw: Record<string, unknown>): OrderResponse {
     id: raw.id as string,
     order_reference: (raw.order_reference ?? raw['orderReference'] ?? '') as string,
     status: (raw.status ?? '') as OrderResponse['status'],
+    status_reason: (raw.status_reason ?? raw['statusReason'] ?? null) as string | null,
     expected_amount_minor_units: (raw.expected_amount_minor_units ?? raw['expectedAmountMinorUnits'] ?? 0) as number,
     expected_currency: (raw.expected_currency ?? raw['expectedCurrency'] ?? '') as string,
     payment_method_id: (raw.payment_method_id ?? raw['paymentMethodId'] ?? '') as string,
@@ -282,21 +288,27 @@ function normalizeOrderResponse(raw: Record<string, unknown>): OrderResponse {
       : undefined,
     expires_at: (raw.expires_at ?? raw['expiresAt']) as string | undefined,
     created_at: (raw.created_at ?? raw['createdAt'] ?? '') as string,
+    updated_at: (raw.updated_at ?? raw['updatedAt']) as string | undefined,
     poll_after_ms: (raw.poll_after_ms ?? raw['pollAfterMs'] ?? null) as number | null,
     verify_et_request_id: (raw.verify_et_request_id ?? raw['verifyEtRequestId']) as string | undefined,
     can_upload_receipt: (raw.can_upload_receipt ?? raw['canUploadReceipt']) as boolean | undefined,
     can_contact_support: (raw.can_contact_support ?? raw['canContactSupport']) as boolean | undefined,
+    can_retry_verification: (raw.can_retry_verification ?? raw['canRetryVerification']) as boolean | undefined,
     verification_count: (raw.verification_count ?? raw['verificationCount'] ?? 0) as number,
   };
 }
 
 export async function createOrder(body: CreateOrderRequest): Promise<OrderResponse> {
-  const res = await apiClient.post<unknown>(`${BASE}/orders`, {
-    paymentOfferId: body.payment_offer_id,
-    paymentMethodId: body.payment_method_id,
-    idempotencyKey: body.idempotency_key,
-    platform: body.platform,
-  });
+  const res = await apiClient.post<unknown>(
+    `${BASE}/orders`,
+    {
+      payment_offer_id: body.payment_offer_id,
+      payment_method_id: body.payment_method_id,
+      idempotency_key: body.idempotency_key,
+      platform: body.platform,
+    },
+    { headers: { 'Content-Type': 'application/json' } },
+  );
   return normalizeOrderResponse(res.data as Record<string, unknown>);
 }
 
@@ -353,6 +365,11 @@ export async function fetchOrders(params?: {
   return normalizeOrderListResponse(res.data as Record<string, unknown>);
 }
 
+export async function verifyChapaPayment(orderId: string): Promise<OrderResponse> {
+  const res = await apiClient.post<unknown>(`${BASE}/orders/${orderId}/verify`);
+  return normalizeOrderResponse(res.data as Record<string, unknown>);
+}
+
 export async function verifyManualPayment(
   orderId: string,
   body: VerifyPaymentRequest,
@@ -360,9 +377,9 @@ export async function verifyManualPayment(
   const res = await apiClient.post<unknown>(
     `${BASE}/orders/${orderId}/verify`,
     {
-      verificationFields: body.verification_fields,
-      submittedAmountMinorUnits: body.submitted_amount_minor_units,
-      submittedCurrency: body.submitted_currency,
+      verification_fields: body.verification_fields,
+      submitted_amount_minor_units: body.submitted_amount_minor_units,
+      submitted_currency: body.submitted_currency,
     },
   );
   return normalizeOrderResponse(res.data as Record<string, unknown>);

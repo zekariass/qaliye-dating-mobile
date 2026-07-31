@@ -73,14 +73,14 @@ const STATUS_CONFIG: Record<OrderStatus, StatusConfig> = {
     iconColor: colors.success,
     bgColor: colors.success + '18',
     title: 'Payment Confirmed',
-    body: 'Your purchase has been activated. Enjoy your subscription or credits!',
+    body: 'Your payment has been completed. Enjoy the app!',
   },
   FULFILLED: {
     icon: 'checkmark-done-circle',
     iconColor: colors.success,
     bgColor: colors.success + '18',
     title: 'Purchase Complete',
-    body: 'Your purchase has been fulfilled and is ready to use.',
+    body: 'Your payment has been completed. Enjoy the app!',
   },
   REJECTED: {
     icon: 'close-circle-outline',

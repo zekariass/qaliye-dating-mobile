@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
@@ -130,6 +130,25 @@ export default function PremiumPaywallScreen() {
       )?.id ?? null
     : null;
 
+  const bestValueId = useMemo(() => {
+    const candidates = isGlobalMarket
+      ? (reconciledOffers.length > 0
+          ? reconciledOffers.map((r) => r.backendOffer)
+          : localOffers.filter((o) => o.country_code === 'GLOBAL'))
+      : localOffers;
+    if (candidates.length < 2) return null;
+    const unitDays: Record<string, number> = { DAY: 1, WEEK: 7, MONTH: 30, YEAR: 365 };
+    const scored = candidates
+      .filter((o) => o.billing_interval_count && o.billing_interval_unit)
+      .map((o) => ({
+        id: o.id,
+        score: o.billing_interval_count! * (unitDays[o.billing_interval_unit!] ?? 0),
+      }));
+    if (scored.length === 0) return null;
+    const max = Math.max(...scored.map((s) => s.score));
+    return scored.find((s) => s.score === max)?.id ?? null;
+  }, [isGlobalMarket, reconciledOffers, localOffers]);
+
   const isProcessing = purchaseState === 'processing' || purchaseState === 'purchasing';
   const isBusy = isPurchasing || isCreatingOrder || isProcessing;
 
@@ -167,6 +186,13 @@ export default function PremiumPaywallScreen() {
       { paymentOfferId: offerId, paymentMethodId: method.id },
       {
         onSuccess: (order) => {
+          if (order.status === 'REJECTED' || order.status === 'EXPIRED' || order.status === 'CANCELLED') {
+            themedError(
+              t('billing.orderFailed', 'Order failed'),
+              order.status_reason || t('billing.orderCreationFailed', 'Could not create your order. Please try again.'),
+            );
+            return;
+          }
           if (order.provider_checkout_url) {
             router.push({
               pathname: '/(app)/order-status',
@@ -228,12 +254,12 @@ export default function PremiumPaywallScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('common.close', 'Close')}
         >
-          <Ionicons name="close" size={20} color={th.text} />
+          <Ionicons name="close" size={22} color={th.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: th.text }]}>
           {t('billing.premiumTitle', 'Go Premium')}
         </Text>
-        <View style={{ width: 36 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
@@ -243,6 +269,9 @@ export default function PremiumPaywallScreen() {
         {isLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loaderText, { color: th.textSecondary }]}>
+              {t('billing.loadingOffers', 'Loading offers…')}
+            </Text>
           </View>
         ) : (
           <>
@@ -386,6 +415,7 @@ export default function PremiumPaywallScreen() {
                             onSelect={() => handleSelectOffer(backendOffer.id)}
                             onPurchase={handlePurchase}
                             isPurchasing={isBusy}
+                            isBestValue={bestValueId === backendOffer.id}
                             storeUnavailable={isLoadingRc}
                             textColor={th.text}
                             secondaryColor={th.textSecondary}
@@ -404,6 +434,7 @@ export default function PremiumPaywallScreen() {
                             onSelect={() => handleSelectOffer(offer.id)}
                             onPurchase={handlePurchase}
                             isPurchasing={isBusy}
+                            isBestValue={bestValueId === offer.id}
                             storeUnavailable
                             textColor={th.text}
                             secondaryColor={th.textSecondary}
@@ -423,6 +454,7 @@ export default function PremiumPaywallScreen() {
                         onSelect={() => handleSelectOffer(offer.id)}
                         onPurchase={handlePurchase}
                         isPurchasing={isBusy}
+                        isBestValue={bestValueId === offer.id}
                         textColor={th.text}
                         secondaryColor={th.textSecondary}
                         surfaceColor={th.surface}
@@ -606,15 +638,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 20, fontWeight: '800' },
   content: { paddingHorizontal: 16, gap: 4 },
-  centered: { paddingVertical: 60, alignItems: 'center' },
+  centered: { paddingVertical: 80, alignItems: 'center', gap: 12 },
+  loaderText: { fontSize: 14, fontWeight: '600' },
   alreadyActiveBanner: {
     flexDirection: 'row',
     alignItems: 'center',

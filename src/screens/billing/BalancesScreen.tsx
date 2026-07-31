@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius } from '@/constants/theme';
@@ -9,10 +10,17 @@ import { useTheme } from '@/hooks/use-theme';
 import type { EntitlementResponse, QuotaInfo } from '@/types/billing';
 import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 
-const CREDIT_ITEMS: { key: keyof EntitlementResponse['credits']; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-  { key: 'super_likes_available', label: 'Super Likes', icon: 'star' },
-  { key: 'rewinds_available', label: 'Rewinds', icon: 'arrow-undo' },
-  { key: 'boosts_available', label: 'Boosts', icon: 'rocket' },
+type CreditItem = {
+  key: keyof EntitlementResponse['credits'];
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  accent: string;
+};
+
+const CREDIT_ITEMS: CreditItem[] = [
+  { key: 'super_likes_available', label: 'Super Likes', icon: 'star', accent: colors.heartPink },
+  { key: 'rewinds_available', label: 'Rewinds', icon: 'arrow-undo', accent: colors.verifiedBlue },
+  { key: 'boosts_available', label: 'Boosts', icon: 'rocket', accent: colors.primary },
 ];
 
 const LIMIT_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
@@ -20,6 +28,8 @@ const LIMIT_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> 
   super_likes: 'star',
   rewinds: 'arrow-undo',
   boosts: 'rocket',
+  voice_chat_msgs: 'mic',
+  image_chat_msgs: 'image',
   voiceChatMsgs: 'mic',
   imageChatMsgs: 'image',
 };
@@ -29,9 +39,29 @@ const LIMIT_LABEL: Record<string, string> = {
   super_likes: 'Super Likes',
   rewinds: 'Rewinds',
   boosts: 'Boosts',
+  voice_chat_msgs: 'Voice Msgs',
+  image_chat_msgs: 'Image Msgs',
   voiceChatMsgs: 'Voice Msgs',
   imageChatMsgs: 'Image Msgs',
 };
+
+const LIMIT_ACCENT: Record<string, string> = {
+  likes: colors.heartPink,
+  super_likes: colors.heartPink,
+  rewinds: colors.verifiedBlue,
+  boosts: colors.primary,
+  voice_chat_msgs: colors.secondary,
+  image_chat_msgs: colors.primary,
+  voiceChatMsgs: colors.secondary,
+  imageChatMsgs: colors.primary,
+};
+
+function CustomIcon({ name, size, color }: { name: React.ComponentProps<typeof Ionicons>['name']; size: number; color: string }) {
+  if (name === 'arrow-undo') {
+    return <Text style={{ fontSize: size * 0.9, fontWeight: '700', color }}>↺</Text>;
+  }
+  return <Ionicons name={name} size={size} color={color} />;
+}
 
 function formatDate(iso?: string): string {
   if (!iso) return '';
@@ -58,15 +88,9 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 export default function BalancesScreen() {
   const router = useRouter();
-  const { colors: th, mode } = useTheme();
+  const { colors: th } = useTheme();
   const { entitlements, isLoading } = useEntitlements();
-  const { top: safeTop } = useSafeAreaInsets();
-  const isDark = mode === 'dark';
-
-  const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';
-  const borderCol = isDark ? 'rgba(46,31,80,0.22)' : 'rgba(233,221,248,0.5)';
-  const textCol = th.text;
-  const mutedCol = th.textSecondary;
+  const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
 
   if (isLoading || !entitlements) {
     return (
@@ -85,53 +109,49 @@ export default function BalancesScreen() {
 
   const limitEntries = Object.entries(entitlements.limits) as [string, QuotaInfo][];
   const quotaRows = chunk(limitEntries, 2);
-  const creditRows = chunk(CREDIT_ITEMS, 2);
 
   return (
-    <View style={[styles.screen, { backgroundColor: th.background }]}>
-      <View style={[styles.header, { paddingTop: safeTop + 8 }]}>
+    <View style={[styles.screen, { backgroundColor: th.background, paddingTop: safeTop }]}>
+      <View style={styles.header}>
         <Pressable
-          style={[styles.backBtn, { backgroundColor: th.surface, borderColor: borderCol }]}
+          style={[styles.iconBtn, { backgroundColor: th.backgroundElement }]}
           onPress={() => router.back()}
           accessibilityLabel="Go back"
           accessibilityRole="button"
         >
-          <Ionicons name="arrow-back" size={18} color={colors.primary} />
+          <Ionicons name="arrow-back" size={20} color={th.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: textCol }]}>Balances</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={[styles.headerTitle, { color: th.text }]}>Balances</Text>
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.contentInner}
+        contentContainerStyle={[styles.contentInner, { paddingBottom: safeBottom + 16 }]}
         showsVerticalScrollIndicator={false}
         bounces
       >
-        {/* Subscription Status Card */}
-        <View
-          style={[
-            styles.subCard,
-            {
-              backgroundColor: th.surface,
-              borderColor: borderCol,
-              ...Platform.select({
-                ios: { shadowColor: '#8A2CFF', shadowOpacity: isDark ? 0.15 : 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } },
-                android: { elevation: 3 },
-              }) as any,
-            },
-          ]}
+        <LinearGradient
+          colors={[`${colors.primary}18`, `${colors.primaryLight}10`, th.background]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.planCard, { borderColor: `${planColor}40` }]}
         >
-          <View style={styles.subCardTop}>
-            <View style={[styles.planBadge, { backgroundColor: planColor }]}>
-              <Ionicons name={planIcon as any} size={14} color="#fff" />
-              <Text style={styles.planBadgeText}>{planLabel}</Text>
+          <View style={styles.planCardRow}>
+            <View style={[styles.planIconRing, { backgroundColor: `${planColor}20`, borderColor: `${planColor}35` }]}>
+              <Ionicons name={planIcon as any} size={28} color={planColor} />
             </View>
-            {isPremium && subscription?.expires_at && (
-              <Text style={[styles.subExpiry, { color: mutedCol }]}>
-                {subscription.auto_renew ? 'Renews' : 'Expires'} {formatDate(subscription.expires_at)}
-              </Text>
-            )}
+            <View style={styles.planInfo}>
+              <View style={[styles.planBadge, { backgroundColor: planColor }]}>
+                <Ionicons name={planIcon as any} size={14} color="#fff" />
+                <Text style={styles.planBadgeText}>{planLabel}</Text>
+              </View>
+              {isPremium && subscription?.expires_at && (
+                <Text style={[styles.planExpiry, { color: th.textSecondary }]}>
+                  {subscription.auto_renew ? 'Renews' : 'Expires'} {formatDate(subscription.expires_at)}
+                </Text>
+              )}
+            </View>
           </View>
 
           {!isPremium && (
@@ -141,75 +161,83 @@ export default function BalancesScreen() {
               accessibilityLabel="Upgrade to Premium"
               accessibilityRole="button"
             >
-              <Ionicons name="diamond" size={15} color="#fff" />
+              <Ionicons name="diamond" size={18} color="#fff" />
               <Text style={styles.upgradeBtnText}>Upgrade to Premium</Text>
             </Pressable>
           )}
-        </View>
 
-        {/* Subscription Daily Balances */}
-        <View style={[styles.sectionWrap, { backgroundColor: isDark ? 'rgba(138,44,255,0.08)' : th.surface }]}>
-          <View style={styles.sectionInner}>
-            <Text style={[styles.sectionTitle, { color: mutedCol }]}>Subscription Daily Balances</Text>
-            <View style={styles.grid}>
-              {quotaRows.map((row, rowIndex) => (
-                <View key={rowIndex} style={styles.gridRow}>
-                  {row.map(([key, quota]) => {
-                    const value = formatQuotaRemaining(quota);
-                    const label = LIMIT_LABEL[key] ?? key;
-                    const icon = LIMIT_ICON[key] ?? 'help-circle-outline';
-                    return (
-                      <View
-                        key={key}
-                        style={[
-                          styles.balanceCard, { backgroundColor: th.surface, borderColor: borderCol }]}
-                      >
-                        <View style={[styles.balanceIconWrap, { backgroundColor: iconBg, borderColor: borderCol }]}>
-                          <Ionicons name={icon} size={18} color={colors.primary} />
-                        </View>
-                        <View style={styles.balanceInfo}>
-                          <Text style={[styles.balanceLabel, { color: mutedCol }]}>{label}</Text>
-                          <Text style={[styles.balanceValue, { color: textCol }]}>{value}</Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-                  {row.length === 1 && <View style={styles.gridSpacer} />}
-                </View>
-              ))}
+          {isPremium && !isFreePremium && (
+            <View style={[styles.activeBadge, { borderColor: `${colors.success}35` }]}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+              <Text style={[styles.activeBadgeText, { color: th.text }]}>Active subscription</Text>
             </View>
+          )}
+        </LinearGradient>
+
+        {/* Credits */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="wallet-outline" size={16} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: th.text }]}>Your Credits</Text>
+          </View>
+          <View style={styles.creditGrid}>
+            {CREDIT_ITEMS.map((item) => {
+              const value = `${entitlements.credits[item.key] ?? 0}`;
+              const unlimited = false;
+              return (
+                <View
+                  key={item.key}
+                  style={[
+                    styles.creditCard,
+                    { backgroundColor: th.surface, borderColor: th.border, shadowColor: item.accent },
+                  ]}
+                >
+                  <View style={[styles.creditIconRing, { backgroundColor: `${item.accent}15`, borderColor: `${item.accent}25` }]}>
+                    <CustomIcon name={item.icon} size={20} color={item.accent} />
+                  </View>
+                  <Text style={[styles.creditValue, { color: th.text }]}>{unlimited ? '∞' : value}</Text>
+                  <Text style={[styles.creditLabel, { color: th.textSecondary }]}>{item.label}</Text>
+                </View>
+              );
+            })}
           </View>
         </View>
 
-        {/* Credit Balances */}
-        <View style={[styles.sectionWrap, { backgroundColor: isDark ? 'rgba(244,163,22,0.08)' : th.surface }]}>
-          <View style={styles.sectionInner}>
-            <Text style={[styles.sectionTitle, { color: mutedCol }]}>Credit Balances</Text>
-            <View style={styles.grid}>
-              {creditRows.map((row, rowIndex) => (
-                <View key={rowIndex} style={styles.gridRow}>
-                  {row.map((item) => {
-                    const value = `${entitlements.credits[item.key] ?? 0}`;
-                    return (
-                      <View
-                        key={item.key}
-                        style={[
-                          styles.balanceCard, { backgroundColor: th.surface, borderColor: borderCol }]}
-                      >
-                        <View style={[styles.balanceIconWrap, { backgroundColor: iconBg, borderColor: borderCol }]}>
-                          <Ionicons name={item.icon} size={18} color={colors.primary} />
+        {/* Daily limits */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: th.text }]}>Daily Balances</Text>
+          </View>
+          <View style={styles.limitsList}>
+            {quotaRows.map((row, rowIndex) => (
+              <View key={rowIndex} style={styles.limitsRow}>
+                {row.map(([key, quota]) => {
+                  const value = formatQuotaRemaining(quota);
+                  const label = LIMIT_LABEL[key] ?? key;
+                  const icon = LIMIT_ICON[key] ?? 'help-circle-outline';
+                  const accent = LIMIT_ACCENT[key] ?? colors.primary;
+                  return (
+                    <View
+                      key={key}
+                      style={[
+                        styles.limitCard,
+                        { backgroundColor: th.surface, borderColor: th.border, shadowColor: accent },
+                      ]}
+                    >
+                      <View style={styles.limitTop}>
+                        <View style={[styles.limitIconRing, { backgroundColor: `${accent}15`, borderColor: `${accent}25` }]}>
+                          <CustomIcon name={icon} size={16} color={accent} />
                         </View>
-                        <View style={styles.balanceInfo}>
-                          <Text style={[styles.balanceLabel, { color: mutedCol }]}>{item.label}</Text>
-                          <Text style={[styles.balanceValue, { color: textCol }]}>{value}</Text>
-                        </View>
+                        <Text style={[styles.limitValue, { color: th.text }]}>{value}</Text>
                       </View>
-                    );
-                  })}
-                  {row.length === 1 && <View style={styles.gridSpacer} />}
-                </View>
-              ))}
-            </View>
+                      <Text style={[styles.limitLabel, { color: th.textSecondary }]}>{label}</Text>
+                    </View>
+                  );
+                })}
+                {row.length === 1 && <View style={{ flex: 1 }} />}
+              </View>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -218,70 +246,60 @@ export default function BalancesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  centered: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  screen: { flex: 1 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingVertical: 10,
   },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '800' },
+  content: { flex: 1 },
+  contentInner: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 24, gap: 14 },
+  planCard: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: 18,
+    gap: 12,
+  },
+  planCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  planIconRing: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  headerSpacer: {
-    width: 38,
-  },
-  content: {
-    flex: 1,
-  },
-  contentInner: {
-    paddingHorizontal: 16,
-    paddingBottom: 60,
-  },
-  // Subscription card
-  subCard: {
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    padding: 18,
-    gap: 14,
-    marginTop: 8,
-  },
-  subCardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  planInfo: { flex: 1, gap: 4 },
   planBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 999,
   },
   planBadgeText: {
     color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
-  subExpiry: {
+  planExpiry: {
     fontSize: 13,
     fontWeight: '500',
   },
@@ -291,76 +309,102 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 12,
-    borderRadius: 14,
+    paddingHorizontal: 16,
+    borderRadius: 999,
   },
   upgradeBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
     color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
   },
-  // Section wrapper
-  sectionWrap: {
-    marginTop: 24,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
-      android: { elevation: 2 },
-    }) as any,
-  },
-  sectionInner: {
-    padding: 16,
-  },
-  // Section title
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginBottom: 14,
-  },
-  // Grid
-  grid: {
-    gap: 12,
-  },
-  gridRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  gridSpacer: {
-    flex: 1,
-  },
-  balanceCard: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
+  activeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  balanceIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
+    gap: 5,
+    alignSelf: 'flex-start',
     borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: `${colors.success}10`,
+  },
+  activeBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  section: { gap: 8 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sectionTitle: { fontSize: 15, fontWeight: '800' },
+  creditGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  creditCard: {
+    flex: 1,
+    alignItems: 'center',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    padding: 12,
+    gap: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  creditIconRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
+    borderWidth: 1,
   },
-  balanceInfo: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
+  creditValue: {
+    fontSize: 20,
+    fontWeight: '900',
   },
-  balanceLabel: {
+  creditLabel: {
     fontSize: 12,
     fontWeight: '600',
-    letterSpacing: 0.2,
   },
-  balanceValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+  limitsList: { gap: 8 },
+  limitsRow: { flexDirection: 'row', gap: 8 },
+  limitCard: {
+    flex: 1,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    padding: 12,
+    gap: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  limitTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  limitIconRing: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  limitValue: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '900',
+    textAlign: 'right',
+  },
+  limitLabel: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

@@ -375,8 +375,8 @@ export default function OnboardingScreen() {
             style={styles.signOutBtn}
             activeOpacity={0.65}
           >
-            <Ionicons name="log-out-outline" size={14} color={th.textMuted} />
-            <Text style={[styles.signOutText, { color: th.textMuted }]}>
+            <Ionicons name="log-out-outline" size={16} color={colors.danger} />
+            <Text style={[styles.signOutText, { color: colors.danger }]}>
               {t('onboarding.signOut')}
             </Text>
           </TouchableOpacity>
@@ -582,12 +582,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: spacing.sm,
-    paddingBottom: spacing.md,
+    alignSelf: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: colors.danger,
+    backgroundColor: `${colors.danger}12`,
+    marginBottom: 12,
   },
   signOutText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

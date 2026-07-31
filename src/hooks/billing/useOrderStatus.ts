@@ -1,13 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { fetchOrder } from '@/api/billing/billingApi';
+import { fetchOrder, verifyChapaPayment } from '@/api/billing/billingApi';
 import type { OrderResponse } from '@/types/billing';
-import { ORDER_TERMINAL_STATUSES } from '@/types/billing';
+import { ORDER_TERMINAL_STATUSES, POLLING_ORDER_STATUSES } from '@/types/billing';
 import { ENTITLEMENTS_KEY } from './useEntitlements';
 
 const POLL_INTERVAL_MS = 5_000;
-const POLL_DURATION_MS = 30_000;
+const POLL_DURATION_MS = 120_000;
 
 export const ORDER_KEY = (orderId: string) =>
   ['billing', 'order', orderId] as const;
@@ -30,7 +30,9 @@ export function useOrderStatus(orderId: string | null) {
     enabled: !!orderId,
     staleTime: 0,
     refetchInterval: (q) => {
-      if (q.state.data?.status !== 'VERIFICATION_PENDING') return false;
+      if (!q.state.data) return false;
+      const status = q.state.data.status;
+      if (!POLLING_ORDER_STATUSES.includes(status)) return false;
       return Date.now() < pollingUntilRef.current ? POLL_INTERVAL_MS : false;
     },
   });
@@ -43,7 +45,7 @@ export function useOrderStatus(orderId: string | null) {
   }, []);
 
   useEffect(() => {
-    if (order && !autoStartedRef.current && order.status === 'VERIFICATION_PENDING') {
+    if (order && !autoStartedRef.current && POLLING_ORDER_STATUSES.includes(order.status)) {
       autoStartedRef.current = true;
       startPolling();
       query.refetch().catch(() => {});
@@ -51,7 +53,7 @@ export function useOrderStatus(orderId: string | null) {
   }, [order, startPolling, query]);
 
   useEffect(() => {
-    if (order && order.status !== 'VERIFICATION_PENDING' && isPolling) {
+    if (order && !POLLING_ORDER_STATUSES.includes(order.status) && isPolling) {
       pollingUntilRef.current = 0;
       setIsPolling(false);
     }
@@ -59,9 +61,11 @@ export function useOrderStatus(orderId: string | null) {
 
   const isTerminal = order ? ORDER_TERMINAL_STATUSES.includes(order.status) : false;
 
+  const isChapaOrder = !!(order?.provider_checkout_url || order?.method_code === 'chapa' || order?.payment_method === 'CHAPA');
+
   const refresh = useCallback(async () => {
     let result;
-    if (order?.status === 'VERIFICATION_PENDING') {
+    if (order && POLLING_ORDER_STATUSES.includes(order.status)) {
       result = await query.refetch();
       startPolling();
     } else {
@@ -73,5 +77,22 @@ export function useOrderStatus(orderId: string | null) {
     }
   }, [order?.status, startPolling, query, qc]);
 
-  return { ...query, order, isTerminal, isPolling, refresh };
+  const verifyChapa = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const updated = await verifyChapaPayment(orderId);
+      qc.setQueryData(ORDER_KEY(orderId), updated);
+      if (updated.status === 'VERIFIED' || updated.status === 'FULFILLED') {
+        qc.invalidateQueries({ queryKey: ENTITLEMENTS_KEY });
+      }
+      if (POLLING_ORDER_STATUSES.includes(updated.status)) {
+        startPolling();
+      }
+    } catch {
+      // verify failed — fall back to GET refresh
+      await query.refetch();
+    }
+  }, [orderId, qc, startPolling, query]);
+
+  return { ...query, order, isTerminal, isPolling, isChapaOrder, refresh, verifyChapa };
 }

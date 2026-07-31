@@ -24,6 +24,7 @@ export type BillingIntervalUnit = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
 export type PaymentChannel =
   | 'REVENUECAT_APPLE'
   | 'REVENUECAT_GOOGLE'
+  | 'ONLINE'
   | 'CHAPA'
   | 'ARIFPAY'
   | 'MANUAL_TRANSFER'
@@ -69,6 +70,9 @@ export type BillingPlatform = 'IOS' | 'ANDROID' | 'WEB';
 export type PaymentChannelOptionDto = {
   channel: PaymentChannel;
   display_name: string;
+  active_online_method_code?: string | null;
+  display_order?: number;
+  method_count?: number;
 };
 
 export type SubscriptionProvider =
@@ -195,6 +199,7 @@ export type PaymentMethodDto = {
   payment_instructions: string | null;
   display_order: number;
   verification_params: VerificationParams | null;
+  logo_url?: string | null;
 };
 
 export type PaymentOptionsResponse = {
@@ -202,6 +207,7 @@ export type PaymentOptionsResponse = {
   billing_country_code: string;
   resolved_market_country_code: string;
   fallback_to_global: boolean;
+  active_online_method_code?: string | null;
   payment_methods: PaymentMethodDto[];
 };
 
@@ -244,6 +250,7 @@ export type OrderResponse = {
   id: string;
   order_reference: string;
   status: OrderStatus;
+  status_reason?: string | null;
   expected_amount_minor_units: number;
   expected_currency: string;
   payment_method_id: string;
@@ -255,10 +262,12 @@ export type OrderResponse = {
   payment_instructions?: PaymentInstructions;
   expires_at?: string;
   created_at: string;
+  updated_at?: string;
   poll_after_ms?: number | null;
   verify_et_request_id?: string;
   can_upload_receipt?: boolean;
   can_contact_support?: boolean;
+  can_retry_verification?: boolean;
   verification_count?: number;
 };
 

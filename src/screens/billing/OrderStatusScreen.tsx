@@ -1,11 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
-    AppState,
-    Linking,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ChapaCheckoutModal } from '@/components/billing/ChapaCheckoutModal';
 import { OrderStatusBanner } from '@/components/billing/OrderStatusBanner';
 import { colors } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
@@ -29,9 +29,10 @@ export default function OrderStatusScreen() {
   const orderId = params.orderId ?? null;
   const checkoutUrl = params.checkoutUrl;
 
-  const { order, isLoading, refresh, isTerminal } = useOrderStatus(orderId);
+  const { order, isLoading, refresh, isTerminal, isChapaOrder, verifyChapa } = useOrderStatus(orderId);
   const { refreshEntitlements } = useEntitlements();
-  const appStateRef = useRef(AppState.currentState);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const hasVerifiedRef = useRef(false);
 
   useEffect(() => {
     if (order?.status === 'VERIFIED' || order?.status === 'FULFILLED') {
@@ -39,21 +40,32 @@ export default function OrderStatusScreen() {
     }
   }, [order?.status, refreshEntitlements]);
 
+  // Auto-open checkout modal when order has a checkout URL
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (nextState) => {
-      if (appStateRef.current !== 'active' && nextState === 'active') {
-        refresh();
-      }
-      appStateRef.current = nextState;
-    });
-    return () => sub.remove();
-  }, [refresh]);
+    if (!orderId) return;
+    const url = checkoutUrl ?? order?.provider_checkout_url;
+    if (!url) return;
+    if (!order || (order.status !== 'AWAITING_PAYMENT' && order.status !== 'CREATED')) return;
+    setShowCheckoutModal(true);
+  }, [orderId, checkoutUrl, order?.provider_checkout_url, order?.status]);
 
-  const handleOpenCheckout = useCallback(async () => {
-    if (checkoutUrl) {
-      await Linking.openURL(checkoutUrl);
+  const returnUrl = Linking.createURL('payments/chapa/callback');
+
+  const handleCheckoutReturned = useCallback(() => {
+    setShowCheckoutModal(false);
+    if (!hasVerifiedRef.current) {
+      hasVerifiedRef.current = true;
+      verifyChapa();
     }
-  }, [checkoutUrl]);
+  }, [verifyChapa]);
+
+  const handleCheckoutClose = useCallback(() => {
+    setShowCheckoutModal(false);
+    if (!hasVerifiedRef.current) {
+      hasVerifiedRef.current = true;
+      verifyChapa();
+    }
+  }, [verifyChapa]);
 
   const handleDone = useCallback(() => {
     router.replace('/(app)/balances' as any);
@@ -98,6 +110,16 @@ export default function OrderStatusScreen() {
               secondaryColor={th.textSecondary}
             />
 
+            {order.status === 'REJECTED' && order.status_reason && order.status_reason.toLowerCase().includes('transaction used in another app') ? (
+              <Text style={[styles.statusReason, { color: colors.danger }]}>
+                {t('billing.transactionUsedInAnotherApp', 'This transaction was already used in another application. Please use a new transaction.')}
+              </Text>
+            ) : order.status_reason ? (
+              <Text style={[styles.statusReason, { color: th.textSecondary }]}>
+                {order.status_reason}
+              </Text>
+            ) : null}
+
             <View style={[styles.detailCard, { backgroundColor: th.surface, borderColor: th.border }]}>
               <DetailRow label={t('billing.orderReference', 'Order ref')} value={order.order_reference} textColor={th.text} secondaryColor={th.textSecondary} />
               <DetailRow label={t('billing.amount', 'Amount')} value={`${(order.expected_amount_minor_units / 100).toFixed(2)} ${order.expected_currency}`} textColor={th.text} secondaryColor={th.textSecondary} />
@@ -112,11 +134,24 @@ export default function OrderStatusScreen() {
               )}
             </View>
 
-            {(order.status === 'AWAITING_PAYMENT' || order.status === 'CREATED') && checkoutUrl && (
-              <Pressable style={styles.primaryBtn} onPress={handleOpenCheckout} accessibilityRole="button">
-                <Ionicons name="open-outline" size={18} color="#fff" />
-                <Text style={styles.primaryBtnText}>{t('billing.openCheckout', 'Open Payment Page')}</Text>
-              </Pressable>
+            {(order.status === 'AWAITING_PAYMENT' || order.status === 'CREATED') && (checkoutUrl || order.provider_checkout_url) && (
+              <View style={styles.pollingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.pollingText, { color: th.textSecondary }]}>
+                  {showCheckoutModal
+                    ? t('billing.openingCheckout', 'Complete your payment...')
+                    : t('billing.verifyingPayment', 'Verifying your payment...')}
+                </Text>
+              </View>
+            )}
+
+            {isChapaOrder && !isTerminal && (order.status === 'VERIFICATION_PENDING') && (
+              <View style={styles.pollingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.pollingText, { color: th.textSecondary }]}>
+                  {t('billing.verifyingPayment', 'Verifying your payment...')}
+                </Text>
+              </View>
             )}
 
             {!isTerminal && (
@@ -163,6 +198,20 @@ export default function OrderStatusScreen() {
           </>
         )}
       </ScrollView>
+
+      {(() => {
+        const url = checkoutUrl ?? order?.provider_checkout_url;
+        if (!url || !isChapaOrder) return null;
+        return (
+          <ChapaCheckoutModal
+            visible={showCheckoutModal}
+            checkoutUrl={url}
+            returnUrl={returnUrl}
+            onClose={handleCheckoutClose}
+            onReturned={handleCheckoutReturned}
+          />
+        );
+      })()}
     </View>
   );
 }
@@ -195,6 +244,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingTop: 8, gap: 14 },
   centered: { paddingVertical: 60, alignItems: 'center' },
   errorText: { fontSize: 14, textAlign: 'center' },
+  statusReason: { fontSize: 13, fontStyle: 'italic', paddingHorizontal: 4 },
   detailCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   detailLabel: { fontSize: 13 },
@@ -223,4 +273,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   refreshText: { fontSize: 15, fontWeight: '600' },
+  pollingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 16,
+  },
+  pollingText: { fontSize: 14, fontWeight: '500' },
 });
