@@ -380,6 +380,18 @@ function BrowseProfileCard({
           <Ionicons name="close" size={22} color={colors.danger} />
         </TouchableOpacity>
 
+        {/* Like */}
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: iconBg }]}
+          onPress={handleLike}
+          disabled={animating || isActing}
+          activeOpacity={0.7}
+          accessibilityLabel="Like profile"
+          accessibilityRole="button"
+        >
+          <Ionicons name="heart" size={20} color={colors.heartPink} />
+        </TouchableOpacity>
+
         {/* Super Like — star burst style matching swipe mode */}
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: iconBg, opacity: canSuperLike ? 1 : 0.4 }]}
@@ -407,18 +419,6 @@ function BrowseProfileCard({
               />
             );
           })}
-        </TouchableOpacity>
-
-        {/* Like */}
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg }]}
-          onPress={handleLike}
-          disabled={animating || isActing}
-          activeOpacity={0.7}
-          accessibilityLabel="Like profile"
-          accessibilityRole="button"
-        >
-          <Ionicons name="heart" size={20} color={colors.heartPink} />
         </TouchableOpacity>
 
         {/* Super Message */}

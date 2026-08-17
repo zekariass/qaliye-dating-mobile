@@ -368,6 +368,22 @@ export default function BrowseProfileDetailSheet({
               <Ionicons name="close" size={34} color={colors.danger} />
             </TouchableOpacity>
 
+            {/* Like */}
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                styles.likeBtn,
+                { backgroundColor: isDark ? th.backgroundSelected : '#FFE8F3' },
+              ]}
+              onPress={handleLike}
+              disabled={isActing || !!actionTaken}
+              activeOpacity={0.7}
+              accessibilityLabel="Like profile"
+              accessibilityRole="button"
+            >
+              <Ionicons name="heart" size={32} color={colors.heartPink} />
+            </TouchableOpacity>
+
             {/* Super Like — star burst style matching swipe mode */}
             <TouchableOpacity
               style={[
@@ -399,22 +415,6 @@ export default function BrowseProfileDetailSheet({
                   />
                 );
               })}
-            </TouchableOpacity>
-
-            {/* Like */}
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                styles.likeBtn,
-                { backgroundColor: isDark ? th.backgroundSelected : '#FFE8F3' },
-              ]}
-              onPress={handleLike}
-              disabled={isActing || !!actionTaken}
-              activeOpacity={0.7}
-              accessibilityLabel="Like profile"
-              accessibilityRole="button"
-            >
-              <Ionicons name="heart" size={32} color={colors.heartPink} />
             </TouchableOpacity>
 
             {/* Super Message */}
