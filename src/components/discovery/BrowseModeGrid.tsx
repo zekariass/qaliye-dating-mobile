@@ -435,14 +435,14 @@ function BrowseProfileCard({
 
         {/* View profile — at the right end */}
         <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+          style={[styles.actionBtn, { backgroundColor: iconBg }]}
           onPress={() => onPress(item.user_id)}
           disabled={animating || isActing}
           activeOpacity={0.7}
           accessibilityLabel="View profile"
           accessibilityRole="button"
         >
-          <Ionicons name="information-circle-outline" size={22} color="#FFFFFF" />
+          <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
         </TouchableOpacity>
       </View>
     </Animated.View>
