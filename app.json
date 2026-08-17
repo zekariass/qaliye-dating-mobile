@@ -95,6 +95,13 @@
           "microphonePermission": "Qaliye needs access to your microphone to record voice messages in support chat."
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Qaliye needs access to your camera to verify your identity with a selfie.",
+          "recordAudioAndroid": false
+        }
+      ],
       "expo-asset",
       "expo-web-browser"
     ],

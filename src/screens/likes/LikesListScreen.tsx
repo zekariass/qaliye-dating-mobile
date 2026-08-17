@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { revealLike } from '@/api/discovery/discoveryApi';
+import { InsufficientCreditModal } from '@/components/billing/InsufficientCreditModal';
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
@@ -26,7 +28,9 @@ import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
 import type { LikeDirection, LikeItemDto } from '@/types/discovery';
+import { isInsufficientCreditsError, isLimitExceededError } from '@/utils/entitlements';
 import { formatDistance } from '@/utils/formatDistance';
+import { showActionErrorAlert } from '@/utils/limitExceededAlert';
 
 // ─── Layout constants (identical to MatchesListScreen) ────────────────────────
 // NOTE: useWindowDimensions causes a runtime error in this RN version.
@@ -383,9 +387,11 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
 interface BlurredLikeCardProps {
   item: LikeItemDto;
   onPress: () => void;
+  onReveal: () => void;
+  isRevealing: boolean;
 }
 
-function BlurredLikeCard({ item, onPress }: BlurredLikeCardProps) {
+function BlurredLikeCard({ item, onPress, onReveal, isRevealing }: BlurredLikeCardProps) {
   const { card, textPrimary, textMuted, purple } = useLikesTheme();
   const { colors: th } = useTheme();
   const isDark = th.background === '#0D0712';
@@ -396,7 +402,7 @@ function BlurredLikeCard({ item, onPress }: BlurredLikeCardProps) {
       onPress={onPress}
       activeOpacity={0.88}
       accessibilityRole="button"
-      accessibilityLabel="Upgrade to see who liked you"
+      accessibilityLabel="View who liked you"
     >
       <View style={styles.imageWrap}>
         {item.primary_photo_url ? (
@@ -416,7 +422,7 @@ function BlurredLikeCard({ item, onPress }: BlurredLikeCardProps) {
           <View style={[blurStyles.lockCircle, { backgroundColor: purple }]}>
             <Ionicons name="lock-closed" size={22} color="#FFF" />
           </View>
-          <Text style={[blurStyles.overlayText, { color: isDark ? '#FFF' : '#FFF' }]}>Upgrade to see</Text>
+          <Text style={[blurStyles.overlayText, { color: isDark ? '#FFF' : '#FFF' }]}>Someone likes you</Text>
         </View>
       </View>
 
@@ -429,8 +435,27 @@ function BlurredLikeCard({ item, onPress }: BlurredLikeCardProps) {
           </View>
         </View>
         <Text style={[styles.locationText, { color: textMuted }]} numberOfLines={1}>
-          Tap to unlock with Premium
+          Tap View to reveal
         </Text>
+
+        {/* View / Reveal button */}
+        <TouchableOpacity
+          style={[blurStyles.viewBtn, { backgroundColor: purple }]}
+          onPress={onReveal}
+          disabled={isRevealing}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="View who liked you"
+        >
+          {isRevealing ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <>
+              <Ionicons name="eye-outline" size={15} color="#FFF" />
+              <Text style={blurStyles.viewBtnText}>View</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -453,6 +478,22 @@ const blurStyles = StyleSheet.create({
   overlayText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  viewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 18,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  viewBtnText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
 
@@ -587,6 +628,7 @@ export default function LikesListScreen() {
   const insets    = useSafeAreaInsets();
   const { bg }    = useLikesTheme();
   const router    = useRouter();
+  const [isUserRefreshing, setIsUserRefreshing] = useState(false);
   const { entitlements } = useEntitlements();
   const canSeeWhoLikedYou = entitlements?.features?.see_who_liked_you ?? false;
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
@@ -611,9 +653,23 @@ export default function LikesListScreen() {
     fetchNextPage, hasNextPage, isFetchingNextPage, refetch,
   } = useLikes(direction);
 
+  // Stop the user-initiated refresh spinner once fetching completes
+  useEffect(() => {
+    if (!isFetching) setIsUserRefreshing(false);
+  }, [isFetching]);
+
+  const handleRefresh = useCallback(() => {
+    setIsUserRefreshing(true);
+    refetch();
+  }, [refetch]);
+
   const { mutateAsync: swipeAction, isPending: isSwiping } = useSwipeAction();
   const [unsendingId, setUnsendingId] = useState<string | null>(null);
   const [likingBackId, setLikingBackId] = useState<string | null>(null);
+  const [revealingId, setRevealingId] = useState<string | null>(null);
+  const [showInsufficientCredit, setShowInsufficientCredit] = useState(false);
+  const [revealedItems, setRevealedItems] = useState<Record<string, LikeItemDto>>({});
+  const { refreshEntitlements } = useEntitlements();
 
   const handleLikeBack = useCallback(
     async (item: LikeItemDto) => {
@@ -655,6 +711,7 @@ export default function LikesListScreen() {
         }
         refetch();
       } catch (err: any) {
+        if (isInsufficientCreditsError(err)) return;
         themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
       } finally {
         setLikingBackId(null);
@@ -669,6 +726,53 @@ export default function LikesListScreen() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const handleReveal = useCallback(
+    async (item: LikeItemDto) => {
+      setRevealingId(item.action_id);
+      try {
+        const response = await revealLike(item.action_id);
+
+        // Update the local item with revealed data
+        const revealedItem: LikeItemDto = {
+          ...item,
+          display_name: response.actor_display_name,
+          age: response.actor_age,
+          user_id: response.actor_user_id,
+          primary_photo_url: response.actor_primary_photo_url,
+        };
+        setRevealedItems((prev) => ({ ...prev, [item.action_id]: revealedItem }));
+
+        // Refresh entitlements to update credit balance
+        refreshEntitlements();
+
+        if (response.idempotent) {
+          themedAlert({
+            title: 'Already revealed',
+            message: `This profile was already revealed previously.`,
+            icon: 'eye-outline',
+            iconColor: colors.primary,
+            buttons: [{ text: 'OK' }],
+          });
+        }
+      } catch (err: any) {
+        if (isInsufficientCreditsError(err)) {
+          return;
+        } else if (isLimitExceededError(err)) {
+          showActionErrorAlert(err, router, {
+            subscriptionEnabled: entitlements?.country_settings?.subscription_enabled ?? true,
+            creditsEnabled: entitlements?.country_settings?.credits_enabled ?? true,
+            actionTypeOverride: 'SEE_WHO_LIKED_YOU',
+          });
+        } else {
+          themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not reveal this profile.');
+        }
+      } finally {
+        setRevealingId(null);
+      }
+    },
+    [refreshEntitlements, router],
+  );
+
   const handleCardPress = useCallback(
     (userId: string) => {
       router.push({ pathname: '/(app)/user-profile', params: { userId } } as any);
@@ -678,13 +782,13 @@ export default function LikesListScreen() {
 
   const handleBlurredCardPress = useCallback(() => {
     themedAlert({
-      title: 'Premium Feature',
-      message: 'Upgrade to Premium to see who liked you!',
-      icon: 'lock-closed-outline',
+      title: 'See Who Likes You',
+      message: 'Reveal this profile to see who liked you. Uses credits or your plan allowance.',
+      icon: 'eye-outline',
       iconColor: colors.primary,
       buttons: [
         {
-          text: 'Upgrade to Premium',
+          text: 'Go Premium',
           onPress: () => {
             router.push('/(app)/premium' as any);
           },
@@ -712,6 +816,7 @@ export default function LikesListScreen() {
                 await swipeAction({ type: 'PASS', targetUserId: item.user_id });
                 refetch();
               } catch (err: any) {
+                if (isInsufficientCreditsError(err)) return;
                 themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not unsend like.');
               } finally {
                 setUnsendingId(null);
@@ -726,30 +831,35 @@ export default function LikesListScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: LikeItemDto }) => {
-      if (activeTab === 'received' && !canSeeWhoLikedYou) {
+      // If this item has been revealed, use the revealed data
+      const effectiveItem = revealedItems[item.action_id] ?? item;
+
+      if (activeTab === 'received' && !canSeeWhoLikedYou && !revealedItems[item.action_id]) {
         return (
           <BlurredLikeCard
             item={item}
             onPress={handleBlurredCardPress}
+            onReveal={() => handleReveal(item)}
+            isRevealing={revealingId === item.action_id}
           />
         );
       }
       return (
         <LikeCard
-          key={item.action_id}
-          item={item}
+          key={effectiveItem.action_id}
+          item={effectiveItem}
           isReceived={activeTab === 'received'}
-          onPress={() => handleCardPress(item.user_id)}
-          onUnsend={() => handleUnsend(item)}
-          isUnsending={unsendingId === item.action_id}
-          onLikeBack={() => handleLikeBack(item)}
-          isLikingBack={likingBackId === item.action_id}
-          activityStatus={getStatus(item.user_id, item.activity_status)}
+          onPress={() => handleCardPress(effectiveItem.user_id)}
+          onUnsend={() => handleUnsend(effectiveItem)}
+          isUnsending={unsendingId === effectiveItem.action_id}
+          onLikeBack={() => handleLikeBack(effectiveItem)}
+          isLikingBack={likingBackId === effectiveItem.action_id}
+          activityStatus={getStatus(effectiveItem.user_id, effectiveItem.activity_status)}
           myCountry={myCountry}
         />
       );
     },
-    [activeTab, canSeeWhoLikedYou, handleCardPress, handleBlurredCardPress, handleUnsend, handleLikeBack, unsendingId, likingBackId, getStatus, myCountry],
+    [activeTab, canSeeWhoLikedYou, revealedItems, handleCardPress, handleBlurredCardPress, handleReveal, handleUnsend, handleLikeBack, revealingId, unsendingId, likingBackId, getStatus, myCountry],
   );
 
   const renderFooter = useCallback(() => {
@@ -805,7 +915,7 @@ export default function LikesListScreen() {
           },
         ]}
         ListHeaderComponent={listHeader}
-        ListEmptyComponent={<EmptyState tab={activeTab} onRefresh={refetch} />}
+        ListEmptyComponent={<EmptyState tab={activeTab} onRefresh={handleRefresh} />}
         ListFooterComponent={renderFooter}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
@@ -816,8 +926,16 @@ export default function LikesListScreen() {
         initialNumToRender={8}
         windowSize={7}
         removeClippedSubviews={Platform.OS === 'android'}
-        refreshing={isFetching && !isFetchingNextPage}
-        onRefresh={refetch}
+        refreshing={isUserRefreshing}
+        onRefresh={handleRefresh}
+      />
+
+      <InsufficientCreditModal
+        visible={showInsufficientCredit}
+        onClose={() => setShowInsufficientCredit(false)}
+        action={{ icon: 'eye', actionName: 'Reveal' }}
+        creditBalance={entitlements?.credits.credit_balance ?? 0}
+        creditsEnabled={entitlements?.country_settings?.credits_enabled ?? true}
       />
     </View>
   );

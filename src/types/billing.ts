@@ -1,5 +1,12 @@
 export type BillingPlan = 'FREE' | 'PREMIUM' | 'PREMIUM_MONTHLY' | 'PREMIUM_YEARLY' | 'FREE_PREMIUM' | (string & {});
 
+export type CountrySettings = {
+  country_code: string;
+  subscription_enabled: boolean;
+  credits_enabled: boolean;
+  identity_verification_required: boolean;
+};
+
 export function isPremiumPlan(plan: BillingPlan | null | undefined): boolean {
   return !!plan && plan !== 'FREE';
 }
@@ -47,6 +54,30 @@ export type OrderStatus =
   | 'EXPIRED'
   | 'CANCELLED';
 
+export type IdentityVerificationStatus =
+  | 'NOT_STARTED'
+  | 'PENDING'
+  | 'VERIFIED'
+  | 'FAILED'
+  | 'MANUAL_REVIEW';
+
+export type IdentityVerificationResponse = {
+  verification_status: IdentityVerificationStatus;
+  error_code?: string;
+  message: string;
+};
+
+export type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export type ManualReviewStatus = {
+  verification_status: IdentityVerificationStatus;
+  review_id?: string;
+  review_status?: ReviewStatus;
+  submitted_at?: string;
+  reviewed_at?: string | null;
+  reviewer_note?: string | null;
+};
+
 export const ORDER_TERMINAL_STATUSES: OrderStatus[] = [
   'VERIFIED',
   'FULFILLED',
@@ -65,7 +96,7 @@ export const POLLING_ORDER_STATUSES: OrderStatus[] = [
   'RECEIPT_SUBMITTED',
 ];
 
-export type BillingPlatform = 'IOS' | 'ANDROID' | 'WEB';
+export type BillingPlatform = 'IOS' | 'ANDROID' | 'WEB' | 'MOBILE';
 
 export type PaymentChannelOptionDto = {
   channel: PaymentChannel;
@@ -106,6 +137,7 @@ export type QuotaInfo = {
 export type EntitlementLimits = Record<string, QuotaInfo>;
 
 export type EntitlementCredits = {
+  credit_balance: number;
   boosts_available: number;
   super_likes_available: number;
   rewinds_available: number;
@@ -151,6 +183,7 @@ export type EntitlementResponse = {
   features: EntitlementFeatures;
   plan_limits: PlanLimits;
   boost_duration_minutes: number;
+  country_settings?: CountrySettings;
 };
 
 export type OfferDto = {
@@ -169,6 +202,7 @@ export type OfferDto = {
   external_product_id?: string;
   revenuecat_offering_id?: string;
   revenuecat_package_id?: string;
+  included_credits?: number;
   has_available_payment_methods: boolean;
   available_payment_method_count: number;
   promotion?: OfferPromotionDto | null;
@@ -251,6 +285,7 @@ export type OrderResponse = {
   order_reference: string;
   status: OrderStatus;
   status_reason?: string | null;
+  payment_offer_id?: string;
   expected_amount_minor_units: number;
   expected_currency: string;
   payment_method_id: string;
@@ -282,8 +317,6 @@ export type BoostActivationResponse = {
   expires_at: string;
   credits_remaining: number;
 };
-
-export type CreditsProductCategory = 'BOOST' | 'SUPERLIKE' | 'REWIND';
 
 export type OrderListItem = {
   id: string;

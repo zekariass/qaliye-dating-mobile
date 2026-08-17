@@ -14,7 +14,7 @@ const POLL_ATTEMPTS = 8;
 const POLL_DELAY_MS = 3000;
 
 function totalCredits(e: EntitlementResponse): number {
-  return e.credits.boosts_available + e.credits.super_likes_available + e.credits.rewinds_available;
+  return e.credits.credit_balance;
 }
 
 async function pollForEntitlementChange(
@@ -51,9 +51,7 @@ async function pollForEntitlementChange(
 }
 
 export type CreditsDelta = {
-  boosts: number;
-  superLikes: number;
-  rewinds: number;
+  credits: number;
 };
 
 export type RcPurchaseState =
@@ -102,9 +100,7 @@ export function useRevenueCatPurchase() {
         const afterEntitlements = qc.getQueryData<EntitlementResponse>(ENTITLEMENTS_KEY);
         if (afterEntitlements) {
           setCreditsDelta({
-            boosts: afterEntitlements.credits.boosts_available - before.boosts_available,
-            superLikes: afterEntitlements.credits.super_likes_available - before.super_likes_available,
-            rewinds: afterEntitlements.credits.rewinds_available - before.rewinds_available,
+            credits: afterEntitlements.credits.credit_balance - before.credit_balance,
           });
         }
       }

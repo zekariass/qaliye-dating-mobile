@@ -33,6 +33,7 @@ import {
 } from '@/screens/profile/mockEditProfile';
 import { useMeStore } from '@/stores/me-store';
 import type { EthnicityOption, LanguageOption } from '@/types/catalog';
+import { isInsufficientCreditsError } from '@/utils/entitlements';
 import {
     mapApiPrefsToDiscoveryPrefDraft,
     mapDiscoveryPrefDraftToUpdateRequest,
@@ -165,7 +166,8 @@ export default function DiscoveryPreferencesScreen() {
           themedAlert({ message: t('discovery.preferences.saved'), icon: 'checkmark-circle', iconColor: colors.success });
           router.back();
         },
-        onError: () => {
+        onError: (err) => {
+          if (isInsufficientCreditsError(err)) return;
           themedAlert({
             title: t('common.errorTitle', { defaultValue: 'Something went wrong' }),
             message: t('common.errorRetryHint', { defaultValue: 'Please try again.' }),

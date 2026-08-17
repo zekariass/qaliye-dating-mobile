@@ -23,12 +23,12 @@ export function getPlanLimitDisplays(entitlements: EntitlementResponse | null): 
   const voiceLimit = pl?.VOICE_CHAT_MSGS ?? limits?.[LIMIT_KEYS.VOICE_CHAT_MSGS]?.limit ?? null;
   const imageLimit = pl?.IMAGE_CHAT_MSGS ?? limits?.[LIMIT_KEYS.IMAGE_CHAT_MSGS]?.limit ?? null;
   return [
-    { label: 'Likes per day', icon: 'heart', value: pl?.LIKES ?? null, formatted: formatLimit(pl?.LIKES) },
-    { label: 'Super Likes per day', icon: 'star', value: pl?.SUPERLIKES ?? null, formatted: formatLimit(pl?.SUPERLIKES) },
-    { label: 'Rewinds per day', icon: 'arrow-undo', value: pl?.REWINDS ?? null, formatted: formatLimit(pl?.REWINDS) },
-    { label: 'Boosts per month', icon: 'rocket', value: pl?.BOOSTS ?? null, formatted: formatLimit(pl?.BOOSTS) },
-    { label: 'Voice messages per day', icon: 'mic', value: voiceLimit, formatted: formatLimit(voiceLimit) },
-    { label: 'Image messages per day', icon: 'image', value: imageLimit, formatted: formatLimit(imageLimit) },
+    { label: 'Likes', icon: 'heart', value: pl?.LIKES ?? null, formatted: formatLimit(pl?.LIKES) },
+    { label: 'Super Likes', icon: 'star', value: pl?.SUPERLIKES ?? null, formatted: formatLimit(pl?.SUPERLIKES) },
+    { label: 'Rewinds', icon: 'arrow-undo', value: pl?.REWINDS ?? null, formatted: formatLimit(pl?.REWINDS) },
+    { label: 'Boosts', icon: 'rocket', value: pl?.BOOSTS ?? null, formatted: formatLimit(pl?.BOOSTS) },
+    { label: 'Voice messages', icon: 'mic', value: voiceLimit, formatted: formatLimit(voiceLimit) },
+    { label: 'Image messages', icon: 'image', value: imageLimit, formatted: formatLimit(imageLimit) },
   ];
 }
 
@@ -77,7 +77,7 @@ export function getSuperLikesStatus(entitlements: EntitlementResponse | null): T
   const limit = getLimit(entitlements, LIMIT_KEYS.SUPER_LIKES);
   const dailyRemaining = limit?.remaining ?? null;
   const isUnlimited = dailyRemaining === null;
-  const credits = entitlements?.credits.super_likes_available ?? 0;
+  const credits = entitlements?.credits.credit_balance ?? 0;
   const dailyNum = isUnlimited ? Infinity : (dailyRemaining ?? 0);
   const totalAvailable = isUnlimited ? Infinity : dailyNum + credits;
   const usingCredits = !isUnlimited && dailyNum === 0 && credits > 0;
@@ -101,7 +101,7 @@ export function getRewindsStatus(entitlements: EntitlementResponse | null): TwoT
   const limit = getLimit(entitlements, LIMIT_KEYS.REWINDS);
   const dailyRemaining = limit?.remaining ?? null;
   const isUnlimited = dailyRemaining === null;
-  const credits = entitlements?.credits.rewinds_available ?? 0;
+  const credits = entitlements?.credits.credit_balance ?? 0;
   const dailyNum = isUnlimited ? Infinity : (dailyRemaining ?? 0);
   const totalAvailable = isUnlimited ? Infinity : dailyNum + credits;
   const usingCredits = !isUnlimited && dailyNum === 0 && credits > 0;
@@ -138,7 +138,7 @@ export function getBoostStatus(entitlements: EntitlementResponse | null): BoostS
   const limit = getLimit(entitlements, LIMIT_KEYS.BOOSTS);
   const dailyRemaining = limit?.remaining ?? null;
   const isUnlimited = dailyRemaining === null;
-  const credits = entitlements?.credits.boosts_available ?? 0;
+  const credits = entitlements?.credits.credit_balance ?? 0;
   const dailyNum = isUnlimited ? Infinity : (dailyRemaining ?? 0);
   const totalAvailable = isUnlimited ? Infinity : dailyNum + credits;
   const activeBoost = entitlements?.active_boost ?? null;
@@ -203,31 +203,84 @@ export function canSendImageChatMsg(entitlements: EntitlementResponse | null): b
   return status.isUnlimited || status.available > 0;
 }
 
-export const QUOTA_ERROR_CODES = {
-  LIKES: 'DAILY_LIKE_LIMIT_EXCEEDED',
-  SUPER_LIKES: 'DAILY_SUPERLIKE_LIMIT_EXCEEDED',
-  REWINDS: 'DAILY_REWIND_LIMIT_EXCEEDED',
-  VOICE_CHAT_MSGS: 'DAILY_VOICE_CHAT_MSG_LIMIT_EXCEEDED',
-  IMAGE_CHAT_MSGS: 'DAILY_IMAGE_CHAT_MSG_LIMIT_EXCEEDED',
-} as const;
+// ── Limit-exceeded error helpers ────────────────────────────────────────────
+// Backend now returns a single LIMIT_EXCEEDED code with HTTP 429 for all
+// plan-limit errors. HTTP 402 is exclusively for insufficient credits.
 
-export function isQuotaError(error: unknown): boolean {
-  const status = (error as any)?.response?.status;
-  const code: string = (error as any)?.response?.data?.error?.code ?? (error as any)?.response?.data?.error ?? (error as any)?.response?.data?.code ?? '';
-  if (status === 429 || status === 402) return true;
-  return code === QUOTA_ERROR_CODES.LIKES ||
-    code === QUOTA_ERROR_CODES.SUPER_LIKES ||
-    code === QUOTA_ERROR_CODES.REWINDS ||
-    code === QUOTA_ERROR_CODES.VOICE_CHAT_MSGS ||
-    code === QUOTA_ERROR_CODES.IMAGE_CHAT_MSGS;
+export type ActionType =
+  | 'LIKES'
+  | 'SUPER_LIKE'
+  | 'REWIND'
+  | 'BOOST'
+  | 'VOICE_MESSAGE'
+  | 'IMAGE_MESSAGE'
+  | 'RETURN_PASSED_PROFILE'
+  | 'SEE_WHO_LIKED_YOU'
+  | 'SUPER_MESSAGE';
+
+export type PeriodType = 'DAY' | 'MONTH' | 'BILLING_CYCLE';
+
+/** Maps a PeriodType to a human-readable adjective for use in messages. */
+export function periodTypeLabel(periodType: string | undefined | null): string {
+  switch (periodType) {
+    case 'MONTH':
+      return 'monthly';
+    case 'BILLING_CYCLE':
+      return 'billing cycle';
+    case 'DAY':
+    default:
+      return 'daily';
+  }
 }
 
-export function getQuotaErrorType(error: unknown): 'LIKES' | 'SUPER_LIKES' | 'REWINDS' | 'VOICE_CHAT_MSGS' | 'IMAGE_CHAT_MSGS' | null {
-  const code: string = (error as any)?.response?.data?.error?.code ?? (error as any)?.response?.data?.error ?? (error as any)?.response?.data?.code ?? '';
-  if (code === QUOTA_ERROR_CODES.LIKES) return 'LIKES';
-  if (code === QUOTA_ERROR_CODES.SUPER_LIKES) return 'SUPER_LIKES';
-  if (code === QUOTA_ERROR_CODES.REWINDS) return 'REWINDS';
-  if (code === QUOTA_ERROR_CODES.VOICE_CHAT_MSGS) return 'VOICE_CHAT_MSGS';
-  if (code === QUOTA_ERROR_CODES.IMAGE_CHAT_MSGS) return 'IMAGE_CHAT_MSGS';
+export type LimitExceededDetails = {
+  action_type: ActionType | string;
+  period_type: PeriodType | string;
+};
+
+export type LimitExceededError = {
+  code: 'LIMIT_EXCEEDED';
+  message: string;
+  details: LimitExceededDetails;
+};
+
+export function isLimitExceededError(error: unknown): boolean {
+  const status = (error as any)?.response?.status;
+  const code: string = (error as any)?.response?.data?.error?.code ?? '';
+  return status === 429 && code === 'LIMIT_EXCEEDED';
+}
+
+export function isInsufficientCreditsError(error: unknown): boolean {
+  if ((error as any)?.isInsufficientCredits === true) return true;
+  const status = (error as any)?.response?.status;
+  const code: string = (error as any)?.response?.data?.error?.code ?? '';
+  return status === 402 && code.toLowerCase() === 'insufficient_credits';
+}
+
+/** @deprecated Use isLimitExceededError or isInsufficientCreditsError instead */
+export function isQuotaError(error: unknown): boolean {
+  return isLimitExceededError(error) || isInsufficientCreditsError(error);
+}
+
+export function getLimitExceededDetails(error: unknown): LimitExceededError | null {
+  const err = (error as any)?.response?.data?.error;
+  if (!err || err.code !== 'LIMIT_EXCEEDED') return null;
+  return {
+    code: 'LIMIT_EXCEEDED',
+    message: err.message ?? '',
+    details: {
+      action_type: err.details?.action_type ?? '',
+      period_type: err.details?.period_type ?? '',
+    },
+  };
+}
+
+export function getQuotaErrorType(error: unknown): ActionType | string | null {
+  const details = getLimitExceededDetails(error);
+  if (details) return details.details.action_type;
+  // Fallback for 402 insufficient credits — treat as the action being attempted
+  if (isInsufficientCreditsError(error)) return 'INSUFFICIENT_CREDITS';
   return null;
 }
+
+

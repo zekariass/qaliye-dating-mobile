@@ -1,7 +1,10 @@
+import type { IdentityVerificationStatus } from './billing';
+
 export type OnboardingStep =
   | 'BASIC_PROFILE'
   | 'ADD_LOCATION'
   | 'ADD_PHOTO'
+  | 'IDENTITY_VERIFICATION'
   | 'SET_PREFERENCES'
   | 'COMPLETE'
   | 'DONE';
@@ -29,8 +32,11 @@ export type OnboardingStatus = {
     basic_profile: boolean;
     location: boolean;
     photo: boolean;
+    identity_verification?: boolean;
     preferences: boolean;
   };
+  identity_verification_required: boolean;
+  identity_verification_status?: IdentityVerificationStatus;
   can_complete_onboarding: boolean;
   can_enter_discovery: boolean;
   blocking_reasons: string[];

@@ -24,6 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { InsufficientCreditModal, type InsufficientCreditAction } from '@/components/billing/InsufficientCreditModal';
 import { PromotionAlert } from '@/components/billing/PromotionAlert';
 import { themedAlert } from '@/components/common/ThemedAlert';
 import BrowseModeGrid from '@/components/discovery/BrowseModeGrid';
@@ -34,6 +35,7 @@ import MorePhotosSection from '@/components/discovery/MorePhotosSection';
 import { CardDto } from '@/components/discovery/ProfileCard';
 import ProfileDetailsSection from '@/components/discovery/ProfileDetailsSection';
 import { BANNER_H, PromotionBanner } from '@/components/discovery/PromotionBanner';
+import SuperMessageModal, { type SuperMessageTarget } from '@/components/discovery/SuperMessageModal';
 import { SwipeIcon } from '@/components/layout/AppTabBar';
 import { NotificationPromptModal } from '@/components/notifications/NotificationPromptModal';
 import { colors, radius, spacing } from '@/constants/theme';
@@ -44,6 +46,7 @@ import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { usePromotionBanner } from '@/hooks/billing/usePromotionBanner';
 import { mapProfileToCard, useDiscoveryProfiles } from '@/hooks/discovery/useDiscoveryProfiles';
 import { useRewind } from '@/hooks/discovery/useRewind';
+import { useSendSuperMessage } from '@/hooks/discovery/useSendSuperMessage';
 import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
 import { useNotificationPrompt } from '@/hooks/notifications/useNotificationPrompt';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
@@ -60,8 +63,10 @@ import {
     canSuperLike as checkCanSuperLike,
     getBoostStatus,
     getQuotaErrorType,
-    isQuotaError
+    isInsufficientCreditsError,
+    isLimitExceededError,
 } from '@/utils/entitlements';
+import { showActionErrorAlert } from '@/utils/limitExceededAlert';
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -292,7 +297,7 @@ const BALANCE_CONTEXT_CONFIG: Record<InsufficientBalanceContext, {
 }> = {
   LIKES: {
     title: 'No More Likes',
-    message: "You've used all your daily likes.",
+    message: "You've used all your available likes.",
     icon: 'heart-outline',
     iconColor: colors.heartPink,
   },
@@ -316,29 +321,29 @@ function showInsufficientBalanceModal(
   context: InsufficientBalanceContext,
   hasPremium: boolean,
   router: ReturnType<typeof useRouter>,
+  creditsEnabled: boolean,
+  subscriptionEnabled: boolean,
 ) {
   const config = BALANCE_CONTEXT_CONFIG[context];
-  const creditsShopParams = config.creditsShopFocus
-    ? { pathname: '/(app)/credits-shop' as const, params: { focus: config.creditsShopFocus } }
-    : { pathname: '/(app)/credits-shop' as const };
+  const creditsShopParams = { pathname: '/(app)/credits-shop' as const };
 
-  // Likes don't have credits — only show Go Premium
+  // Likes don't have credits — only show Go Premium (if enabled) + reset hint
   if (context === 'LIKES') {
     themedAlert({
       title: config.title,
-      message: `${config.message} Upgrade to Premium for unlimited likes.`,
+      message: config.message,
       icon: config.icon,
       iconColor: config.iconColor,
       buttons: [
-        {
+        ...(subscriptionEnabled ? [{
           text: 'Go Premium',
-          style: 'default',
+          style: 'default' as const,
           icon: 'crown',
-          iconFamily: 'material',
+          iconFamily: 'material' as const,
           iconColor: '#FFD700',
           onPress: () => router.push('/(app)/premium' as any),
-        },
-        { text: 'Cancel', style: 'cancel' },
+        }] : []),
+        { text: 'Cancel', style: 'cancel' as const },
       ],
     });
     return;
@@ -347,19 +352,21 @@ function showInsufficientBalanceModal(
   if (hasPremium) {
     themedAlert({
       title: config.title,
-      message: `${config.message} Visit the Credits Shop to buy more.`,
+      message: creditsEnabled
+        ? `${config.message} Visit the Credits Shop to buy more.`
+        : `${config.message}`,
       icon: config.icon,
       iconColor: config.iconColor,
       buttons: [
-        {
+        ...(creditsEnabled ? [{
           text: 'Buy More Credits',
-          style: 'default',
+          style: 'default' as const,
           icon: 'hand-coin-outline',
-          iconFamily: 'material',
+          iconFamily: 'material' as const,
           iconColor: '#F59E0B',
           onPress: () => router.push(creditsShopParams as any),
-        },
-        { text: 'Cancel', style: 'cancel' },
+        }] : []),
+        { text: 'Cancel', style: 'cancel' as const },
       ],
     });
   } else {
@@ -369,23 +376,23 @@ function showInsufficientBalanceModal(
       icon: config.icon,
       iconColor: config.iconColor,
       buttons: [
-        {
+        ...(subscriptionEnabled ? [{
           text: 'Go Premium',
-          style: 'default',
+          style: 'default' as const,
           icon: 'crown',
-          iconFamily: 'material',
+          iconFamily: 'material' as const,
           iconColor: '#FFD700',
           onPress: () => router.push('/(app)/premium' as any),
-        },
-        {
+        }] : []),
+        ...(creditsEnabled ? [{
           text: 'Buy Credits',
-          style: 'default',
+          style: 'default' as const,
           icon: 'hand-coin-outline',
-          iconFamily: 'material',
+          iconFamily: 'material' as const,
           iconColor: '#F59E0B',
           onPress: () => router.push(creditsShopParams as any),
-        },
-        { text: 'Cancel', style: 'cancel' },
+        }] : []),
+        { text: 'Cancel', style: 'cancel' as const },
       ],
     });
   }
@@ -422,6 +429,8 @@ export default function DiscoverScreen() {
   const [isRewinding, setIsRewinding] = useState(false);
   const [activePromotion, setActivePromotion] = useState<EligiblePromotionDto | null>(null);
   const [modeSwitching, setModeSwitching] = useState(false);
+  const [insufficientCredit, setInsufficientCredit] = useState<InsufficientCreditAction | null>(null);
+  const [superMessageTarget, setSuperMessageTarget] = useState<SuperMessageTarget | null>(null);
   const viewMode = useDiscoveryStore((s) => s.viewMode);
   const setViewMode = useDiscoveryStore((s) => s.setViewMode);
   const router = useRouter();
@@ -441,6 +450,7 @@ export default function DiscoverScreen() {
   } = useDiscoveryProfiles();
 
   const { mutate: swipe } = useSwipeAction();
+  const sendSuperMessage = useSendSuperMessage();
   const { onMatch: onReviewMatch } = useReviewPrompt();
   const notifPrompt = useNotificationPrompt();
   const { mutate: rewind } = useRewind();
@@ -647,53 +657,8 @@ export default function DiscoverScreen() {
     }
 
     // No boost credits available
-    const hasPremium = isPremiumPlan(entitlements?.plan);
-    if (hasPremium) {
-      themedAlert({
-        title: 'No Boost Credits',
-        message: "You've used all your Boosts. Visit the Credits Shop to buy more.",
-        icon: 'rocket-outline',
-        iconColor: colors.primary,
-        buttons: [
-          {
-            text: 'Buy More Credits',
-            style: 'default',
-            icon: 'hand-coin-outline',
-            iconFamily: 'material',
-            iconColor: '#F59E0B',
-            onPress: () => router.push({ pathname: '/(app)/credits-shop', params: { focus: 'BOOST' } } as any),
-          },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      });
-    } else {
-      themedAlert({
-        title: 'No Boost Credits',
-        message: "You've used all your Boosts. Upgrade to Premium or buy credits separately.",
-        icon: 'rocket-outline',
-        iconColor: colors.primary,
-        buttons: [
-          {
-            text: 'Go Premium',
-            style: 'default',
-            icon: 'crown',
-            iconFamily: 'material',
-            iconColor: '#FFD700',
-            onPress: () => router.push('/(app)/premium' as any),
-          },
-          {
-            text: 'Buy Credits',
-            style: 'default',
-            icon: 'hand-coin-outline',
-            iconFamily: 'material',
-            iconColor: '#F59E0B',
-            onPress: () => router.push({ pathname: '/(app)/credits-shop', params: { focus: 'BOOST' } } as any),
-          },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      });
-    }
-  }, [activateBoost, boostStatus, entitlements, refreshEntitlements, router]);
+    setInsufficientCredit({ icon: 'rocket', actionName: 'Boost' });
+  }, [activateBoost, boostStatus, entitlements, refreshEntitlements]);
 
   // ── Queue management ───────────────────────────────────────────────────────
 
@@ -809,19 +774,31 @@ export default function DiscoverScreen() {
             }
           },
           onError: (e) => {
-            if (!isQuotaError(e)) return;
+            if (isInsufficientCreditsError(e)) {
+              if (isSuperLike) {
+                shownIdsRef.current.delete(card.user_id);
+                setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
+                setDisplayQueue((prev) => [card, ...prev]);
+              }
+              return;
+            }
+            if (!isLimitExceededError(e)) return;
             const errorType = getQuotaErrorType(e);
-            if (isSuperLike || errorType === 'SUPER_LIKES') {
+            if (isSuperLike || errorType === 'SUPER_LIKE') {
               shownIdsRef.current.delete(card.user_id);
               setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
               setDisplayQueue((prev) => [card, ...prev]);
-              showInsufficientBalanceModal('SUPER_LIKES', isPremiumPlan(entitlements?.plan), router);
             } else if (direction === 'LIKE' || errorType === 'LIKES') {
               shownIdsRef.current.delete(card.user_id);
               setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
               setDisplayQueue((prev) => [card, ...prev]);
-              showInsufficientBalanceModal('LIKES', isPremiumPlan(entitlements?.plan), router);
+            } else {
+              return;
             }
+            showActionErrorAlert(e, router, {
+              subscriptionEnabled: entitlements?.country_settings?.subscription_enabled ?? true,
+              creditsEnabled: entitlements?.country_settings?.credits_enabled ?? true,
+            });
           },
         },
       );
@@ -833,7 +810,7 @@ export default function DiscoverScreen() {
   const handleRewind = useCallback(async () => {
     if (isRewindingRef.current) return;
     if (!checkCanRewind(entitlements)) {
-      showInsufficientBalanceModal('REWINDS', isPremiumPlan(entitlements?.plan), router);
+      setInsufficientCredit({ icon: 'arrow-undo', actionName: 'Rewind' });
       return;
     }
     isRewindingRef.current = true;
@@ -871,12 +848,17 @@ export default function DiscoverScreen() {
       onError: (e) => {
         isRewindingRef.current = false;
         setIsRewinding(false);
-        if (isQuotaError(e)) {
-          showInsufficientBalanceModal('REWINDS', isPremiumPlan(entitlements?.plan), router);
+        if (isInsufficientCreditsError(e)) {
+          return;
+        } else if (isLimitExceededError(e)) {
+          showActionErrorAlert(e, router, {
+            subscriptionEnabled: entitlements?.country_settings?.subscription_enabled ?? true,
+            creditsEnabled: entitlements?.country_settings?.credits_enabled ?? true,
+          });
         }
       },
     });
-  }, [rewind, scrollToTop, entitlements, router]);
+  }, [rewind, scrollToTop, entitlements]);
 
   // ── Button handlers ─────────────────────────────────────────────────────────
   const handlePass = useCallback(async () => {
@@ -886,22 +868,51 @@ export default function DiscoverScreen() {
 
   const handleLike = useCallback(async () => {
     if (!checkCanLike(entitlements)) {
-      showInsufficientBalanceModal('LIKES', isPremiumPlan(entitlements?.plan), router);
+      showInsufficientBalanceModal('LIKES', isPremiumPlan(entitlements?.plan), router, entitlements?.country_settings?.credits_enabled ?? true, entitlements?.country_settings?.subscription_enabled ?? true);
       return;
     }
     await scrollToTop();
     cardStackRef.current?.triggerSwipe('LIKE');
   }, [scrollToTop, entitlements, router]);
 
+  const handleOpenSuperMessage = useCallback(
+    (userId: string, displayName: string, photoUrl: string | null) => {
+      setSuperMessageTarget({ userId, displayName, photoUrl });
+    },
+    [],
+  );
+
+  const handleSendSuperMessage = useCallback(
+    (targetUserId: string, message: string) => {
+      sendSuperMessage.mutate(
+        { targetUserId, message },
+        {
+          onSuccess: () => {
+            setSuperMessageTarget(null);
+            router.push('/(app)/messages' as any);
+          },
+          onError: (err: any) => {
+            setSuperMessageTarget(null);
+            showActionErrorAlert(err, router, {
+              subscriptionEnabled: entitlements?.country_settings?.subscription_enabled ?? true,
+              creditsEnabled: entitlements?.country_settings?.credits_enabled ?? true,
+            });
+          },
+        },
+      );
+    },
+    [sendSuperMessage, router, entitlements],
+  );
+
   const handleSuperLike = useCallback(async () => {
     if (!checkCanSuperLike(entitlements)) {
-      showInsufficientBalanceModal('SUPER_LIKES', isPremiumPlan(entitlements?.plan), router);
+      setInsufficientCredit({ icon: 'star', actionName: 'Super Like' });
       return;
     }
     pendingSuperLikeRef.current = true;
     await scrollToTop();
     cardStackRef.current?.triggerSwipe('LIKE');
-  }, [scrollToTop, entitlements, router]);
+  }, [scrollToTop, entitlements]);
 
   // Keep the suspense loader visible while we are fetching or while the API
   // has already returned cards but they have not yet been synced into the
@@ -1053,6 +1064,7 @@ export default function DiscoverScreen() {
             onRewind={() => {}}
             canRewind={checkCanRewind(entitlements)}
             canSuperLike={checkCanSuperLike(entitlements)}
+            onSuperMessage={handleOpenSuperMessage}
             rewindTrigger={browseRewindTrigger}
             swipedIds={swipedIds}
             onCardAction={(userId, swiped, card) => {
@@ -1176,6 +1188,10 @@ export default function DiscoverScreen() {
               onPass={handlePass}
               onLike={handleLike}
               onSuperLike={handleSuperLike}
+              onSuperMessage={() => {
+                const top = displayQueue[0];
+                if (top) handleOpenSuperMessage(top.user_id, top.display_name, top.photos?.[0]?.image_url ?? null);
+              }}
             />
           </View>
         )}
@@ -1215,6 +1231,15 @@ export default function DiscoverScreen() {
         }}
       />
 
+      {/* ── Super Message compose modal ── */}
+      <SuperMessageModal
+        visible={!!superMessageTarget}
+        target={superMessageTarget}
+        isSending={sendSuperMessage.isPending}
+        onSend={handleSendSuperMessage}
+        onClose={() => setSuperMessageTarget(null)}
+      />
+
       {/* ── Promotion alert — temporary, non-blocking ── */}
       <PromotionAlert
         promotion={activePromotion}
@@ -1228,6 +1253,15 @@ export default function DiscoverScreen() {
         visible={notifPrompt.visible}
         onEnable={notifPrompt.handleEnable}
         onDismiss={notifPrompt.handleDismiss}
+      />
+
+      {/* ── Insufficient credit modal — shared by rewind, super like, boost ── */}
+      <InsufficientCreditModal
+        visible={insufficientCredit !== null}
+        onClose={() => setInsufficientCredit(null)}
+        action={insufficientCredit ?? { icon: 'wallet-outline', actionName: '' }}
+        creditBalance={entitlements?.credits.credit_balance ?? 0}
+        creditsEnabled={entitlements?.country_settings?.credits_enabled ?? true}
       />
     </SafeAreaView>
   );

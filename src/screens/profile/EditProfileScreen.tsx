@@ -19,6 +19,7 @@ import { useUpdateProfileLocation } from '@/hooks/profile/useUpdateProfileLocati
 import { useSemanticTheme } from '@/hooks/use-semantic-theme';
 import { isPremiumPlan } from '@/types/billing';
 import type { EthnicityOption, LanguageOption } from '@/types/catalog';
+import { isInsufficientCreditsError } from '@/utils/entitlements';
 import {
     mapApiPrefsToDiscoveryPrefDraft,
     mapDiscoveryPrefDraftToUpdateRequest,
@@ -204,6 +205,7 @@ export default function EditProfileScreen() {
       setDraftVersion((v) => v + 1);
       themedSuccess('Saved', 'Your profile has been updated.');
     } catch (err: unknown) {
+      if (isInsufficientCreditsError(err)) return;
       themedError('Error', (err as Error)?.message ?? 'Failed to save profile.');
     }
   }, [draft, prefs, updateProfileMutation]);
@@ -223,6 +225,7 @@ export default function EditProfileScreen() {
       setDraftVersion((v) => v + 1);
       themedSuccess('Saved', 'Your preferences have been updated.');
     } catch (err: unknown) {
+      if (isInsufficientCreditsError(err)) return;
       themedError('Error', (err as Error)?.message ?? 'Failed to save preferences.');
     }
   }, [prefs, updatePrefsMutation, updateProfileMutation]);
@@ -267,6 +270,7 @@ export default function EditProfileScreen() {
         setDraftVersion((v) => v + 1);
         themedSuccess('Saved', 'Your location has been updated.');
       } catch (err: unknown) {
+        if (isInsufficientCreditsError(err)) return;
         themedError('Error', (err as Error)?.message ?? 'Failed to save location.');
       }
     },

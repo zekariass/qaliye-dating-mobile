@@ -7,61 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useTheme } from '@/hooks/use-theme';
-import type { EntitlementResponse, QuotaInfo } from '@/types/billing';
 import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
-
-type CreditItem = {
-  key: keyof EntitlementResponse['credits'];
-  label: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  accent: string;
-};
-
-const CREDIT_ITEMS: CreditItem[] = [
-  { key: 'super_likes_available', label: 'Super Likes', icon: 'star', accent: colors.heartPink },
-  { key: 'rewinds_available', label: 'Rewinds', icon: 'arrow-undo', accent: colors.verifiedBlue },
-  { key: 'boosts_available', label: 'Boosts', icon: 'rocket', accent: colors.primary },
-];
-
-const LIMIT_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-  likes: 'heart',
-  super_likes: 'star',
-  rewinds: 'arrow-undo',
-  boosts: 'rocket',
-  voice_chat_msgs: 'mic',
-  image_chat_msgs: 'image',
-  voiceChatMsgs: 'mic',
-  imageChatMsgs: 'image',
-};
-
-const LIMIT_LABEL: Record<string, string> = {
-  likes: 'Likes',
-  super_likes: 'Super Likes',
-  rewinds: 'Rewinds',
-  boosts: 'Boosts',
-  voice_chat_msgs: 'Voice Msgs',
-  image_chat_msgs: 'Image Msgs',
-  voiceChatMsgs: 'Voice Msgs',
-  imageChatMsgs: 'Image Msgs',
-};
-
-const LIMIT_ACCENT: Record<string, string> = {
-  likes: colors.heartPink,
-  super_likes: colors.heartPink,
-  rewinds: colors.verifiedBlue,
-  boosts: colors.primary,
-  voice_chat_msgs: colors.secondary,
-  image_chat_msgs: colors.primary,
-  voiceChatMsgs: colors.secondary,
-  imageChatMsgs: colors.primary,
-};
-
-function CustomIcon({ name, size, color }: { name: React.ComponentProps<typeof Ionicons>['name']; size: number; color: string }) {
-  if (name === 'arrow-undo') {
-    return <Text style={{ fontSize: size * 0.9, fontWeight: '700', color }}>↺</Text>;
-  }
-  return <Ionicons name={name} size={size} color={color} />;
-}
 
 function formatDate(iso?: string): string {
   if (!iso) return '';
@@ -70,20 +16,6 @@ function formatDate(iso?: string): string {
     month: 'short',
     day: 'numeric',
   });
-}
-
-function formatQuotaRemaining(quota: QuotaInfo): string {
-  const limit = quota.limit;
-  if (limit === null || limit === undefined) return 'Unlimited';
-  return `${quota.remaining ?? 0}`;
-}
-
-function chunk<T>(arr: T[], size: number): T[][] {
-  const rows: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    rows.push(arr.slice(i, i + size));
-  }
-  return rows;
 }
 
 export default function BalancesScreen() {
@@ -103,12 +35,10 @@ export default function BalancesScreen() {
   const { plan, subscription } = entitlements;
   const isPremium = isPremiumPlan(plan);
   const isFreePremium = isFreePremiumPlan(plan);
-  const planLabel = isPremium ? (isFreePremium ? 'Free Premium' : 'Premium') : 'Free';
-  const planIcon = isPremium ? (isFreePremium ? 'gift' : 'diamond') : 'person-outline';
-  const planColor = isPremium ? (isFreePremium ? colors.warning : colors.primary) : '#6B7280';
-
-  const limitEntries = Object.entries(entitlements.limits) as [string, QuotaInfo][];
-  const quotaRows = chunk(limitEntries, 2);
+  const planLabel = isFreePremium ? 'Free Premium' : 'Premium';
+  const planIcon = isFreePremium ? 'gift' : 'diamond';
+  const planColor = isFreePremium ? colors.warning : colors.primary;
+  const creditsEnabled = entitlements.country_settings?.credits_enabled ?? true;
 
   return (
     <View style={[styles.screen, { backgroundColor: th.background, paddingTop: safeTop }]}>
@@ -131,115 +61,67 @@ export default function BalancesScreen() {
         showsVerticalScrollIndicator={false}
         bounces
       >
-        <LinearGradient
-          colors={[`${colors.primary}18`, `${colors.primaryLight}10`, th.background]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.planCard, { borderColor: `${planColor}40` }]}
-        >
-          <View style={styles.planCardRow}>
-            <View style={[styles.planIconRing, { backgroundColor: `${planColor}20`, borderColor: `${planColor}35` }]}>
-              <Ionicons name={planIcon as any} size={28} color={planColor} />
-            </View>
-            <View style={styles.planInfo}>
-              <View style={[styles.planBadge, { backgroundColor: planColor }]}>
-                <Ionicons name={planIcon as any} size={14} color="#fff" />
-                <Text style={styles.planBadgeText}>{planLabel}</Text>
+        {isPremium && (
+          <LinearGradient
+            colors={[`${colors.primary}18`, `${colors.primaryLight}10`, th.background]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.planCard, { borderColor: `${planColor}40` }]}
+          >
+            <View style={styles.planCardRow}>
+              <View style={[styles.planIconRing, { backgroundColor: `${planColor}20`, borderColor: `${planColor}35` }]}>
+                <Ionicons name={planIcon as any} size={28} color={planColor} />
               </View>
-              {isPremium && subscription?.expires_at && (
-                <Text style={[styles.planExpiry, { color: th.textSecondary }]}>
-                  {subscription.auto_renew ? 'Renews' : 'Expires'} {formatDate(subscription.expires_at)}
-                </Text>
-              )}
+              <View style={styles.planInfo}>
+                <View style={[styles.planBadge, { backgroundColor: planColor }]}>
+                  <Ionicons name={planIcon as any} size={14} color="#fff" />
+                  <Text style={styles.planBadgeText}>{planLabel}</Text>
+                </View>
+                {subscription?.expires_at && (
+                  <Text style={[styles.planExpiry, { color: th.textSecondary }]}>
+                    {subscription.auto_renew ? 'Renews' : 'Expires'} {formatDate(subscription.expires_at)}
+                  </Text>
+                )}
+              </View>
             </View>
-          </View>
 
-          {!isPremium && (
-            <Pressable
-              style={[styles.upgradeBtn, { backgroundColor: colors.primary }]}
-              onPress={() => router.push('/(app)/premium' as any)}
-              accessibilityLabel="Upgrade to Premium"
-              accessibilityRole="button"
-            >
-              <Ionicons name="diamond" size={18} color="#fff" />
-              <Text style={styles.upgradeBtnText}>Upgrade to Premium</Text>
-            </Pressable>
-          )}
-
-          {isPremium && !isFreePremium && (
-            <View style={[styles.activeBadge, { borderColor: `${colors.success}35` }]}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-              <Text style={[styles.activeBadgeText, { color: th.text }]}>Active subscription</Text>
-            </View>
-          )}
-        </LinearGradient>
+            {!isFreePremium && (
+              <View style={[styles.activeBadge, { borderColor: `${colors.success}35` }]}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                <Text style={[styles.activeBadgeText, { color: th.text }]}>Active subscription</Text>
+              </View>
+            )}
+          </LinearGradient>
+        )}
 
         {/* Credits */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="wallet-outline" size={16} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: th.text }]}>Your Credits</Text>
-          </View>
-          <View style={styles.creditGrid}>
-            {CREDIT_ITEMS.map((item) => {
-              const value = `${entitlements.credits[item.key] ?? 0}`;
-              const unlimited = false;
-              return (
-                <View
-                  key={item.key}
-                  style={[
-                    styles.creditCard,
-                    { backgroundColor: th.surface, borderColor: th.border, shadowColor: item.accent },
-                  ]}
-                >
-                  <View style={[styles.creditIconRing, { backgroundColor: `${item.accent}15`, borderColor: `${item.accent}25` }]}>
-                    <CustomIcon name={item.icon} size={20} color={item.accent} />
-                  </View>
-                  <Text style={[styles.creditValue, { color: th.text }]}>{unlimited ? '∞' : value}</Text>
-                  <Text style={[styles.creditLabel, { color: th.textSecondary }]}>{item.label}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Daily limits */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: th.text }]}>Daily Balances</Text>
-          </View>
-          <View style={styles.limitsList}>
-            {quotaRows.map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.limitsRow}>
-                {row.map(([key, quota]) => {
-                  const value = formatQuotaRemaining(quota);
-                  const label = LIMIT_LABEL[key] ?? key;
-                  const icon = LIMIT_ICON[key] ?? 'help-circle-outline';
-                  const accent = LIMIT_ACCENT[key] ?? colors.primary;
-                  return (
-                    <View
-                      key={key}
-                      style={[
-                        styles.limitCard,
-                        { backgroundColor: th.surface, borderColor: th.border, shadowColor: accent },
-                      ]}
-                    >
-                      <View style={styles.limitTop}>
-                        <View style={[styles.limitIconRing, { backgroundColor: `${accent}15`, borderColor: `${accent}25` }]}>
-                          <CustomIcon name={icon} size={16} color={accent} />
-                        </View>
-                        <Text style={[styles.limitValue, { color: th.text }]}>{value}</Text>
-                      </View>
-                      <Text style={[styles.limitLabel, { color: th.textSecondary }]}>{label}</Text>
-                    </View>
-                  );
-                })}
-                {row.length === 1 && <View style={{ flex: 1 }} />}
+        {creditsEnabled && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="wallet-outline" size={16} color={colors.primary} />
+              <Text style={[styles.sectionTitle, { color: th.text }]}>Your Credits</Text>
+            </View>
+            <View style={[styles.creditHeroCard, { backgroundColor: th.surface, borderColor: th.border }]}>
+              <View style={[styles.creditHeroIconRing, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}25` }]}>
+                <Ionicons name="diamond" size={32} color={colors.primary} />
               </View>
-            ))}
+              <Text style={[styles.creditHeroValue, { color: colors.primary }]}>
+                {entitlements.credits.credit_balance.toLocaleString()}
+              </Text>
+              <Text style={[styles.creditHeroLabel, { color: th.textSecondary }]}>Credits</Text>
+              <Pressable
+                style={[styles.buyCreditsBtn, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/(app)/credits-shop' as any)}
+                accessibilityLabel="Buy credits"
+                accessibilityRole="button"
+              >
+                <Ionicons name="add-circle" size={18} color="#fff" />
+                <Text style={styles.buyCreditsBtnText}>Buy Credits</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        )}
+
       </ScrollView>
     </View>
   );
@@ -303,20 +185,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  upgradeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-  },
-  upgradeBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '800',
-  },
   activeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -339,72 +207,43 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sectionTitle: { fontSize: 15, fontWeight: '800' },
-  creditGrid: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  creditCard: {
-    flex: 1,
+  creditHeroCard: {
     alignItems: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    padding: 12,
-    gap: 6,
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    padding: 24,
+    gap: 10,
   },
-  creditIconRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  creditHeroIconRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    marginBottom: 4,
   },
-  creditValue: {
-    fontSize: 20,
+  creditHeroValue: {
+    fontSize: 36,
     fontWeight: '900',
   },
-  creditLabel: {
-    fontSize: 12,
+  creditHeroLabel: {
+    fontSize: 14,
     fontWeight: '600',
   },
-  limitsList: { gap: 8 },
-  limitsRow: { flexDirection: 'row', gap: 8 },
-  limitCard: {
-    flex: 1,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    padding: 12,
-    gap: 6,
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  limitTop: {
+  buyCreditsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  limitIconRing: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 999,
+    marginTop: 8,
   },
-  limitValue: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '900',
-    textAlign: 'right',
-  },
-  limitLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+  buyCreditsBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

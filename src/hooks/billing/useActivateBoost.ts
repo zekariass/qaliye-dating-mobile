@@ -37,12 +37,12 @@ export function useActivateBoost() {
       try {
         return await activateBoost({ idempotency_key: key });
       } catch (e: unknown) {
+        if ((e as any)?.isInsufficientCredits === true) {
+          throw e;
+        }
         const err = e as { response?: { status: number; data?: { code?: string } } };
         if (err.response?.status === 409) {
           throw { code: 'BOOST_ALREADY_ACTIVE', message: 'A boost is already active' } as BoostActivationError;
-        }
-        if (err.response?.status === 402) {
-          throw { code: 'INSUFFICIENT_BOOST_CREDITS', message: 'No boost credits available' } as BoostActivationError;
         }
         throw { code: 'UNKNOWN', message: 'Could not activate boost' } as BoostActivationError;
       }

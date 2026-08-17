@@ -54,6 +54,7 @@ export default function CurrentUserProfileScreen() {
         isVerified={profile.isVerified}
         isIncognito={dto.discovery_mode === 'INCOGNITO'}
         plan={entitlements?.plan ?? null}
+        countrySettings={entitlements?.country_settings ?? null}
       />
 
       <ProfileTabBar activeTab={activeTab} onTabChange={setActiveTab} />

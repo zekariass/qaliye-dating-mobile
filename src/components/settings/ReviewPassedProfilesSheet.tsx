@@ -19,6 +19,7 @@ import { colors, fontSize, radius, shadows, spacing } from '@/constants/theme';
 import { useRevisitPassedProfiles } from '@/hooks/discovery/useRevisitPassedProfiles';
 import { useTheme } from '@/hooks/use-theme';
 import type { RevisitCount } from '@/types/discovery';
+import { isInsufficientCreditsError } from '@/utils/entitlements';
 
 const COUNT_OPTIONS: RevisitCount[] = [10, 20, 30];
 
@@ -91,6 +92,7 @@ export function ReviewPassedProfilesSheet({ visible, onClose }: Props) {
 
   const handleError = useCallback(
     (error: Error) => {
+      if (isInsufficientCreditsError(error)) return;
       let message = t(
         'settings.revisitErrorGeneric',
         'Something went wrong. Please try again.',

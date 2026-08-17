@@ -244,6 +244,36 @@
       "saveAndContinue": "አስቀምጥና ቀጥል",
       "continue": "ቀጥል"
     },
+    "identity": {
+      "reviewWaitTitle": "መለያ በግምገማ ላይ",
+      "reviewWaitBody": "መለያዎ በቡድናችን እጅ ግምገማ ላይ ነው። ይህ ሂደት ብዙውን ጊዜ 24-48 ሰዓታት ይወስዳል። ግምገማው ሲጠናቀቅ እናሳውቅዎታለን።",
+      "retryVerification": "ራስ-ሰር ማረጋገጥን እንደገና ይሞክሩ",
+      "turnOnNotifications": "ማሳወቂያዎችን ያብሩ",
+      "notificationsOn": "ማሳወቂያዎች በርተዋል። ግምገማው ሲጠናቀቅ እናሳውቅዎታለን።",
+      "checkStatus": "ሁኔታውን ያረጋግጡ",
+      "submittedOn": "በ{{date}} ገብቷል",
+      "reviewApproved": "መለያዎ በእጅ ግምገማ ተረጋግጧል።",
+      "reviewRejected": "የእጅ ግምገማዎ ተቋርጧል። እባክዎ እንደገና ይሞክሩ።",
+      "stillUnderReview": "ግምገማው አሁንም በመጠባበቅ ላይ ነው። እባክዎ በኋላ እንደገና ያረጋግጡ።",
+      "statusCheckError": "ሁኔታውን ማረጋገጥ አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "alreadyVerified": "ተረጋግጠዋል",
+      "errors": {
+        "selfie_required": "የሰልፊ ምስል ያስፈልጋል።",
+        "unsupported_image_format": "ሰልፊ ምስል JPEG ወይም PNG መሆን አለበት።",
+        "selfie_too_large": "የሰልፊ ምስል ከ5 ሜጋባይት መብለጥ የለበትም።",
+        "selfie_empty": "የሰልፊ ምስል ባዶ ነው።",
+        "no_approved_photo": "ጸድቋል የመገለጫ ፎቶ አልተገኘም። እባክዎ መጀመሪያ የመገለጫ ፎቶ ይስቀሉ።",
+        "face_not_matched": "የፊት ንፅፅር የሚገባውን ደረጃ አላሟለም። እባክዎ ግልጽ የሆነ ሰልፊ ያስገቡ።",
+        "profile_photo_unavailable": "ለንፅፅር የመገለጫ ፎቶን ማግኘት አልተቻለም።",
+        "profile_photo_unsupported_format": "የመገለጫ ፎቶ ቅርጸት ለማረጋገጥ አይደገፍም።",
+        "verification_service_unavailable": "የማረጋገጥ አገልግሎት ጊዜያዊ አይገኝም። እባክዎ እንደገና ይሞክሩ።",
+        "face_comparison_failed": "የፊት ንፅፅር ሊጠናቀቅ አልቻለም። እባክዎ ግልጽ የሆነ ሰልፂ በመጠቀም እንደገና ይሞክሩ።",
+        "verification_in_progress": "ማረጋገጥ በድግግሞሽ በመከናወን ላይ ነው።",
+        "manual_review_in_progress": "መለያዎ በእጅ ግምገማ ላይ ነው። እባክዎ ውጤቱን ይጠብቁ።",
+        "manual_review_already_requested": "እጅ ግምገማ ቀደም ሲባል ተጠይቋል።",
+        "user_not_found": "ተጠቃሚ አልተገኘም።"
+      }
+    },
     "completion": {
       "verifying": "መገለጫዎን በማረጋገጥ ላይ…",
       "almostThere": "በጣም ቅርብ!",
@@ -258,7 +288,11 @@
       "highlightNearby": "በአቅራቢያ ወይም በዲያስፖራ ያሉ ሰዎች",
       "highlightVerified": "ለበለጠ ደህንነት የተረጋገጡ መገለጫዎች",
       "enableNotifications": "ማሳወቂያዎችን ያንቁ",
-      "notificationsHint": "ስለ ግጥሚያዎች፣ መልዕክቶች እና ደግፎች ይሳወቁ"
+      "notificationsHint": "ስለ ግጥሚያዎች፣ መልዕክቶች እና ደግፎች ይሳወቁ",
+      "notifPopupTitle": "ማሳወቂያዎችን ያንቁ",
+      "notifPopupBody": "በዚህ መልዕክት ሲልክልዎት፣ መገለጫዎን ሲወዱ፣ ወይም የመለያ ማረጋገጥዎ ሲጠናቀቅ ይሳወቃሉ።",
+      "notifPopupEnable": "ማሳወቂያዎችን ያንቁ",
+      "notifPopupSkip": "ዘግይቶ ይሆናል"
     }
   },
   "notifications": {

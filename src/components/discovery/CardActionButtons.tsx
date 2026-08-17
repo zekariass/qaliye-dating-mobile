@@ -12,12 +12,13 @@ interface Props {
   onPass: () => void;
   onLike: () => void;
   onSuperLike: () => void;
+  onSuperMessage: () => void;
   disabled?: boolean;
 }
 
 const BTN = 48;
 
-export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLike, disabled }: Props) {
+export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLike, onSuperMessage, disabled }: Props) {
   const { colors: th } = useTheme();
   return (
     <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
@@ -72,6 +73,17 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
               />
             );
           })}
+        </TouchableOpacity>
+
+        {/* Super Message */}
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: th.surface }]}
+          onPress={onSuperMessage}
+          disabled={disabled}
+          activeOpacity={0.75}
+          accessibilityLabel="Send super message"
+        >
+          <Ionicons name="chatbubble-ellipses" size={24} color="#F59E0B" />
         </TouchableOpacity>
 
         {/* Pass */}

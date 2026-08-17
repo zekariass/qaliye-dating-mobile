@@ -5,13 +5,12 @@ import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Linking,
-    Modal,
     Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,13 +34,6 @@ import type { PurchasesPackage } from '@/services/billing/revenueCatService';
 import type { ClaimablePromotionDto, PaymentMethodDto } from '@/types/billing';
 import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan, type SubscriptionProvider } from '@/types/billing';
 import { extractApiError } from '@/utils/apiError';
-import { getPlanLimitDisplays } from '@/utils/entitlements';
-
-const FEATURE_ICONS = {
-  see_who_liked_you: 'eye' as const,
-  advanced_filters: 'options-outline' as const,
-  incognito_mode: 'eye-off' as const,
-};
 
 export default function PremiumPaywallScreen() {
   const { t } = useTranslation();
@@ -115,7 +107,6 @@ export default function PremiumPaywallScreen() {
 
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [showMethodSheet, setShowMethodSheet] = useState(false);
-  const [showFeaturesModal, setShowFeaturesModal] = useState(false);
 
   const isGlobalMarket = subscriptionOffers.some((o) => o.country_code === 'GLOBAL');
   const isPremium = isPremiumPlan(entitlements?.plan) && isActiveSubscription(entitlements?.subscription);
@@ -527,21 +518,6 @@ export default function PremiumPaywallScreen() {
                 {t('billing.restoreDone', 'Restore complete. Check your plan status above.')}
               </Text>
             )}
-
-            {!isPremium && (
-              <Pressable
-                style={[styles.featuresLink, { borderColor: colors.primary + '40' }]}
-                onPress={() => setShowFeaturesModal(true)}
-                accessibilityRole="button"
-                accessibilityLabel="View premium features"
-              >
-                <Ionicons name="diamond" size={18} color={colors.primary} />
-                <Text style={[styles.featuresLinkText, { color: th.text }]}>
-                  {t('billing.premiumFeatures', 'Premium features')}
-                </Text>
-                <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
-              </Pressable>
-            )}
           </>
         )}
       </ScrollView>
@@ -568,62 +544,6 @@ export default function PremiumPaywallScreen() {
         icon="checkmark-circle"
         featureName={confirmedFeatureName}
       />
-
-      {/* Premium Features Modal */}
-      <Modal
-        visible={showFeaturesModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowFeaturesModal(false)}
-      >
-        <Pressable style={featModalStyles.backdrop} onPress={() => setShowFeaturesModal(false)}>
-          <Pressable
-            style={[featModalStyles.card, { backgroundColor: th.surface }]}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={[styles.sectionTitle, { color: th.text, fontSize: 18 }]}>
-                {t('billing.premiumFeatures', 'Premium features')}
-              </Text>
-              <Pressable
-                style={[styles.closeBtn, { backgroundColor: th.backgroundElement }]}
-                onPress={() => setShowFeaturesModal(false)}
-                hitSlop={12}
-              >
-                <Ionicons name="close" size={18} color={th.text} />
-              </Pressable>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {getPlanLimitDisplays(entitlements).map((item) => (
-                <View key={item.label} style={styles.featureRow}>
-                  <Ionicons name={item.icon} size={18} color={colors.primary} />
-                  <Text style={[styles.featureLabel, { color: th.text }]}>{item.label}</Text>
-                  <Text style={[styles.featureValue, { color: colors.primary }]}>{item.formatted}</Text>
-                </View>
-              ))}
-              {entitlements?.features && (
-                <>
-                  <View style={styles.featureRow}>
-                    <Ionicons name={FEATURE_ICONS.see_who_liked_you} size={18} color={colors.primary} />
-                    <Text style={[styles.featureLabel, { color: th.text }]}>See who liked you</Text>
-                  </View>
-                  {entitlements.features.advanced_filters && (
-                    <View style={styles.featureRow}>
-                      <Ionicons name={FEATURE_ICONS.advanced_filters} size={18} color={colors.primary} />
-                      <Text style={[styles.featureLabel, { color: th.text }]}>Advanced filters</Text>
-                    </View>
-                  )}
-                </>
-              )}
-              <View style={styles.featureRow}>
-                <Ionicons name={FEATURE_ICONS.incognito_mode} size={18} color={colors.primary} />
-                <Text style={[styles.featureLabel, { color: th.text }]}>Private mode (Incognito)</Text>
-              </View>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -707,37 +627,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 10,
   },
-  featuresLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginTop: 4,
-  },
-  featuresLinkText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  featuresCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
-    gap: 10,
-  },
   sectionTitle: { fontSize: 15, fontWeight: '700' },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
-  featureLabel: { flex: 1, fontSize: 14 },
-  featureValue: { fontSize: 14, fontWeight: '700' },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
   claimableBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -811,22 +701,5 @@ const styles = StyleSheet.create({
   },
   legalDot: {
     fontSize: 13,
-  },
-});
-
-const featModalStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 380,
-    borderRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
   },
 });

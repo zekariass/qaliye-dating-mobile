@@ -17,7 +17,7 @@ import { colors } from '@/constants/theme';
 import { useActivateBoost } from '@/hooks/billing/useActivateBoost';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useTheme } from '@/hooks/use-theme';
-import { getBoostStatus } from '@/utils/entitlements';
+import { getBoostStatus, isInsufficientCreditsError } from '@/utils/entitlements';
 
 export default function BoostScreen() {
   const { t } = useTranslation();
@@ -35,16 +35,13 @@ export default function BoostScreen() {
 
   const handleActivate = useCallback(() => {
     activate(undefined, {
-      onError: (err) => {
-        if (err.code === 'INSUFFICIENT_BOOST_CREDITS') {
-          router.push({
-            pathname: '/(app)/credits-shop',
-            params: { focus: 'BOOST' },
-          } as any);
+      onError: (err: any) => {
+        if (isInsufficientCreditsError(err)) {
+          return;
         }
       },
     });
-  }, [activate, router]);
+  }, [activate]);
 
   const handleExpire = useCallback(() => {
     refreshEntitlements();
@@ -145,9 +142,10 @@ export default function BoostScreen() {
                         {t('billing.noBoostCredits', 'You have no boost credits. Purchase a boost pack to continue.')}
                       </Text>
                     </View>
+                    {(entitlements?.country_settings?.credits_enabled ?? true) && (
                     <Pressable
                       style={styles.buyBtn}
-                      onPress={() => router.push({ pathname: '/(app)/credits-shop', params: { focus: 'BOOST' } } as any)}
+                      onPress={() => router.push({ pathname: '/(app)/credits-shop' } as any)}
                       accessibilityRole="button"
                     >
                       <Ionicons name="cart-outline" size={18} color="#fff" />
@@ -155,6 +153,7 @@ export default function BoostScreen() {
                         {t('billing.buyBoosts', 'Buy Boost Credits')}
                       </Text>
                     </Pressable>
+                    )}
                   </>
                 )}
               </>

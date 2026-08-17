@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,101 +24,18 @@ import { useRevenueCatPurchase } from '@/hooks/billing/useRevenueCatPurchase';
 import { useRevenueCatReconcile } from '@/hooks/billing/useRevenueCatReconcile';
 import { useTheme } from '@/hooks/use-theme';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
-import type { CreditsProductCategory, OfferDto, PaymentMethodDto } from '@/types/billing';
+import type { OfferDto, PaymentMethodDto } from '@/types/billing';
 import { isActiveSubscription, isPremiumPlan } from '@/types/billing';
-
-type Tab = CreditsProductCategory;
-
-type CategoryMeta = {
-  key: Tab;
-  label: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  customIcon?: string;
-  accent: string;
-  light: string;
-  description: string;
-};
-
-const CATEGORIES: CategoryMeta[] = [
-  {
-    key: 'BOOST',
-    label: 'Boosts',
-    icon: 'rocket',
-    accent: colors.primary,
-    light: colors.primaryLight,
-    description: 'Get more eyes on your profile with boost credits.',
-  },
-  {
-    key: 'SUPERLIKE',
-    label: 'Super Likes',
-    icon: 'star',
-    accent: colors.heartPink,
-    light: colors.heartRose,
-    description: 'Stand out by sending Super Likes.',
-  },
-  {
-    key: 'REWIND',
-    label: 'Rewinds',
-    icon: 'arrow-undo',
-    customIcon: '↺',
-    accent: colors.verifiedBlue,
-    light: '#93C5FD',
-    description: 'Go back and reconsider your last action.',
-  },
-];
-
-function CategoryIcon({ cat, size, color }: { cat: CategoryMeta; size: number; color: string }) {
-  if (cat.customIcon) {
-    return (
-      <Text
-        style={{
-          fontSize: size * 1.3,
-          fontWeight: '700',
-          color,
-          lineHeight: size * 1.3,
-          textAlign: 'center',
-          includeFontPadding: false,
-        }}
-      >
-        {cat.customIcon}
-      </Text>
-    );
-  }
-  return <Ionicons name={cat.icon} size={size} color={color} />;
-}
-
-const TAB_TO_PLAN_LIMIT_KEY: Record<Tab, keyof import('@/types/billing').PlanLimits> = {
-  BOOST: 'BOOSTS',
-  SUPERLIKE: 'SUPERLIKES',
-  REWIND: 'REWINDS',
-};
-
-function categoryMatchesOffer(offer: import('@/types/billing').OfferDto, category: Tab): boolean {
-  const code = offer.product_code.toUpperCase();
-  if (category === 'BOOST') return code.includes('BOOST');
-  if (category === 'SUPERLIKE') return code.includes('SUPER') || code.includes('SUPERLIKE');
-  if (category === 'REWIND') return code.includes('REWIND');
-  return false;
-}
 
 function packQuantity(productCode: string): number | null {
   const match = productCode.match(/(\d+)(?=\D*$)/);
   return match ? parseInt(match[1], 10) : null;
 }
 
-function packDisplayName(productCode: string, category: Tab): string {
+function packDisplayName(productCode: string): string {
   const qty = packQuantity(productCode);
   if (qty === null) return productCode.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-  const base =
-    category === 'BOOST' ? 'Boost'
-      : category === 'SUPERLIKE' ? 'Super Like'
-        : 'Rewind';
-  return `${qty} ${base}${qty > 1 ? 's' : ''}`;
-}
-
-function packSubtitle(productCode: string): string {
-  const qty = packQuantity(productCode);
-  return qty === null ? 'Credit pack' : `${qty} credits`;
+  return `${qty.toLocaleString()} Credits`;
 }
 
 type PackViewModel = {
@@ -127,6 +44,7 @@ type PackViewModel = {
   price: string;
   originalPrice?: string | null;
   hasDiscount: boolean;
+  quantity: number;
 };
 
 function buildPackViewModel(
@@ -134,15 +52,16 @@ function buildPackViewModel(
   rcPackage: PurchasesPackage | undefined,
   hasActivePremium: boolean,
 ): PackViewModel {
+  const quantity = packQuantity(offer.product_code) ?? 0;
   if (rcPackage) {
-    return { offer, rcPackage, price: rcPackage.product.priceString, originalPrice: null, hasDiscount: false };
+    return { offer, rcPackage, price: rcPackage.product.priceString, originalPrice: null, hasDiscount: false, quantity };
   }
   const promotion = hasActivePremium ? null : (offer.promotion ?? null);
   const effective = hasActivePremium ? null : (offer.effective_display_price ?? null);
   const discounted = promotion?.effective_display_price ?? effective ?? null;
   const base = offer.display_price;
   const hasDiscount = !!discounted && discounted !== base;
-  return { offer, price: hasDiscount ? discounted : base, originalPrice: hasDiscount ? base : null, hasDiscount };
+  return { offer, price: hasDiscount ? discounted : base, originalPrice: hasDiscount ? base : null, hasDiscount, quantity };
 }
 
 export default function CreditsShopScreen() {
@@ -150,10 +69,7 @@ export default function CreditsShopScreen() {
   const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
   const { colors: th } = useTheme();
-  const params = useLocalSearchParams<{ focus?: string }>();
-  const initialTab = (params.focus as Tab | undefined) ?? 'BOOST';
 
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [showMethodSheet, setShowMethodSheet] = useState(false);
 
@@ -166,41 +82,29 @@ export default function CreditsShopScreen() {
 
   const isBusy = isPurchasing || isCreatingOrder || purchaseState === 'purchasing' || purchaseState === 'processing';
   const isGlobalMarket = consumableOffers.some((o) => o.country_code === 'GLOBAL');
-  const activeMeta = CATEGORIES.find((c) => c.key === activeTab) ?? CATEGORIES[0];
-
-  const categoryOffers = useMemo(() => {
-    if (isGlobalMarket) {
-      const rc = reconciledOffers.filter((r) => categoryMatchesOffer(r.backendOffer, activeTab));
-      const fallback = localOffers.filter((o) => o.country_code === 'GLOBAL' && categoryMatchesOffer(o, activeTab));
-      return { rc, local: [], fallback };
-    }
-    const local = localOffers.filter((o) => categoryMatchesOffer(o, activeTab));
-    return { rc: [], local, fallback: [] };
-  }, [isGlobalMarket, reconciledOffers, localOffers, activeTab]);
 
   const hasActivePremium = isPremiumPlan(entitlements?.plan) && isActiveSubscription(entitlements?.subscription);
-  const isUnlimitedForTab = !loadingEntitlements && !loadingOffers && hasActivePremium && entitlements?.plan_limits?.[TAB_TO_PLAN_LIMIT_KEY[activeTab]] === null;
 
   const packs = useMemo<PackViewModel[]>(() => {
     if (isGlobalMarket) {
-      if (categoryOffers.rc.length > 0) {
-        return categoryOffers.rc.map(({ backendOffer, rcPackage }) =>
+      if (reconciledOffers.length > 0) {
+        return reconciledOffers.map(({ backendOffer, rcPackage }) =>
           buildPackViewModel(backendOffer, rcPackage, hasActivePremium),
         );
       }
-      return categoryOffers.fallback.map((offer) => buildPackViewModel(offer, undefined, hasActivePremium));
+      return localOffers
+        .filter((o) => o.country_code === 'GLOBAL')
+        .map((offer) => buildPackViewModel(offer, undefined, hasActivePremium));
     }
-    return categoryOffers.local.map((offer) => buildPackViewModel(offer, undefined, hasActivePremium));
-  }, [categoryOffers, isGlobalMarket, hasActivePremium]);
+    return localOffers.map((offer) => buildPackViewModel(offer, undefined, hasActivePremium));
+  }, [isGlobalMarket, reconciledOffers, localOffers, hasActivePremium]);
 
   const bestValueId = useMemo(() => {
     if (packs.length < 2) return null;
-    const byQty = packs
-      .map((p) => ({ id: p.offer.id, qty: packQuantity(p.offer.product_code) ?? 0 }))
-      .filter((p) => p.qty > 0);
+    const byQty = packs.filter((p) => p.quantity > 0);
     if (byQty.length === 0) return null;
-    const maxQty = Math.max(...byQty.map((p) => p.qty));
-    return byQty.find((p) => p.qty === maxQty)?.id ?? null;
+    const maxQty = Math.max(...byQty.map((p) => p.quantity));
+    return byQty.find((p) => p.quantity === maxQty)?.offer.id ?? null;
   }, [packs]);
 
   const selectedPack = useMemo(() => packs.find((p) => p.offer.id === selectedOfferId) ?? null, [packs, selectedOfferId]);
@@ -276,24 +180,12 @@ export default function CreditsShopScreen() {
     proceedWithMethod(selectedOfferId, method);
   }, [selectedOfferId, proceedWithMethod]);
 
-  const switchTab = useCallback((tab: Tab) => {
-    setActiveTab(tab);
-    setSelectedOfferId(null);
-  }, []);
-
   const isLoading = loadingEntitlements || loadingOffers || (isGlobalMarket && isLoadingRc);
   const noOffers = !isLoading && packs.length === 0;
 
-  const confirmedFeatureName = activeMeta.label;
-  const confirmedQuantity = creditsDelta
-    ? activeTab === 'BOOST'
-      ? `+${creditsDelta.boosts}`
-      : activeTab === 'SUPERLIKE'
-        ? `+${creditsDelta.superLikes}`
-        : `+${creditsDelta.rewinds}`
-    : undefined;
+  const confirmedQuantity = creditsDelta ? `+${creditsDelta.credits.toLocaleString()}` : undefined;
 
-  const ctaDisabled = isBusy || !selectedPack || isUnlimitedForTab;
+  const ctaDisabled = isBusy || !selectedPack;
 
   return (
     <View style={[styles.screen, { backgroundColor: th.background, paddingTop: top }]}>
@@ -312,41 +204,23 @@ export default function CreditsShopScreen() {
         <View style={{ width: 44 }} />
       </View>
 
-      <View style={styles.tabPillBar}>
-        {CATEGORIES.map((cat) => {
-          const active = activeTab === cat.key;
-          return (
-            <Pressable
-              key={cat.key}
-              style={[
-                styles.tabPill,
-                active && { backgroundColor: cat.accent },
-                !active && { backgroundColor: th.surface, borderColor: th.border },
-              ]}
-              onPress={() => switchTab(cat.key)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-            >
-              <CategoryIcon
-                cat={cat}
-                size={16}
-                color={active ? '#fff' : cat.accent}
-              />
-              <Text
-                style={[
-                  styles.tabPillLabel,
-                  { color: active ? '#fff' : th.text },
-                ]}
-              >
-                {cat.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {/* Current balance */}
+      {!loadingEntitlements && entitlements && (
+        <View style={[styles.balanceBar, { backgroundColor: th.surface }]}>
+          <View style={[styles.balanceIconRing, { backgroundColor: `${colors.primary}15` }]}>
+            <Ionicons name="wallet-outline" size={20} color={colors.primary} />
+          </View>
+          <Text style={[styles.balanceLabel, { color: th.textSecondary }]}>
+            {t('billing.yourCredits', 'Your Credits')}
+          </Text>
+          <Text style={[styles.balanceValue, { color: colors.primary }]}>
+            {entitlements.credits.credit_balance.toLocaleString()}
+          </Text>
+        </View>
+      )}
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: bottom + 116 }]} // leave room for bottom CTA
+        contentContainerStyle={[styles.content, { paddingBottom: bottom + 116 }]}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
@@ -356,133 +230,116 @@ export default function CreditsShopScreen() {
               {t('billing.loadingOffers', 'Loading offers…')}
             </Text>
           </View>
+        ) : noOffers ? (
+          <View style={[styles.stateCard, { backgroundColor: th.surface, borderColor: th.border }]}>
+            <Ionicons name="storefront-outline" size={40} color={th.textSecondary} />
+            <Text style={[styles.stateTitle, { color: th.text }]}>
+              {t('billing.noCreditsOffers', 'No offers available')}
+            </Text>
+            <Text style={[styles.stateBody, { color: th.textSecondary }]}>
+              {t('billing.noCreditsOffersBody', 'No credit packs are available right now.')}
+            </Text>
+          </View>
         ) : (
           <>
-            {isUnlimitedForTab ? (
-              <View style={[styles.stateCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-                <Ionicons name="infinite" size={40} color={colors.success} />
-                <Text style={[styles.stateTitle, { color: th.text }]}>
-                  {t('billing.unlimitedCategory', 'You have unlimited {{category}}', { category: activeMeta.label })}
-                </Text>
-                <Text style={[styles.stateBody, { color: th.textSecondary }]}>
-                  {t('billing.unlimitedCategoryBody', 'Your current plan includes unlimited {{category}}. No need to buy more.', { category: activeMeta.label })}
+            <Text style={[styles.sectionTitle, { color: th.text }]}>
+              {t('billing.choosePack', 'Choose a pack')}
+            </Text>
+
+            <View style={styles.packsList}>
+              {packs.map((pack) => {
+                const isSelected = selectedOfferId === pack.offer.id;
+                const isBestValue = bestValueId === pack.offer.id;
+                return (
+                  <Pressable
+                    key={pack.offer.id}
+                    onPress={() => setSelectedOfferId(pack.offer.id)}
+                    style={[
+                      styles.packCard,
+                      {
+                        backgroundColor: th.surface,
+                        borderColor: isSelected ? colors.primary : th.border,
+                        shadowColor: colors.primary,
+                      },
+                      isSelected && styles.packCardSelected,
+                    ]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isSelected }}
+                  >
+                    {isSelected && (
+                      <View style={[styles.checkBadge, { backgroundColor: colors.primary }]}>
+                        <Ionicons name="checkmark" size={12} color="#fff" />
+                      </View>
+                    )}
+
+                    <View style={[styles.packIconRing, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}25` }]}>
+                      <Ionicons name="diamond" size={22} color={colors.primary} />
+                    </View>
+
+                    <View style={styles.packBody}>
+                      <Text style={[styles.packName, { color: th.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                        {packDisplayName(pack.offer.product_code)}
+                      </Text>
+                      {isBestValue && (
+                        <View style={[styles.bestValueBadge, { backgroundColor: colors.primary }]}>
+                          <Text style={styles.bestValueText}>{t('billing.bestValue', 'Best value')}</Text>
+                        </View>
+                      )}
+                      {pack.hasDiscount && !isBestValue && (
+                        <View style={[styles.promoBadge, { backgroundColor: colors.warning + '22' }]}>
+                          <Text style={[styles.promoBadgeText, { color: colors.warning }]}>{t('promotion.offer.discount', 'Promo')}</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.packPriceCol}>
+                      {pack.originalPrice && (
+                        <Text style={[styles.originalPrice, { color: th.textSecondary }]}>{pack.originalPrice}</Text>
+                      )}
+                      <Text style={[styles.price, { color: isSelected ? colors.primary : th.text }]}>
+                        {pack.price}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {purchaseState === 'processing' && (
+              <View style={[styles.processingBanner, { backgroundColor: `${colors.primary}15` }]}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.processingText, { color: th.text }]}>
+                  {t('billing.purchaseActivating', 'Activating your purchase…')}
                 </Text>
               </View>
-            ) : noOffers ? (
-              <View style={[styles.stateCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-                <Ionicons name="storefront-outline" size={40} color={th.textSecondary} />
-                <Text style={[styles.stateTitle, { color: th.text }]}>
-                  {t('billing.noCreditsOffers', 'No offers available')}
-                </Text>
-                <Text style={[styles.stateBody, { color: th.textSecondary }]}>
-                  {t('billing.noCreditsOffersBody', 'No credit packs are available for this category right now.')}
+            )}
+
+            {purchaseState === 'pending' && (
+              <View style={[styles.processingBanner, { backgroundColor: `${colors.warning}15` }]}>
+                <ActivityIndicator size="small" color={colors.warning} />
+                <Text style={[styles.processingText, { color: th.text }]}>
+                  {t('billing.purchasePending', 'Activating… this may take a moment.')}
                 </Text>
               </View>
-            ) : (
-              <>
-                <Text style={[styles.sectionTitle, { color: th.text }]}>
-                  {t('billing.choosePack', 'Choose a pack')}
-                </Text>
-
-                <View style={styles.packsList}>
-                  {packs.map((pack) => {
-                    const isSelected = selectedOfferId === pack.offer.id;
-                    const isBestValue = bestValueId === pack.offer.id;
-                    return (
-                      <Pressable
-                        key={pack.offer.id}
-                        onPress={() => setSelectedOfferId(pack.offer.id)}
-                        style={[
-                          styles.packCard,
-                          {
-                            backgroundColor: th.surface,
-                            borderColor: isSelected ? activeMeta.accent : th.border,
-                            shadowColor: activeMeta.accent,
-                          },
-                          isSelected && styles.packCardSelected,
-                        ]}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: isSelected }}
-                      >
-                        {isSelected && (
-                          <View style={[styles.checkBadge, { backgroundColor: activeMeta.accent }]}>
-                            <Ionicons name="checkmark" size={12} color="#fff" />
-                          </View>
-                        )}
-
-                        <View style={[styles.packIconRing, { backgroundColor: `${activeMeta.accent}15`, borderColor: `${activeMeta.accent}25` }]}>
-                          <CategoryIcon cat={activeMeta} size={22} color={activeMeta.accent} />
-                        </View>
-
-                        <View style={styles.packBody}>
-                          <Text style={[styles.packName, { color: th.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
-                            {packDisplayName(pack.offer.product_code, activeTab)}
-                          </Text>
-                          <Text style={[styles.packSubtitle, { color: th.textSecondary }]}>
-                            {packSubtitle(pack.offer.product_code)}
-                          </Text>
-                          {isBestValue && (
-                            <View style={[styles.bestValueBadge, { backgroundColor: activeMeta.accent }]}>
-                              <Text style={styles.bestValueText}>{t('billing.bestValue', 'Best value')}</Text>
-                            </View>
-                          )}
-                          {pack.hasDiscount && !isBestValue && (
-                            <View style={[styles.promoBadge, { backgroundColor: colors.warning + '22' }]}>
-                              <Text style={[styles.promoBadgeText, { color: colors.warning }]}>{t('promotion.offer.discount', 'Promo')}</Text>
-                            </View>
-                          )}
-                        </View>
-
-                        <View style={styles.packPriceCol}>
-                          {pack.originalPrice && (
-                            <Text style={[styles.originalPrice, { color: th.textSecondary }]}>{pack.originalPrice}</Text>
-                          )}
-                          <Text style={[styles.price, { color: isSelected ? activeMeta.accent : th.text }]}>
-                            {pack.price}
-                          </Text>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                {purchaseState === 'processing' && (
-                  <View style={[styles.processingBanner, { backgroundColor: `${colors.primary}15` }]}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                    <Text style={[styles.processingText, { color: th.text }]}>
-                      {t('billing.purchaseActivating', 'Activating your purchase…')}
-                    </Text>
-                  </View>
-                )}
-
-                {purchaseState === 'pending' && (
-                  <View style={[styles.processingBanner, { backgroundColor: `${colors.warning}15` }]}>
-                    <ActivityIndicator size="small" color={colors.warning} />
-                    <Text style={[styles.processingText, { color: th.text }]}>
-                      {t('billing.purchasePending', 'Activating… this may take a moment.')}
-                    </Text>
-                  </View>
-                )}
-              </>
             )}
           </>
         )}
       </ScrollView>
 
-      {!isLoading && !isUnlimitedForTab && !noOffers && (
+      {!isLoading && !noOffers && (
         <View style={[styles.bottomBar, { backgroundColor: th.surface, borderColor: th.border, paddingBottom: bottom + 16 }]}>
           <View style={styles.bottomBarInner}>
             <View style={styles.bottomSummary}>
               {selectedPack ? (
                 <>
-                  <View style={[styles.smallIconRing, { backgroundColor: `${activeMeta.accent}18` }]}>
-                    <CategoryIcon cat={activeMeta} size={18} color={activeMeta.accent} />
+                  <View style={[styles.smallIconRing, { backgroundColor: `${colors.primary}18` }]}>
+                    <Ionicons name="diamond" size={18} color={colors.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.bottomPackName, { color: th.text }]} numberOfLines={1}>
-                      {packDisplayName(selectedPack.offer.product_code, activeTab)}
+                      {packDisplayName(selectedPack.offer.product_code)}
                     </Text>
-                    <Text style={[styles.bottomPackPrice, { color: activeMeta.accent }]}>
+                    <Text style={[styles.bottomPackPrice, { color: colors.primary }]}>
                       {selectedPack.price}
                     </Text>
                   </View>
@@ -497,7 +354,7 @@ export default function CreditsShopScreen() {
             <Pressable
               style={[
                 styles.ctaBtn,
-                { backgroundColor: ctaDisabled ? th.textMuted : activeMeta.accent },
+                { backgroundColor: ctaDisabled ? th.textMuted : colors.primary },
                 ctaDisabled && styles.ctaBtnDisabled,
               ]}
               onPress={handlePurchase}
@@ -538,7 +395,6 @@ export default function CreditsShopScreen() {
         title={t('billing.creditsPurchaseConfirmedTitle', 'Credits Added!')}
         message={t('billing.creditsPurchaseConfirmedMsg', 'Your credits have been added to your account. Enjoy!')}
         icon="add-circle"
-        featureName={confirmedFeatureName}
         amount={confirmedQuantity}
       />
     </View>
@@ -562,44 +418,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { fontSize: 20, fontWeight: '800' },
-  tabPillBar: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  tabPill: {
-    flex: 1,
+  balanceBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    borderWidth: 1,
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  tabPillLabel: { fontSize: 13, fontWeight: '700' },
-  content: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
+  balanceIconRing: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  balanceLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
+  balanceValue: { fontSize: 20, fontWeight: '900' },
+  content: { paddingHorizontal: 16, paddingTop: 4, gap: 12 },
   centered: { paddingVertical: 80, alignItems: 'center', gap: 12 },
   loaderText: { fontSize: 14, fontWeight: '600' },
-  heroCard: {
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    padding: 24,
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 4,
-  },
-  heroIconRing: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  heroTitle: { fontSize: 22, fontWeight: '800' },
-  heroBody: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
   sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 2 },
   packsList: { gap: 12 },
   packCard: {
@@ -638,7 +478,6 @@ const styles = StyleSheet.create({
   },
   packBody: { flex: 1, gap: 4 },
   packName: { fontSize: 15, fontWeight: '800' },
-  packSubtitle: { fontSize: 13 },
   bestValueBadge: {
     alignSelf: 'flex-start',
     borderRadius: 999,

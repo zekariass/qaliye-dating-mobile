@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
+import { InsufficientCreditsModal } from '@/components/billing/InsufficientCreditsModal';
 import { ThemedAlert } from '@/components/common/ThemedAlert';
 import { NotificationBanner } from '@/components/notifications/NotificationBanner';
 import { colors, spacing } from '@/constants/theme';
@@ -173,6 +174,7 @@ export default function AppLayout() {
       </Stack>
       <NotificationBanner />
       <ThemedAlert />
+      <InsufficientCreditsModal />
     </View>
   );
 }

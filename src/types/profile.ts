@@ -1,6 +1,7 @@
 // ─── Profile API DTOs ──────────────────────────────────────────────────────────
 // All keys are snake_case to match the backend JSON.
 
+import type { IdentityVerificationStatus } from './billing';
 import type { EthnicityOption, LanguageOption } from './catalog';
 
 export type ProfileAddressDto = {
@@ -72,6 +73,7 @@ export type ProfileMeDto = {
   discovery_mode: 'PUBLIC' | 'INCOGNITO';
   is_onboarded: boolean;
   is_verified: boolean;
+  verification_status: IdentityVerificationStatus;
   profile_completion_score: number;
   discovery_preferences: ProfileDiscoveryPreferencesDto;
   role: string;

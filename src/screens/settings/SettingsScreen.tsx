@@ -33,7 +33,6 @@ import { LANGUAGE_LABELS, LANGUAGE_LIST, useLanguageStore } from '@/stores/langu
 import { ThemeMode, useThemeStore } from '@/stores/theme-store';
 import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 import { extractApiError, getApiErrorTitle } from '@/utils/apiError';
-import { getBoostStatus, getRewindsStatus, getSuperLikesStatus } from '@/utils/entitlements';
 
 const THEME_OPTIONS: { key: ThemeMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { key: 'light', label: 'Light', icon: 'sunny-outline' },
@@ -191,29 +190,20 @@ export default function SettingsScreen() {
         {/* ── Subscription & Credits ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
           <Text style={[styles.sectionTitle, { color: th.text }]}>
-            {t('billing.settingsSection', 'Subscription & Credits')}
+            {isPremiumPlan(entitlements?.plan)
+              ? t('billing.settingsSection', 'Subscription & Credits')
+              : t('billing.creditsSection', 'Credits')}
           </Text>
-          {entitlements && (
-            <View style={[styles.planRow, { backgroundColor: isPremiumPlan(entitlements.plan) ? (isFreePremiumPlan(entitlements.plan) ? colors.warning + '12' : colors.primary + '12') : th.backgroundElement }]}>
+          {entitlements && isPremiumPlan(entitlements.plan) && (
+            <View style={[styles.planRow, { backgroundColor: isFreePremiumPlan(entitlements.plan) ? colors.warning + '12' : colors.primary + '12' }]}>
               <Ionicons
-                name={isPremiumPlan(entitlements.plan) ? (isFreePremiumPlan(entitlements.plan) ? 'gift' : 'diamond') : 'person-outline'}
+                name={isFreePremiumPlan(entitlements.plan) ? 'gift' : 'diamond'}
                 size={16}
-                color={isPremiumPlan(entitlements.plan) ? (isFreePremiumPlan(entitlements.plan) ? colors.warning : colors.primary) : th.textSecondary}
+                color={isFreePremiumPlan(entitlements.plan) ? colors.warning : colors.primary}
               />
-              <Text style={[styles.planLabel, { color: isPremiumPlan(entitlements.plan) ? (isFreePremiumPlan(entitlements.plan) ? colors.warning : colors.primary) : th.text }]}>
-                {isPremiumPlan(entitlements.plan)
-                  ? (isFreePremiumPlan(entitlements.plan) ? t('billing.freePremiumActive', 'Free Premium') : t('billing.premiumActive', 'Premium'))
-                  : t('billing.freePlan', 'Free Plan')}
+              <Text style={[styles.planLabel, { color: isFreePremiumPlan(entitlements.plan) ? colors.warning : colors.primary }]}>
+                {isFreePremiumPlan(entitlements.plan) ? t('billing.freePremiumActive', 'Free Premium') : t('billing.premiumActive', 'Premium')}
               </Text>
-              {entitlements.plan === 'FREE' && (
-                <Pressable
-                  style={styles.upgradePill}
-                  onPress={() => router.push('/(app)/premium' as any)}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.upgradePillText}>{t('billing.upgrade', 'Upgrade')}</Text>
-                </Pressable>
-              )}
             </View>
           )}
           {isPremiumPlan(entitlements?.plan) && isActiveSubscription(entitlements?.subscription) && (
@@ -236,26 +226,28 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
             </Pressable>
           )}
-          <Pressable
-            style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
-            onPress={() => router.push('/(app)/credits-shop' as any)}
-            accessibilityRole="button"
-          >
-            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="cart-outline" size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.optionLabel, { color: th.text }]}>
-                {t('billing.creditsShop', 'Credits Shop')}
-              </Text>
-              {entitlements && (
-                <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                  {`${getBoostStatus(entitlements).isUnlimited ? '∞' : getBoostStatus(entitlements).totalAvailable} boosts · ${getSuperLikesStatus(entitlements).isUnlimited ? '∞' : getSuperLikesStatus(entitlements).totalAvailable} super likes · ${getRewindsStatus(entitlements).isUnlimited ? '∞' : getRewindsStatus(entitlements).totalAvailable} rewinds`}
+          {(entitlements?.country_settings?.credits_enabled ?? true) && (
+            <Pressable
+              style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
+              onPress={() => router.push('/(app)/credits-shop' as any)}
+              accessibilityRole="button"
+            >
+              <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="cart-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.optionLabel, { color: th.text }]}>
+                  {t('billing.creditsShop', 'Credits Shop')}
                 </Text>
-              )}
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
-          </Pressable>
+                {entitlements && (
+                  <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                    {`${entitlements.credits.credit_balance.toLocaleString()} credits`}
+                  </Text>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+            </Pressable>
+          )}
           <Pressable
             style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
             onPress={() => router.push('/(app)/promotions' as any)}

@@ -6,6 +6,7 @@ import type {
     BoostActivationRequest,
     BoostActivationResponse,
     ClaimablePromotionDto,
+    CountrySettings,
     CreateOrderRequest,
     EligiblePromotionDto,
     EntitlementResponse,
@@ -46,6 +47,15 @@ function normalizeQuota(raw: Record<string, unknown>): QuotaInfo {
   };
 }
 
+function normalizeCountrySettings(raw: Record<string, unknown>): CountrySettings {
+  return {
+    country_code: (raw.country_code ?? raw.countryCode ?? '') as string,
+    subscription_enabled: (raw.subscription_enabled ?? raw.subscriptionEnabled ?? true) as boolean,
+    credits_enabled: (raw.credits_enabled ?? raw.creditsEnabled ?? true) as boolean,
+    identity_verification_required: (raw.identity_verification_required ?? raw.identityVerificationRequired ?? false) as boolean,
+  };
+}
+
 function normalizeEntitlements(raw: Record<string, unknown>): EntitlementResponse {
   const subRaw = (raw.subscription ?? null) as Record<string, unknown> | null;
   const limitsRaw = (raw.limits ?? {}) as Record<string, Record<string, unknown>>;
@@ -53,6 +63,7 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
   const featuresRaw = (raw.features ?? {}) as Record<string, unknown>;
   const boostRaw = (raw.activeBoost ?? raw.active_boost ?? null) as Record<string, unknown> | null;
   const planLimitsRaw = (raw.planLimits ?? raw.plan_limits ?? {}) as Record<string, unknown>;
+  const countrySettingsRaw = (raw.countrySettings ?? raw.country_settings ?? null) as Record<string, unknown> | null;
 
   const limits: Record<string, QuotaInfo> = {};
   for (const [key, val] of Object.entries(limitsRaw)) {
@@ -74,6 +85,7 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
       : null,
     limits,
     credits: {
+      credit_balance: (creditsRaw.credit_balance ?? creditsRaw.creditBalance ?? 0) as number,
       boosts_available: (creditsRaw.boosts_available ?? creditsRaw.boostsAvailable ?? 0) as number,
       super_likes_available: (creditsRaw.super_likes_available ?? creditsRaw.superLikesAvailable ?? 0) as number,
       rewinds_available: (creditsRaw.rewinds_available ?? creditsRaw.rewindsAvailable ?? 0) as number,
@@ -100,12 +112,18 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
       IMAGE_CHAT_MSGS: (planLimitsRaw.IMAGE_CHAT_MSGS ?? planLimitsRaw.imageChatMsgs ?? null) as number | null,
     },
     boost_duration_minutes: (raw.boost_duration_minutes ?? raw.boostDurationMinutes ?? 30) as number,
+    country_settings: countrySettingsRaw ? normalizeCountrySettings(countrySettingsRaw) : undefined,
   };
 }
 
 export async function fetchEntitlements(): Promise<EntitlementResponse> {
   const res = await apiClient.get<unknown>(`${BASE}/entitlements`);
   return normalizeEntitlements(res.data as Record<string, unknown>);
+}
+
+export async function fetchCountrySettings(): Promise<CountrySettings> {
+  const res = await apiClient.get<unknown>(`${BASE}/country-settings`);
+  return normalizeCountrySettings(res.data as Record<string, unknown>);
 }
 
 function normalizeOfferPromotion(raw: Record<string, unknown>): OfferPromotionDto {
@@ -156,6 +174,7 @@ function normalizeOffer(raw: Record<string, unknown>): OfferDto {
     external_product_id: (raw.external_product_id ?? raw['externalProductId']) as string | undefined,
     revenuecat_offering_id: (raw.revenuecat_offering_id ?? raw['revenuecatOfferingId']) as string | undefined,
     revenuecat_package_id: (raw.revenuecat_package_id ?? raw['revenuecatPackageId']) as string | undefined,
+    included_credits: (raw.included_credits ?? raw['includedCredits'] ?? 0) as number,
     has_available_payment_methods: (raw.has_available_payment_methods ?? raw['hasAvailablePaymentMethods'] ?? false) as boolean,
     available_payment_method_count: (raw.available_payment_method_count ?? raw['availablePaymentMethodCount'] ?? 0) as number,
     promotion: rawPromotion ? normalizeOfferPromotion(rawPromotion) : null,
@@ -275,6 +294,7 @@ function normalizeOrderResponse(raw: Record<string, unknown>): OrderResponse {
     order_reference: (raw.order_reference ?? raw['orderReference'] ?? '') as string,
     status: (raw.status ?? '') as OrderResponse['status'],
     status_reason: (raw.status_reason ?? raw['statusReason'] ?? null) as string | null,
+    payment_offer_id: (raw.payment_offer_id ?? raw['paymentOfferId']) as string | undefined,
     expected_amount_minor_units: (raw.expected_amount_minor_units ?? raw['expectedAmountMinorUnits'] ?? 0) as number,
     expected_currency: (raw.expected_currency ?? raw['expectedCurrency'] ?? '') as string,
     payment_method_id: (raw.payment_method_id ?? raw['paymentMethodId'] ?? '') as string,

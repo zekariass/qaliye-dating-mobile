@@ -44,6 +44,7 @@ import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useBlockUser } from '@/hooks/safety/useBlockUser';
 import { useReportUser } from '@/hooks/safety/useReportUser';
 import { useTheme } from '@/hooks/use-theme';
+import { isInsufficientCreditsError } from '@/utils/entitlements';
 import {
     mapOtherUserProfileDtoToView,
     OtherUserRelationStatus,
@@ -146,6 +147,7 @@ export default function OtherUserProfileScreen() {
               invalidateLikesAndDiscovery();
               router.back();
             } catch (err: any) {
+              if (isInsufficientCreditsError(err)) return;
               themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
             }
           },
@@ -177,6 +179,7 @@ export default function OtherUserProfileScreen() {
         });
       }
     } catch (err: any) {
+      if (isInsufficientCreditsError(err)) return;
       themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
     }
   };

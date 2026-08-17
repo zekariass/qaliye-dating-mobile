@@ -119,6 +119,14 @@ export function OfferCard({
         {autoRenewLabel && (
           <Text style={[styles.renew, { color: secondaryColor }]}>{autoRenewLabel}</Text>
         )}
+        {offer.product_type === 'SUBSCRIPTION' && (offer.included_credits ?? 0) > 0 && (
+          <View style={[styles.creditsBadge, { backgroundColor: `${colors.primary}18` }]}>
+            <Ionicons name="star" size={11} color={colors.primary} />
+            <Text style={[styles.creditsBadgeText, { color: colors.primary }]}>
+              {t('billing.includedCredits', 'Includes {{count}} credits', { count: offer.included_credits })}
+            </Text>
+          </View>
+        )}
         {isBestValue && !isActive && (
           <View style={[styles.badge, { backgroundColor: colors.primary }]}>
             <Text style={styles.badgeText}>{t('billing.bestValue', 'Best value')}</Text>
@@ -229,6 +237,20 @@ const styles = StyleSheet.create({
   renew: {
     fontSize: 12,
     opacity: 0.7,
+  },
+  creditsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 2,
+  },
+  creditsBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   badge: {
     alignSelf: 'flex-start',

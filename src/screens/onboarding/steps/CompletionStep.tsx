@@ -3,15 +3,16 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Animated,
-  Linking,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Animated,
+    Linking,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { completeOnboarding, fetchOnboardingStatus } from '@/api/onboardingApi';
@@ -34,9 +35,19 @@ export default function CompletionStep() {
   const [error, setError] = useState<string | null>(null);
   const [notifRequested, setNotifRequested] = useState(false);
   const [notifLoading, setNotifLoading] = useState(false);
+  const [showNotifModal, setShowNotifModal] = useState(false);
 
   const { status: notifStatus, requestPermission } = useNotificationPermission();
   const notifVisible = Platform.OS !== 'web' && !notifRequested && notifStatus !== 'granted';
+
+  // Auto-show notification popup when the "all set" screen loads and notifications aren't enabled.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (notifStatus === 'granted' || notifRequested) return;
+    // Delay slightly so the entrance animation finishes first
+    const timer = setTimeout(() => setShowNotifModal(true), 800);
+    return () => clearTimeout(timer);
+  }, [notifStatus, notifRequested]);
 
   const handleEnableNotifications = useCallback(async () => {
     if (notifLoading) return;
@@ -52,6 +63,7 @@ export default function CompletionStep() {
     } finally {
       setNotifRequested(true);
       setNotifLoading(false);
+      setShowNotifModal(false);
     }
   }, [requestPermission, notifLoading]);
 
@@ -240,6 +252,54 @@ export default function CompletionStep() {
           )}
         </TouchableOpacity>
       </Animated.View>
+
+      {/* ── Notification permission popup ── */}
+      <Modal
+        visible={showNotifModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNotifModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: th.surface }]}>
+            <View style={[styles.modalIconWrap, { backgroundColor: `${colors.primary}15` }]}>
+              <Ionicons name="notifications" size={40} color={colors.primary} />
+            </View>
+            <Text style={[styles.modalTitle, { color: th.text }]}>
+              {t('onboarding.completion.notifPopupTitle', 'Enable Notifications')}
+            </Text>
+            <Text style={[styles.modalBody, { color: th.textSecondary }]}>
+              {t('onboarding.completion.notifPopupBody', 'Get notified when someone sends you a message, likes your profile, or when your identity verification is complete.')}
+            </Text>
+            <TouchableOpacity
+              style={[styles.btn, { width: '100%', marginTop: spacing.md }]}
+              onPress={handleEnableNotifications}
+              disabled={notifLoading}
+              activeOpacity={0.85}
+            >
+              {notifLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.btnText}>
+                    {t('onboarding.completion.notifPopupEnable', 'Enable Notifications')}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalSkipBtn}
+              onPress={() => setShowNotifModal(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.modalSkipText, { color: th.textSecondary }]}>
+                {t('onboarding.completion.notifPopupSkip', 'Maybe Later')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -424,5 +484,50 @@ const styles = StyleSheet.create({
   notifSubtitle: {
     fontSize: 12,
     lineHeight: 16,
+  },
+
+  /* ── Notification modal ── */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  modalIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  modalBody: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalSkipBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
+  },
+  modalSkipText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

@@ -7,6 +7,12 @@ export type ProcessedImage = {
   mimeType: 'image/webp';
 };
 
+export type ProcessedSelfie = {
+  uri: string;
+  fileName: string;
+  mimeType: 'image/jpeg';
+};
+
 const QUALITY = 0.85;
 
 const MIN_PRIMARY_W = 720;
@@ -161,6 +167,29 @@ const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image
 export function isImageMimeType(mimeType: string | undefined | null): boolean {
   if (!mimeType) return false;
   return IMAGE_MIME_TYPES.has(mimeType.toLowerCase());
+}
+
+const SELFIE_MAX_DIMENSION = 1280;
+const SELFIE_QUALITY = 0.85;
+
+/**
+ * Convert a selfie (e.g. HEIC on iOS, PNG, or oversized JPEG) to a standard
+ * JPEG for identity-verification upload. The API expects image/jpeg or
+ * image/png; native camera formats like HEIC are rejected.
+ *
+ * Accepts a raw file URI (e.g. from expo-camera `takePictureAsync`).
+ */
+export async function processSelfieForVerification(uri: string): Promise<ProcessedSelfie> {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: SELFIE_MAX_DIMENSION } }],
+    { compress: SELFIE_QUALITY, format: ImageManipulator.SaveFormat.JPEG },
+  );
+  return {
+    uri: result.uri,
+    fileName: `selfie_${Date.now()}.jpg`,
+    mimeType: 'image/jpeg',
+  };
 }
 
 const CHAT_MAX_DIMENSION = 1280;

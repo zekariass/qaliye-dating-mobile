@@ -1,4 +1,5 @@
 import type { GpsLocationPayload, ManualLocationPayload } from '@/types/api';
+import type { IdentityVerificationResponse, ManualReviewStatus } from '@/types/billing';
 import type {
     BatchPhotoRegistrationRequest,
     CulturalDetailsUpdateRequest,
@@ -106,4 +107,95 @@ export async function updateProfileLocation(
 ): Promise<ProfileLocationDto> {
   const res = await apiClient.put<ProfileLocationDto>('/api/v1/profile/location', payload);
   return res.data;
+}
+
+// ─── Identity verification ─────────────────────────────────────────────────────
+
+function normalizeIdentityVerificationResponse(
+  raw: Record<string, unknown>,
+): IdentityVerificationResponse {
+  return {
+    verification_status: (raw.verification_status ?? raw.verificationStatus ?? 'FAILED') as IdentityVerificationResponse['verification_status'],
+    error_code: (raw.error_code ?? raw.errorCode ?? undefined) as string | undefined,
+    message: (raw.message ?? '') as string,
+  };
+}
+
+/**
+ * Automated identity verification via selfie-to-profile-photo face comparison.
+ * Sends a multipart/form-data request with the selfie image file.
+ *
+ * `selfieUri` should be a local file URI (e.g. from expo-image-picker).
+ */
+export async function submitIdentityVerification(
+  selfieUri: string,
+  fileName: string = 'selfie.jpg',
+  mimeType: string = 'image/jpeg',
+): Promise<IdentityVerificationResponse> {
+  const formData = new FormData();
+  formData.append('selfie', {
+    uri: selfieUri,
+    name: fileName,
+    type: mimeType,
+  } as unknown as Blob);
+
+  const res = await apiClient.post<unknown>(
+    '/api/v1/profile/identity-verification',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return normalizeIdentityVerificationResponse(res.data as Record<string, unknown>);
+}
+
+/**
+ * Manual verification submission for admin review (alternative to automated selfie match).
+ * The selfie must already be uploaded to Supabase storage; only the storage path is sent.
+ */
+export async function submitManualVerification(
+  storagePath: string,
+): Promise<{ verification_id: string; status: 'PENDING' }> {
+  const res = await apiClient.post<unknown>('/api/v1/verification/submit', {
+    storage_path: storagePath,
+  });
+  const raw = res.data as Record<string, unknown>;
+  return {
+    verification_id: (raw.verification_id ?? raw.verificationId ?? '') as string,
+    status: 'PENDING',
+  };
+}
+
+/**
+ * Request manual review of a failed identity verification.
+ * Sends the selfie image as multipart/form-data for admin review.
+ * Returns MANUAL_REVIEW status on success.
+ */
+export async function requestManualReview(
+  selfieUri: string,
+  fileName: string = 'selfie.jpg',
+  mimeType: string = 'image/jpeg',
+): Promise<IdentityVerificationResponse> {
+  const formData = new FormData();
+  formData.append('selfie', {
+    uri: selfieUri,
+    name: fileName,
+    type: mimeType,
+  } as unknown as Blob);
+
+  const res = await apiClient.post<unknown>(
+    '/api/v1/profile/identity-verification/manual-review',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return normalizeIdentityVerificationResponse(res.data as Record<string, unknown>);
+}
+
+/**
+ * Check the status of a manual identity verification review.
+ * Returns the current review state (PENDING, APPROVED, REJECTED) or NOT_STARTED if no review was submitted.
+ */
+export async function getManualReviewStatus(): Promise<ManualReviewStatus> {
+  const res = await apiClient.get<unknown>(
+    '/api/v1/profile/identity-verification/manual-review/status',
+  );
+  return res.data as ManualReviewStatus;
 }

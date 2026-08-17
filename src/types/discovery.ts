@@ -219,3 +219,16 @@ export type RevisitPassedProfilesResponse = {
   success: boolean;
   reopenedCount: number;
 };
+
+// ─── Reveal (See Who Likes You) ──────────────────────────────────────────────
+
+export type RevealResponse = {
+  action_id: string;
+  action_type: 'LIKE' | 'SUPERLIKE';
+  actor_user_id: string;
+  actor_display_name: string;
+  actor_age: number;
+  actor_primary_photo_url: string | null;
+  idempotent: boolean;
+  credit_balance: number;
+};

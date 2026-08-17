@@ -15,10 +15,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { InboxFilter } from '@/api/chat/chatApi';
 import { ConversationRow } from '@/components/messages/ConversationRow';
+import SuperMessageDetailModal from '@/components/messages/SuperMessageDetailModal';
+import { SuperMessageRow } from '@/components/messages/SuperMessageRow';
 import { SupportConversationListItem } from '@/components/messages/SupportConversationListItem';
 import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
+import { useSuperMessages } from '@/hooks/discovery/useSuperMessages';
 import { useInbox } from '@/hooks/messages/useInbox';
 import { useInboxChannel } from '@/hooks/messages/useInboxChannel';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
@@ -26,6 +29,7 @@ import { useStaffConversations } from '@/hooks/support/useStaffConversations';
 import { useSupportConversation } from '@/hooks/support/useSupportConversation';
 import { useTheme } from '@/hooks/use-theme';
 import type { InboxItem } from '@/types/chat';
+import type { SuperMessageDto } from '@/types/superMessage';
 import type { SupportConversationStatus } from '@/types/support';
 
 // ---------------------------------------------------------------------------
@@ -267,18 +271,31 @@ export default function MessagesListScreen() {
   const th = useScreenTheme();
   const currentUserId = useCurrentUserId();
 
+  // ── Unified item type ───────────────────────────────────────────────────
+  type UnifiedItem =
+    | { kind: 'conversation'; item: InboxItem }
+    | { kind: 'super_message'; item: SuperMessageDto; direction: 'sent' | 'received' };
+
   const [filter, setFilter] = useState<MessageFilter>('ALL');
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
+  const [detailModal, setDetailModal] = useState<{
+    item: SuperMessageDto;
+    direction: 'sent' | 'received';
+  } | null>(null);
   const { getStatus } = useActivityStatuses(visibleIds);
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
   const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ item: InboxItem }> }) => {
-      setVisibleIds(viewableItems.map((v) => v.item.participant.userId));
+    ({ viewableItems }: { viewableItems: Array<{ item: UnifiedItem }> }) => {
+      setVisibleIds(
+        viewableItems
+          .filter((v) => v.item.kind === 'conversation')
+          .map((v) => (v.item as Extract<UnifiedItem, { kind: 'conversation' }>).item.participant.userId),
+      );
     },
   );
   const {
-    items,
+    items: inboxItems,
     isLoading,
     isError,
     isFetchingNextPage,
@@ -288,6 +305,50 @@ export default function MessagesListScreen() {
   } = useInbox(filter as InboxFilter);
 
   useInboxChannel(currentUserId, filter as InboxFilter);
+
+  const { data: sentSuperMessages = [] } = useSuperMessages('sent');
+  const { data: receivedSuperMessages = [] } = useSuperMessages('received');
+
+  // ── Build combined + sorted list ──────────────────────────────────────────
+  const unifiedItems = useMemo<UnifiedItem[]>(() => {
+    const parseTs = (iso: string | null | undefined): number => {
+      if (!iso) return 0;
+      const t = new Date(iso).getTime();
+      return isNaN(t) ? 0 : t;
+    };
+    const getTimestamp = (u: UnifiedItem): number => {
+      if (u.kind === 'conversation') {
+        return parseTs(u.item.lastMessageAt ?? u.item.matchedAt);
+      }
+      return parseTs(u.item.responded_at ?? u.item.created_at);
+    };
+
+    // Filter: for UNREAD, only include unread conversations and unviewed received super messages
+    const conversations: UnifiedItem[] = inboxItems.map((item) => ({ kind: 'conversation', item }));
+
+    // Exclude super messages that already have a matchId — they'll appear as regular conversations
+    const pendingSent: UnifiedItem[] = sentSuperMessages
+      .filter((sm) => !sm.match_id)
+      .map((item) => ({ kind: 'super_message', item, direction: 'sent' as const }));
+    // Also exclude PASSED received messages — receiver dismissed them
+    const pendingReceived: UnifiedItem[] = receivedSuperMessages
+      .filter((sm) => !sm.match_id && sm.status !== 'PASSED')
+      .map((item) => ({ kind: 'super_message', item, direction: 'received' as const }));
+
+    const all: UnifiedItem[] = [...conversations, ...pendingSent, ...pendingReceived];
+
+    if (filter === 'UNREAD') {
+      return all
+        .filter((u) => {
+          if (u.kind === 'conversation') return u.item.unreadCount > 0;
+          if (u.kind === 'super_message') return u.direction === 'received' && !u.item.viewed_at;
+          return false;
+        })
+        .sort((a, b) => getTimestamp(b) - getTimestamp(a));
+    }
+
+    return all.sort((a, b) => getTimestamp(b) - getTimestamp(a));
+  }, [inboxItems, sentSuperMessages, receivedSuperMessages, filter]);
 
   const { data: profile } = useCurrentProfile();
   const isStaff = profile?.role === 'ADMIN' || profile?.role === 'MODERATOR';
@@ -338,6 +399,26 @@ export default function MessagesListScreen() {
     [router],
   );
 
+  const handleSuperMessagePress = useCallback(
+    (item: SuperMessageDto, direction: 'sent' | 'received') => {
+      const isSent = direction === 'sent';
+      const otherParty = isSent ? item.receiver : item.sender;
+      if (item.match_id) {
+        router.push({
+          pathname: '/(app)/chat' as any,
+          params: {
+            matchId: item.match_id,
+            displayName: otherParty?.display_name ?? '',
+            avatarUrl: otherParty?.photo_url ?? '',
+          },
+        });
+        return;
+      }
+      setDetailModal({ item, direction });
+    },
+    [router],
+  );
+
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -345,18 +426,33 @@ export default function MessagesListScreen() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const renderItem = useCallback(
-    ({ item, index }: { item: InboxItem; index: number }) => (
-      <ConversationRow
-        item={item}
-        onPress={handleRowPress}
-        isLast={index === items.length - 1}
-        activityStatus={getStatus(item.participant.userId, item.participant.activityStatus)}
-      />
-    ),
-    [handleRowPress, items.length, getStatus],
+    ({ item, index }: { item: UnifiedItem; index: number }) => {
+      const isLast = index === unifiedItems.length - 1;
+      if (item.kind === 'conversation') {
+        return (
+          <ConversationRow
+            item={item.item}
+            onPress={handleRowPress}
+            isLast={isLast}
+            activityStatus={getStatus(item.item.participant.userId, item.item.participant.activityStatus)}
+          />
+        );
+      }
+      return (
+        <SuperMessageRow
+          item={item.item}
+          direction={item.direction}
+          isLast={isLast}
+          onPress={handleSuperMessagePress}
+        />
+      );
+    },
+    [handleRowPress, handleSuperMessagePress, unifiedItems.length, getStatus],
   );
 
-  const keyExtractor = useCallback((item: InboxItem) => item.matchId, []);
+  const keyExtractor = useCallback((item: UnifiedItem) =>
+    item.kind === 'conversation' ? `conv-${item.item.matchId}` : `sm-${item.item.id}`,
+  []);
 
   const supportProps: SupportHeaderProps = isStaff
     ? {
@@ -406,7 +502,7 @@ export default function MessagesListScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: th.bg }]}>
       <FlatList
-        data={items}
+        data={unifiedItems}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         ListHeaderComponent={
@@ -435,6 +531,12 @@ export default function MessagesListScreen() {
         initialNumToRender={12}
         windowSize={7}
         removeClippedSubviews={Platform.OS === 'android'}
+      />
+      <SuperMessageDetailModal
+        visible={!!detailModal}
+        item={detailModal?.item ?? null}
+        direction={detailModal?.direction ?? null}
+        onClose={() => setDetailModal(null)}
       />
     </View>
   );

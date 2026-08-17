@@ -57,8 +57,7 @@ import type {
 } from '@/types/chat';
 import {
     getImageChatMsgsStatus,
-    getVoiceChatMsgsStatus,
-    QUOTA_ERROR_CODES,
+    getVoiceChatMsgsStatus
 } from '@/utils/entitlements';
 import { processChatImage } from '@/utils/imageProcessor';
 
@@ -432,8 +431,8 @@ export default function ChatScreen() {
       stopTyping();
       const quotaError = await sendWithAttachments(text, files, undefined, voiceDurationsMs);
       if (quotaError) {
-        const type = quotaError.code === QUOTA_ERROR_CODES.VOICE_CHAT_MSGS ? 'voice' : 'image';
-        showQuotaUpsell(type);
+        const type = quotaError.actionType === 'VOICE_MESSAGE' ? 'voice' : 'image';
+        showQuotaUpsell(type, quotaError.message);
       } else {
         refreshEntitlements();
       }
@@ -459,8 +458,8 @@ export default function ChatScreen() {
       stopTyping();
       const quotaError = await sendWithAttachments(text, [file], undefined, [rec.durationMs]);
       if (quotaError) {
-        const type = quotaError.code === QUOTA_ERROR_CODES.VOICE_CHAT_MSGS ? 'voice' : 'image';
-        showQuotaUpsell(type);
+        const type = quotaError.actionType === 'VOICE_MESSAGE' ? 'voice' : 'image';
+        showQuotaUpsell(type, quotaError.message);
       } else {
         refreshEntitlements();
       }
@@ -478,31 +477,33 @@ export default function ChatScreen() {
   const imageQuotaStatus = getImageChatMsgsStatus(entitlements);
 
   const showQuotaUpsell = useCallback(
-    (type: 'voice' | 'image') => {
+    (type: 'voice' | 'image', serverMessage?: string) => {
       const isVoice = type === 'voice';
+      const subscriptionEnabled = entitlements?.country_settings?.subscription_enabled ?? true;
+      const baseMessage = serverMessage ?? (isVoice
+        ? "You've used all your available voice messages."
+        : "You've used all your available image messages.");
       themedAlert({
         title: isVoice ? 'Voice Message Limit Reached' : 'Image Message Limit Reached',
-        message: isVoice
-          ? "You've used all your daily voice messages. Upgrade to Premium for unlimited voice messages."
-          : "You've used all your daily image messages. Upgrade to Premium for unlimited image messages.",
+        message: baseMessage,
         icon: isVoice ? 'mic-outline' : 'image-outline',
         iconColor: colors.warning,
         buttons: [
-          {
+          ...(subscriptionEnabled ? [{
             text: 'Go Premium',
-            style: 'default',
+            style: 'default' as const,
             icon: 'crown',
-            iconFamily: 'material',
+            iconFamily: 'material' as const,
             iconColor: '#FFD700',
             onPress: () => {
               router.push('/(app)/premium' as any);
             },
-          },
-          { text: 'Cancel', style: 'cancel' },
+          }] : []),
+          { text: 'Cancel', style: 'cancel' as const },
         ],
       });
     },
-    [router],
+    [router, entitlements],
   );
 
   const handleQuotaExceeded = useCallback(

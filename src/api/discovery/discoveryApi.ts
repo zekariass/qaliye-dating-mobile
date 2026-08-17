@@ -6,6 +6,7 @@ import type {
     LikeDirection,
     LikesPageResponse,
     MatchesPageResponse,
+    RevealResponse,
     RevisitCount,
     RevisitPassedProfilesResponse,
     RewindResponse,
@@ -117,4 +118,22 @@ export async function fetchLikes(
 export async function fetchDiscoveryCounts(): Promise<DiscoveryCountsDto> {
   const res = await apiClient.get<DiscoveryCountsDto>(`${BASE}/counts`);
   return res.data;
+}
+
+function normalizeRevealResponse(raw: Record<string, unknown>): RevealResponse {
+  return {
+    action_id: (raw.action_id ?? raw.actionId ?? '') as string,
+    action_type: (raw.action_type ?? raw.actionType ?? 'LIKE') as RevealResponse['action_type'],
+    actor_user_id: (raw.actor_user_id ?? raw.actorUserId ?? '') as string,
+    actor_display_name: (raw.actor_display_name ?? raw.actorDisplayName ?? '') as string,
+    actor_age: (raw.actor_age ?? raw.actorAge ?? 0) as number,
+    actor_primary_photo_url: (raw.actor_primary_photo_url ?? raw.actorPrimaryPhotoUrl ?? null) as string | null,
+    idempotent: (raw.idempotent ?? false) as boolean,
+    credit_balance: (raw.credit_balance ?? raw.creditBalance ?? 0) as number,
+  };
+}
+
+export async function revealLike(actionId: string): Promise<RevealResponse> {
+  const res = await apiClient.post<unknown>(`${BASE}/actions/${actionId}/reveal`);
+  return normalizeRevealResponse(res.data as Record<string, unknown>);
 }

@@ -181,6 +181,7 @@
       "profile": "Profile",
       "location": "Location",
       "photos": "Photos",
+      "identity": "Identity",
       "preferences": "Preferences"
     },
     "basicProfile": {
@@ -265,6 +266,57 @@
       "uploading": "Uploading…",
       "reviewNote": "Photos are reviewed before appearing in discovery. This usually takes a few minutes."
     },
+    "identity": {
+      "title": "Verify Your Identity",
+      "subtitleRequired": "Identity verification is required in your region. Take a selfie so we can confirm you are real.",
+      "subtitleOptional": "Take a selfie so we can confirm you are real. This helps keep Qaliye safe. This step is optional.",
+      "noSelfie": "No selfie captured",
+      "tapToCapture": "Tap below to take a selfie",
+      "takeSelfie": "Take Selfie",
+      "retake": "Retake Selfie",
+      "verifyNow": "Verify Now",
+      "verified": "Identity verified successfully!",
+      "failed": "Verification failed. Please try again.",
+      "requiredNotice": "Identity verification is required in your region before you can continue.",
+      "retrySelfie": "Try Different Selfie",
+      "changePhoto": "Change Profile Photo",
+      "faceGuide": "Align your face inside the oval",
+      "cameraPermission": "Camera access is required to capture a selfie.",
+      "grantPermission": "Grant Camera Access",
+      "skipCamera": "Cancel",
+      "verifyLater": "Verify Later",
+      "requestManualReview": "Request Manual Review",
+      "underReview": "Your identity is under manual review. This usually takes 24-48 hours. We will notify you when it is complete.",
+      "reviewWaitTitle": "Identity Under Review",
+      "reviewWaitBody": "Your identity is currently under manual review by our team. This process usually takes 24-48 hours. We will notify you as soon as the review is complete.",
+      "retryVerification": "Retry Automatic Verification",
+      "turnOnNotifications": "Turn On Notifications",
+      "notificationsOn": "Notifications are on. We will notify you when your review is complete.",
+      "checkStatus": "Check Status",
+      "submittedOn": "Submitted on {{date}}",
+      "reviewApproved": "Your identity has been verified by manual review.",
+      "reviewRejected": "Your manual review was rejected. Please try again.",
+      "stillUnderReview": "Your review is still pending. Please check again later.",
+      "statusCheckError": "Could not check status. Please try again.",
+      "alreadyVerified": "You are already verified",
+      "errors": {
+        "selfie_required": "A selfie image is required.",
+        "unsupported_image_format": "Selfie must be a JPEG or PNG image.",
+        "selfie_too_large": "Selfie image exceeds the maximum allowed size of 5 MB.",
+        "selfie_empty": "Selfie image is empty.",
+        "no_approved_photo": "No approved profile photo found. Please upload a profile photo first.",
+        "face_not_matched": "Face comparison did not meet the required threshold. Please submit a clearer selfie.",
+        "profile_photo_unavailable": "Could not retrieve profile photo for comparison.",
+        "profile_photo_unsupported_format": "Profile photo format is not supported for verification.",
+        "verification_service_unavailable": "Verification service temporarily unavailable. Please try again.",
+        "face_comparison_failed": "Face comparison could not be completed. Please try again with a clearer selfie.",
+        "verification_in_progress": "Verification is already in progress.",
+        "manual_review_in_progress": "Your identity is under manual review. Please wait for the result.",
+        "manual_review_already_requested": "Manual review has already been requested.",
+        "user_not_found": "User not found."
+      }
+    },
+    "continue": "Continue",
     "preferences": {
       "title": "Who would you like to meet?",
       "subtitle": "Qaliye connects men with women only.",
@@ -298,7 +350,11 @@
       "highlightNearby": "People near you or anywhere in the diaspora",
       "highlightVerified": "Verified profiles for a safer experience",
       "enableNotifications": "Enable notifications",
-      "notificationsHint": "Get notified about matches, messages, and likes"
+      "notificationsHint": "Get notified about matches, messages, and likes",
+      "notifPopupTitle": "Enable Notifications",
+      "notifPopupBody": "Get notified when someone sends you a message, likes your profile, or when your identity verification is complete.",
+      "notifPopupEnable": "Enable Notifications",
+      "notifPopupSkip": "Maybe Later"
     }
   },
   "notifications": {

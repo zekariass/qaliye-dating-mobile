@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchOnboardingStatus } from '@/api/onboardingApi';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useCountrySettings } from '@/hooks/billing/useCountrySettings';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { useDiscoveryStore } from '@/stores/discovery-store';
@@ -26,6 +27,7 @@ import { extractApiError } from '@/utils/apiError';
 
 import BasicProfileStep from './steps/BasicProfileStep';
 import CompletionStep from './steps/CompletionStep';
+import IdentityVerificationStep from './steps/IdentityVerificationStep';
 import LocationStep from './steps/LocationStep';
 import PhotoStep from './steps/PhotoStep';
 import PreferencesStep from './steps/PreferencesStep';
@@ -36,6 +38,7 @@ const ORDERED_STEPS: OnboardingStep[] = [
   'BASIC_PROFILE',
   'ADD_LOCATION',
   'ADD_PHOTO',
+  'IDENTITY_VERIFICATION',
   'SET_PREFERENCES',
   'COMPLETE',
 ];
@@ -44,15 +47,17 @@ const PROGRESS_STEPS: OnboardingStep[] = [
   'BASIC_PROFILE',
   'ADD_LOCATION',
   'ADD_PHOTO',
+  'IDENTITY_VERIFICATION',
   'SET_PREFERENCES',
 ];
 
-const STEP_LABEL_KEYS = ['onboarding.steps.profile', 'onboarding.steps.location', 'onboarding.steps.photos', 'onboarding.steps.preferences'] as const;
+const STEP_LABEL_KEYS = ['onboarding.steps.profile', 'onboarding.steps.location', 'onboarding.steps.photos', 'onboarding.steps.identity', 'onboarding.steps.preferences'] as const;
 
 const STEP_ICONS: Partial<Record<OnboardingStep, string>> = {
   BASIC_PROFILE: 'person-outline',
   ADD_LOCATION: 'location-outline',
   ADD_PHOTO: 'camera-outline',
+  IDENTITY_VERIFICATION: 'shield-checkmark-outline',
   SET_PREFERENCES: 'heart-outline',
 };
 
@@ -70,6 +75,7 @@ function isStepCompleted(step: OnboardingStep, status: OnboardingStatus | null):
     BASIC_PROFILE: status.steps.basic_profile,
     ADD_LOCATION: status.steps.location,
     ADD_PHOTO: status.steps.photo,
+    IDENTITY_VERIFICATION: status.steps.identity_verification ?? false,
     SET_PREFERENCES: status.steps.preferences,
   };
   return map[step] ?? false;
@@ -81,6 +87,7 @@ export default function OnboardingScreen() {
   const markOnboarded = useMeStore((s) => s.markOnboarded);
   const clearMe = useMeStore((s) => s.clearMe);
   const fetchMe = useMeStore((s) => s.fetchMe);
+  const { identity_verification_required: countrySettingRequired } = useCountrySettings();
 
   const { t } = useTranslation();
   const language = useLanguageStore((s) => s.language);
@@ -91,6 +98,11 @@ export default function OnboardingScreen() {
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Prefer the onboarding status value (same API response as next_step — no race
+  // condition). Fall back to the country settings hook when status hasn't loaded.
+  const identity_verification_required =
+    onboardingStatus?.identity_verification_required ?? countrySettingRequired ?? false;
 
   // Apply persisted language on mount
   useEffect(() => {
@@ -113,7 +125,9 @@ export default function OnboardingScreen() {
         router.replace('/(app)/(tabs)' as never);
         return;
       }
-      if (setDisplay) setDisplayStep(status.next_step);
+      if (setDisplay) {
+        setDisplayStep(status.next_step);
+      }
     } catch (e: unknown) {
       const detail = extractApiError(e);
       if (detail.code === 'account_deleted' || detail.code === 'account_suspended') {
@@ -131,17 +145,16 @@ export default function OnboardingScreen() {
   // ─── Navigation ────────────────────────────────────────────────────────────
   const handleStepDone = useCallback(async () => {
     if (!displayStep) return;
-    const nextIdx = orderedIndex(displayStep) + 1;
+    let nextIdx = orderedIndex(displayStep) + 1;
+    // Re-fetch status to get the authoritative next_step.
+    const latest = await fetchOnboardingStatus().catch(() => null);
+    if (latest) setOnboardingStatus(latest);
+    // Always show identity verification step — user can skip with "Verify Later" if optional.
     if (nextIdx < ORDERED_STEPS.length) setDisplayStep(ORDERED_STEPS[nextIdx]);
-    fetchOnboardingStatus()
-      .then((s) => {
-        setOnboardingStatus(s);
-        if (s.next_step === 'DONE') {
-          markOnboarded();
-          router.replace('/(app)/(tabs)' as never);
-        }
-      })
-      .catch(() => {});
+    if (latest?.next_step === 'DONE') {
+      markOnboarded();
+      router.replace('/(app)/(tabs)' as never);
+    }
   }, [displayStep, markOnboarded, router]);
 
   const handleBack = useCallback(() => {
@@ -149,6 +162,10 @@ export default function OnboardingScreen() {
     const prevIdx = orderedIndex(displayStep) - 1;
     if (prevIdx >= 0) setDisplayStep(ORDERED_STEPS[prevIdx]);
   }, [displayStep]);
+
+  const handleGoBackToPhoto = useCallback(() => {
+    setDisplayStep('ADD_PHOTO');
+  }, []);
 
   const handleSignOut = useCallback(async () => {
     await supabase.auth.signOut();
@@ -172,6 +189,15 @@ export default function OnboardingScreen() {
       case 'BASIC_PROFILE': return <BasicProfileStep onComplete={handleStepDone} isCompleted={completed} />;
       case 'ADD_LOCATION':  return <LocationStep     onComplete={handleStepDone} isCompleted={completed} />;
       case 'ADD_PHOTO':     return <PhotoStep        onComplete={handleStepDone} isCompleted={completed} />;
+      case 'IDENTITY_VERIFICATION': return (
+        <IdentityVerificationStep
+          onComplete={handleStepDone}
+          isCompleted={completed}
+          identity_verification_required={identity_verification_required}
+          onGoBackToPhoto={handleGoBackToPhoto}
+          verificationStatus={onboardingStatus?.identity_verification_status}
+        />
+      );
       case 'SET_PREFERENCES': return <PreferencesStep onComplete={handleStepDone} isCompleted={completed} />;
       case 'COMPLETE':      return <CompletionStep />;
       default:              return null;

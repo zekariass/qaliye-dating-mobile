@@ -49,6 +49,7 @@ interface Props {
   onLike: (userId: string) => void;
   onPass: (userId: string) => void;
   onSuperLike: (userId: string) => void;
+  onSuperMessage?: (userId: string) => void;
   canSuperLike: boolean;
   isActing: boolean;
 }
@@ -60,6 +61,7 @@ export default function BrowseProfileDetailSheet({
   onLike,
   onPass,
   onSuperLike,
+  onSuperMessage,
   canSuperLike,
   isActing,
 }: Props) {
@@ -198,6 +200,11 @@ export default function BrowseProfileDetailSheet({
     animateToConfirmation();
     onSuperLike(card.user_id);
   }, [card, onSuperLike, actionTaken, animateToConfirmation]);
+
+  const handleSuperMessage = useCallback(() => {
+    if (!card || actionTaken) return;
+    onSuperMessage?.(card.user_id);
+  }, [card, onSuperMessage, actionTaken]);
 
   if (!card) return null;
 
@@ -393,6 +400,23 @@ export default function BrowseProfileDetailSheet({
                 );
               })}
             </TouchableOpacity>
+
+            {/* Super Message */}
+            {onSuperMessage && (
+              <TouchableOpacity
+                style={[
+                  styles.actionBtn,
+                  { backgroundColor: isDark ? th.backgroundSelected : '#FFF8E8' },
+                ]}
+                onPress={handleSuperMessage}
+                disabled={isActing || !!actionTaken}
+                activeOpacity={0.7}
+                accessibilityLabel="Send super message"
+                accessibilityRole="button"
+              >
+                <Ionicons name="chatbubble-ellipses" size={30} color="#F59E0B" />
+              </TouchableOpacity>
+            )}
 
             {/* Like */}
             <TouchableOpacity

@@ -332,6 +332,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/theme';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useDiscoveryCounts } from '@/hooks/discovery/useDiscoveryCounts';
+import { useSuperMessages } from '@/hooks/discovery/useSuperMessages';
 import { useInbox } from '@/hooks/messages/useInbox';
 import { useInboxChannel } from '@/hooks/messages/useInboxChannel';
 import { useTheme } from '@/hooks/use-theme';
@@ -482,10 +483,14 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
   // Keep inbox fresh so the unread badge is always up to date
   useInboxChannel(userId, 'ALL');
   const { items: inboxItems } = useInbox('ALL');
-  const unreadCount = useMemo(
-    () => inboxItems.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0),
-    [inboxItems],
-  );
+  const { data: receivedSuperMessages = [] } = useSuperMessages('received');
+  const unreadCount = useMemo(() => {
+    const chatUnread = inboxItems.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0);
+    const superUnread = receivedSuperMessages.filter(
+      (sm) => !sm.match_id && sm.status !== 'ACCEPTED' && sm.status !== 'PASSED',
+    ).length;
+    return chatUnread + superUnread;
+  }, [inboxItems, receivedSuperMessages]);
 
   // Discovery counts for tab badges (matches + received likes)
   const { data: discoveryCounts } = useDiscoveryCounts();

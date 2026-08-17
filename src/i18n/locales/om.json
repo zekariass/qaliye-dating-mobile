@@ -192,6 +192,36 @@
       "men": "Dhiiraa", "women": "Dubartii", "man": "Dhiira", "woman": "Dubartii", "selectWho": "Maaloo namoo walitti dhiyessuu barbaaddhu filadhu.",
       "saveAndContinue": "Ol kaa'i fi itti fufi", "continue": "Itti fufi"
     },
+    "identity": {
+      "reviewWaitTitle": "Identitiin Qorannaa Keessatti",
+      "reviewWaitBody": "Identitiin kee haaraa qorannaa harkaa tiimii keenya keessatti jira. Adeemsi kun yeroo baay'ee sa'aatii 24-48 fudhata. Yeroo qoranniin xumuru nutti beeksina.",
+      "retryVerification": "Mirkaneessuu ofii ofii irra deebi'ii yaali",
+      "turnOnNotifications": "Beeksisa dhaabsi",
+      "notificationsOn": "Beeksiinsi banameera. Yeroo qoranniin xumuru beeksina.",
+      "checkStatus": "Haalaa mirkaneessi",
+      "submittedOn": "Ergame {{date}}",
+      "reviewApproved": "Identitiin kee qorannoo harkaan mirkanoofameera.",
+      "reviewRejected": "Qoranniin harkaan kee deebifameera. Maaloo irra deebi'ii yaali.",
+      "stillUnderReview": "Qoranniin kee hanqaa jira. Maaloo booda irra deebi'ii mirkaneessi.",
+      "statusCheckError": "Haalaa mirkaneessuu hin danda'ine. Maaloo irra deebi'ii yaali.",
+      "alreadyVerified": "Durmii mirkanooftee jirta",
+      "errors": {
+        "selfie_required": "Suuraa ofii (selfie) barbaachisaadha.",
+        "unsupported_image_format": "Suuraa ofii JPEG yookiin PNG ta'uu qaba.",
+        "selfie_too_large": "Suuraa ofii baay'ee guddaa (5 MB ol) ta'uu hin qabu.",
+        "selfie_empty": "Suuraa ofii duwwaadha.",
+        "no_approved_photo": "Suuraa profaayilii mirkanoofte hin jiru. Maaloo suuraa profaayilii ol kaa'i.",
+        "face_not_matched": "Faayyii walfakkaatu hin milkaa'ine. Suuraa ifa ta'e ergaa.",
+        "profile_photo_unavailable": "Suuraa profaayilii walgitaa jechuun hin argamne.",
+        "profile_photo_unsupported_format": "Formaata suuraa profaayilii mirkaneessuuf hin deggeru.",
+        "verification_service_unavailable": "Tajaajila mirkaneessuu yeroo dhabbii hin jiru. Maaloo irra deebi'ii yaali.",
+        "face_comparison_failed": "Faayyii walfakkaannuu hin xumuramne. Suuraa ifa ta'e fayyadhuun irra deebi'ii yaali.",
+        "verification_in_progress": "Mirkaneessuun jalqabamee jira.",
+        "manual_review_in_progress": "Identitii kee harkaan qoramaa jira. Bu'aa eegi.",
+        "manual_review_already_requested": "Qorannoon harkaan duraan gaafatameera.",
+        "user_not_found": "Fayyadamaa hin argamne."
+      }
+    },
     "completion": {
       "verifying": "Beeksisa kee mirkaneessaa jira...", "almostThere": "Hafee jirta!",
       "pendingSubtitle": "Beeksisa kee qopheesse. Suuraa kee gaaruma jira — gaarumfamee booda argachuu keessa mul'ata. Kun yeroo muraasa fudhata.",
@@ -202,7 +232,11 @@
       "highlightNearby": "Sitti dhihoo ykn diyaasporaa keessatti argaman namoota",
       "highlightVerified": "Nageenyaaf beeksisa mirkaneessitan",
       "enableNotifications": "Beeksisa dandeessaa",
-      "notificationsHint": "Walcinaa, ergaa, fi jaalala irratti beeksama argadhu"
+      "notificationsHint": "Walcinaa, ergaa, fi jaalala irratti beeksama argadhu",
+      "notifPopupTitle": "Beeksisa Dandeessaa",
+      "notifPopupBody": "Namni ergaa erguu yoo dhabamsiisu, profaayilii kee jaalate, ykn mirkaneessni identitii kee xumuru beeksama argadhu.",
+      "notifPopupEnable": "Beeksisa Dandeessaa",
+      "notifPopupSkip": "Booda galaa"
     }
   },
   "notifications": {

@@ -100,6 +100,7 @@ function BrowseProfileCard({
   onLike,
   onPass,
   onSuperLike,
+  onSuperMessage,
   canSuperLike,
   cardBg,
   iconBg,
@@ -112,6 +113,7 @@ function BrowseProfileCard({
   onLike: (userId: string) => void;
   onPass: (userId: string) => void;
   onSuperLike: (userId: string) => void;
+  onSuperMessage: (userId: string) => void;
   canSuperLike: boolean;
   cardBg: string;
   iconBg: string;
@@ -407,6 +409,18 @@ function BrowseProfileCard({
           })}
         </TouchableOpacity>
 
+        {/* Super Message */}
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: iconBg }]}
+          onPress={() => onSuperMessage(item.user_id)}
+          disabled={animating || isActing}
+          activeOpacity={0.7}
+          accessibilityLabel="Send super message"
+          accessibilityRole="button"
+        >
+          <Ionicons name="chatbubble-ellipses" size={24} color="#F59E0B" />
+        </TouchableOpacity>
+
         {/* View profile */}
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: colors.primary }]}
@@ -450,6 +464,7 @@ interface Props {
   rewindTrigger: number;
   swipedIds: Set<string>;
   onCardAction: (userId: string, swiped: boolean, card?: CardDto) => void;
+  onSuperMessage?: (userId: string, displayName: string, photoUrl: string | null) => void;
 }
 
 export default function BrowseModeGrid({
@@ -466,6 +481,7 @@ export default function BrowseModeGrid({
   rewindTrigger,
   swipedIds,
   onCardAction,
+  onSuperMessage,
 }: Props) {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
@@ -612,6 +628,16 @@ export default function BrowseModeGrid({
     [handleSwipe],
   );
 
+  const handleSuperMessage = useCallback(
+    (userId: string) => {
+      const card = cardMap.get(userId);
+      if (card && onSuperMessage) {
+        onSuperMessage(userId, card.display_name, card.photos?.[0]?.image_url ?? null);
+      }
+    },
+    [cardMap, onSuperMessage],
+  );
+
   const cardBg = isDark ? th.backgroundElement : th.surface;
   const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';
   const skeletonBg = isDark ? th.backgroundElement : colors.backgroundLavender;
@@ -699,6 +725,7 @@ export default function BrowseModeGrid({
             onLike={handleLike}
             onPass={handlePass}
             onSuperLike={handleSuperLike}
+            onSuperMessage={handleSuperMessage}
             canSuperLike={canSuperLike}
             cardBg={cardBg}
             iconBg={iconBg}
@@ -727,6 +754,7 @@ export default function BrowseModeGrid({
         onLike={handleLike}
         onPass={handlePass}
         onSuperLike={handleSuperLike}
+        onSuperMessage={handleSuperMessage}
         canSuperLike={canSuperLike}
         isActing={isSwiping || isRewinding}
       />

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PremiumBadgeModal from '@/components/billing/PremiumBadgeModal';
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import type { CountrySettings } from '@/types/billing';
 import { isFreePremiumPlan, isPremiumPlan, type BillingPlan } from '@/types/billing';
 
 interface ProfileHeaderProps {
@@ -17,6 +18,7 @@ interface ProfileHeaderProps {
   isVerified: boolean;
   isIncognito?: boolean;
   plan?: BillingPlan | null;
+  countrySettings?: CountrySettings | null;
 }
 
 const AVATAR_SIZE = 120;
@@ -29,6 +31,7 @@ export default function ProfileHeader({
   isVerified,
   isIncognito = false,
   plan = null,
+  countrySettings = null,
 }: ProfileHeaderProps) {
   const { top: safeTop } = useSafeAreaInsets();
   const router = useRouter();
@@ -38,6 +41,10 @@ export default function ProfileHeader({
   const showPremium = isPremiumPlan(plan);
   const premiumLabel = isFreePremiumPlan(plan) ? 'Free Premium' : 'Premium';
 
+  // Country settings control which purchase buttons are visible
+  const subscriptionEnabled = countrySettings?.subscription_enabled ?? true;
+  const creditsEnabled = countrySettings?.credits_enabled ?? true;
+
   return (
     <View style={[styles.container, { backgroundColor: th.background }]}>
       <View style={[styles.lavenderGlow, { height: safeTop + 160, backgroundColor: th.backgroundSelected }]} />
@@ -46,45 +53,53 @@ export default function ProfileHeader({
         <View style={styles.topLeft}>
           {showPremium ? (
             <View style={styles.topLeftLinks}>
-              <Pressable
-                style={[styles.premiumBadge, { backgroundColor: colors.primary }]}
-                onPress={() => setBadgeModalVisible(true)}
-                accessibilityLabel="Premium status"
-                accessibilityRole="button"
-              >
-                <Ionicons name="diamond" size={16} color="#FFFFFF" />
-                <Text style={[styles.premiumText, { color: '#FFFFFF' }]}>{premiumLabel}</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.linkBtn, { backgroundColor: '#FFD700' }]}
-                onPress={() => router.push('/(app)/credits-shop' as any)}
-                accessibilityLabel="Buy Credits"
-                accessibilityRole="button"
-              >
-                <Ionicons name="sparkles" size={14} color="#5B4500" />
-                <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>Buy Credits</Text>
-              </Pressable>
+              {subscriptionEnabled && (
+                <Pressable
+                  style={[styles.premiumBadge, { backgroundColor: colors.primary }]}
+                  onPress={() => setBadgeModalVisible(true)}
+                  accessibilityLabel="Premium status"
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="diamond" size={16} color="#FFFFFF" />
+                  <Text style={[styles.premiumText, { color: '#FFFFFF' }]}>{premiumLabel}</Text>
+                </Pressable>
+              )}
+              {creditsEnabled && (
+                <Pressable
+                  style={[styles.linkBtn, { backgroundColor: '#FFD700' }]}
+                  onPress={() => router.push('/(app)/credits-shop' as any)}
+                  accessibilityLabel="Buy Credits"
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="sparkles" size={14} color="#5B4500" />
+                  <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>Buy Credits</Text>
+                </Pressable>
+              )}
             </View>
           ) : (
             <View style={styles.topLeftLinks}>
-              <Pressable
-                style={[styles.linkBtn, { backgroundColor: colors.primary }]}
-                onPress={() => router.push('/(app)/premium' as any)}
-                accessibilityLabel="Go Premium"
-                accessibilityRole="button"
-              >
-                <Ionicons name="diamond" size={14} color="#FFFFFF" />
-                <Text style={styles.linkBtnText}>Go Premium</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.linkBtn, { backgroundColor: '#FFD700' }]}
-                onPress={() => router.push('/(app)/credits-shop' as any)}
-                accessibilityLabel="Buy Credits"
-                accessibilityRole="button"
-              >
-                <Ionicons name="sparkles" size={14} color="#5B4500" />
-                <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>Buy Credits</Text>
-              </Pressable>
+              {subscriptionEnabled && (
+                <Pressable
+                  style={[styles.linkBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => router.push('/(app)/premium' as any)}
+                  accessibilityLabel="Go Premium"
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="diamond" size={14} color="#FFFFFF" />
+                  <Text style={styles.linkBtnText}>Go Premium</Text>
+                </Pressable>
+              )}
+              {creditsEnabled && (
+                <Pressable
+                  style={[styles.linkBtn, { backgroundColor: '#FFD700' }]}
+                  onPress={() => router.push('/(app)/credits-shop' as any)}
+                  accessibilityLabel="Buy Credits"
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="sparkles" size={14} color="#5B4500" />
+                  <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>Buy Credits</Text>
+                </Pressable>
+              )}
             </View>
           )}
         </View>

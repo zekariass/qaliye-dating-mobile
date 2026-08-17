@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
@@ -427,6 +427,7 @@ export default function MatchesListScreen() {
   const { data: myProfile } = useCurrentProfile();
   const myCountry = myProfile?.address?.country_name ?? '';
 
+  const [isUserRefreshing, setIsUserRefreshing] = useState(false);
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
   const { getStatus } = useActivityStatuses(visibleIds);
 
@@ -478,6 +479,16 @@ export default function MatchesListScreen() {
     },
     [router],
   );
+
+  // Stop the user-initiated refresh spinner once fetching completes
+  useEffect(() => {
+    if (!isFetching) setIsUserRefreshing(false);
+  }, [isFetching]);
+
+  const handleRefresh = useCallback(() => {
+    setIsUserRefreshing(true);
+    refetch();
+  }, [refetch]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -551,7 +562,7 @@ export default function MatchesListScreen() {
           },
         ]}
         ListHeaderComponent={listHeader}
-        ListEmptyComponent={<EmptyState onRefresh={refetch} />}
+        ListEmptyComponent={<EmptyState onRefresh={handleRefresh} />}
         ListFooterComponent={renderFooter}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
@@ -562,8 +573,8 @@ export default function MatchesListScreen() {
         initialNumToRender={8}
         windowSize={7}
         removeClippedSubviews={Platform.OS === 'android'}
-        refreshing={isFetching && !isFetchingNextPage}
-        onRefresh={refetch}
+        refreshing={isUserRefreshing}
+        onRefresh={handleRefresh}
       />
     </View>
   );

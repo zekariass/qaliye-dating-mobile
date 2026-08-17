@@ -3,18 +3,14 @@ import { useCallback, useRef } from 'react';
 import { sendMessage, sendMessageWithAttachments } from '@/api/chat/chatApi';
 import { useChatStore } from '@/stores/chat-store';
 import type { ChatFileAttachment, ChatMessage } from '@/types/chat';
-import { QUOTA_ERROR_CODES } from '@/utils/entitlements';
+import { getLimitExceededDetails, isInsufficientCreditsError, isLimitExceededError } from '@/utils/entitlements';
 import { generateUUID } from '@/utils/uuid';
 
 export type ChatQuotaError = {
   code: string;
   message: string;
+  actionType?: string;
 };
-
-const CHAT_QUOTA_CODES = new Set([
-  QUOTA_ERROR_CODES.VOICE_CHAT_MSGS,
-  QUOTA_ERROR_CODES.IMAGE_CHAT_MSGS,
-]);
 
 // ---------------------------------------------------------------------------
 // Error codes that must NOT be auto-retried
@@ -234,9 +230,15 @@ export function useSendMessage(matchId: string, currentUserId: string) {
         const errorMessage =
           error?.response?.data?.error?.message ?? error?.response?.data?.message ?? '';
 
-        if (CHAT_QUOTA_CODES.has(errorCode)) {
+        if (isInsufficientCreditsError(error)) {
           useChatStore.getState().removeOptimisticMessage(clientMessageId);
-          return { code: errorCode, message: errorMessage };
+          return null;
+        }
+
+        if (isLimitExceededError(error)) {
+          useChatStore.getState().removeOptimisticMessage(clientMessageId);
+          const details = getLimitExceededDetails(error);
+          return { code: 'LIMIT_EXCEEDED', message: errorMessage, actionType: details?.details.action_type };
         }
 
         if (responseStatus === 429) {

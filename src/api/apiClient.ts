@@ -8,6 +8,7 @@ import { readInstallationId } from '@/services/notifications/installationId';
 import { useBillingStore } from '@/stores/billing-store';
 import { useChatStore } from '@/stores/chat-store';
 import { useDiscoveryStore } from '@/stores/discovery-store';
+import { useInsufficientCreditsStore } from '@/stores/insufficient-credits-store';
 import { useMeStore } from '@/stores/me-store';
 import { useNotificationsStore } from '@/stores/notifications-store';
 
@@ -120,6 +121,19 @@ apiClient.interceptors.response.use(
           ? (rawError as { code?: string }).code            // {"error":{"code":"ACCOUNT_DELETED"}}
           : undefined;
     const normalizedCode = errorCode?.toLowerCase();
+
+    // 402 Payment Required — insufficient credits: show global modal, suppress generic error handling
+    if (error.response?.status === 402 && normalizedCode === 'insufficient_credits') {
+      const message =
+        typeof rawError === 'object' && rawError !== null
+          ? (rawError as { message?: string }).message ?? "You don't have enough credits for this action."
+          : "You don't have enough credits for this action.";
+      useInsufficientCreditsStore.getState().show(message);
+      const tagged = new Error('insufficient_credits') as Error & { isInsufficientCredits: true };
+      tagged.isInsufficientCredits = true;
+      return Promise.reject(tagged);
+    }
+
     if (
       error.response?.status === 403 &&
       (normalizedCode === 'account_deleted' || normalizedCode === 'account_suspended') &&

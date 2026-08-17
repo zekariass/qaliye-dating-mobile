@@ -244,6 +244,36 @@
       "saveAndContinue": "ዕብየትን ቀጽልን",
       "continue": "ቀጽል"
     },
+    "identity": {
+      "reviewWaitTitle": "መለያ ኣብ ግምገማ",
+      "reviewWaitBody": "መለያኻ ብቡድናና ኣብ እጅ ግምገማ ኣሎ። እዚ ሂደት እዚ ብተደጋጋሚ 24-48 ሰዓታት ይወስድ። ግምገማ ምስ ወድአ ክንሕብርኩም ኢና።",
+      "retryVerification": "ራስ-ሰር ምርግጋጽ ዳግማይ ፈትኑ",
+      "turnOnNotifications": "ምልክትታታት ኣንቅሑ",
+      "notificationsOn": "ምልክትታታት እንቅልዋሎ። ግምገማ ምስ ወድአ ክንሕብርኩም ኢና።",
+      "checkStatus": "ኩነታ ኣረጋግጽ",
+      "submittedOn": "ተኣታትዩ {{date}}",
+      "reviewApproved": "መለያኻ ብእጅ ግምገማ ተረጋጊጹ እዩ።",
+      "reviewRejected": "ናይ እጅ ግምገማኻ ተንጻጺኑ እዩ። እባኽኻ ዳግማይ ፈትኑ።",
+      "stillUnderReview": "ግምገማኻ ንዕርቂ ኣሎ። እባኽኻ ሓደ ቆይትካ ኣረጋግጽ።",
+      "statusCheckError": "ኩነታ ኣርጋግጽ ኣይከኣለን። እባኽኻ ዳግማይ ፈትኑ።",
+      "alreadyVerified": "ተረጋጊጹካ እዩ",
+      "errors": {
+        "selfie_required": "ስእሊ ርእስኻ ይድልይ እዩ።",
+        "unsupported_image_format": "ስእሊ ርእስኻ JPEG ወይ ናይ PNG ክኸውን ኣለዎ።",
+        "selfie_too_large": "ስእሊ ርእስኻ ካብ 5 ሜጋባይት ክዓቢ ኣይክእልን እዩ።",
+        "selfie_empty": "ስእሊ ርእስኻ ባዶ እዩ።",
+        "no_approved_photo": "ዝተረጋገጸ ስእሊ መገለጺ ኣይተረኽበን። እባኽኻ ኣቐዲምካ ስእሊ መገለጺ ኣእትው።",
+        "face_not_matched": "ምንጻጕ ፊት ዘለዎ ደረጃ ኣይበጽሐን። እባኽኻ ግሉጽ ዝኾነ ስእሊ ርእስኻ ኣእትው።",
+        "profile_photo_unavailable": "ንምንጻጕ ስእሊ መገለጺ ምርካብ ኣይከኣለን።",
+        "profile_photo_unsupported_format": "ናይ ስእሊ መገለጺ ፎርማት ንምርግጋጽ ኣይደገፍን።",
+        "verification_service_unavailable": "ናይ ምርግጋጽ ኣገልግሎት ጊዚኡ ዘይርከብ እዩ። እባኽኻ ዳግማይ ፈትኑ።",
+        "face_comparison_failed": "ምንጻጕ ፊት ክግጠም ኣይከኣለን። እባኽኻ ግሉጽ ዝኾነ ስእሊ ብምጥቃም ዳግማይ ፈትኑ።",
+        "verification_in_progress": "ምርግጋጽ ኣብ ምእናድ እዩ።",
+        "manual_review_in_progress": "መለያኻ ኣብ እጅ ግምገማ እዩ። እባኽኻ ውጺኡ ተጸበይ።",
+        "manual_review_already_requested": "እጅ ግምገማ ቀደም ክብል ተለኪሉ እዩ።",
+        "user_not_found": "ተጠቃሚ ኣይተረኽበን።"
+      }
+    },
     "completion": {
       "verifying": "መገለጽኻ ኣብ ምርግጋጽ...",
       "almostThere": "ኣብ ጥቓ!",
@@ -258,7 +288,11 @@
       "highlightNearby": "ኣብ ጎንኻ ወይ ኣብ ዲያስፖራ ዘለዉ ሰባት",
       "highlightVerified": "ንበደህነት ዝተረጋገጹ መገለጽታት",
       "enableNotifications": "ምልክትታት ኣንቅሩ",
-      "notificationsHint": "ብዛዕባ ምትዕማቓት፣ መልእኽትታትን ደገፍታትን ርከቡ"
+      "notificationsHint": "ብዛዕባ ምትዕማቓት፣ መልእኽትታትን ደገፍታትን ርከቡ",
+      "notifPopupTitle": "ምልክትታት ኣንቅሩ",
+      "notifPopupBody": "ሰብ መልእኽቲ ምስ ልኦካ፣ መገለጽኻ ምስ ፈትወ፣ ወይ ምርግጋጽ መለያኻ ምስ ወድእ ምልክቲ ቕረብ።",
+      "notifPopupEnable": "ምልክትታት ኣንቅሩ",
+      "notifPopupSkip": "ድሕር እዋን"
     }
   },
   "notifications": {
