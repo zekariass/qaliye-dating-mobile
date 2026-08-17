@@ -73,6 +73,15 @@ export function InsufficientCreditsModal() {
     }
   }, [visible]);
 
+  // Always refetch entitlements when the modal opens so we have fresh
+  // costs/balance data from the backend (the cached query may be stale).
+  useEffect(() => {
+    if (visible) {
+      refetch();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
   // Debug: log what's in the costs map when the modal opens
   useEffect(() => {
     if (visible && __DEV__) {

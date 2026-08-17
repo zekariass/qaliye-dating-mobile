@@ -76,6 +76,9 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
   const planLimitsRaw = (raw.planLimits ?? raw.plan_limits ?? {}) as Record<string, unknown>;
   const countrySettingsRaw = (raw.countrySettings ?? raw.country_settings ?? null) as Record<string, unknown> | null;
   const costsRaw = (raw.costs ?? raw.Costs ?? {}) as Record<string, Record<string, unknown>>;
+  if (__DEV__) {
+    console.log('[normalizeEntitlements] raw.costs exists:', 'costs' in raw, '| costsRaw keys:', Object.keys(costsRaw));
+  }
 
   const limits: Record<string, QuotaInfo> = {};
   for (const [key, val] of Object.entries(limitsRaw)) {
@@ -121,12 +124,12 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
       incognito_mode: (featuresRaw.incognito_mode ?? featuresRaw.incognitoMode ?? false) as boolean,
     },
     plan_limits: {
-      LIKES: (planLimitsRaw.LIKES ?? null) as number | null,
-      SUPERLIKES: (planLimitsRaw.SUPERLIKES ?? null) as number | null,
-      REWINDS: (planLimitsRaw.REWINDS ?? null) as number | null,
-      BOOSTS: (planLimitsRaw.BOOSTS ?? null) as number | null,
-      VOICE_CHAT_MSGS: (planLimitsRaw.VOICE_CHAT_MSGS ?? planLimitsRaw.voiceChatMsgs ?? null) as number | null,
-      IMAGE_CHAT_MSGS: (planLimitsRaw.IMAGE_CHAT_MSGS ?? planLimitsRaw.imageChatMsgs ?? null) as number | null,
+      LIKES: (planLimitsRaw.LIKES ?? planLimitsRaw.LIKE ?? null) as number | null,
+      SUPERLIKES: (planLimitsRaw.SUPERLIKES ?? planLimitsRaw.SUPER_LIKE ?? null) as number | null,
+      REWINDS: (planLimitsRaw.REWINDS ?? planLimitsRaw.REWIND ?? null) as number | null,
+      BOOSTS: (planLimitsRaw.BOOSTS ?? planLimitsRaw.BOOST ?? null) as number | null,
+      VOICE_CHAT_MSGS: (planLimitsRaw.VOICE_CHAT_MSGS ?? planLimitsRaw.VOICE_MESSAGE ?? planLimitsRaw.voiceChatMsgs ?? null) as number | null,
+      IMAGE_CHAT_MSGS: (planLimitsRaw.IMAGE_CHAT_MSGS ?? planLimitsRaw.IMAGE_MESSAGE ?? planLimitsRaw.imageChatMsgs ?? null) as number | null,
     },
     boost_duration_minutes: (raw.boost_duration_minutes ?? raw.boostDurationMinutes ?? 30) as number,
     country_settings: countrySettingsRaw ? normalizeCountrySettings(countrySettingsRaw) : undefined,
@@ -136,7 +139,11 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
 
 export async function fetchEntitlements(): Promise<EntitlementResponse> {
   const res = await apiClient.get<unknown>(`${BASE}/entitlements`);
-  return normalizeEntitlements(res.data as Record<string, unknown>);
+  const raw = res.data as Record<string, unknown>;
+  if (__DEV__) {
+    console.log('[fetchEntitlements] raw.costs keys:', raw.costs ? Object.keys(raw.costs as object) : 'MISSING');
+  }
+  return normalizeEntitlements(raw);
 }
 
 export async function fetchCountrySettings(): Promise<CountrySettings> {
