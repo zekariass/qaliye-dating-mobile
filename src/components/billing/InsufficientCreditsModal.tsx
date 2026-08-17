@@ -18,7 +18,7 @@ import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useTheme } from '@/hooks/use-theme';
 import { useInsufficientCreditsStore } from '@/stores/insufficient-credits-store';
 import { isPremiumPlan } from '@/types/billing';
-import { getActionCostSummary, getActionName } from '@/utils/entitlements';
+import { formatPeriodType, formatTryAgainLabel, getActionCostSummary, getActionName, normalizeActionCode } from '@/utils/entitlements';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // InsufficientCreditsModal — reusable for all credit-consuming actions.
@@ -27,10 +27,11 @@ import { getActionCostSummary, getActionName } from '@/utils/entitlements';
 //  │       Reveal Profile          │
 //  │ ─────────────────────────── │
 //  │                               │
-//  │  You need 5 credits to        │
-//  │  perform this action.         │
+//  │  You need:                    │
+//  │  5 Credits                    │
 //  │                               │
-//  │  Your balance: 2 credits      │
+//  │  Your balance:                │
+//  │  2 Credits                    │
 //  │                               │
 //  │  [ Go Premium     ]           │
 //  │  [ Buy Credits    ]           │
@@ -130,15 +131,20 @@ export function InsufficientCreditsModal() {
 
   // ── Button visibility ────────────────────────────────────────────────────
   // Go Premium: only if subscriptions are enabled AND user is not already premium
+  // Buy Credits: only if credits are enabled
+  // Both hidden when the issue is a limit being exceeded (credits can't help)
   const hasPremium = isPremiumPlan(entitlements?.plan);
-  const showGoPremium  = subscriptionEnabled && !hasPremium;
-  const showBuyCredits = creditsEnabled;
+  const isLimitExceeded = summary.isLimitExceeded;
+  const showGoPremium  = !isLimitExceeded && subscriptionEnabled && !hasPremium;
+  const showBuyCredits = !isLimitExceeded && creditsEnabled;
 
   // ── Cost & balance (always shown) ─────────────────────────────────────────
   // Primary: from getActionCostSummary (applies limit/remaining logic)
-  // Fallback: read member_credit_cost directly from the costs map
-  const directCost = actionCode
-    ? entitlements?.costs?.[actionCode]?.member_credit_cost ?? null
+  // Fallback: read actual_credit_cost directly from the costs map (using
+  // canonical action code so variants like LIKES → LIKE resolve correctly)
+  const canonicalCode = normalizeActionCode(actionCode);
+  const directCost = canonicalCode
+    ? entitlements?.costs?.[canonicalCode]?.actual_credit_cost ?? null
     : null;
   const cost    = summary.cost ?? directCost;
   const balance = summary.creditBalance;
@@ -168,7 +174,7 @@ export function InsufficientCreditsModal() {
             </Text>
           </View>
 
-          {/* ── Body: cost + balance, all centered ─────────────────────── */}
+          {/* ── Body ─────────────────────────────────────────────────────── */}
           <View style={styles.body}>
             {isRetrying ? (
               <View style={styles.retryRow}>
@@ -177,23 +183,35 @@ export function InsufficientCreditsModal() {
                   Checking your account…
                 </Text>
               </View>
+            ) : isLimitExceeded ? (
+              <>
+                {/* Limit exceeded message */}
+                <Text style={styles.limitExceededMessage}>
+                  Limit Exceeded
+                </Text>
+                <Text style={[styles.limitPeriod, { color: th.textSecondary }]}>
+                  Period: {formatPeriodType(summary.periodType)}
+                </Text>
+                <Text style={[styles.limitTryAgain, { color: th.textMuted }]}>
+                  Try {formatTryAgainLabel(summary.periodType)}
+                </Text>
+              </>
             ) : (
               <>
-                {/* Cost line — number styled prominently */}
-                <Text style={[styles.costText, { color: th.text }]}>
-                  You need{' '}
-                  <Text style={styles.costHighlight}>
-                    {cost !== null ? cost : '—'}
-                  </Text>
-                  {' '}credits to perform this action.
+                {/* Cost line — label + value, large and bold */}
+                <Text style={[styles.costLabel, { color: th.textSecondary }]}>
+                  You need:
+                </Text>
+                <Text style={styles.costValue}>
+                  {cost !== null ? cost.toLocaleString() : '—'} Credits
                 </Text>
 
-                {/* Balance line — number styled prominently */}
-                <Text style={[styles.balanceText, { color: th.textSecondary }]}>
-                  Your balance:{' '}
-                  <Text style={styles.balanceHighlight}>
-                    {balance.toLocaleString()} credits
-                  </Text>
+                {/* Balance line — label + value, large and bold */}
+                <Text style={[styles.balanceLabel, { color: th.textSecondary }]}>
+                  Your balance:
+                </Text>
+                <Text style={styles.balanceValue}>
+                  {balance.toLocaleString()} Credits
                 </Text>
               </>
             )}
@@ -242,15 +260,24 @@ export function InsufficientCreditsModal() {
                 onPress={dismiss}
                 style={({ pressed }) => [
                   styles.btn,
-                  styles.btnOutline,
-                  { borderColor: th.border },
+                  styles.btnNotNow,
+                  { backgroundColor: th.backgroundElement, borderColor: th.border },
                   pressed && styles.btnPressed,
                 ]}
                 accessibilityRole="button"
               >
-                <Text style={[styles.btnTextMuted, { color: th.textSecondary }]}>
-                  Not Now
-                </Text>
+                {({ pressed: p }: { pressed: boolean }) => (
+                  <View style={styles.btnInner}>
+                    <Ionicons
+                      name="close-outline"
+                      size={16}
+                      color={th.textSecondary}
+                    />
+                    <Text style={[styles.btnTextMuted, { color: th.textSecondary, opacity: p ? 0.7 : 1 }]}>
+                      Not Now
+                    </Text>
+                  </View>
+                )}
               </Pressable>
             </View>
           )}
@@ -325,27 +352,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'stretch',
   },
-  costText: {
+  costLabel: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  costValue: {
+    fontSize: fontSize.xl,
+    fontWeight: '800',
+    color: colors.primary,
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  balanceLabel: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  balanceValue: {
+    fontSize: fontSize.xl,
+    fontWeight: '800',
+    color: colors.primary,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  limitExceededMessage: {
+    fontSize: fontSize.xl,
+    fontWeight: '800',
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  limitPeriod: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  limitTryAgain: {
     fontSize: fontSize.sm,
-    lineHeight: 24,
     fontWeight: '500',
     textAlign: 'center',
-  },
-  costHighlight: {
-    fontSize: fontSize.md,
-    fontWeight: '800',
-    color: colors.primary,
-  },
-  balanceText: {
-    fontSize: fontSize.sm,
-    lineHeight: 22,
-    textAlign: 'center',
-    marginTop: 6,
-  },
-  balanceHighlight: {
-    fontSize: fontSize.base,
-    fontWeight: '800',
-    color: colors.primary,
+    marginTop: 8,
   },
   retryRow: {
     flexDirection: 'row',
@@ -384,12 +432,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: spacing.lg,
   },
-  btnOutline: {
+  btnNotNow: {
     borderWidth: 1.5,
-    paddingVertical: 13,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   btnTextWhite: {
     color: '#FFFFFF',

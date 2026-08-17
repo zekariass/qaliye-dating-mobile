@@ -12,6 +12,14 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+    Easing,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { revealLike } from '@/api/discovery/discoveryApi';
@@ -661,293 +669,412 @@ function showRevealUpgradeModal(
 
 export default function LikesListScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('received');
-  const direction = tabToDirection(activeTab);
   const insets    = useSafeAreaInsets();
   const { bg }    = useLikesTheme();
   const router    = useRouter();
-  const [isUserRefreshing, setIsUserRefreshing] = useState(false);
-  const { entitlements } = useEntitlements();
+  const { entitlements, refreshEntitlements } = useEntitlements();
   const canSeeWhoLikedYou = entitlements?.features?.see_who_liked_you ?? false;
-  const [visibleIds, setVisibleIds] = useState<string[]>([]);
+
+  // Activity status — merge visible ids from both pages
+  const [visibleReceivedIds, setVisibleReceivedIds] = useState<string[]>([]);
+  const [visibleSentIds,     setVisibleSentIds]     = useState<string[]>([]);
+  const visibleIds = useMemo(
+    () => [...visibleReceivedIds, ...visibleSentIds],
+    [visibleReceivedIds, visibleSentIds],
+  );
   const { getStatus } = useActivityStatuses(visibleIds);
   const { data: myProfile } = useCurrentProfile();
   const myCountry = myProfile?.address?.country_name ?? '';
 
   const { data: discoveryCounts } = useDiscoveryCounts();
   const receivedLikesCount = discoveryCounts?.received_likes_count ?? 0;
-  const sentLikesCount = discoveryCounts?.sent_likes_count ?? 0;
+  const sentLikesCount     = discoveryCounts?.sent_likes_count ?? 0;
 
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ item: LikeItemDto }> }) => {
-      setVisibleIds(viewableItems.map((v) => v.item.user_id));
-    },
-  );
+  // ─── Pager animation ────────────────────────────────────────────────────────
+  // currentPageIndex is a shared value so it can be read inside worklets
+  const currentPageIndex = useSharedValue(0); // 0 = received, 1 = sent
+  const pageOffset       = useSharedValue(0); // translateX: 0 → received, -SCREEN_W → sent
 
-  const {
-    items, totalElements,
-    isLoading, isError, isFetching,
-    fetchNextPage, hasNextPage, isFetchingNextPage, refetch,
-  } = useLikes(direction);
+  const snapToPage = useCallback((tab: Tab) => {
+    const newPage = tab === 'received' ? 0 : 1;
+    pageOffset.value = withTiming(-(newPage * SCREEN_W), {
+      duration: 300,
+      easing: Easing.out(Easing.cubic),
+    });
+    currentPageIndex.value = newPage;
+    setActiveTab(tab);
+  }, [pageOffset, currentPageIndex]);
 
-  // Stop the user-initiated refresh spinner once fetching completes
-  useEffect(() => {
-    if (!isFetching) setIsUserRefreshing(false);
-  }, [isFetching]);
-
-  const handleRefresh = useCallback(() => {
-    setIsUserRefreshing(true);
-    refetch();
-  }, [refetch]);
-
-  const { mutateAsync: swipeAction, isPending: isSwiping } = useSwipeAction();
-  const [unsendingId, setUnsendingId] = useState<string | null>(null);
-  const [likingBackId, setLikingBackId] = useState<string | null>(null);
-  const [revealingId, setRevealingId] = useState<string | null>(null);
-  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
-  const [revealedItems, setRevealedItems] = useState<Record<string, LikeItemDto>>({});
-
-  const filteredItems = useMemo(
-    () => (removedIds.size > 0 ? items.filter((i) => !removedIds.has(i.action_id)) : items),
-    [items, removedIds],
-  );
-  const { refreshEntitlements } = useEntitlements();
-
-  const handleLikeBack = useCallback(
-    async (item: LikeItemDto) => {
-      setLikingBackId(item.action_id);
-      try {
-        const response = await swipeAction({ type: 'LIKE', targetUserId: item.user_id });
-        if (response.is_match && response.match) {
-          themedAlert({
-            title: "It's a Match!",
-            message: `You and ${item.display_name} are now matched.`,
-            icon: 'heart',
-            iconColor: colors.secondary,
-            buttons: [
-              {
-                text: 'Send Message',
-                onPress: () => {
-                  router.push({
-                    pathname: '/(app)/chat' as any,
-                    params: {
-                      matchId: response.match!.match_id,
-                      displayName: item.display_name,
-                      avatarUrl: item.primary_photo_url ?? '',
-                      isVerified: item.is_verified ? '1' : '0',
-                    },
-                  });
-                },
-              },
-              { text: 'Keep Swiping', style: 'cancel' },
-            ],
-          });
-        } else {
-          themedAlert({
-            title: 'Like sent',
-            message: `Your like has been sent to ${item.display_name}.`,
-            icon: 'heart-outline',
-            iconColor: colors.primary,
-            buttons: [{ text: 'OK' }],
-          });
-        }
-        refetch();
-      } catch (err: any) {
-        if (isInsufficientCreditsError(err)) return;
-        themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
-      } finally {
-        setLikingBackId(null);
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-15, 15])
+    .onUpdate((e) => {
+      'worklet';
+      const base = -(currentPageIndex.value * SCREEN_W);
+      const raw  = base + e.translationX;
+      // Rubber-band when swiping past edge pages
+      if (raw > 0) {
+        pageOffset.value = raw * 0.2;
+      } else if (raw < -SCREEN_W) {
+        pageOffset.value = -SCREEN_W + (raw + SCREEN_W) * 0.2;
+      } else {
+        pageOffset.value = raw;
       }
-    },
-    [swipeAction, refetch, router],
-  );
-
-  const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const handleReveal = useCallback(
-    async (item: LikeItemDto) => {
-      setRevealingId(item.action_id);
-      try {
-        const response = await revealLike(item.action_id);
-
-        const revealedItem: LikeItemDto = {
-          ...item,
-          display_name: response.actor_display_name,
-          age: response.actor_age,
-          user_id: response.actor_user_id,
-          primary_photo_url: response.actor_primary_photo_url,
-          revealed_at: new Date().toISOString(),
-        };
-        setRevealedItems((prev) => ({ ...prev, [item.action_id]: revealedItem }));
-
-        if (!response.idempotent) {
-          refreshEntitlements();
-        }
-      } catch (err: any) {
-        const status = err?.response?.status;
-        if (isInsufficientCreditsError(err)) {
-          // Global axios interceptor already showed the Insufficient Credits modal
-        } else if (status === 403) {
-          showRevealUpgradeModal(
-            router,
-            entitlements?.country_settings?.credits_enabled ?? true,
-            entitlements?.country_settings?.subscription_enabled ?? true,
-          );
-        } else if (status === 404) {
-          setRemovedIds((prev) => new Set(prev).add(item.action_id));
-        } else {
-          themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not reveal this profile.');
-        }
-      } finally {
-        setRevealingId(null);
-      }
-    },
-    [refreshEntitlements, router, entitlements],
-  );
-
-  const handleCardPress = useCallback(
-    (userId: string) => {
-      router.push({ pathname: '/(app)/user-profile', params: { userId } } as any);
-    },
-    [router],
-  );
-
-  const handleUnsend = useCallback(
-    (item: LikeItemDto) => {
-      themedAlert({
-        title: 'Unsend Like?',
-        message: `Withdraw your like from ${item.display_name}?`,
-        icon: 'heart-dislike-outline',
-        iconColor: colors.danger,
-        buttons: [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Unsend Like',
-            style: 'destructive',
-            onPress: async () => {
-              setUnsendingId(item.action_id);
-              try {
-                await swipeAction({ type: 'PASS', targetUserId: item.user_id });
-                refetch();
-              } catch (err: any) {
-                if (isInsufficientCreditsError(err)) return;
-                themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not unsend like.');
-              } finally {
-                setUnsendingId(null);
-              }
-            },
-          },
-        ],
+    })
+    .onEnd((e) => {
+      'worklet';
+      const base      = -(currentPageIndex.value * SCREEN_W);
+      const projected = base + e.translationX + e.velocityX * 0.15;
+      const newPage   = projected < -(SCREEN_W * 0.5) ? 1 : 0;
+      pageOffset.value = withTiming(-(newPage * SCREEN_W), {
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
       });
-    },
-    [swipeAction, refetch],
+      currentPageIndex.value = newPage;
+      runOnJS(setActiveTab)(newPage === 0 ? 'received' : 'sent');
+    });
+
+  const pagerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: pageOffset.value }],
+  }));
+
+  // ─── Received tab data ──────────────────────────────────────────────────────
+  const {
+    items: receivedItems,
+    isLoading: receivedLoading,
+    isError: receivedError,
+    isFetching: receivedFetching,
+    fetchNextPage: receivedFetchNextPage,
+    hasNextPage: receivedHasNextPage,
+    isFetchingNextPage: receivedFetchingNextPage,
+    refetch: receivedRefetch,
+  } = useLikes('RECEIVED');
+
+  const [isReceivedRefreshing, setIsReceivedRefreshing] = useState(false);
+  useEffect(() => { if (!receivedFetching) setIsReceivedRefreshing(false); }, [receivedFetching]);
+
+  const [removedReceivedIds, setRemovedReceivedIds] = useState<Set<string>>(new Set());
+  const [revealedItems,      setRevealedItems]      = useState<Record<string, LikeItemDto>>({});
+  const [revealingId,        setRevealingId]        = useState<string | null>(null);
+  const [likingBackId,       setLikingBackId]       = useState<string | null>(null);
+
+  const filteredReceivedItems = useMemo(
+    () => removedReceivedIds.size > 0
+      ? receivedItems.filter((i) => !removedReceivedIds.has(i.action_id))
+      : receivedItems,
+    [receivedItems, removedReceivedIds],
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: LikeItemDto }) => {
-      // If this item has been revealed, use the revealed data
-      const effectiveItem = revealedItems[item.action_id] ?? item;
+  // ─── Sent tab data ──────────────────────────────────────────────────────────
+  const {
+    items: sentItems,
+    isLoading: sentLoading,
+    isError: sentError,
+    isFetching: sentFetching,
+    fetchNextPage: sentFetchNextPage,
+    hasNextPage: sentHasNextPage,
+    isFetchingNextPage: sentFetchingNextPage,
+    refetch: sentRefetch,
+  } = useLikes('SENT');
 
-      if (activeTab === 'received' && !canSeeWhoLikedYou && !revealedItems[item.action_id] && !item.revealed_at) {
-        return (
-          <BlurredLikeCard
-            item={item}
-            onPress={() => handleReveal(item)}
-            onReveal={() => handleReveal(item)}
-            isRevealing={revealingId === item.action_id}
-          />
+  const [isSentRefreshing, setIsSentRefreshing] = useState(false);
+  useEffect(() => { if (!sentFetching) setIsSentRefreshing(false); }, [sentFetching]);
+
+  const [removedSentIds, setRemovedSentIds] = useState<Set<string>>(new Set());
+  const [unsendingId,    setUnsendingId]    = useState<string | null>(null);
+
+  const filteredSentItems = useMemo(
+    () => removedSentIds.size > 0
+      ? sentItems.filter((i) => !removedSentIds.has(i.action_id))
+      : sentItems,
+    [sentItems, removedSentIds],
+  );
+
+  // ─── Viewability refs ────────────────────────────────────────────────────────
+  const receivedViewConfig = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
+  const sentViewConfig     = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
+  const onReceivedViewChange = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ item: LikeItemDto }> }) => {
+      setVisibleReceivedIds(viewableItems.map((v) => v.item.user_id));
+    },
+  );
+  const onSentViewChange = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ item: LikeItemDto }> }) => {
+      setVisibleSentIds(viewableItems.map((v) => v.item.user_id));
+    },
+  );
+
+  // ─── Action handlers ─────────────────────────────────────────────────────────
+  const { mutateAsync: swipeAction } = useSwipeAction();
+
+  const handleReveal = useCallback(async (item: LikeItemDto) => {
+    setRevealingId(item.action_id);
+    try {
+      const response = await revealLike(item.action_id);
+      const revealedItem: LikeItemDto = {
+        ...item,
+        display_name:      response.actor_display_name,
+        age:               response.actor_age,
+        user_id:           response.actor_user_id,
+        primary_photo_url: response.actor_primary_photo_url,
+        revealed_at:       new Date().toISOString(),
+      };
+      setRevealedItems((prev) => ({ ...prev, [item.action_id]: revealedItem }));
+      if (!response.idempotent) refreshEntitlements();
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (isInsufficientCreditsError(err)) {
+        // Global interceptor already showed the modal
+      } else if (status === 403) {
+        showRevealUpgradeModal(
+          router,
+          entitlements?.country_settings?.credits_enabled ?? true,
+          entitlements?.country_settings?.subscription_enabled ?? true,
         );
+      } else if (status === 404) {
+        setRemovedReceivedIds((prev) => new Set(prev).add(item.action_id));
+      } else {
+        themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not reveal this profile.');
       }
+    } finally {
+      setRevealingId(null);
+    }
+  }, [refreshEntitlements, router, entitlements]);
+
+  const handleLikeBack = useCallback(async (item: LikeItemDto) => {
+    setLikingBackId(item.action_id);
+    try {
+      const response = await swipeAction({ type: 'LIKE', targetUserId: item.user_id });
+      if (response.is_match && response.match) {
+        themedAlert({
+          title: "It's a Match!",
+          message: `You and ${item.display_name} are now matched.`,
+          icon: 'heart',
+          iconColor: colors.secondary,
+          buttons: [
+            {
+              text: 'Send Message',
+              onPress: () => router.push({
+                pathname: '/(app)/chat' as any,
+                params: {
+                  matchId:     response.match!.match_id,
+                  displayName: item.display_name,
+                  avatarUrl:   item.primary_photo_url ?? '',
+                  isVerified:  item.is_verified ? '1' : '0',
+                },
+              }),
+            },
+            { text: 'Keep Swiping', style: 'cancel' },
+          ],
+        });
+      } else {
+        themedAlert({
+          title: 'Like sent',
+          message: `Your like has been sent to ${item.display_name}.`,
+          icon: 'heart-outline',
+          iconColor: colors.primary,
+          buttons: [{ text: 'OK' }],
+        });
+      }
+      receivedRefetch();
+    } catch (err: any) {
+      if (isInsufficientCreditsError(err)) return;
+      themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
+    } finally {
+      setLikingBackId(null);
+    }
+  }, [swipeAction, receivedRefetch, router]);
+
+  const handleUnsend = useCallback((item: LikeItemDto) => {
+    themedAlert({
+      title: 'Unsend Like?',
+      message: `Withdraw your like from ${item.display_name}?`,
+      icon: 'heart-dislike-outline',
+      iconColor: colors.danger,
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unsend Like',
+          style: 'destructive',
+          onPress: async () => {
+            setUnsendingId(item.action_id);
+            try {
+              await swipeAction({ type: 'PASS', targetUserId: item.user_id });
+              sentRefetch();
+            } catch (err: any) {
+              if (isInsufficientCreditsError(err)) return;
+              themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not unsend like.');
+            } finally {
+              setUnsendingId(null);
+            }
+          },
+        },
+      ],
+    });
+  }, [swipeAction, sentRefetch]);
+
+  const handleCardPress = useCallback((userId: string) => {
+    router.push({ pathname: '/(app)/user-profile', params: { userId } } as any);
+  }, [router]);
+
+  // ─── Per-page render functions ────────────────────────────────────────────────
+
+  const renderReceivedItem = useCallback(({ item }: { item: LikeItemDto }) => {
+    const effectiveItem = revealedItems[item.action_id] ?? item;
+    if (!canSeeWhoLikedYou && !revealedItems[item.action_id] && !item.revealed_at) {
       return (
-        <LikeCard
-          key={effectiveItem.action_id}
-          item={effectiveItem}
-          isReceived={activeTab === 'received'}
-          onPress={() => handleCardPress(effectiveItem.user_id)}
-          onUnsend={() => handleUnsend(effectiveItem)}
-          isUnsending={unsendingId === effectiveItem.action_id}
-          onLikeBack={() => handleLikeBack(effectiveItem)}
-          isLikingBack={likingBackId === effectiveItem.action_id}
-          activityStatus={getStatus(effectiveItem.user_id, effectiveItem.activity_status)}
-          myCountry={myCountry}
+        <BlurredLikeCard
+          item={item}
+          onPress={() => handleReveal(item)}
+          onReveal={() => handleReveal(item)}
+          isRevealing={revealingId === item.action_id}
         />
       );
-    },
-    [activeTab, canSeeWhoLikedYou, revealedItems, handleCardPress, handleReveal, handleUnsend, handleLikeBack, revealingId, unsendingId, likingBackId, getStatus, myCountry],
-  );
-
-  const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
+    }
     return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={colors.primary} />
-      </View>
+      <LikeCard
+        item={effectiveItem}
+        isReceived
+        onPress={() => handleCardPress(effectiveItem.user_id)}
+        onUnsend={() => {}}
+        isUnsending={false}
+        onLikeBack={() => handleLikeBack(effectiveItem)}
+        isLikingBack={likingBackId === effectiveItem.action_id}
+        activityStatus={getStatus(effectiveItem.user_id, effectiveItem.activity_status)}
+        myCountry={myCountry}
+      />
     );
-  }, [isFetchingNextPage]);
+  }, [canSeeWhoLikedYou, revealedItems, handleReveal, handleCardPress, handleLikeBack, revealingId, likingBackId, getStatus, myCountry]);
 
-  const listHeader = (
-    <View style={styles.segHeader}>
-      <SegmentedControl active={activeTab} onChange={setActiveTab} receivedCount={receivedLikesCount} sentCount={sentLikesCount} />
-    </View>
-  );
+  const renderSentItem = useCallback(({ item }: { item: LikeItemDto }) => (
+    <LikeCard
+      item={item}
+      isReceived={false}
+      onPress={() => handleCardPress(item.user_id)}
+      onUnsend={() => handleUnsend(item)}
+      isUnsending={unsendingId === item.action_id}
+      onLikeBack={() => {}}
+      isLikingBack={false}
+      activityStatus={getStatus(item.user_id, item.activity_status)}
+      myCountry={myCountry}
+    />
+  ), [handleCardPress, handleUnsend, unsendingId, getStatus, myCountry]);
 
-  // Initial loading state
-  if (isLoading && items.length === 0) {
-    return (
-      <View style={[styles.screen, { backgroundColor: bg, paddingTop: insets.top + 16, paddingHorizontal: OUTER_PAD }]}>
-        {listHeader}
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </View>
-    );
-  }
+  const renderReceivedFooter = useCallback(() => {
+    if (!receivedFetchingNextPage) return null;
+    return <View style={styles.footerLoader}><ActivityIndicator size="small" color={colors.primary} /></View>;
+  }, [receivedFetchingNextPage]);
 
-  // Error state (no cached data)
-  if (isError && items.length === 0) {
-    return (
-      <View style={[styles.screen, { backgroundColor: bg, paddingTop: insets.top + 16, paddingHorizontal: OUTER_PAD }]}>
-        {listHeader}
-        <ErrorState onRetry={refetch} />
-      </View>
-    );
-  }
+  const renderSentFooter = useCallback(() => {
+    if (!sentFetchingNextPage) return null;
+    return <View style={styles.footerLoader}><ActivityIndicator size="small" color={colors.primary} /></View>;
+  }, [sentFetchingNextPage]);
+
+  const handleReceivedEndReached = useCallback(() => {
+    if (receivedHasNextPage && !receivedFetchingNextPage) receivedFetchNextPage();
+  }, [receivedHasNextPage, receivedFetchingNextPage, receivedFetchNextPage]);
+
+  const handleSentEndReached = useCallback(() => {
+    if (sentHasNextPage && !sentFetchingNextPage) sentFetchNextPage();
+  }, [sentHasNextPage, sentFetchingNextPage, sentFetchNextPage]);
+
+  const handleReceivedRefresh = useCallback(() => {
+    setIsReceivedRefreshing(true);
+    receivedRefetch();
+  }, [receivedRefetch]);
+
+  const handleSentRefresh = useCallback(() => {
+    setIsSentRefreshing(true);
+    sentRefetch();
+  }, [sentRefetch]);
+
+  const listBottomPad = Math.max(insets.bottom, 16) + 120;
 
   return (
     <View style={[styles.screen, { backgroundColor: bg }]}>
-      <FlatList
-        key={activeTab}
-        data={filteredItems}
-        keyExtractor={(item) => item.action_id}
-        numColumns={2}
-        columnWrapperStyle={styles.columnWrapper}
-        contentContainerStyle={[
-          styles.listContent,
-          {
-            paddingTop:    insets.top + 16,
-            paddingBottom: Math.max(insets.bottom, 16) + 120,
-          },
-        ]}
-        ListHeaderComponent={listHeader}
-        ListEmptyComponent={<EmptyState tab={activeTab} onRefresh={handleRefresh} />}
-        ListFooterComponent={renderFooter}
-        onEndReached={handleEndReached}
-        onEndReachedThreshold={0.5}
-        onViewableItemsChanged={onViewableItemsChanged.current}
-        viewabilityConfig={viewabilityConfig.current}
-        showsVerticalScrollIndicator={false}
-        renderItem={renderItem}
-        initialNumToRender={8}
-        windowSize={7}
-        removeClippedSubviews={Platform.OS === 'android'}
-        refreshing={isUserRefreshing}
-        onRefresh={handleRefresh}
-      />
 
+      {/* ── Fixed segmented control — never scrolls or animates ──────────────── */}
+      <View style={[styles.fixedHeader, { paddingTop: insets.top + 16 }]}>
+        <SegmentedControl
+          active={activeTab}
+          onChange={snapToPage}
+          receivedCount={receivedLikesCount}
+          sentCount={sentLikesCount}
+        />
+      </View>
+
+      {/* ── Pager: both lists rendered side-by-side; track slides as a unit ─── */}
+      <GestureDetector gesture={panGesture}>
+        <View style={styles.pagerClip}>
+          <Animated.View style={[styles.pagerTrack, pagerStyle]}>
+
+            {/* Page 0 — Received Likes */}
+            <View style={styles.page}>
+              {receivedLoading && filteredReceivedItems.length === 0 ? (
+                <View style={styles.centered}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+              ) : receivedError && filteredReceivedItems.length === 0 ? (
+                <ErrorState onRetry={receivedRefetch} />
+              ) : (
+                <FlatList
+                  data={filteredReceivedItems}
+                  keyExtractor={(item) => item.action_id}
+                  numColumns={2}
+                  columnWrapperStyle={styles.columnWrapper}
+                  contentContainerStyle={[styles.listContent, { paddingBottom: listBottomPad }]}
+                  ListEmptyComponent={<EmptyState tab="received" onRefresh={handleReceivedRefresh} />}
+                  ListFooterComponent={renderReceivedFooter}
+                  onEndReached={handleReceivedEndReached}
+                  onEndReachedThreshold={0.5}
+                  onViewableItemsChanged={onReceivedViewChange.current}
+                  viewabilityConfig={receivedViewConfig.current}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={renderReceivedItem}
+                  initialNumToRender={8}
+                  windowSize={7}
+                  removeClippedSubviews={Platform.OS === 'android'}
+                  refreshing={isReceivedRefreshing}
+                  onRefresh={handleReceivedRefresh}
+                />
+              )}
+            </View>
+
+            {/* Page 1 — Sent Likes */}
+            <View style={styles.page}>
+              {sentLoading && filteredSentItems.length === 0 ? (
+                <View style={styles.centered}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+              ) : sentError && filteredSentItems.length === 0 ? (
+                <ErrorState onRetry={sentRefetch} />
+              ) : (
+                <FlatList
+                  data={filteredSentItems}
+                  keyExtractor={(item) => item.action_id}
+                  numColumns={2}
+                  columnWrapperStyle={styles.columnWrapper}
+                  contentContainerStyle={[styles.listContent, { paddingBottom: listBottomPad }]}
+                  ListEmptyComponent={<EmptyState tab="sent" onRefresh={handleSentRefresh} />}
+                  ListFooterComponent={renderSentFooter}
+                  onEndReached={handleSentEndReached}
+                  onEndReachedThreshold={0.5}
+                  onViewableItemsChanged={onSentViewChange.current}
+                  viewabilityConfig={sentViewConfig.current}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={renderSentItem}
+                  initialNumToRender={8}
+                  windowSize={7}
+                  removeClippedSubviews={Platform.OS === 'android'}
+                  refreshing={isSentRefreshing}
+                  onRefresh={handleSentRefresh}
+                />
+              )}
+            </View>
+
+          </Animated.View>
+        </View>
+      </GestureDetector>
     </View>
   );
 }
@@ -959,6 +1086,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  // Fixed header: safe-area + segmented control, never animates
+  fixedHeader: {
+    paddingHorizontal: OUTER_PAD,
+    paddingBottom:     16,
+    zIndex:            10,
+  },
+
+  // Clips the pager track to screen width so the off-screen page is hidden
+  pagerClip: {
+    flex:     1,
+    overflow: 'hidden',
+  },
+
+  // The sliding track — 2× screen width, rows side by side
+  pagerTrack: {
+    flex:          1,
+    flexDirection: 'row',
+    width:         SCREEN_W * 2,
+  },
+
+  // Each page occupies exactly one screen width
+  page: {
+    width:    SCREEN_W,
+    overflow: 'hidden',
+  },
+
   // paddingHorizontal on listContent (not columnWrapper) — matches MatchesListScreen
   listContent: {
     paddingHorizontal: OUTER_PAD,
@@ -967,10 +1120,6 @@ const styles = StyleSheet.create({
   columnWrapper: {
     gap:          COL_GAP,
     marginBottom: ROW_GAP,
-  },
-
-  segHeader: {
-    paddingBottom: 20,
   },
 
   // ── Card shell (exact copy of MatchCard styles) ──────────────────────────────

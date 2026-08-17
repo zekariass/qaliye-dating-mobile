@@ -25,7 +25,7 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PromotionAlert } from '@/components/billing/PromotionAlert';
-import { themedAlert } from '@/components/common/ThemedAlert';
+import { themedAlert, themedAlertDismiss } from '@/components/common/ThemedAlert';
 import BrowseModeGrid from '@/components/discovery/BrowseModeGrid';
 import CardActionButtons from '@/components/discovery/CardActionButtons';
 import CardStack, { CardStackHandle } from '@/components/discovery/CardStack';
@@ -510,7 +510,11 @@ export default function DiscoverScreen() {
                 refreshEntitlements();
               },
               onError: (err) => {
-                if (isInsufficientCreditsError(err)) return; // global modal already shown
+                if (isInsufficientCreditsError(err)) {
+                  // Global modal is already shown — dismiss the "Activating Boost…" loading alert
+                  themedAlertDismiss();
+                  return;
+                }
                 if (err.code === 'BOOST_ALREADY_ACTIVE') {
                   themedAlert({
                     title: 'Already Boosted',

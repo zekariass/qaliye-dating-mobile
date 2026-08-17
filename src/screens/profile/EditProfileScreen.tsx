@@ -3,7 +3,9 @@ import {
     ActivityIndicator,
     Keyboard,
     Platform,
+    Pressable,
     ScrollView,
+    StyleSheet,
     Text,
     View
 } from 'react-native';
@@ -35,10 +37,14 @@ import { LocationTab } from './edit/LocationTab';
 import { PhotosTabReal } from './edit/PhotosTabReal';
 import { PreferencesTab } from './edit/PreferencesTab';
 import { ProfileCompletionBar } from './edit/ProfileCompletionBar';
+import { VisibilityTab } from './edit/VisibilityTab';
 import {
     type DiscoveryPrefDraft,
     type EditProfileDraft,
 } from './mockEditProfile';
+
+// Tabs whose edits go through handleSave (shared profile mutation)
+const PROFILE_SAVE_TABS: readonly TabKey[] = ['bio', 'details', 'lifestyle', 'visibility'];
 
 export default function EditProfileScreen() {
   const { sem } = useSemanticTheme();
@@ -51,6 +57,20 @@ export default function EditProfileScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [draft, setDraft] = useState<EditProfileDraft | null>(null);
   const [prefs, setPrefs] = useState<DiscoveryPrefDraft | null>(null);
+
+  // ─── Dirty-state tracking refs ────────────────────────────────────────
+  // savedDraftRef = last server-synced state (updated on load and after save)
+  const savedDraftRef = useRef<EditProfileDraft | null>(null);
+  const savedPrefsRef = useRef<DiscoveryPrefDraft | null>(null);
+  // draftRef/prefsRef mirror current state so we can read it inside callbacks without stale closures
+  const draftRef = useRef<EditProfileDraft | null>(draft);
+  const prefsRef = useRef<DiscoveryPrefDraft | null>(prefs);
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+  useEffect(() => {
+    prefsRef.current = prefs;
+  }, [prefs]);
 
   // ─── Data fetching ────────────────────────────────────────────────────
   const { data: profileDto, isLoading, isError, error } = useCurrentProfile();
@@ -90,16 +110,25 @@ export default function EditProfileScreen() {
 
   useEffect(() => {
     if (profileDto && !draft) {
-      setDraft(mapProfileMeDtoToEditDraft(profileDto));
-      setPrefs(mapApiPrefsToDiscoveryPrefDraft(profileDto.discovery_preferences, profileDto.discovery_mode, profileDto.gender));
+      if (__DEV__) console.log('[EditProfileScreen] user_id:', profileDto.user_id);
+      const initial = mapProfileMeDtoToEditDraft(profileDto);
+      setDraft(initial);
+      savedDraftRef.current = initial;
+      const initialPrefs = mapApiPrefsToDiscoveryPrefDraft(profileDto.discovery_preferences, profileDto.discovery_mode, profileDto.gender);
+      setPrefs(initialPrefs);
+      savedPrefsRef.current = initialPrefs;
     }
   }, [profileDto, draft]);
 
   // Re-sync draft from server after a successful save (draftVersion bump)
   useEffect(() => {
     if (profileDto && draftVersion > 0) {
-      setDraft(mapProfileMeDtoToEditDraft(profileDto));
-      setPrefs(mapApiPrefsToDiscoveryPrefDraft(profileDto.discovery_preferences, profileDto.discovery_mode, profileDto.gender));
+      const synced = mapProfileMeDtoToEditDraft(profileDto);
+      setDraft(synced);
+      savedDraftRef.current = synced;
+      const syncedPrefs = mapApiPrefsToDiscoveryPrefDraft(profileDto.discovery_preferences, profileDto.discovery_mode, profileDto.gender);
+      setPrefs(syncedPrefs);
+      savedPrefsRef.current = syncedPrefs;
     }
   }, [draftVersion, profileDto]);
 
@@ -165,8 +194,9 @@ export default function EditProfileScreen() {
   }, [profileDto]);
 
   // ─── Save profile fields (bio + details + lifestyle) ──────────────────
-  const handleSave = useCallback(async () => {
-    if (!draft) return;
+  // Returns true on success so callers can act on the outcome (e.g. tab switch guard).
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    if (!draft) return false;
 
     // Validate user is 18 or older
     const dob = draft.basics.dateOfBirth;
@@ -189,7 +219,7 @@ export default function EditProfileScreen() {
               iconColor: '#EF4444',
               buttons: [{ text: 'OK', style: 'default' }],
             });
-            return;
+            return false;
           }
         }
       }
@@ -204,9 +234,11 @@ export default function EditProfileScreen() {
       await updateProfileMutation.mutateAsync(payload);
       setDraftVersion((v) => v + 1);
       themedSuccess('Saved', 'Your profile has been updated.');
+      return true;
     } catch (err: unknown) {
-      if (isInsufficientCreditsError(err)) return;
+      if (isInsufficientCreditsError(err)) return false;
       themedError('Error', (err as Error)?.message ?? 'Failed to save profile.');
+      return false;
     }
   }, [draft, prefs, updateProfileMutation]);
 
@@ -277,7 +309,72 @@ export default function EditProfileScreen() {
     [updateLocationMutation],
   );
 
-  const isSaving = updateProfileMutation.isPending;
+  // ─── Dirty-state detection ────────────────────────────────────────────
+  // Returns true if the draft or prefs have uncommitted changes vs. the last saved state.
+  const isDraftDirty = useCallback((): boolean => {
+    const currentDraft = draftRef.current;
+    const savedDraft = savedDraftRef.current;
+    const draftDirty = currentDraft && savedDraft
+      ? JSON.stringify(currentDraft) !== JSON.stringify(savedDraft)
+      : false;
+    const currentPrefs = prefsRef.current;
+    const savedPrefs = savedPrefsRef.current;
+    const prefsDirty = currentPrefs && savedPrefs
+      ? JSON.stringify(currentPrefs) !== JSON.stringify(savedPrefs)
+      : false;
+    return draftDirty || prefsDirty;
+  }, []);
+
+  // ─── Tab-change guard ─────────────────────────────────────────────────
+  const handleTabChange = useCallback((newTab: TabKey) => {
+    if (newTab === activeTab) return;
+
+    // Only guard tabs that share handleSave
+    const leavingDirtyTab = PROFILE_SAVE_TABS.includes(activeTab) && isDraftDirty();
+
+    if (!leavingDirtyTab) {
+      setActiveTab(newTab);
+      return;
+    }
+
+    themedAlert({
+      title: 'Unsaved Changes',
+      message: 'You have unsaved changes in this tab. What would you like to do?',
+      icon: 'alert-circle-outline',
+      iconColor: '#F59E0B',
+      buttons: [
+        {
+          text: 'Save',
+          style: 'default',
+          onPress: () => {
+            void handleSave().then((saved) => {
+              if (saved) setActiveTab(newTab);
+            });
+          },
+        },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => {
+            if (savedDraftRef.current) {
+              setDraft(savedDraftRef.current);
+            }
+            if (savedPrefsRef.current) {
+              setPrefs(savedPrefsRef.current);
+            }
+            setActiveTab(newTab);
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+    });
+  }, [activeTab, isDraftDirty, handleSave]);
+
+  const isSavingProfile = updateProfileMutation.isPending;
+  const showSaveButton = PROFILE_SAVE_TABS.includes(activeTab);
   const isPhotoMutating =
     registerPhotoMutation.isPending ||
     reorderPhotosMutation.isPending ||
@@ -324,9 +421,6 @@ export default function EditProfileScreen() {
             onChange={handleChange}
             onChangeEthnicities={handleChangeEthnicities}
             sem={sem}
-            discoveryMode={currentPrefs.discoveryMode}
-            onDiscoveryModeChange={(mode) => handlePrefsChange({ discoveryMode: mode })}
-            incognitoEnabled={canUseIncognito}
           />
         );
       case 'photo':
@@ -380,6 +474,15 @@ export default function EditProfileScreen() {
             sem={sem}
           />
         );
+      case 'visibility':
+        return (
+          <VisibilityTab
+            sem={sem}
+            discoveryMode={currentPrefs.discoveryMode}
+            onDiscoveryModeChange={(mode: 'PUBLIC' | 'INCOGNITO') => handlePrefsChange({ discoveryMode: mode })}
+            incognitoEnabled={canUseIncognito}
+          />
+        );
       default:
         return null;
     }
@@ -387,16 +490,18 @@ export default function EditProfileScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: sem.bg, paddingTop: safeTop }}>
-      <EditProfileHeader sem={sem} onSave={handleSave} isSaving={isSaving} />
+      <EditProfileHeader sem={sem} />
       <ProfileCompletionBar percent={completionPercent} sem={sem} />
-      <EditProfileTabBar activeTab={activeTab} onTabChange={setActiveTab} sem={sem} />
+      <EditProfileTabBar activeTab={activeTab} onTabChange={handleTabChange} sem={sem} />
 
       <ScrollView
         ref={scrollRef}
         className="flex-1"
         contentContainerStyle={{
           padding: 10,
-          paddingBottom: keyboardHeight > 0 ? keyboardHeight + safeBottom + 24 : safeBottom + 24,
+          paddingBottom: showSaveButton
+            ? 0  // save button below provides spacing
+            : keyboardHeight > 0 ? keyboardHeight + safeBottom + 24 : safeBottom + 24,
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -405,6 +510,62 @@ export default function EditProfileScreen() {
       >
         {renderTab()}
       </ScrollView>
+
+      {/* ── Per-tab save button (bio / details / lifestyle) ── */}
+      {showSaveButton && (
+        <View
+          style={[
+            saveStyles.container,
+            {
+              borderTopColor: sem.border,
+              backgroundColor: sem.bg,
+              paddingBottom: safeBottom > 0 ? safeBottom : 16,
+            },
+          ]}
+        >
+          <Pressable
+            onPress={isSavingProfile ? undefined : handleSave}
+            disabled={isSavingProfile}
+            style={[
+              saveStyles.button,
+              { backgroundColor: sem.accent, opacity: isSavingProfile ? 0.75 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Save changes"
+          >
+            {({ pressed }: { pressed: boolean }) =>
+              isSavingProfile ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text
+                  style={[saveStyles.buttonText, { opacity: pressed ? 0.8 : 1 }]}
+                >
+                  Save Changes
+                </Text>
+              )
+            }
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
+
+const saveStyles = StyleSheet.create({
+  container: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 12,
+    paddingHorizontal: 16,
+  },
+  button: {
+    borderRadius: 9999,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+});

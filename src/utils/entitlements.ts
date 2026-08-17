@@ -254,7 +254,10 @@ export function isInsufficientCreditsError(error: unknown): boolean {
   if ((error as any)?.isInsufficientCredits === true) return true;
   const status = (error as any)?.response?.status;
   const code: string = (error as any)?.response?.data?.error?.code ?? '';
-  return status === 402 && code.toLowerCase() === 'insufficient_credits';
+  if (status === 402 && code.toLowerCase() === 'insufficient_credits') return true;
+  // 429 LIMIT_EXCEEDED is also handled by the global modal; treat it the same way
+  if (status === 429 && code === 'LIMIT_EXCEEDED') return true;
+  return false;
 }
 
 /** @deprecated Use isLimitExceededError or isInsufficientCreditsError instead */
@@ -298,6 +301,28 @@ export const ACTION_CODE_LIMIT_KEY: Record<string, string | undefined> = {
   IMAGE_MESSAGE: LIMIT_KEYS.IMAGE_CHAT_MSGS,
 };
 
+// Map action-code variants (from 429 errors, URL inference, etc.) to the
+// canonical key used in the entitlements `costs` map.
+export const ACTION_CODE_CANONICAL: Record<string, string | undefined> = {
+  LIKES: 'LIKE',
+  LIKE: 'LIKE',
+  SUPERLIKES: 'SUPER_LIKE',
+  SUPER_LIKE: 'SUPER_LIKE',
+  REWINDS: 'REWIND',
+  REWIND: 'REWIND',
+  BOOSTS: 'BOOST',
+  BOOST: 'BOOST',
+};
+
+/**
+ * Normalize an action code to the canonical key used in the costs map.
+ * Falls back to the original code if no alias is known.
+ */
+export function normalizeActionCode(code: string | null | undefined): string | null {
+  if (!code) return null;
+  return ACTION_CODE_CANONICAL[code] ?? code;
+}
+
 export type ActionCostSummary = {
   actionName: string;
   creditBalance: number;
@@ -309,7 +334,47 @@ export type ActionCostSummary = {
   isStale: boolean;
   /** Human-readable message to show in the modal. */
   message: string;
+  /** True when the issue is a quota limit being exceeded (not credits). */
+  isLimitExceeded: boolean;
+  /** Period type from the cost info, e.g. "DAY", "MONTH". */
+  periodType: string | null;
 };
+
+/** Map backend period_type values to user-friendly labels. */
+export function formatPeriodType(periodType: string | null | undefined): string {
+  if (!periodType) return 'Billing Cycle';
+  const map: Record<string, string> = {
+    DAY: 'Daily',
+    DAILY: 'Daily',
+    WEEK: 'Weekly',
+    WEEKLY: 'Weekly',
+    MONTH: 'Monthly',
+    MONTHLY: 'Monthly',
+    YEAR: 'Yearly',
+    YEARLY: 'Yearly',
+    BILLING_CYCLE: 'Billing Cycle',
+    BILLINGCYCLE: 'Billing Cycle',
+  };
+  return map[periodType.toUpperCase()] ?? periodType;
+}
+
+/** Map backend period_type values to a "try again" label. */
+export function formatTryAgainLabel(periodType: string | null | undefined): string {
+  if (!periodType) return 'next billing cycle';
+  const map: Record<string, string> = {
+    DAY: 'tomorrow',
+    DAILY: 'tomorrow',
+    WEEK: 'next week',
+    WEEKLY: 'next week',
+    MONTH: 'next month',
+    MONTHLY: 'next month',
+    YEAR: 'next year',
+    YEARLY: 'next year',
+    BILLING_CYCLE: 'next billing cycle',
+    BILLINGCYCLE: 'next billing cycle',
+  };
+  return map[periodType.toUpperCase()] ?? 'next billing cycle';
+}
 
 export function getActionName(actionCode: string | null | undefined): string {
   if (!actionCode) return 'This Action';
@@ -345,7 +410,9 @@ export function getActionCostSummary(
 ): ActionCostSummary {
   const actionName = getActionName(actionCode);
   const creditBalance = entitlements?.credits?.credit_balance ?? 0;
-  const costInfo = actionCode ? entitlements?.costs?.[actionCode] : undefined;
+  // Use canonical action code for costs lookup (e.g. LIKES → LIKE)
+  const canonicalCode = normalizeActionCode(actionCode);
+  const costInfo = canonicalCode ? entitlements?.costs?.[canonicalCode] : undefined;
 
   if (!costInfo) {
     return {
@@ -354,6 +421,8 @@ export function getActionCostSummary(
       cost: null,
       hasCreditCost: false,
       isStale: false,
+      isLimitExceeded: false,
+      periodType: null,
       message: `Upgrade to use ${actionName.toLowerCase()}.`,
     };
   }
@@ -366,7 +435,8 @@ export function getActionCostSummary(
   //  1. Unlimited plan (limit_value = null) → member_credit_cost
   //  2. Has remaining free quota → member_credit_cost (what they'd pay)
   //  3. Free quota exhausted, credits apply after limit → actual_credit_cost
-  //  4. Free quota exhausted, credits don't apply → no cost (upgrade only)
+  //  4. Free quota exhausted, credits don't apply → actual_credit_cost as
+  //     context (user must upgrade; showing the cost gives them a reference)
   // Note: use ?? not || because member_credit_cost can legitimately be 0 (free)
   let cost: number | null = null;
 
@@ -377,12 +447,36 @@ export function getActionCostSummary(
   } else if (costInfo.apply_credit_after_limit) {
     cost = costInfo.actual_credit_cost ?? costInfo.member_credit_cost ?? null;
   } else {
-    // apply_credit_after_limit = false → credits can't help, upgrade only
-    cost = null;
+    // apply_credit_after_limit = false → credits can't buy more, but show
+    // actual_credit_cost so the user understands the action's value
+    cost = costInfo.actual_credit_cost ?? null;
   }
 
   const hasCreditCost = cost !== null;
-  const isStale = hasCreditCost && cost !== null && creditBalance >= cost;
+  // creditsCanHelp: credits can actually resolve the situation.
+  // When apply_credit_after_limit is false and quota is exhausted, credits
+  // can't buy more — the modal is correctly shown, so it's NOT stale even if
+  // the balance exceeds the displayed cost.
+  const creditsCanHelp = isUnlimited || (remaining ?? 0) > 0 || costInfo.apply_credit_after_limit;
+  const isStale = hasCreditCost && creditsCanHelp && creditBalance >= cost;
+
+  // isLimitExceeded: quota is exhausted AND credits can't help (the user has
+  // enough credits but the limit itself is the blocker)
+  const isLimitExceeded = !isUnlimited && (remaining ?? 0) <= 0 && !costInfo.apply_credit_after_limit;
+  const periodType = costInfo.period_type ?? null;
+
+  if (isLimitExceeded) {
+    return {
+      actionName,
+      creditBalance,
+      cost,
+      hasCreditCost: false,
+      isStale: false,
+      isLimitExceeded: true,
+      periodType,
+      message: `Your ${formatPeriodType(periodType).toLowerCase()} limit for ${actionName.toLowerCase()} has been reached.`,
+    };
+  }
 
   if (hasCreditCost) {
     return {
@@ -391,6 +485,8 @@ export function getActionCostSummary(
       cost,
       hasCreditCost,
       isStale,
+      isLimitExceeded: false,
+      periodType,
       message: `You need ${cost} credits to perform this action.`,
     };
   }
@@ -401,6 +497,8 @@ export function getActionCostSummary(
     cost: null,
     hasCreditCost: false,
     isStale,
+    isLimitExceeded: false,
+    periodType,
     message: `Your free ${actionName.toLowerCase()}s for this period have been used. Upgrade to ${actionName.toLowerCase()} more.`,
   };
 }

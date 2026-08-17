@@ -1,27 +1,141 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    ActivityIndicator,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useTheme } from '@/hooks/use-theme';
+import type { QuotaInfo } from '@/types/billing';
 import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
+import { formatPeriodType } from '@/utils/entitlements';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(iso?: string): string {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+    year: 'numeric', month: 'short', day: 'numeric',
   });
 }
 
-export default function BalancesScreen() {
-  const router = useRouter();
+function formatBoostTime(seconds: number): string {
+  if (seconds <= 0) return 'Expired';
+  const m = Math.floor(seconds / 60);
+  const h = Math.floor(m / 60);
+  return h > 0 ? `${h}h ${m % 60}m remaining` : `${m}m remaining`;
+}
+
+const QUOTA_META: Record<string, { label: string; icon: string; color: string }> = {
+  likes:           { label: 'Likes',          icon: 'heart-outline',   color: colors.secondary    },
+  super_likes:     { label: 'Super Likes',     icon: 'star-outline',    color: colors.warning      },
+  rewinds:         { label: 'Rewinds',         icon: 'refresh-outline', color: colors.primary      },
+  boosts:          { label: 'Boosts',          icon: 'rocket-outline',  color: '#FF6B35'           },
+  voice_chat_msgs: { label: 'Voice Messages',  icon: 'mic-outline',     color: colors.verifiedBlue },
+  image_chat_msgs: { label: 'Image Messages',  icon: 'image-outline',   color: colors.primary      },
+};
+
+const QUOTA_ORDER = ['likes', 'super_likes', 'rewinds', 'boosts', 'voice_chat_msgs', 'image_chat_msgs'];
+
+// Map limit keys (used in `limits`) to canonical action codes (used in `costs`)
+const LIMIT_KEY_TO_ACTION_CODE: Record<string, string> = {
+  likes:           'LIKE',
+  super_likes:     'SUPER_LIKE',
+  rewinds:         'REWIND',
+  boosts:          'BOOST',
+  voice_chat_msgs: 'VOICE_MESSAGE',
+  image_chat_msgs: 'IMAGE_MESSAGE',
+};
+
+const cardShadow = Platform.select({
+  ios:     { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 3 } },
+  android: { elevation: 2 },
+  default: {},
+});
+
+// ─── QuotaRow ─────────────────────────────────────────────────────────────────
+
+function QuotaRow({ quotaKey, quota, periodLabel, isLast }: {
+  quotaKey: string; quota: QuotaInfo; periodLabel: string; isLast: boolean;
+}) {
   const { colors: th } = useTheme();
-  const { entitlements, isLoading } = useEntitlements();
+  const meta        = QUOTA_META[quotaKey];
+  const isUnlimited = quota.limit === null;
+  const used        = quota.used ?? 0;
+  const limit       = quota.limit ?? 1;
+  const progress    = isUnlimited ? 0 : Math.min(used / limit, 1);
+  const barColor    =
+    progress >= 0.95 ? colors.danger
+    : progress >= 0.80 ? colors.warning
+    : meta.color;
+
+  return (
+    <>
+      <View style={quotaRowStyles.row}>
+        <View style={[quotaRowStyles.iconWrap, { backgroundColor: `${meta.color}15` }]}>
+          <Ionicons name={meta.icon as any} size={16} color={meta.color} />
+        </View>
+        <View style={quotaRowStyles.info}>
+          <View style={quotaRowStyles.topRow}>
+            <Text style={[quotaRowStyles.label, { color: th.text }]}>{meta.label}</Text>
+            {isUnlimited ? (
+              <View style={[quotaRowStyles.unlimitedChip, { backgroundColor: `${colors.success}14`, borderColor: `${colors.success}25` }]}>
+                <Ionicons name="infinite" size={11} color={colors.success} />
+                <Text style={[quotaRowStyles.unlimitedText, { color: colors.success }]}>Unlimited</Text>
+              </View>
+            ) : (
+              <Text style={[quotaRowStyles.count, { color: barColor }]}>
+                {used.toLocaleString()} / {limit.toLocaleString()}
+              </Text>
+            )}
+          </View>
+          {!isUnlimited && (
+            <View style={[quotaRowStyles.track, { backgroundColor: `${barColor}20` }]}>
+              <View style={[quotaRowStyles.fill, { backgroundColor: barColor, width: `${Math.round(progress * 100)}%` }]} />
+            </View>
+          )}
+          {!isUnlimited && periodLabel && (
+            <Text style={[quotaRowStyles.reset, { color: th.textSecondary }]}>
+              Resets {periodLabel}
+            </Text>
+          )}
+        </View>
+      </View>
+      {!isLast && <View style={[quotaRowStyles.divider, { backgroundColor: th.border }]} />}
+    </>
+  );
+}
+
+const quotaRowStyles = StyleSheet.create({
+  row:           { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 },
+  iconWrap:      { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  info:          { flex: 1, gap: 6 },
+  topRow:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  label:         { fontSize: 14, fontWeight: '600' },
+  count:         { fontSize: 13, fontWeight: '700' },
+  unlimitedChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1 },
+  unlimitedText: { fontSize: 11, fontWeight: '700' },
+  track:         { height: 5, borderRadius: 3, overflow: 'hidden' },
+  fill:          { height: 5, borderRadius: 3 },
+  reset:         { fontSize: 11, fontWeight: '500', marginTop: -2 },
+  divider:       { height: 1, marginHorizontal: 16 },
+});
+
+// ─── BalancesScreen ───────────────────────────────────────────────────────────
+
+export default function BalancesScreen() {
+  const router  = useRouter();
+  const { colors: th }  = useTheme();
+  const { entitlements, isLoading, refreshEntitlements } = useEntitlements();
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
 
   if (isLoading || !entitlements) {
@@ -32,16 +146,24 @@ export default function BalancesScreen() {
     );
   }
 
-  const { plan, subscription } = entitlements;
-  const isPremium = isPremiumPlan(plan);
-  const isFreePremium = isFreePremiumPlan(plan);
-  const planLabel = isFreePremium ? 'Free Premium' : 'Premium';
-  const planIcon = isFreePremium ? 'gift' : 'diamond';
-  const planColor = isFreePremium ? colors.warning : colors.primary;
-  const creditsEnabled = entitlements.country_settings?.credits_enabled ?? true;
+  const { plan, subscription, credits, limits, active_boost } = entitlements;
+  const isPremium         = isPremiumPlan(plan);
+  const isFreePremium     = isFreePremiumPlan(plan);
+  const planLabel         = isFreePremium ? 'Free Premium' : isPremium ? 'Premium' : 'Free';
+  const planIcon          = isFreePremium ? 'gift-outline' : isPremium ? 'diamond-outline' : 'person-circle-outline';
+  const planColor         = isFreePremium ? colors.warning : isPremium ? colors.primary : th.textSecondary;
+  const creditsEnabled    = entitlements.country_settings?.credits_enabled ?? true;
+  const subscriptionEnabled = entitlements.country_settings?.subscription_enabled ?? true;
+
+  // Sort and filter quota entries to only ones we have metadata for
+  const quotaEntries = Object.entries(limits ?? {})
+    .filter(([key]) => key in QUOTA_META)
+    .sort(([a], [b]) => QUOTA_ORDER.indexOf(a) - QUOTA_ORDER.indexOf(b));
 
   return (
     <View style={[styles.screen, { backgroundColor: th.background, paddingTop: safeTop }]}>
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
         <Pressable
           style={[styles.iconBtn, { backgroundColor: th.backgroundElement }]}
@@ -52,74 +174,209 @@ export default function BalancesScreen() {
           <Ionicons name="arrow-back" size={20} color={th.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: th.text }]}>Balances</Text>
-        <View style={{ width: 44 }} />
+        <Pressable
+          style={[styles.iconBtn, { backgroundColor: th.backgroundElement }]}
+          onPress={() => refreshEntitlements()}
+          accessibilityLabel="Refresh balances"
+          accessibilityRole="button"
+        >
+          <Ionicons name="refresh-outline" size={20} color={th.text} />
+        </Pressable>
       </View>
 
       <ScrollView
-        style={styles.content}
-        contentContainerStyle={[styles.contentInner, { paddingBottom: safeBottom + 16 }]}
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: safeBottom + 32 }]}
         showsVerticalScrollIndicator={false}
         bounces
       >
-        {isPremium && (
+
+        {/* ── Plan Card ──────────────────────────────────────────────────────── */}
+        {isPremium ? (
           <LinearGradient
-            colors={[`${colors.primary}18`, `${colors.primaryLight}10`, th.background]}
+            colors={
+              isFreePremium
+                ? [`${colors.warning}22`, `${colors.warning}0A`, `${th.background}00`]
+                : [`${colors.primary}1C`, `${colors.primaryLight}0E`, `${th.background}00`]
+            }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[styles.planCard, { borderColor: `${planColor}40` }]}
+            style={[styles.planCard, { borderColor: `${planColor}38` }, cardShadow]}
           >
-            <View style={styles.planCardRow}>
-              <View style={[styles.planIconRing, { backgroundColor: `${planColor}20`, borderColor: `${planColor}35` }]}>
-                <Ionicons name={planIcon as any} size={28} color={planColor} />
+            <View style={styles.planRow}>
+              <View style={[styles.planIconRing, { backgroundColor: `${planColor}18`, borderColor: `${planColor}30` }]}>
+                <Ionicons name={planIcon as any} size={26} color={planColor} />
               </View>
               <View style={styles.planInfo}>
-                <View style={[styles.planBadge, { backgroundColor: planColor }]}>
-                  <Ionicons name={planIcon as any} size={14} color="#fff" />
-                  <Text style={styles.planBadgeText}>{planLabel}</Text>
+                <View style={styles.planNameRow}>
+                  <View style={[styles.planBadge, { backgroundColor: planColor }]}>
+                    <Ionicons name={planIcon as any} size={12} color="#fff" />
+                    <Text style={styles.planBadgeText}>{planLabel}</Text>
+                  </View>
+                  {!isFreePremium && (
+                    <View style={[styles.activeChip, { backgroundColor: `${colors.success}14`, borderColor: `${colors.success}28` }]}>
+                      <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
+                      <Text style={[styles.activeChipText, { color: colors.success }]}>Active</Text>
+                    </View>
+                  )}
                 </View>
+                {subscription?.billing_interval_count != null && subscription?.billing_interval_unit && (
+                  <Text style={[styles.planInterval, { color: th.textSecondary }]}>
+                    {subscription.billing_interval_count === 1 ? 'Monthly plan' : `${subscription.billing_interval_count}-month plan`}
+                  </Text>
+                )}
                 {subscription?.expires_at && (
                   <Text style={[styles.planExpiry, { color: th.textSecondary }]}>
-                    {subscription.auto_renew ? 'Renews' : 'Expires'} {formatDate(subscription.expires_at)}
+                    {subscription.auto_renew ? 'Renews' : 'Expires'} · {formatDate(subscription.expires_at)}
                   </Text>
                 )}
               </View>
             </View>
-
-            {!isFreePremium && (
-              <View style={[styles.activeBadge, { borderColor: `${colors.success}35` }]}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                <Text style={[styles.activeBadgeText, { color: th.text }]}>Active subscription</Text>
+          </LinearGradient>
+        ) : (
+          <View style={[styles.freePlanCard, { backgroundColor: th.surface, borderColor: th.border }, cardShadow]}>
+            <View style={styles.freePlanLeft}>
+              <View style={[styles.planIconRing, { backgroundColor: `${th.textSecondary}14`, borderColor: `${th.textSecondary}22` }]}>
+                <Ionicons name="person-circle-outline" size={26} color={th.textSecondary} />
               </View>
+              <View>
+                <Text style={[styles.freePlanTitle, { color: th.text }]}>Free Plan</Text>
+                <Text style={[styles.freePlanSub, { color: th.textSecondary }]}>Limited features</Text>
+              </View>
+            </View>
+            {subscriptionEnabled && (
+              <Pressable
+                style={[styles.upgradePill, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/(app)/premium' as any)}
+                accessibilityRole="button"
+                accessibilityLabel="Go Premium"
+              >
+                <Ionicons name="diamond-outline" size={14} color="#fff" />
+                <Text style={styles.upgradePillText}>Go Premium</Text>
+              </Pressable>
             )}
+          </View>
+        )}
+
+        {/* ── Active Boost ───────────────────────────────────────────────────── */}
+        {active_boost && active_boost.remaining_seconds > 0 && (
+          <LinearGradient
+            colors={['#FF6B3522', '#FF6B350A']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.boostCard, { borderColor: '#FF6B3538' }]}
+          >
+            <View style={[styles.boostIconRing, { backgroundColor: '#FF6B3522' }]}>
+              <Ionicons name="rocket" size={22} color="#FF6B35" />
+            </View>
+            <View style={styles.boostTextWrap}>
+              <Text style={[styles.boostTitle, { color: th.text }]}>Boost Active</Text>
+              <Text style={[styles.boostTimer, { color: '#FF6B35' }]}>
+                {formatBoostTime(active_boost.remaining_seconds)}
+              </Text>
+            </View>
+            <View style={[styles.liveBadge, { backgroundColor: '#FF6B3518', borderColor: '#FF6B3538' }]}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
           </LinearGradient>
         )}
 
-        {/* Credits */}
+        {/* ── Credits ────────────────────────────────────────────────────────── */}
         {creditsEnabled && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="wallet-outline" size={16} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: th.text }]}>Your Credits</Text>
+            <View style={styles.sectionLabel}>
+              <Ionicons name="wallet-outline" size={15} color={colors.primary} />
+              <Text style={[styles.sectionLabelText, { color: th.text }]}>Credits</Text>
             </View>
-            <View style={[styles.creditHeroCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-              <View style={[styles.creditHeroIconRing, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}25` }]}>
-                <Ionicons name="diamond" size={32} color={colors.primary} />
+            <LinearGradient
+              colors={[`${colors.primary}16`, `${colors.primaryLight}0A`]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.creditCard, { borderColor: `${colors.primary}28` }, cardShadow]}
+            >
+              {/* Balance hero */}
+              <View style={styles.creditBalanceRow}>
+                <View style={[styles.creditIconRing, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}28` }]}>
+                  <Ionicons name="diamond" size={28} color={colors.primary} />
+                </View>
+                <View>
+                  <Text style={[styles.creditValue, { color: colors.primary }]}>
+                    {credits.credit_balance.toLocaleString()}
+                  </Text>
+                  <Text style={[styles.creditValueLabel, { color: th.textSecondary }]}>
+                    Available Credits
+                  </Text>
+                </View>
               </View>
-              <Text style={[styles.creditHeroValue, { color: colors.primary }]}>
-                {entitlements.credits.credit_balance.toLocaleString()}
-              </Text>
-              <Text style={[styles.creditHeroLabel, { color: th.textSecondary }]}>Credits</Text>
-              <Pressable
-                style={[styles.buyCreditsBtn, { backgroundColor: colors.primary }]}
-                onPress={() => router.push('/(app)/credits-shop' as any)}
-                accessibilityLabel="Buy credits"
-                accessibilityRole="button"
+
+            </LinearGradient>
+
+            {/* Buy Credits — full-width centered CTA below the card */}
+            <Pressable
+              style={({ pressed }) => [styles.buyBtnWrap, { opacity: pressed ? 0.88 : 1 }]}
+              onPress={() => router.push('/(app)/credits-shop' as any)}
+              accessibilityLabel="Buy credits"
+              accessibilityRole="button"
+            >
+              <LinearGradient
+                colors={['#A020F0', '#6D35FF']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.buyBtnGradient}
               >
-                <Ionicons name="add-circle" size={18} color="#fff" />
-                <Text style={styles.buyCreditsBtnText}>Buy Credits</Text>
-              </Pressable>
+                <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                <Text style={styles.buyBtnText}>Buy Credits</Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
+        )}
+
+        {/* ── Usage / Quotas ─────────────────────────────────────────────────── */}
+        {quotaEntries.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionLabel}>
+              <Ionicons name="stats-chart-outline" size={15} color={colors.primary} />
+              <Text style={[styles.sectionLabelText, { color: th.text }]}>Usage</Text>
+            </View>
+            <View style={[styles.listCard, { backgroundColor: th.surface, borderColor: th.border }, cardShadow]}>
+              {quotaEntries.map(([key, quota], idx) => {
+                const actionCode = LIMIT_KEY_TO_ACTION_CODE[key];
+                const costInfo   = actionCode ? entitlements.costs?.[actionCode] : undefined;
+                const periodLabel = formatPeriodType(costInfo?.period_type);
+                return (
+                  <QuotaRow
+                    key={key}
+                    quotaKey={key}
+                    quota={quota}
+                    periodLabel={periodLabel}
+                    isLast={idx === quotaEntries.length - 1}
+                  />
+                );
+              })}
             </View>
           </View>
+        )}
+
+        {/* ── Upgrade CTA (free users only) ─────────────────────────────────── */}
+        {!isPremium && subscriptionEnabled && (
+          <Pressable
+            style={({ pressed }) => [styles.ctaBtn, { opacity: pressed ? 0.88 : 1 }]}
+            onPress={() => router.push('/(app)/premium' as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Upgrade to Premium"
+          >
+            <LinearGradient
+              colors={['#A020F0', '#6D35FF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.ctaGradient}
+            >
+              <Ionicons name="diamond-outline" size={20} color="#fff" />
+              <Text style={styles.ctaText}>Upgrade to Premium</Text>
+              <Ionicons name="arrow-forward" size={18} color="#fff" />
+            </LinearGradient>
+          </Pressable>
         )}
 
       </ScrollView>
@@ -127,9 +384,13 @@ export default function BalancesScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
+  screen:   { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -138,112 +399,108 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: 18, fontWeight: '800' },
-  content: { flex: 1 },
-  contentInner: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 24, gap: 14 },
+
+  // Scroll
+  scroll:        { flex: 1 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 8, gap: 14 },
+
+  // Plan card (premium)
   planCard: {
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    padding: 18,
-    gap: 12,
+    borderRadius: radius.lg, borderWidth: 1, padding: 18,
   },
-  planCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
+  planRow:     { flexDirection: 'row', alignItems: 'center', gap: 14 },
   planIconRing: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
+    width: 52, height: 52, borderRadius: 26,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  planInfo: { flex: 1, gap: 4 },
+  planInfo:    { flex: 1, gap: 5 },
+  planNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   planBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999,
   },
-  planBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '800',
+  planBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  activeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 999, borderWidth: 1,
   },
-  planExpiry: {
-    fontSize: 13,
-    fontWeight: '500',
+  activeDot:      { width: 6, height: 6, borderRadius: 3 },
+  activeChipText: { fontSize: 11, fontWeight: '700' },
+  planInterval:   { fontSize: 13, fontWeight: '500' },
+  planExpiry:     { fontSize: 12, fontWeight: '500' },
+
+  // Plan card (free)
+  freePlanCard: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: radius.lg, borderWidth: 1, padding: 16,
   },
-  activeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: `${colors.success}10`,
+  freePlanLeft:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  freePlanTitle: { fontSize: 15, fontWeight: '800' },
+  freePlanSub:   { fontSize: 12, fontWeight: '500', marginTop: 1 },
+  upgradePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999,
   },
-  activeBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
+  upgradePillText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+
+  // Active boost
+  boostCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: radius.lg, borderWidth: 1, padding: 16,
   },
-  section: { gap: 8 },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  boostIconRing: {
+    width: 46, height: 46, borderRadius: 23,
+    alignItems: 'center', justifyContent: 'center',
   },
-  sectionTitle: { fontSize: 15, fontWeight: '800' },
-  creditHeroCard: {
-    alignItems: 'center',
+  boostTextWrap: { flex: 1 },
+  boostTitle:    { fontSize: 14, fontWeight: '800' },
+  boostTimer:    { fontSize: 13, fontWeight: '600', marginTop: 2 },
+  liveBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 999, borderWidth: 1,
+  },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF6B35' },
+  liveText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5, color: '#FF6B35' },
+
+  // Section labels
+  section:         { gap: 8 },
+  sectionLabel:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sectionLabelText: { fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
+
+  // Credits card
+  creditCard:       { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
+  creditBalanceRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 20 },
+  creditIconRing: {
+    width: 60, height: 60, borderRadius: 30,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+  },
+  creditValue:      { fontSize: 38, fontWeight: '900', lineHeight: 42 },
+  creditValueLabel: { fontSize: 13, fontWeight: '500', marginTop: 2 },
+  buyBtnWrap: {
     borderRadius: radius.lg,
-    borderWidth: 1,
-    padding: 24,
-    gap: 10,
+    overflow: 'hidden',
+    marginTop: 10,
   },
-  creditHeroIconRing: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    marginBottom: 4,
+  buyBtnGradient: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 15,
   },
-  creditHeroValue: {
-    fontSize: 36,
-    fontWeight: '900',
+  buyBtnText: { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
+
+  // Shared list card (used by quota)
+  listCard:      { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
+
+  // Upgrade CTA
+  ctaBtn:      { borderRadius: radius.lg, overflow: 'hidden' },
+  ctaGradient: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    paddingVertical: 16,
   },
-  creditHeroLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  buyCreditsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 999,
-    marginTop: 8,
-  },
-  buyCreditsBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '800',
-  },
+  ctaText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: -0.3 },
 });

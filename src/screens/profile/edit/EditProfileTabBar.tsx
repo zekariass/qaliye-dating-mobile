@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
 
-export type TabKey = 'bio' | 'details' | 'photo' | 'lifestyle' | 'preferences' | 'location';
+export type TabKey = 'bio' | 'details' | 'photo' | 'lifestyle' | 'preferences' | 'location' | 'visibility';
 
 type TabDef = {
   key: TabKey;
@@ -15,10 +15,11 @@ type TabDef = {
 const TABS: TabDef[] = [
   { key: 'bio', label: 'Bio', icon: 'reader-outline' },
   { key: 'details', label: 'Details', icon: 'person-outline' },
-  { key: 'photo', label: 'Photo', icon: 'camera-outline' },
+  { key: 'photo', label: 'Photos', icon: 'images-outline' },
   { key: 'lifestyle', label: 'Lifestyle', icon: 'git-network-outline' },
   { key: 'preferences', label: 'Preferences', icon: 'options-outline' },
   { key: 'location', label: 'Location', icon: 'location-outline' },
+  { key: 'visibility', label: 'Visibility', icon: 'eye-outline' },
 ];
 
 type Props = {
@@ -29,11 +30,11 @@ type Props = {
 
 export const EditProfileTabBar = memo(function EditProfileTabBar({ activeTab, onTabChange, sem }: Props) {
   return (
-    <View className="px-3 pb-3">
+    <View style={[styles.wrapper, { borderBottomColor: sem.border }]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}
+        contentContainerStyle={styles.scrollContent}
       >
         {TABS.map((tab) => {
           const isActive = tab.key === activeTab;
@@ -41,34 +42,25 @@ export const EditProfileTabBar = memo(function EditProfileTabBar({ activeTab, on
             <Pressable
               key={tab.key}
               onPress={() => onTabChange(tab.key)}
-              className="items-center justify-center rounded-2xl px-4 py-3 border"
-              style={{
-                backgroundColor: isActive ? sem.surface : 'transparent',
-                borderColor: isActive ? sem.accent : sem.border,
-                borderWidth: isActive ? 1.5 : 1,
-                minWidth: 72,
-                ...(isActive
-                  ? {
-                      shadowColor: sem.accent,
-                      shadowOpacity: 0.15,
-                      shadowRadius: 8,
-                      shadowOffset: { width: 0, height: 3 },
-                      elevation: 4,
-                    }
-                  : {}),
-              }}
+              style={[
+                styles.tab,
+                { backgroundColor: isActive ? sem.accentSoft : 'transparent' },
+              ]}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
               accessibilityLabel={tab.label}
             >
               <Ionicons
-                name={tab.icon}
-                size={20}
+                name={isActive ? (tab.icon.replace('-outline', '') as typeof tab.icon) : tab.icon}
+                size={18}
                 color={isActive ? sem.accent : sem.textMuted}
               />
               <Text
-                className="text-sm font-semibold mt-1"
-                style={{ color: isActive ? sem.accent : sem.textMuted }}
+                style={[
+                  styles.label,
+                  { color: isActive ? sem.accent : sem.textMuted },
+                  isActive && styles.labelActive,
+                ]}
               >
                 {tab.label}
               </Text>
@@ -78,4 +70,31 @@ export const EditProfileTabBar = memo(function EditProfileTabBar({ activeTab, on
       </ScrollView>
     </View>
   );
+});
+
+const styles = StyleSheet.create({
+  wrapper: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  scrollContent: {
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    minHeight: 38,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  labelActive: {
+    fontWeight: '700',
+  },
 });

@@ -11,6 +11,7 @@ import { useDiscoveryStore } from '@/stores/discovery-store';
 import { useInsufficientCreditsStore } from '@/stores/insufficient-credits-store';
 import { useMeStore } from '@/stores/me-store';
 import { useNotificationsStore } from '@/stores/notifications-store';
+import { normalizeActionCode } from '@/utils/entitlements';
 
 export const apiClient = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_BASE_URL,
@@ -150,11 +151,13 @@ apiClient.interceptors.response.use(
       return undefined;
     }
 
+    const isRetryGuarded = !!(error.config as { _insufficientCreditRetry?: boolean })?._insufficientCreditRetry;
+
     // 402/403 insufficient credits: show global modal with action context, suppress generic error handling
     if (
       (status === 402 || status === 403) &&
       normalizedCode === 'insufficient_credits' &&
-      !(error.config as { _insufficientCreditRetry?: boolean })?._insufficientCreditRetry
+      !isRetryGuarded
     ) {
       const message =
         typeof rawError === 'object' && rawError !== null
@@ -166,6 +169,26 @@ apiClient.interceptors.response.use(
         retryConfig: error.config,
       });
       const tagged = new Error('insufficient_credits') as Error & { isInsufficientCredits: true };
+      tagged.isInsufficientCredits = true;
+      return Promise.reject(tagged);
+    }
+
+    // 429 LIMIT_EXCEEDED: free-quota exhausted — show the same modal so the user can upgrade/buy credits
+    if (status === 429 && normalizedCode === 'limit_exceeded' && !isRetryGuarded) {
+      const errObj = typeof rawError === 'object' && rawError !== null
+        ? rawError as { message?: string; details?: { action_type?: string } }
+        : null;
+      // Prefer the action type from the response body; fall back to URL inference.
+      // Normalize to canonical costs-map key (e.g. LIKES → LIKE)
+      const rawActionCode = errObj?.details?.action_type ?? actionCodeFromConfig(error.config);
+      const actionCode = normalizeActionCode(rawActionCode) ?? rawActionCode;
+      const message = errObj?.message ?? 'You have reached your limit for this action.';
+      useInsufficientCreditsStore.getState().show({
+        actionCode,
+        message,
+        retryConfig: error.config,
+      });
+      const tagged = new Error('limit_exceeded') as Error & { isInsufficientCredits: true };
       tagged.isInsufficientCredits = true;
       return Promise.reject(tagged);
     }
