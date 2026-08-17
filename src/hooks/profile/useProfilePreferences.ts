@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
-    fetchProfilePreferences,
-    updateProfilePreferences,
+  fetchProfilePreferences,
+  updateProfilePreferences,
 } from '@/api/profile/profileApi';
 import type {
-    ProfileDiscoveryPreferencesDto,
-    ProfilePreferencesUpdateRequest,
+  ProfileDiscoveryPreferencesDto,
+  ProfilePreferencesUpdateRequest,
 } from '@/types/profile';
 
+import { ENTITLEMENTS_KEY } from '@/hooks/billing/useEntitlements';
 import { PROFILE_ME_QUERY_KEY } from './useCurrentProfile';
 
 export const PROFILE_PREFS_QUERY_KEY = ['profile', 'preferences'] as const;
@@ -30,6 +31,7 @@ export function useUpdateProfilePreferences() {
       queryClient.setQueryData<ProfileDiscoveryPreferencesDto>(PROFILE_PREFS_QUERY_KEY, data);
       queryClient.invalidateQueries({ queryKey: PROFILE_ME_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['discovery', 'profiles'] });
+      queryClient.invalidateQueries({ queryKey: ENTITLEMENTS_KEY });
     },
   });
 }

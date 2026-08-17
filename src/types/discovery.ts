@@ -189,6 +189,7 @@ export type LikeItemDto = {
   primary_photo_url: string | null;
   action_type: 'LIKE' | 'SUPERLIKE';
   liked_at: string;
+  revealed_at: string | null;
   distance_km: number | null;
   city: string | null;
   region: string | null;

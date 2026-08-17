@@ -86,6 +86,8 @@ export async function sendMessageWithAttachments(
   matchId: string,
   formData: FormData,
   durations?: (number | null)[],
+  /** Action code forwarded to the Axios interceptor for the InsufficientCreditsModal. */
+  actionCode?: string,
 ): Promise<{ data: MessageDto; status: number }> {
   let url = `${BASE}/matches/${matchId}/messages/attachments`;
   if (durations && durations.length > 0) {
@@ -97,7 +99,11 @@ export async function sendMessageWithAttachments(
   const res = await apiClient.post<MessageDto>(
     url,
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(actionCode ? ({ metadata: { actionCode } } as any) : {}),
+    },
   );
   return { data: res.data, status: res.status };
 }

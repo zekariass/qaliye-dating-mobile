@@ -1,6 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 
 import { sendMessage, sendMessageWithAttachments } from '@/api/chat/chatApi';
+import { ENTITLEMENTS_KEY } from '@/hooks/billing/useEntitlements';
 import { useChatStore } from '@/stores/chat-store';
 import type { ChatFileAttachment, ChatMessage } from '@/types/chat';
 import { getLimitExceededDetails, isInsufficientCreditsError, isLimitExceededError } from '@/utils/entitlements';
@@ -35,6 +37,7 @@ const NON_RETRYABLE_CODES = new Set([
 
 export function useSendMessage(matchId: string, currentUserId: string) {
   const rateLimitedUntil = useRef<number>(0);
+  const queryClient = useQueryClient();
 
   const send = useCallback(
     async (body: string, existingClientMessageId?: string) => {
@@ -107,6 +110,7 @@ export function useSendMessage(matchId: string, currentUserId: string) {
         };
 
         useChatStore.getState().reconcileMessage(clientMessageId, reconciled);
+        queryClient.invalidateQueries({ queryKey: ENTITLEMENTS_KEY });
       } catch (error: any) {
         const responseStatus = error?.response?.status;
         const errorCode =
@@ -123,7 +127,7 @@ export function useSendMessage(matchId: string, currentUserId: string) {
         useChatStore.getState().markMessageFailed(clientMessageId, errorCode);
       }
     },
-    [matchId, currentUserId],
+    [matchId, currentUserId, queryClient],
   );
 
   // ── Send with attachments (multipart) ─────────────────────────────────────
@@ -190,10 +194,17 @@ export function useSendMessage(matchId: string, currentUserId: string) {
           } as unknown as Blob);
         }
 
+        // Infer action code from file MIME types so the InsufficientCreditsModal
+        // can show the right icon and message. Voice wins when any audio file is present.
+        const actionCode = files.some((f) => f.type.startsWith('audio/'))
+          ? 'VOICE_MESSAGE'
+          : 'IMAGE_MESSAGE';
+
         const { data: serverMsg } = await sendMessageWithAttachments(
           matchId,
           formData,
           voiceDurationsMs,
+          actionCode,
         );
 
         const reconciled: ChatMessage = {
@@ -222,6 +233,7 @@ export function useSendMessage(matchId: string, currentUserId: string) {
         };
 
         useChatStore.getState().reconcileMessage(clientMessageId, reconciled);
+        queryClient.invalidateQueries({ queryKey: ENTITLEMENTS_KEY });
         return null;
       } catch (error: any) {
         const responseStatus = error?.response?.status;
@@ -253,7 +265,7 @@ export function useSendMessage(matchId: string, currentUserId: string) {
         return null;
       }
     },
-    [matchId, currentUserId],
+    [matchId, currentUserId, queryClient],
   );
 
   const retry = useCallback(

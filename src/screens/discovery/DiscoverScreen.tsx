@@ -24,7 +24,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { InsufficientCreditModal, type InsufficientCreditAction } from '@/components/billing/InsufficientCreditModal';
 import { PromotionAlert } from '@/components/billing/PromotionAlert';
 import { themedAlert } from '@/components/common/ThemedAlert';
 import BrowseModeGrid from '@/components/discovery/BrowseModeGrid';
@@ -56,9 +55,7 @@ import { useReviewPrompt } from '@/hooks/useReviewPrompt';
 import { useDiscoveryStore } from '@/stores/discovery-store';
 import { usePromotionStore } from '@/stores/promotion-store';
 import type { EligiblePromotionDto } from '@/types/billing';
-import { isPremiumPlan } from '@/types/billing';
 import {
-    canLike as checkCanLike,
     canRewind as checkCanRewind,
     canSuperLike as checkCanSuperLike,
     getBoostStatus,
@@ -284,121 +281,6 @@ const boostStyles = StyleSheet.create({
 });
 
 // ---------------------------------------------------------------------------
-// Insufficient-balance modal (shared by Like, Super Like, Rewind)
-// ---------------------------------------------------------------------------
-type InsufficientBalanceContext = 'LIKES' | 'SUPER_LIKES' | 'REWINDS';
-
-const BALANCE_CONTEXT_CONFIG: Record<InsufficientBalanceContext, {
-  title: string;
-  message: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  iconColor: string;
-  creditsShopFocus?: string;
-}> = {
-  LIKES: {
-    title: 'No More Likes',
-    message: "You've used all your available likes.",
-    icon: 'heart-outline',
-    iconColor: colors.heartPink,
-  },
-  SUPER_LIKES: {
-    title: 'No More Super Likes',
-    message: "You've used all your Super Likes.",
-    icon: 'star-outline',
-    iconColor: colors.warning,
-    creditsShopFocus: 'SUPERLIKE',
-  },
-  REWINDS: {
-    title: 'No More Rewinds',
-    message: "You've used all your Rewinds.",
-    icon: 'arrow-undo-outline',
-    iconColor: colors.primary,
-    creditsShopFocus: 'REWIND',
-  },
-};
-
-function showInsufficientBalanceModal(
-  context: InsufficientBalanceContext,
-  hasPremium: boolean,
-  router: ReturnType<typeof useRouter>,
-  creditsEnabled: boolean,
-  subscriptionEnabled: boolean,
-) {
-  const config = BALANCE_CONTEXT_CONFIG[context];
-  const creditsShopParams = { pathname: '/(app)/credits-shop' as const };
-
-  // Likes don't have credits — only show Go Premium (if enabled) + reset hint
-  if (context === 'LIKES') {
-    themedAlert({
-      title: config.title,
-      message: config.message,
-      icon: config.icon,
-      iconColor: config.iconColor,
-      buttons: [
-        ...(subscriptionEnabled ? [{
-          text: 'Go Premium',
-          style: 'default' as const,
-          icon: 'crown',
-          iconFamily: 'material' as const,
-          iconColor: '#FFD700',
-          onPress: () => router.push('/(app)/premium' as any),
-        }] : []),
-        { text: 'Cancel', style: 'cancel' as const },
-      ],
-    });
-    return;
-  }
-
-  if (hasPremium) {
-    themedAlert({
-      title: config.title,
-      message: creditsEnabled
-        ? `${config.message} Visit the Credits Shop to buy more.`
-        : `${config.message}`,
-      icon: config.icon,
-      iconColor: config.iconColor,
-      buttons: [
-        ...(creditsEnabled ? [{
-          text: 'Buy More Credits',
-          style: 'default' as const,
-          icon: 'hand-coin-outline',
-          iconFamily: 'material' as const,
-          iconColor: '#F59E0B',
-          onPress: () => router.push(creditsShopParams as any),
-        }] : []),
-        { text: 'Cancel', style: 'cancel' as const },
-      ],
-    });
-  } else {
-    themedAlert({
-      title: config.title,
-      message: `${config.message} Upgrade to Premium or buy credits separately.`,
-      icon: config.icon,
-      iconColor: config.iconColor,
-      buttons: [
-        ...(subscriptionEnabled ? [{
-          text: 'Go Premium',
-          style: 'default' as const,
-          icon: 'crown',
-          iconFamily: 'material' as const,
-          iconColor: '#FFD700',
-          onPress: () => router.push('/(app)/premium' as any),
-        }] : []),
-        ...(creditsEnabled ? [{
-          text: 'Buy Credits',
-          style: 'default' as const,
-          icon: 'hand-coin-outline',
-          iconFamily: 'material' as const,
-          iconColor: '#F59E0B',
-          onPress: () => router.push(creditsShopParams as any),
-        }] : []),
-        { text: 'Cancel', style: 'cancel' as const },
-      ],
-    });
-  }
-}
-
-// ---------------------------------------------------------------------------
 
 export default function DiscoverScreen() {
   const { t } = useTranslation();
@@ -429,7 +311,6 @@ export default function DiscoverScreen() {
   const [isRewinding, setIsRewinding] = useState(false);
   const [activePromotion, setActivePromotion] = useState<EligiblePromotionDto | null>(null);
   const [modeSwitching, setModeSwitching] = useState(false);
-  const [insufficientCredit, setInsufficientCredit] = useState<InsufficientCreditAction | null>(null);
   const [superMessageTarget, setSuperMessageTarget] = useState<SuperMessageTarget | null>(null);
   const viewMode = useDiscoveryStore((s) => s.viewMode);
   const setViewMode = useDiscoveryStore((s) => s.setViewMode);
@@ -600,65 +481,61 @@ export default function DiscoverScreen() {
     if (activateBoost.isPending) return;
     if (boostStatus.isActive) return;
 
-    if (boostStatus.canActivate) {
-      themedAlert({
-        title: 'Activate Boost',
-        message: `Boost will make your profile appear more frequently to others for ${boostStatus.durationMinutes} minutes. Ready to stand out?`,
-        icon: 'rocket',
-        iconColor: colors.primary,
-        buttons: [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Activate',
-            style: 'default',
-            onPress: () => {
-              themedAlert({
-                title: 'Activating Boost…',
-                loading: true,
-                buttons: [],
-              });
-              activateBoost.mutate(undefined, {
-                onSuccess: () => {
+    // Always attempt — if no credits the server returns 402 and the global modal fires
+    themedAlert({
+      title: 'Activate Boost',
+      message: `Boost will make your profile appear more frequently to others for ${boostStatus.durationMinutes} minutes. Ready to stand out?`,
+      icon: 'rocket',
+      iconColor: colors.primary,
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Activate',
+          style: 'default',
+          onPress: () => {
+            themedAlert({
+              title: 'Activating Boost…',
+              loading: true,
+              buttons: [],
+            });
+            activateBoost.mutate(undefined, {
+              onSuccess: () => {
+                themedAlert({
+                  title: 'Boost Active!',
+                  message: 'Your profile is now being shown to more people. Enjoy the spotlight!',
+                  icon: 'checkmark-circle',
+                  iconColor: colors.success,
+                  buttons: [{ text: 'OK' }],
+                });
+                refreshEntitlements();
+              },
+              onError: (err) => {
+                if (isInsufficientCreditsError(err)) return; // global modal already shown
+                if (err.code === 'BOOST_ALREADY_ACTIVE') {
                   themedAlert({
-                    title: 'Boost Active!',
-                    message: 'Your profile is now being shown to more people. Enjoy the spotlight!',
-                    icon: 'checkmark-circle',
-                    iconColor: colors.success,
+                    title: 'Already Boosted',
+                    message: 'A boost is already active. Enjoy the spotlight!',
+                    icon: 'rocket',
+                    iconColor: colors.primary,
                     buttons: [{ text: 'OK' }],
                   });
-                  refreshEntitlements();
-                },
-                onError: (err) => {
-                  if (err.code === 'BOOST_ALREADY_ACTIVE') {
-                    themedAlert({
-                      title: 'Already Boosted',
-                      message: 'A boost is already active. Enjoy the spotlight!',
-                      icon: 'rocket',
-                      iconColor: colors.primary,
-                      buttons: [{ text: 'OK' }],
-                    });
-                  } else {
-                    themedAlert({
-                      title: 'Boost Failed',
-                      message: err.message || 'Could not activate boost. Please try again.',
-                      icon: 'alert-circle',
-                      iconColor: colors.danger,
-                      buttons: [{ text: 'OK' }],
-                    });
-                  }
-                  refreshEntitlements();
-                },
-              });
-            },
+                } else {
+                  themedAlert({
+                    title: 'Boost Failed',
+                    message: err.message || 'Could not activate boost. Please try again.',
+                    icon: 'alert-circle',
+                    iconColor: colors.danger,
+                    buttons: [{ text: 'OK' }],
+                  });
+                }
+                refreshEntitlements();
+              },
+            });
           },
-        ],
-      });
-      return;
-    }
-
-    // No boost credits available
-    setInsufficientCredit({ icon: 'rocket', actionName: 'Boost' });
-  }, [activateBoost, boostStatus, entitlements, refreshEntitlements]);
+        },
+      ],
+    });
+  }, [activateBoost, boostStatus, refreshEntitlements]);
 
   // ── Queue management ───────────────────────────────────────────────────────
 
@@ -775,12 +652,11 @@ export default function DiscoverScreen() {
           },
           onError: (e) => {
             if (isInsufficientCreditsError(e)) {
-              if (isSuperLike) {
-                shownIdsRef.current.delete(card.user_id);
-                setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
-                setDisplayQueue((prev) => [card, ...prev]);
-              }
-              return;
+              // Restore the profile card so the user can retry after purchasing credits
+              shownIdsRef.current.delete(card.user_id);
+              setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
+              setDisplayQueue((prev) => [card, ...prev]);
+              return; // global InsufficientCreditsModal already shown by interceptor
             }
             if (!isLimitExceededError(e)) return;
             const errorType = getQuotaErrorType(e);
@@ -809,10 +685,6 @@ export default function DiscoverScreen() {
   // ── Rewind handler ──────────────────────────────────────────────────────────
   const handleRewind = useCallback(async () => {
     if (isRewindingRef.current) return;
-    if (!checkCanRewind(entitlements)) {
-      setInsufficientCredit({ icon: 'arrow-undo', actionName: 'Rewind' });
-      return;
-    }
     isRewindingRef.current = true;
     setIsRewinding(true);
     await scrollToTop();
@@ -867,13 +739,9 @@ export default function DiscoverScreen() {
   }, [scrollToTop]);
 
   const handleLike = useCallback(async () => {
-    if (!checkCanLike(entitlements)) {
-      showInsufficientBalanceModal('LIKES', isPremiumPlan(entitlements?.plan), router, entitlements?.country_settings?.credits_enabled ?? true, entitlements?.country_settings?.subscription_enabled ?? true);
-      return;
-    }
     await scrollToTop();
     cardStackRef.current?.triggerSwipe('LIKE');
-  }, [scrollToTop, entitlements, router]);
+  }, [scrollToTop]);
 
   const handleOpenSuperMessage = useCallback(
     (userId: string, displayName: string, photoUrl: string | null) => {
@@ -893,6 +761,7 @@ export default function DiscoverScreen() {
           },
           onError: (err: any) => {
             setSuperMessageTarget(null);
+            if (isInsufficientCreditsError(err)) return; // global modal already shown
             showActionErrorAlert(err, router, {
               subscriptionEnabled: entitlements?.country_settings?.subscription_enabled ?? true,
               creditsEnabled: entitlements?.country_settings?.credits_enabled ?? true,
@@ -905,14 +774,10 @@ export default function DiscoverScreen() {
   );
 
   const handleSuperLike = useCallback(async () => {
-    if (!checkCanSuperLike(entitlements)) {
-      setInsufficientCredit({ icon: 'star', actionName: 'Super Like' });
-      return;
-    }
     pendingSuperLikeRef.current = true;
     await scrollToTop();
     cardStackRef.current?.triggerSwipe('LIKE');
-  }, [scrollToTop, entitlements]);
+  }, [scrollToTop]);
 
   // Keep the suspense loader visible while we are fetching or while the API
   // has already returned cards but they have not yet been synced into the
@@ -1255,14 +1120,7 @@ export default function DiscoverScreen() {
         onDismiss={notifPrompt.handleDismiss}
       />
 
-      {/* ── Insufficient credit modal — shared by rewind, super like, boost ── */}
-      <InsufficientCreditModal
-        visible={insufficientCredit !== null}
-        onClose={() => setInsufficientCredit(null)}
-        action={insufficientCredit ?? { icon: 'wallet-outline', actionName: '' }}
-        creditBalance={entitlements?.credits.credit_balance ?? 0}
-        creditsEnabled={entitlements?.country_settings?.credits_enabled ?? true}
-      />
+      {/* InsufficientCreditsModal is mounted globally in _layout.tsx */}
     </SafeAreaView>
   );
 }

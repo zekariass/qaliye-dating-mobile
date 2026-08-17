@@ -174,6 +174,14 @@ export type PlanLimits = {
   IMAGE_CHAT_MSGS: number | null;
 };
 
+export type ActionCostInfo = {
+  member_credit_cost: number;
+  actual_credit_cost: number;
+  limit_value: number | null;
+  period_type: string;
+  apply_credit_after_limit: boolean;
+};
+
 export type EntitlementResponse = {
   plan: BillingPlan;
   subscription: SubscriptionInfo;
@@ -184,6 +192,7 @@ export type EntitlementResponse = {
   plan_limits: PlanLimits;
   boost_duration_minutes: number;
   country_settings?: CountrySettings;
+  costs?: Record<string, ActionCostInfo>;
 };
 
 export type OfferDto = {

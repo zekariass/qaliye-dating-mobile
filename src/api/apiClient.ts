@@ -124,16 +124,29 @@ apiClient.interceptors.response.use(
     const status = error.response?.status;
 
     function actionCodeFromConfig(config: any): string | undefined {
+      // Explicit metadata always wins (passed by API call sites that need precision)
       const meta = config?.metadata?.actionCode;
       if (meta) return meta;
       const url = (config?.url ?? '') as string;
+      // Discovery actions
       if (url.includes('/actions/like')) return 'LIKE';
       if (url.includes('/actions/superlike')) return 'SUPER_LIKE';
       if (url.includes('/actions/rewind')) return 'REWIND';
-      if (url.includes('/passes/revisit')) return 'RETURN_PASSED_PROFILE';
-      if (url.includes('/super-messages')) return 'SUPER_MESSAGE';
-      if (url.includes('/boosts/activate')) return 'BOOST';
       if (url.match(/\/actions\/[^/]+\/reveal/)) return 'SEE_WHO_LIKED_YOU';
+      if (url.includes('/passes/revisit')) return 'RETURN_PASSED_PROFILE';
+      // Messaging
+      if (url.includes('/super-messages')) return 'SUPER_MESSAGE';
+      // Chat attachments: metadata.actionCode from useSendMessage is preferred;
+      // fall back to VOICE_MESSAGE for audio, IMAGE_MESSAGE for images
+      if (url.includes('/messages/attachments')) {
+        const method = (config?.method ?? '').toLowerCase();
+        if (method === 'post') return 'IMAGE_MESSAGE'; // refined by metadata in practice
+      }
+      // Boosts
+      if (url.includes('/boosts/activate')) return 'BOOST';
+      // Profile actions
+      if (url.includes('/profile/location')) return 'CHANGE_ADDRESS';
+      if (url.includes('/profile/me/discovery-settings')) return 'INCOGNITO_MODE';
       return undefined;
     }
 

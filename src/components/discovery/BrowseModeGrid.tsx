@@ -33,7 +33,6 @@ import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
 import type { SwipeActionResponse } from '@/types/discovery';
-import { isInsufficientCreditsError } from '@/utils/entitlements';
 import { formatDistance } from '@/utils/formatDistance';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -466,7 +465,6 @@ interface Props {
   swipedIds: Set<string>;
   onCardAction: (userId: string, swiped: boolean, card?: CardDto) => void;
   onSuperMessage?: (userId: string, displayName: string, photoUrl: string | null) => void;
-  onInsufficientCredits?: (type: 'LIKE' | 'SUPER_LIKE') => void;
 }
 
 export default function BrowseModeGrid({
@@ -484,7 +482,6 @@ export default function BrowseModeGrid({
   swipedIds,
   onCardAction,
   onSuperMessage,
-  onInsufficientCredits,
 }: Props) {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
@@ -564,12 +561,10 @@ export default function BrowseModeGrid({
           next.delete(userId);
           return next;
         });
-        if (isInsufficientCreditsError(e) && (type === 'LIKE' || type === 'SUPER_LIKE')) {
-          onInsufficientCredits?.(type);
-        }
+        // Insufficient-credit errors are handled globally by the interceptor
       }
     },
-    [swipeAction, onMatch, cardMap, onCardAction, sheetVisible, onInsufficientCredits],
+    [swipeAction, onMatch, cardMap, onCardAction, sheetVisible],
   );
 
   // ── Rewind: call API, show spinner, prepend restored card ──

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
@@ -15,7 +15,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { revealLike } from '@/api/discovery/discoveryApi';
-import { InsufficientCreditModal } from '@/components/billing/InsufficientCreditModal';
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
@@ -28,9 +27,8 @@ import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
 import type { LikeDirection, LikeItemDto } from '@/types/discovery';
-import { isInsufficientCreditsError, isLimitExceededError } from '@/utils/entitlements';
+import { isInsufficientCreditsError } from '@/utils/entitlements';
 import { formatDistance } from '@/utils/formatDistance';
-import { showActionErrorAlert } from '@/utils/limitExceededAlert';
 
 // ─── Layout constants (identical to MatchesListScreen) ────────────────────────
 // NOTE: useWindowDimensions causes a runtime error in this RN version.
@@ -332,16 +330,18 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
 
         {/* Action type chip + unsend like button */}
         <View style={styles.chipRow}>
-          <View style={[styles.chip, { backgroundColor: chipBg }]}>
-            <Ionicons
-              name={item.action_type === 'SUPERLIKE' ? 'star' : 'heart'}
-              size={11}
-              color={purple}
-            />
-            <Text style={[styles.chipText, { color: purple }]} numberOfLines={2}>
-              {item.action_type === 'SUPERLIKE' ? 'Super Liked' : 'Liked'}
-            </Text>
-          </View>
+          {(!isReceived || item.action_type === 'SUPERLIKE') && (
+            <View style={[styles.chip, { backgroundColor: chipBg }]}>
+              <Ionicons
+                name={item.action_type === 'SUPERLIKE' ? 'star' : 'heart'}
+                size={11}
+                color={purple}
+              />
+              <Text style={[styles.chipText, { color: purple }]} numberOfLines={2}>
+                {item.action_type === 'SUPERLIKE' ? 'Super Liked' : 'Liked'}
+              </Text>
+            </View>
+          )}
 
           {/* Unsend like button — sent likes only */}
           {!isReceived && (
@@ -419,10 +419,23 @@ function BlurredLikeCard({ item, onPress, onReveal, isRevealing }: BlurredLikeCa
         )}
 
         <View style={[blurStyles.overlay, { backgroundColor: isDark ? 'rgba(13,7,18,0.55)' : 'rgba(0,0,0,0.25)' }]}>
-          <View style={[blurStyles.lockCircle, { backgroundColor: purple }]}>
-            <Ionicons name="lock-closed" size={22} color="#FFF" />
-          </View>
-          <Text style={[blurStyles.overlayText, { color: isDark ? '#FFF' : '#FFF' }]}>Someone likes you</Text>
+          <TouchableOpacity
+            style={[blurStyles.viewBtn, { backgroundColor: purple }]}
+            onPress={onReveal}
+            disabled={isRevealing}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="View who liked you"
+          >
+            {isRevealing ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <>
+                <Ionicons name="eye-outline" size={15} color="#FFF" />
+                <Text style={blurStyles.viewBtnText}>View</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -438,24 +451,6 @@ function BlurredLikeCard({ item, onPress, onReveal, isRevealing }: BlurredLikeCa
           Tap View to reveal
         </Text>
 
-        {/* View / Reveal button */}
-        <TouchableOpacity
-          style={[blurStyles.viewBtn, { backgroundColor: purple }]}
-          onPress={onReveal}
-          disabled={isRevealing}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel="View who liked you"
-        >
-          {isRevealing ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <>
-              <Ionicons name="eye-outline" size={15} color="#FFF" />
-              <Text style={blurStyles.viewBtnText}>View</Text>
-            </>
-          )}
-        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -487,8 +482,6 @@ const blurStyles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 18,
-    alignSelf: 'flex-start',
-    marginTop: 4,
   },
   viewBtnText: {
     color: '#FFF',
@@ -620,6 +613,50 @@ const errorStyles = StyleSheet.create({
   },
 });
 
+// ─── Reveal upgrade modal ─────────────────────────────────────────────────────
+
+function showRevealUpgradeModal(
+  router: ReturnType<typeof useRouter>,
+  creditsEnabled: boolean,
+  subscriptionEnabled: boolean,
+) {
+  if (!creditsEnabled && !subscriptionEnabled) {
+    themedAlert({
+      title: 'Reveal Who Liked You',
+      message: 'You have no available allowance to reveal this profile.',
+      icon: 'eye-outline',
+      iconColor: colors.primary,
+      buttons: [{ text: 'OK', style: 'cancel' }],
+    });
+    return;
+  }
+  themedAlert({
+    title: 'Reveal Who Liked You',
+    message: 'You have no available allowance or credits.',
+    icon: 'eye-outline',
+    iconColor: colors.primary,
+    buttons: [
+      ...(subscriptionEnabled ? [{
+        text: 'Go Premium',
+        style: 'default' as const,
+        icon: 'crown',
+        iconFamily: 'material' as const,
+        iconColor: '#FFD700',
+        onPress: () => router.push('/(app)/premium' as any),
+      }] : []),
+      ...(creditsEnabled ? [{
+        text: 'Buy Credits',
+        style: 'default' as const,
+        icon: 'hand-coin-outline',
+        iconFamily: 'material' as const,
+        iconColor: '#F59E0B',
+        onPress: () => router.push('/(app)/credits-shop' as any),
+      }] : []),
+      { text: 'Not Now', style: 'cancel' as const },
+    ],
+  });
+}
+
 // ─── LikesListScreen ──────────────────────────────────────────────────────────
 
 export default function LikesListScreen() {
@@ -667,8 +704,13 @@ export default function LikesListScreen() {
   const [unsendingId, setUnsendingId] = useState<string | null>(null);
   const [likingBackId, setLikingBackId] = useState<string | null>(null);
   const [revealingId, setRevealingId] = useState<string | null>(null);
-  const [showInsufficientCredit, setShowInsufficientCredit] = useState(false);
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [revealedItems, setRevealedItems] = useState<Record<string, LikeItemDto>>({});
+
+  const filteredItems = useMemo(
+    () => (removedIds.size > 0 ? items.filter((i) => !removedIds.has(i.action_id)) : items),
+    [items, removedIds],
+  );
   const { refreshEntitlements } = useEntitlements();
 
   const handleLikeBack = useCallback(
@@ -732,37 +774,31 @@ export default function LikesListScreen() {
       try {
         const response = await revealLike(item.action_id);
 
-        // Update the local item with revealed data
         const revealedItem: LikeItemDto = {
           ...item,
           display_name: response.actor_display_name,
           age: response.actor_age,
           user_id: response.actor_user_id,
           primary_photo_url: response.actor_primary_photo_url,
+          revealed_at: new Date().toISOString(),
         };
         setRevealedItems((prev) => ({ ...prev, [item.action_id]: revealedItem }));
 
-        // Refresh entitlements to update credit balance
-        refreshEntitlements();
-
-        if (response.idempotent) {
-          themedAlert({
-            title: 'Already revealed',
-            message: `This profile was already revealed previously.`,
-            icon: 'eye-outline',
-            iconColor: colors.primary,
-            buttons: [{ text: 'OK' }],
-          });
+        if (!response.idempotent) {
+          refreshEntitlements();
         }
       } catch (err: any) {
+        const status = err?.response?.status;
         if (isInsufficientCreditsError(err)) {
-          return;
-        } else if (isLimitExceededError(err)) {
-          showActionErrorAlert(err, router, {
-            subscriptionEnabled: entitlements?.country_settings?.subscription_enabled ?? true,
-            creditsEnabled: entitlements?.country_settings?.credits_enabled ?? true,
-            actionTypeOverride: 'SEE_WHO_LIKED_YOU',
-          });
+          // Global axios interceptor already showed the Insufficient Credits modal
+        } else if (status === 403) {
+          showRevealUpgradeModal(
+            router,
+            entitlements?.country_settings?.credits_enabled ?? true,
+            entitlements?.country_settings?.subscription_enabled ?? true,
+          );
+        } else if (status === 404) {
+          setRemovedIds((prev) => new Set(prev).add(item.action_id));
         } else {
           themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not reveal this profile.');
         }
@@ -770,7 +806,7 @@ export default function LikesListScreen() {
         setRevealingId(null);
       }
     },
-    [refreshEntitlements, router],
+    [refreshEntitlements, router, entitlements],
   );
 
   const handleCardPress = useCallback(
@@ -779,24 +815,6 @@ export default function LikesListScreen() {
     },
     [router],
   );
-
-  const handleBlurredCardPress = useCallback(() => {
-    themedAlert({
-      title: 'See Who Likes You',
-      message: 'Reveal this profile to see who liked you. Uses credits or your plan allowance.',
-      icon: 'eye-outline',
-      iconColor: colors.primary,
-      buttons: [
-        {
-          text: 'Go Premium',
-          onPress: () => {
-            router.push('/(app)/premium' as any);
-          },
-        },
-        { text: 'Not now', style: 'cancel' },
-      ],
-    });
-  }, [router]);
 
   const handleUnsend = useCallback(
     (item: LikeItemDto) => {
@@ -834,11 +852,11 @@ export default function LikesListScreen() {
       // If this item has been revealed, use the revealed data
       const effectiveItem = revealedItems[item.action_id] ?? item;
 
-      if (activeTab === 'received' && !canSeeWhoLikedYou && !revealedItems[item.action_id]) {
+      if (activeTab === 'received' && !canSeeWhoLikedYou && !revealedItems[item.action_id] && !item.revealed_at) {
         return (
           <BlurredLikeCard
             item={item}
-            onPress={handleBlurredCardPress}
+            onPress={() => handleReveal(item)}
             onReveal={() => handleReveal(item)}
             isRevealing={revealingId === item.action_id}
           />
@@ -859,7 +877,7 @@ export default function LikesListScreen() {
         />
       );
     },
-    [activeTab, canSeeWhoLikedYou, revealedItems, handleCardPress, handleBlurredCardPress, handleReveal, handleUnsend, handleLikeBack, revealingId, unsendingId, likingBackId, getStatus, myCountry],
+    [activeTab, canSeeWhoLikedYou, revealedItems, handleCardPress, handleReveal, handleUnsend, handleLikeBack, revealingId, unsendingId, likingBackId, getStatus, myCountry],
   );
 
   const renderFooter = useCallback(() => {
@@ -903,7 +921,7 @@ export default function LikesListScreen() {
     <View style={[styles.screen, { backgroundColor: bg }]}>
       <FlatList
         key={activeTab}
-        data={items}
+        data={filteredItems}
         keyExtractor={(item) => item.action_id}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
@@ -930,13 +948,6 @@ export default function LikesListScreen() {
         onRefresh={handleRefresh}
       />
 
-      <InsufficientCreditModal
-        visible={showInsufficientCredit}
-        onClose={() => setShowInsufficientCredit(false)}
-        action={{ icon: 'eye', actionName: 'Reveal' }}
-        creditBalance={entitlements?.credits.credit_balance ?? 0}
-        creditsEnabled={entitlements?.country_settings?.credits_enabled ?? true}
-      />
     </View>
   );
 }
