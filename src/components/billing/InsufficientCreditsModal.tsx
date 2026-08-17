@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Modal,
@@ -21,9 +20,7 @@ import { useInsufficientCreditsStore } from '@/stores/insufficient-credits-store
 import { getActionCostSummary, getActionName } from '@/utils/entitlements';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// InsufficientCreditsModal
-//
-// Layout (same for every action — only the title changes):
+// InsufficientCreditsModal — reusable for all credit-consuming actions.
 //
 //  ┌───────────────────────────────┐
 //  │       Reveal Profile          │
@@ -39,24 +36,23 @@ import { getActionCostSummary, getActionName } from '@/utils/entitlements';
 //  │  [ Not Now        ]           │
 //  └───────────────────────────────┘
 //
-// Title: dynamically set to the action name (e.g. "Reveal Profile",
-//        "Super Like", "Incognito Mode", "Boost", etc.)
+// Title:  action name from getActionName(actionCode)
+// Cost:   from entitlements.costs[actionCode]
+// Balance: from entitlements.credits.credit_balance
 //
-// Button visibility:
+// Buttons (filtered by country_settings):
 //   subscription_enabled → Go Premium
-//   credits_enabled AND hasCreditCost → Buy Credits
-//   always → Not Now
+//   credits_enabled      → Buy Credits
+//   always               → Not Now
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function InsufficientCreditsModal() {
-  const { t } = useTranslation();
   const { colors: th } = useTheme();
-  const router  = useRouter();
+  const router = useRouter();
   const { entitlements, refetch } = useEntitlements();
 
   const visible     = useInsufficientCreditsStore((s) => s.visible);
   const actionCode  = useInsufficientCreditsStore((s) => s.actionCode);
-  const message     = useInsufficientCreditsStore((s) => s.message);
   const retryConfig = useInsufficientCreditsStore((s) => s.retryConfig);
   const dismiss     = useInsufficientCreditsStore((s) => s.dismiss);
 
@@ -64,6 +60,7 @@ export function InsufficientCreditsModal() {
   const didRetryRef = useRef(false);
 
   const summary = getActionCostSummary(actionCode, entitlements);
+  const actionName = getActionName(actionCode);
 
   const creditsEnabled      = entitlements?.country_settings?.credits_enabled      ?? true;
   const subscriptionEnabled = entitlements?.country_settings?.subscription_enabled ?? true;
@@ -97,7 +94,6 @@ export function InsufficientCreditsModal() {
       })
       .then(() => { setIsRetrying(false); dismiss(); })
       .catch(() => { setIsRetrying(false); });
-  // Only re-run when visibility or stale flag changes — not on every entitlement update
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, summary.isStale]);
 
@@ -111,19 +107,13 @@ export function InsufficientCreditsModal() {
     router.push('/(app)/credits-shop' as any);
   }, [dismiss, router]);
 
-  // ── Button visibility (per country settings only) ────────────────────────
+  // ── Button visibility (per country settings) ─────────────────────────────
   const showGoPremium  = subscriptionEnabled;
   const showBuyCredits = creditsEnabled;
 
-  // ── Body content ─────────────────────────────────────────────────────────
-  // Title: the action name (e.g. "Reveal Profile", "Super Like", "Incognito Mode")
-  const actionName = getActionName(actionCode);
-
-  // When a credit cost applies: "You need N credits to perform this action."
-  // When free allowance is exhausted (no credit path): server message or generic
-  const bodyText = summary.hasCreditCost && summary.cost !== null
-    ? `You need ${summary.cost} credits to perform this action.`
-    : summary.message || message || 'You have run out of access for this action.';
+  // ── Cost & balance (always shown) ─────────────────────────────────────────
+  const cost    = summary.cost;
+  const balance = summary.creditBalance;
 
   if (!visible) return null;
 
@@ -135,23 +125,22 @@ export function InsufficientCreditsModal() {
       onRequestClose={dismiss}
       statusBarTranslucent
     >
-      {/* Dimmed backdrop — tap outside to close */}
       <Pressable style={styles.overlay} onPress={dismiss}>
         <Pressable
           style={[styles.card, { backgroundColor: th.surface }]}
           onPress={(e) => e.stopPropagation()}
         >
-          {/* ── Header ───────────────────────────────────────────────── */}
+          {/* ── Header: action name centered ───────────────────────────── */}
           <View style={[styles.header, { borderBottomColor: th.border }]}>
             <View style={[styles.iconBadge, { backgroundColor: `${colors.primary}15` }]}>
-              <Ionicons name="wallet-outline" size={20} color={colors.primary} />
+              <Ionicons name="wallet-outline" size={22} color={colors.primary} />
             </View>
             <Text style={[styles.title, { color: th.text }]}>
               {actionName}
             </Text>
           </View>
 
-          {/* ── Body ─────────────────────────────────────────────────── */}
+          {/* ── Body: cost + balance, all centered ─────────────────────── */}
           <View style={styles.body}>
             {isRetrying ? (
               <View style={styles.retryRow}>
@@ -163,24 +152,24 @@ export function InsufficientCreditsModal() {
             ) : (
               <>
                 {/* Cost line */}
-                <Text style={[styles.bodyText, { color: th.text }]}>
-                  {bodyText}
+                <Text style={[styles.costText, { color: th.text }]}>
+                  {cost !== null
+                    ? `You need ${cost} credits to perform this action.`
+                    : `You need credits to perform this action.`}
                 </Text>
 
-                {/* Balance line — only when credits apply */}
-                {summary.hasCreditCost && summary.cost !== null && (
-                  <Text style={[styles.balanceText, { color: th.textSecondary }]}>
-                    Your balance:{' '}
-                    <Text style={{ color: colors.primary, fontWeight: '700' }}>
-                      {summary.creditBalance.toLocaleString()} credits
-                    </Text>
+                {/* Balance line */}
+                <Text style={[styles.balanceText, { color: th.textSecondary }]}>
+                  Your balance:{' '}
+                  <Text style={{ color: colors.primary, fontWeight: '700' }}>
+                    {balance.toLocaleString()} credits
                   </Text>
-                )}
+                </Text>
               </>
             )}
           </View>
 
-          {/* ── Buttons ──────────────────────────────────────────────── */}
+          {/* ── Buttons ────────────────────────────────────────────────── */}
           {!isRetrying && (
             <View style={styles.buttons}>
               {showGoPremium && (
@@ -242,7 +231,7 @@ export function InsufficientCreditsModal() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Styles
+// Styles — everything centered
 // ─────────────────────────────────────────────────────────────────────────────
 
 const cardShadow = Platform.select({
@@ -269,17 +258,20 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     borderRadius: radius.lg,
     overflow: 'hidden',
+    alignItems: 'center',
     ...cardShadow,
   },
 
-  // Header
+  // Header — centered
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
     paddingHorizontal: spacing.lg,
     paddingVertical: 18,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
   },
   iconBadge: {
     width: 36,
@@ -292,40 +284,48 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: '700',
     letterSpacing: -0.2,
+    textAlign: 'center',
   },
 
-  // Body
+  // Body — centered
   body: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    gap: 8,
+    alignItems: 'center',
+    alignSelf: 'stretch',
   },
-  bodyText: {
+  costText: {
     fontSize: fontSize.sm,
     lineHeight: 22,
     fontWeight: '500',
+    textAlign: 'center',
   },
   balanceText: {
     fontSize: fontSize.sm,
-    lineHeight: 20,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginTop: 6,
   },
   retryRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
     paddingVertical: 8,
   },
   retryText: {
     fontSize: fontSize.sm,
+    textAlign: 'center',
   },
 
-  // Buttons
+  // Buttons — full width, centered
   buttons: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
     paddingTop: spacing.sm,
     gap: 10,
+    alignSelf: 'stretch',
   },
   btn: {
     width: '100%',

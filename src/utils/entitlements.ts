@@ -327,6 +327,8 @@ export function getActionName(actionCode: string | null | undefined): string {
     SEE_WHO_LIKED_YOU: 'Reveal Profile',
     RETURN_PASSED_PROFILE: 'Revisit Profile',
     SUPER_MESSAGE: 'Super Message',
+    INCOGNITO_MODE: 'Incognito Mode',
+    CHANGE_ADDRESS: 'Change Address',
   };
   return map[actionCode] ?? actionCode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
