@@ -401,6 +401,22 @@ export default function BrowseProfileDetailSheet({
               })}
             </TouchableOpacity>
 
+            {/* Like */}
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                styles.likeBtn,
+                { backgroundColor: isDark ? th.backgroundSelected : '#FFE8F3' },
+              ]}
+              onPress={handleLike}
+              disabled={isActing || !!actionTaken}
+              activeOpacity={0.7}
+              accessibilityLabel="Like profile"
+              accessibilityRole="button"
+            >
+              <Ionicons name="heart" size={32} color={colors.heartPink} />
+            </TouchableOpacity>
+
             {/* Super Message */}
             {onSuperMessage && (
               <TouchableOpacity
@@ -417,22 +433,6 @@ export default function BrowseProfileDetailSheet({
                 <Ionicons name="chatbubble-ellipses" size={30} color="#F59E0B" />
               </TouchableOpacity>
             )}
-
-            {/* Like */}
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                styles.likeBtn,
-                { backgroundColor: isDark ? th.backgroundSelected : '#FFE8F3' },
-              ]}
-              onPress={handleLike}
-              disabled={isActing || !!actionTaken}
-              activeOpacity={0.7}
-              accessibilityLabel="Like profile"
-              accessibilityRole="button"
-            >
-              <Ionicons name="heart" size={32} color={colors.heartPink} />
-            </TouchableOpacity>
           </Animated.View>
 
           {/* Confirmation message */}
