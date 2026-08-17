@@ -430,7 +430,7 @@ function BrowseProfileCard({
           accessibilityLabel="View profile"
           accessibilityRole="button"
         >
-          <Ionicons name="eye-outline" size={22} color="#FFFFFF" />
+          <Ionicons name="list-outline" size={22} color="#FFFFFF" />
         </TouchableOpacity>
 
         {/* Like */}
