@@ -17,6 +17,7 @@ import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useTheme } from '@/hooks/use-theme';
 import { useInsufficientCreditsStore } from '@/stores/insufficient-credits-store';
+import { isPremiumPlan } from '@/types/billing';
 import { getActionCostSummary, getActionName } from '@/utils/entitlements';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,8 +128,10 @@ export function InsufficientCreditsModal() {
     router.push('/(app)/credits-shop' as any);
   }, [dismiss, router]);
 
-  // ── Button visibility (per country settings) ─────────────────────────────
-  const showGoPremium  = subscriptionEnabled;
+  // ── Button visibility ────────────────────────────────────────────────────
+  // Go Premium: only if subscriptions are enabled AND user is not already premium
+  const hasPremium = isPremiumPlan(entitlements?.plan);
+  const showGoPremium  = subscriptionEnabled && !hasPremium;
   const showBuyCredits = creditsEnabled;
 
   // ── Cost & balance (always shown) ─────────────────────────────────────────
