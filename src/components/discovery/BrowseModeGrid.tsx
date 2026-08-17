@@ -409,18 +409,6 @@ function BrowseProfileCard({
           })}
         </TouchableOpacity>
 
-        {/* Super Message */}
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg }]}
-          onPress={() => onSuperMessage(item.user_id)}
-          disabled={animating || isActing}
-          activeOpacity={0.7}
-          accessibilityLabel="Send super message"
-          accessibilityRole="button"
-        >
-          <Ionicons name="chatbubble-ellipses" size={24} color="#F59E0B" />
-        </TouchableOpacity>
-
         {/* Like */}
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: iconBg }]}
@@ -431,6 +419,18 @@ function BrowseProfileCard({
           accessibilityRole="button"
         >
           <Ionicons name="heart" size={20} color={colors.heartPink} />
+        </TouchableOpacity>
+
+        {/* Super Message */}
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: iconBg }]}
+          onPress={() => onSuperMessage(item.user_id)}
+          disabled={animating || isActing}
+          activeOpacity={0.7}
+          accessibilityLabel="Send super message"
+          accessibilityRole="button"
+        >
+          <Ionicons name="chatbubble-ellipses" size={24} color="#F59E0B" />
         </TouchableOpacity>
 
         {/* View profile — at the right end */}
