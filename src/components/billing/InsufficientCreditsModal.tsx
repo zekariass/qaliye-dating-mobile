@@ -18,26 +18,29 @@ import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useTheme } from '@/hooks/use-theme';
 import { useInsufficientCreditsStore } from '@/stores/insufficient-credits-store';
-import { getActionCostSummary } from '@/utils/entitlements';
+import { getActionCostSummary, getActionName } from '@/utils/entitlements';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // InsufficientCreditsModal
 //
-// Layout (same for every action):
+// Layout (same for every action — only the title changes):
 //
 //  ┌───────────────────────────────┐
-//  │      Insufficient Credit      │
+//  │       Reveal Profile          │
 //  │ ─────────────────────────── │
 //  │                               │
-//  │  You need 5 credits for       │
-//  │  this action.                 │
+//  │  You need 5 credits to        │
+//  │  perform this action.         │
 //  │                               │
-//  │  Your balance: 2              │
+//  │  Your balance: 2 credits      │
 //  │                               │
 //  │  [ Go Premium     ]           │
 //  │  [ Buy Credits    ]           │
 //  │  [ Not Now        ]           │
 //  └───────────────────────────────┘
+//
+// Title: dynamically set to the action name (e.g. "Reveal Profile",
+//        "Super Like", "Incognito Mode", "Boost", etc.)
 //
 // Button visibility:
 //   subscription_enabled → Go Premium
@@ -113,10 +116,13 @@ export function InsufficientCreditsModal() {
   const showBuyCredits = creditsEnabled && summary.hasCreditCost;
 
   // ── Body content ─────────────────────────────────────────────────────────
-  // When a credit cost applies: "You need N credits for this action."
+  // Title: the action name (e.g. "Reveal Profile", "Super Like", "Incognito Mode")
+  const actionName = getActionName(actionCode);
+
+  // When a credit cost applies: "You need N credits to perform this action."
   // When free allowance is exhausted (no credit path): server message or generic
   const bodyText = summary.hasCreditCost && summary.cost !== null
-    ? `You need ${summary.cost} credits for this action.`
+    ? `You need ${summary.cost} credits to perform this action.`
     : summary.message || message || 'You have run out of access for this action.';
 
   if (!visible) return null;
@@ -141,7 +147,7 @@ export function InsufficientCreditsModal() {
               <Ionicons name="wallet-outline" size={20} color={colors.primary} />
             </View>
             <Text style={[styles.title, { color: th.text }]}>
-              {t('billing.insufficientCreditTitle', 'Insufficient Credit')}
+              {actionName}
             </Text>
           </View>
 
@@ -166,7 +172,7 @@ export function InsufficientCreditsModal() {
                   <Text style={[styles.balanceText, { color: th.textSecondary }]}>
                     Your balance:{' '}
                     <Text style={{ color: colors.primary, fontWeight: '700' }}>
-                      {summary.creditBalance.toLocaleString()}
+                      {summary.creditBalance.toLocaleString()} credits
                     </Text>
                   </Text>
                 )}
