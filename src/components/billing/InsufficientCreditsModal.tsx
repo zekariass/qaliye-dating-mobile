@@ -176,17 +176,19 @@ export function InsufficientCreditsModal() {
               </View>
             ) : (
               <>
-                {/* Cost line */}
+                {/* Cost line — number styled prominently */}
                 <Text style={[styles.costText, { color: th.text }]}>
-                  {cost !== null
-                    ? `You need ${cost} credits to perform this action.`
-                    : `You need credits to perform this action.`}
+                  You need{' '}
+                  <Text style={styles.costHighlight}>
+                    {cost !== null ? cost : '—'}
+                  </Text>
+                  {' '}credits to perform this action.
                 </Text>
 
-                {/* Balance line */}
+                {/* Balance line — number styled prominently */}
                 <Text style={[styles.balanceText, { color: th.textSecondary }]}>
                   Your balance:{' '}
-                  <Text style={{ color: colors.primary, fontWeight: '700' }}>
+                  <Text style={styles.balanceHighlight}>
                     {balance.toLocaleString()} credits
                   </Text>
                 </Text>
@@ -322,15 +324,25 @@ const styles = StyleSheet.create({
   },
   costText: {
     fontSize: fontSize.sm,
-    lineHeight: 22,
+    lineHeight: 24,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  costHighlight: {
+    fontSize: fontSize.md,
+    fontWeight: '800',
+    color: colors.primary,
   },
   balanceText: {
     fontSize: fontSize.sm,
     lineHeight: 22,
     textAlign: 'center',
     marginTop: 6,
+  },
+  balanceHighlight: {
+    fontSize: fontSize.base,
+    fontWeight: '800',
+    color: colors.primary,
   },
   retryRow: {
     flexDirection: 'row',
@@ -384,5 +396,6 @@ const styles = StyleSheet.create({
   btnTextMuted: {
     fontSize: 15,
     fontWeight: '600',
+    textAlign: 'center',
   },
 });
