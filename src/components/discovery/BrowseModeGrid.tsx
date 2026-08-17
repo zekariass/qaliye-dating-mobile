@@ -421,18 +421,6 @@ function BrowseProfileCard({
           <Ionicons name="chatbubble-ellipses" size={24} color="#F59E0B" />
         </TouchableOpacity>
 
-        {/* View profile */}
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-          onPress={() => onPress(item.user_id)}
-          disabled={animating || isActing}
-          activeOpacity={0.7}
-          accessibilityLabel="View profile"
-          accessibilityRole="button"
-        >
-          <Ionicons name="information-circle-outline" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
-
         {/* Like */}
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: iconBg }]}
@@ -443,6 +431,18 @@ function BrowseProfileCard({
           accessibilityRole="button"
         >
           <Ionicons name="heart" size={20} color={colors.heartPink} />
+        </TouchableOpacity>
+
+        {/* View profile — at the right end */}
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+          onPress={() => onPress(item.user_id)}
+          disabled={animating || isActing}
+          activeOpacity={0.7}
+          accessibilityLabel="View profile"
+          accessibilityRole="button"
+        >
+          <Ionicons name="information-circle-outline" size={22} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     </Animated.View>
