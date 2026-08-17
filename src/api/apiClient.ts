@@ -121,14 +121,37 @@ apiClient.interceptors.response.use(
           ? (rawError as { code?: string }).code            // {"error":{"code":"ACCOUNT_DELETED"}}
           : undefined;
     const normalizedCode = errorCode?.toLowerCase();
+    const status = error.response?.status;
 
-    // 402 Payment Required — insufficient credits: show global modal, suppress generic error handling
-    if (error.response?.status === 402 && normalizedCode === 'insufficient_credits') {
+    function actionCodeFromConfig(config: any): string | undefined {
+      const meta = config?.metadata?.actionCode;
+      if (meta) return meta;
+      const url = (config?.url ?? '') as string;
+      if (url.includes('/actions/like')) return 'LIKE';
+      if (url.includes('/actions/superlike')) return 'SUPER_LIKE';
+      if (url.includes('/actions/rewind')) return 'REWIND';
+      if (url.includes('/passes/revisit')) return 'RETURN_PASSED_PROFILE';
+      if (url.includes('/super-messages')) return 'SUPER_MESSAGE';
+      if (url.includes('/boosts/activate')) return 'BOOST';
+      if (url.match(/\/actions\/[^/]+\/reveal/)) return 'SEE_WHO_LIKED_YOU';
+      return undefined;
+    }
+
+    // 402/403 insufficient credits: show global modal with action context, suppress generic error handling
+    if (
+      (status === 402 || status === 403) &&
+      normalizedCode === 'insufficient_credits' &&
+      !(error.config as { _insufficientCreditRetry?: boolean })?._insufficientCreditRetry
+    ) {
       const message =
         typeof rawError === 'object' && rawError !== null
           ? (rawError as { message?: string }).message ?? "You don't have enough credits for this action."
           : "You don't have enough credits for this action.";
-      useInsufficientCreditsStore.getState().show(message);
+      useInsufficientCreditsStore.getState().show({
+        actionCode: actionCodeFromConfig(error.config),
+        message,
+        retryConfig: error.config,
+      });
       const tagged = new Error('insufficient_credits') as Error & { isInsufficientCredits: true };
       tagged.isInsufficientCredits = true;
       return Promise.reject(tagged);

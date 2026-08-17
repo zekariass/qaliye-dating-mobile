@@ -1,6 +1,7 @@
 import { apiClient } from '../apiClient';
 
 import type {
+    ActionCostInfo,
     BillingIntervalUnit,
     BillingPlatform,
     BoostActivationRequest,
@@ -56,6 +57,16 @@ function normalizeCountrySettings(raw: Record<string, unknown>): CountrySettings
   };
 }
 
+function normalizeActionCost(raw: Record<string, unknown>): ActionCostInfo {
+  return {
+    member_credit_cost: (raw.member_credit_cost ?? raw.memberCreditCost ?? 0) as number,
+    actual_credit_cost: (raw.actual_credit_cost ?? raw.actualCreditCost ?? 0) as number,
+    limit_value: (raw.limit_value ?? raw.limitValue ?? null) as number | null,
+    period_type: (raw.period_type ?? raw.periodType ?? '') as string,
+    apply_credit_after_limit: (raw.apply_credit_after_limit ?? raw.applyCreditAfterLimit ?? false) as boolean,
+  };
+}
+
 function normalizeEntitlements(raw: Record<string, unknown>): EntitlementResponse {
   const subRaw = (raw.subscription ?? null) as Record<string, unknown> | null;
   const limitsRaw = (raw.limits ?? {}) as Record<string, Record<string, unknown>>;
@@ -64,11 +75,17 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
   const boostRaw = (raw.activeBoost ?? raw.active_boost ?? null) as Record<string, unknown> | null;
   const planLimitsRaw = (raw.planLimits ?? raw.plan_limits ?? {}) as Record<string, unknown>;
   const countrySettingsRaw = (raw.countrySettings ?? raw.country_settings ?? null) as Record<string, unknown> | null;
+  const costsRaw = (raw.costs ?? raw.Costs ?? {}) as Record<string, Record<string, unknown>>;
 
   const limits: Record<string, QuotaInfo> = {};
   for (const [key, val] of Object.entries(limitsRaw)) {
     const snakeKey = key === 'superLikes' ? 'super_likes' : key;
     limits[snakeKey] = normalizeQuota(val as Record<string, unknown>);
+  }
+
+  const costs: Record<string, ActionCostInfo> = {};
+  for (const [key, val] of Object.entries(costsRaw)) {
+    costs[key] = normalizeActionCost(val as Record<string, unknown>);
   }
 
   return {
@@ -113,6 +130,7 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
     },
     boost_duration_minutes: (raw.boost_duration_minutes ?? raw.boostDurationMinutes ?? 30) as number,
     country_settings: countrySettingsRaw ? normalizeCountrySettings(countrySettingsRaw) : undefined,
+    costs,
   };
 }
 

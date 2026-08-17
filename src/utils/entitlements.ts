@@ -283,4 +283,125 @@ export function getQuotaErrorType(error: unknown): ActionType | string | null {
   return null;
 }
 
+// ── Action-cost helpers for the insufficient-credits modal ───────────────────
+
+export const ACTION_CODE_LIMIT_KEY: Record<string, string | undefined> = {
+  LIKES: LIMIT_KEYS.LIKES,
+  LIKE: LIMIT_KEYS.LIKES,
+  SUPER_LIKE: LIMIT_KEYS.SUPER_LIKES,
+  SUPERLIKES: LIMIT_KEYS.SUPER_LIKES,
+  REWIND: LIMIT_KEYS.REWINDS,
+  REWINDS: LIMIT_KEYS.REWINDS,
+  BOOST: LIMIT_KEYS.BOOSTS,
+  BOOSTS: LIMIT_KEYS.BOOSTS,
+  VOICE_MESSAGE: LIMIT_KEYS.VOICE_CHAT_MSGS,
+  IMAGE_MESSAGE: LIMIT_KEYS.IMAGE_CHAT_MSGS,
+};
+
+export type ActionCostSummary = {
+  actionName: string;
+  creditBalance: number;
+  /** Credit cost that should be displayed, or null if credits cannot help. */
+  cost: number | null;
+  /** Whether a credit cost applies for this action right now. */
+  hasCreditCost: boolean;
+  /** True when the user's balance is enough that the modal should not have appeared. */
+  isStale: boolean;
+  /** Human-readable message to show in the modal. */
+  message: string;
+};
+
+export function getActionName(actionCode: string | null | undefined): string {
+  if (!actionCode) return 'This Action';
+  const map: Record<string, string> = {
+    LIKE: 'Like',
+    LIKES: 'Like',
+    SUPER_LIKE: 'Super Like',
+    SUPERLIKES: 'Super Like',
+    REWIND: 'Rewind',
+    REWINDS: 'Rewind',
+    BOOST: 'Boost',
+    BOOSTS: 'Boost',
+    VOICE_MESSAGE: 'Voice Message',
+    IMAGE_MESSAGE: 'Image Message',
+    SEE_WHO_LIKED_YOU: 'Reveal Profile',
+    RETURN_PASSED_PROFILE: 'Revisit Profile',
+    SUPER_MESSAGE: 'Super Message',
+  };
+  return map[actionCode] ?? actionCode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function getLimitRemaining(entitlements: EntitlementResponse | null, actionCode: string): number | null {
+  const limitKey = ACTION_CODE_LIMIT_KEY[actionCode] ?? actionCode;
+  const limit = entitlements?.limits?.[limitKey];
+  return limit?.remaining ?? null;
+}
+
+export function getActionCostSummary(
+  actionCode: string | null | undefined,
+  entitlements: EntitlementResponse | null,
+): ActionCostSummary {
+  const actionName = getActionName(actionCode);
+  const creditBalance = entitlements?.credits?.credit_balance ?? 0;
+  const costInfo = actionCode ? entitlements?.costs?.[actionCode] : undefined;
+
+  if (!costInfo) {
+    return {
+      actionName,
+      creditBalance,
+      cost: null,
+      hasCreditCost: false,
+      isStale: false,
+      message: `Upgrade to use ${actionName.toLowerCase()}.`,
+    };
+  }
+
+  const limitValue: number | null = costInfo.limit_value ?? null;
+  const remaining = getLimitRemaining(entitlements, actionCode ?? '');
+  const isUnlimited = limitValue === null;
+
+  let cost: number | null = null;
+  let hasCreditCost = false;
+
+  if (isUnlimited && costInfo.member_credit_cost > 0) {
+    cost = costInfo.member_credit_cost;
+    hasCreditCost = true;
+  } else if (typeof limitValue === 'number' && (remaining ?? 0) > 0 && costInfo.member_credit_cost > 0) {
+    cost = costInfo.member_credit_cost;
+    hasCreditCost = true;
+  } else if (typeof limitValue === 'number' && (remaining ?? 0) === 0 && costInfo.apply_credit_after_limit && costInfo.actual_credit_cost > 0) {
+    cost = costInfo.actual_credit_cost;
+    hasCreditCost = true;
+  }
+
+  const isStale = hasCreditCost && cost !== null && creditBalance >= cost;
+
+  if (hasCreditCost && cost !== null) {
+    return {
+      actionName,
+      creditBalance,
+      cost,
+      hasCreditCost,
+      isStale,
+      message: `You need ${cost} credits for this action.`,
+    };
+  }
+
+  return {
+    actionName,
+    creditBalance,
+    cost: null,
+    hasCreditCost: false,
+    isStale,
+    message: `Your free ${actionName.toLowerCase()}s for this period have been used. Upgrade to ${actionName.toLowerCase()} more.`,
+  };
+}
+
+export function getCostForAction(
+  actionCode: string,
+  entitlements: EntitlementResponse | null,
+): number | null {
+  return getActionCostSummary(actionCode, entitlements).cost;
+}
+
 
