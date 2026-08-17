@@ -18,52 +18,41 @@ import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useTheme } from '@/hooks/use-theme';
 import { useInsufficientCreditsStore } from '@/stores/insufficient-credits-store';
-import { getActionCostSummary, getActionName } from '@/utils/entitlements';
+import { getActionCostSummary } from '@/utils/entitlements';
 
-// ── Per-action icon + gradient config ────────────────────────────────────────
-
-type ActionVisual = {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  gradient: readonly [string, string];
-};
-
-const ACTION_VISUALS: Record<string, ActionVisual> = {
-  LIKE:                 { icon: 'heart',                 gradient: ['#FF6B9D', '#E91E8C'] },
-  LIKES:                { icon: 'heart',                 gradient: ['#FF6B9D', '#E91E8C'] },
-  SUPER_LIKE:           { icon: 'star',                  gradient: ['#F59E0B', '#D97706'] },
-  SUPERLIKES:           { icon: 'star',                  gradient: ['#F59E0B', '#D97706'] },
-  REWIND:               { icon: 'arrow-undo',            gradient: ['#F97316', '#EA580C'] },
-  REWINDS:              { icon: 'arrow-undo',            gradient: ['#F97316', '#EA580C'] },
-  BOOST:                { icon: 'rocket',                gradient: ['#A020F0', '#6D35FF'] },
-  SEE_WHO_LIKED_YOU:    { icon: 'eye',                   gradient: ['#8A2CFF', '#5B18D6'] },
-  RETURN_PASSED_PROFILE:{ icon: 'refresh-circle',        gradient: ['#F97316', '#EA580C'] },
-  SUPER_MESSAGE:        { icon: 'chatbubble-ellipses',   gradient: ['#06B6D4', '#0891B2'] },
-  VOICE_MESSAGE:        { icon: 'mic',                   gradient: ['#10B981', '#059669'] },
-  IMAGE_MESSAGE:        { icon: 'image',                 gradient: ['#3B82F6', '#2563EB'] },
-  INCOGNITO_MODE:       { icon: 'glasses',               gradient: ['#374151', '#1F2937'] },
-  CHANGE_ADDRESS:       { icon: 'location',              gradient: ['#22C55E', '#16A34A'] },
-};
-
-const DEFAULT_VISUAL: ActionVisual = {
-  icon: 'diamond',
-  gradient: ['#A020F0', '#6D35FF'],
-};
-
-function getActionVisual(actionCode: string | null | undefined): ActionVisual {
-  return (actionCode ? ACTION_VISUALS[actionCode] : undefined) ?? DEFAULT_VISUAL;
-}
-
-// ── Component ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// InsufficientCreditsModal
+//
+// Layout (same for every action):
+//
+//  ┌───────────────────────────────┐
+//  │      Insufficient Credit      │
+//  │ ─────────────────────────── │
+//  │                               │
+//  │  You need 5 credits for       │
+//  │  this action.                 │
+//  │                               │
+//  │  Your balance: 2              │
+//  │                               │
+//  │  [ Go Premium     ]           │
+//  │  [ Buy Credits    ]           │
+//  │  [ Not Now        ]           │
+//  └───────────────────────────────┘
+//
+// Button visibility:
+//   subscription_enabled → Go Premium
+//   credits_enabled AND hasCreditCost → Buy Credits
+//   always → Not Now
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function InsufficientCreditsModal() {
   const { t } = useTranslation();
   const { colors: th } = useTheme();
-  const router = useRouter();
+  const router  = useRouter();
   const { entitlements, refetch } = useEntitlements();
 
   const visible     = useInsufficientCreditsStore((s) => s.visible);
   const actionCode  = useInsufficientCreditsStore((s) => s.actionCode);
-  const title       = useInsufficientCreditsStore((s) => s.title);
   const message     = useInsufficientCreditsStore((s) => s.message);
   const retryConfig = useInsufficientCreditsStore((s) => s.retryConfig);
   const dismiss     = useInsufficientCreditsStore((s) => s.dismiss);
@@ -71,14 +60,12 @@ export function InsufficientCreditsModal() {
   const [isRetrying, setIsRetrying] = useState(false);
   const didRetryRef = useRef(false);
 
-  const actionName = title ?? getActionName(actionCode);
-  const summary    = getActionCostSummary(actionCode, entitlements);
-  const visual     = getActionVisual(actionCode);
+  const summary = getActionCostSummary(actionCode, entitlements);
 
-  const creditsEnabled      = entitlements?.country_settings?.credits_enabled ?? true;
+  const creditsEnabled      = entitlements?.country_settings?.credits_enabled      ?? true;
   const subscriptionEnabled = entitlements?.country_settings?.subscription_enabled ?? true;
 
-  // Reset retry flag when modal closes
+  // Reset state when modal is hidden
   useEffect(() => {
     if (!visible) {
       setIsRetrying(false);
@@ -86,7 +73,8 @@ export function InsufficientCreditsModal() {
     }
   }, [visible]);
 
-  // Stale-entitlement auto-retry: user has enough credits but server returned 402
+  // Stale-entitlement retry: balance >= cost but server still returned 402.
+  // Re-fetch entitlements and retry the original request once silently.
   useEffect(() => {
     if (!visible || !actionCode || !retryConfig || isRetrying) return;
     if (!summary.isStale || didRetryRef.current) return;
@@ -98,19 +86,15 @@ export function InsufficientCreditsModal() {
       .then((result) => {
         const fresh = result.data ?? entitlements;
         const freshSummary = getActionCostSummary(actionCode, fresh);
-        if (!freshSummary.isStale && retryConfig) {
+        if (!freshSummary.isStale) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return apiClient.request({ ...(retryConfig as any), _insufficientCreditRetry: true });
         }
         throw new Error('still-insufficient');
       })
-      .then(() => {
-        setIsRetrying(false);
-        dismiss();
-      })
-      .catch(() => {
-        setIsRetrying(false);
-      });
+      .then(() => { setIsRetrying(false); dismiss(); })
+      .catch(() => { setIsRetrying(false); });
+  // Only re-run when visibility or stale flag changes — not on every entitlement update
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, summary.isStale]);
 
@@ -124,17 +108,16 @@ export function InsufficientCreditsModal() {
     router.push('/(app)/credits-shop' as any);
   }, [dismiss, router]);
 
-  // Button visibility
+  // ── Button visibility ────────────────────────────────────────────────────
   const showGoPremium  = subscriptionEnabled;
   const showBuyCredits = creditsEnabled && summary.hasCreditCost;
-  const dismissLabel   = showGoPremium || showBuyCredits
-    ? t('promotion.notNow', 'Not Now')
-    : t('common.ok', 'OK');
 
-  // Body text – two scenarios per spec
-  const bodyText: string = summary.hasCreditCost && summary.cost !== null
-    ? t('billing.creditCostBody', 'You need {{cost}} credits for this action.', { cost: summary.cost })
-    : summary.message || message || `Your free ${actionName.toLowerCase()}s for this period have been used. Upgrade to ${actionName.toLowerCase()} more.`;
+  // ── Body content ─────────────────────────────────────────────────────────
+  // When a credit cost applies: "You need N credits for this action."
+  // When free allowance is exhausted (no credit path): server message or generic
+  const bodyText = summary.hasCreditCost && summary.cost !== null
+    ? `You need ${summary.cost} credits for this action.`
+    : summary.message || message || 'You have run out of access for this action.';
 
   if (!visible) return null;
 
@@ -146,125 +129,105 @@ export function InsufficientCreditsModal() {
       onRequestClose={dismiss}
       statusBarTranslucent
     >
+      {/* Dimmed backdrop — tap outside to close */}
       <Pressable style={styles.overlay} onPress={dismiss}>
-        {/* Stop propagation so tapping inside the card doesn't dismiss */}
         <Pressable
           style={[styles.card, { backgroundColor: th.surface }]}
           onPress={(e) => e.stopPropagation()}
         >
-          {/* Close button */}
-          <Pressable
-            onPress={dismiss}
-            style={({ pressed }) => [
-              styles.closeBtn,
-              { backgroundColor: pressed ? th.backgroundSelected : 'transparent' },
-            ]}
-            hitSlop={12}
-          >
-            <Ionicons name="close" size={20} color={th.textSecondary} />
-          </Pressable>
-
-          {/* Action icon */}
-          <View style={styles.iconWrap}>
-            <LinearGradient
-              colors={visual.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.iconGradient}
-            >
-              <Ionicons name={visual.icon} size={38} color="#FFFFFF" />
-            </LinearGradient>
+          {/* ── Header ───────────────────────────────────────────────── */}
+          <View style={[styles.header, { borderBottomColor: th.border }]}>
+            <View style={[styles.iconBadge, { backgroundColor: `${colors.primary}15` }]}>
+              <Ionicons name="wallet-outline" size={20} color={colors.primary} />
+            </View>
+            <Text style={[styles.title, { color: th.text }]}>
+              {t('billing.insufficientCreditTitle', 'Insufficient Credit')}
+            </Text>
           </View>
 
-          {/* Title */}
-          <Text style={[styles.title, { color: th.text }]}>{actionName}</Text>
+          {/* ── Body ─────────────────────────────────────────────────── */}
+          <View style={styles.body}>
+            {isRetrying ? (
+              <View style={styles.retryRow}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.retryText, { color: th.textSecondary }]}>
+                  Checking your account…
+                </Text>
+              </View>
+            ) : (
+              <>
+                {/* Cost line */}
+                <Text style={[styles.bodyText, { color: th.text }]}>
+                  {bodyText}
+                </Text>
 
-          {isRetrying ? (
-            <View style={styles.spinnerWrap}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={[styles.retryingText, { color: th.textSecondary }]}>
-                {t('billing.checkingEntitlements', 'Checking your account…')}
-              </Text>
-            </View>
-          ) : (
-            <>
-              {/* Body message */}
-              <Text style={[styles.bodyText, { color: th.textSecondary }]}>
-                {bodyText}
-              </Text>
-
-              {/* Balance pill — only when credits apply */}
-              {summary.hasCreditCost && summary.cost !== null && (
-                <View style={[styles.balancePill, { backgroundColor: `${colors.primary}15` }]}>
-                  <Ionicons name="wallet-outline" size={15} color={colors.primary} />
-                  <Text style={[styles.balanceText, { color: colors.primary }]}>
-                    {t('billing.yourBalance', 'Your balance: {{balance}}', {
-                      balance: summary.creditBalance.toLocaleString(),
-                    })}
+                {/* Balance line — only when credits apply */}
+                {summary.hasCreditCost && summary.cost !== null && (
+                  <Text style={[styles.balanceText, { color: th.textSecondary }]}>
+                    Your balance:{' '}
+                    <Text style={{ color: colors.primary, fontWeight: '700' }}>
+                      {summary.creditBalance.toLocaleString()}
+                    </Text>
                   </Text>
-                </View>
-              )}
-
-              {/* Buttons */}
-              <View style={styles.buttonStack}>
-                {showGoPremium && (
-                  <Pressable
-                    onPress={handleGoPremium}
-                    style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Go Premium"
-                  >
-                    <LinearGradient
-                      colors={['#A020F0', '#6D35FF']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.btnGradient}
-                    >
-                      <Ionicons name="diamond" size={17} color="#FFFFFF" />
-                      <Text style={styles.btnTextLight}>
-                        {t('billing.goPremium', 'Go Premium')}
-                      </Text>
-                    </LinearGradient>
-                  </Pressable>
                 )}
+              </>
+            )}
+          </View>
 
-                {showBuyCredits && (
-                  <Pressable
-                    onPress={handleBuyCredits}
-                    style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Buy Credits"
-                  >
-                    <LinearGradient
-                      colors={['#FF6B35', '#F59E0B']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.btnGradient}
-                    >
-                      <Ionicons name="add-circle" size={17} color="#FFFFFF" />
-                      <Text style={styles.btnTextLight}>
-                        {t('billing.buyCredits', 'Buy Credits')}
-                      </Text>
-                    </LinearGradient>
-                  </Pressable>
-                )}
-
+          {/* ── Buttons ──────────────────────────────────────────────── */}
+          {!isRetrying && (
+            <View style={styles.buttons}>
+              {showGoPremium && (
                 <Pressable
-                  onPress={dismiss}
-                  style={({ pressed }) => [
-                    styles.btn,
-                    styles.btnOutline,
-                    { borderColor: th.border },
-                    pressed && styles.btnPressed,
-                  ]}
+                  onPress={handleGoPremium}
+                  style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
                   accessibilityRole="button"
                 >
-                  <Text style={[styles.btnTextMuted, { color: th.textSecondary }]}>
-                    {dismissLabel}
-                  </Text>
+                  <LinearGradient
+                    colors={['#A020F0', '#6D35FF']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.btnInner}
+                  >
+                    <Ionicons name="diamond" size={16} color="#fff" />
+                    <Text style={styles.btnTextWhite}>Go Premium</Text>
+                  </LinearGradient>
                 </Pressable>
-              </View>
-            </>
+              )}
+
+              {showBuyCredits && (
+                <Pressable
+                  onPress={handleBuyCredits}
+                  style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+                  accessibilityRole="button"
+                >
+                  <LinearGradient
+                    colors={['#FF6B35', '#F59E0B']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.btnInner}
+                  >
+                    <Ionicons name="add-circle-outline" size={16} color="#fff" />
+                    <Text style={styles.btnTextWhite}>Buy Credits</Text>
+                  </LinearGradient>
+                </Pressable>
+              )}
+
+              <Pressable
+                onPress={dismiss}
+                style={({ pressed }) => [
+                  styles.btn,
+                  styles.btnOutline,
+                  { borderColor: th.border },
+                  pressed && styles.btnPressed,
+                ]}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.btnTextMuted, { color: th.textSecondary }]}>
+                  Not Now
+                </Text>
+              </Pressable>
+            </View>
           )}
         </Pressable>
       </Pressable>
@@ -272,23 +235,25 @@ export function InsufficientCreditsModal() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────────────────────────────────────
 
 const cardShadow = Platform.select({
   ios: {
     shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
   },
-  android: { elevation: 12 },
+  android: { elevation: 10 },
   default: {},
 });
 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.70)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,
@@ -296,76 +261,65 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    borderRadius: radius.xl,
-    paddingTop: 44,
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
+    borderRadius: radius.lg,
+    overflow: 'hidden',
     ...cardShadow,
   },
-  closeBtn: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+
+  // Header
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 18,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  iconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  iconGradient: {
-    width: '100%',
-    height: '100%',
+  iconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: fontSize.md,
-    fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: -0.3,
-    marginBottom: 10,
+    fontSize: fontSize.base,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+
+  // Body
+  body: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    gap: 8,
   },
   bodyText: {
     fontSize: fontSize.sm,
-    textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 12,
-  },
-  balancePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: radius.full,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    marginBottom: 4,
-  },
-  balanceText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  spinnerWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    gap: 10,
-  },
-  retryingText: {
-    fontSize: fontSize.sm,
     fontWeight: '500',
   },
-  buttonStack: {
-    width: '100%',
+  balanceText: {
+    fontSize: fontSize.sm,
+    lineHeight: 20,
+  },
+  retryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
-    marginTop: 14,
+    paddingVertical: 8,
+  },
+  retryText: {
+    fontSize: fontSize.sm,
+  },
+
+  // Buttons
+  buttons: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
+    gap: 10,
   },
   btn: {
     width: '100%',
@@ -373,30 +327,28 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   btnPressed: {
-    opacity: 0.82,
+    opacity: 0.80,
     transform: [{ scale: 0.98 }],
   },
-  btnGradient: {
+  btnInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
   },
   btnOutline: {
     borderWidth: 1.5,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: 13,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
   },
-  btnTextLight: {
+  btnTextWhite: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
-    letterSpacing: 0.1,
   },
   btnTextMuted: {
     fontSize: 15,
