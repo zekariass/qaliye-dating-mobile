@@ -111,9 +111,9 @@ export function InsufficientCreditsModal() {
     router.push('/(app)/credits-shop' as any);
   }, [dismiss, router]);
 
-  // ── Button visibility ────────────────────────────────────────────────────
+  // ── Button visibility (per country settings only) ────────────────────────
   const showGoPremium  = subscriptionEnabled;
-  const showBuyCredits = creditsEnabled && summary.hasCreditCost;
+  const showBuyCredits = creditsEnabled;
 
   // ── Body content ─────────────────────────────────────────────────────────
   // Title: the action name (e.g. "Reveal Profile", "Super Like", "Incognito Mode")
