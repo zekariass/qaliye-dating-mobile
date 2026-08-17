@@ -73,6 +73,17 @@ export function InsufficientCreditsModal() {
     }
   }, [visible]);
 
+  // Debug: log what's in the costs map when the modal opens
+  useEffect(() => {
+    if (visible && __DEV__) {
+      console.log('[InsufficientCreditsModal] actionCode:', actionCode);
+      console.log('[InsufficientCreditsModal] costs map:', entitlements?.costs);
+      console.log('[InsufficientCreditsModal] costInfo for action:', actionCode ? entitlements?.costs?.[actionCode] : undefined);
+      console.log('[InsufficientCreditsModal] summary:', summary);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
   // Stale-entitlement retry: balance >= cost but server still returned 402.
   // Re-fetch entitlements and retry the original request once silently.
   useEffect(() => {
@@ -112,7 +123,12 @@ export function InsufficientCreditsModal() {
   const showBuyCredits = creditsEnabled;
 
   // ── Cost & balance (always shown) ─────────────────────────────────────────
-  const cost    = summary.cost;
+  // Primary: from getActionCostSummary (applies limit/remaining logic)
+  // Fallback: read member_credit_cost directly from the costs map
+  const directCost = actionCode
+    ? entitlements?.costs?.[actionCode]?.member_credit_cost ?? null
+    : null;
+  const cost    = summary.cost ?? directCost;
   const balance = summary.creditBalance;
 
   if (!visible) return null;

@@ -362,30 +362,35 @@ export function getActionCostSummary(
   const remaining = getLimitRemaining(entitlements, actionCode ?? '');
   const isUnlimited = limitValue === null;
 
+  // Determine which cost to display based on the user's situation:
+  //  1. Unlimited plan (limit_value = null) → member_credit_cost
+  //  2. Has remaining free quota → member_credit_cost (what they'd pay if they skip the free quota)
+  //  3. Free quota exhausted, credits apply after limit → actual_credit_cost
+  //  4. Free quota exhausted, credits don't apply → no cost (upgrade only)
   let cost: number | null = null;
-  let hasCreditCost = false;
 
-  if (isUnlimited && costInfo.member_credit_cost > 0) {
-    cost = costInfo.member_credit_cost;
-    hasCreditCost = true;
-  } else if (typeof limitValue === 'number' && (remaining ?? 0) > 0 && costInfo.member_credit_cost > 0) {
-    cost = costInfo.member_credit_cost;
-    hasCreditCost = true;
-  } else if (typeof limitValue === 'number' && (remaining ?? 0) === 0 && costInfo.apply_credit_after_limit && costInfo.actual_credit_cost > 0) {
-    cost = costInfo.actual_credit_cost;
-    hasCreditCost = true;
+  if (isUnlimited) {
+    cost = costInfo.member_credit_cost || costInfo.actual_credit_cost || null;
+  } else if ((remaining ?? 0) > 0) {
+    cost = costInfo.member_credit_cost || costInfo.actual_credit_cost || null;
+  } else if (costInfo.apply_credit_after_limit) {
+    cost = costInfo.actual_credit_cost || costInfo.member_credit_cost || null;
+  } else {
+    // apply_credit_after_limit = false → credits can't help, upgrade only
+    cost = null;
   }
 
+  const hasCreditCost = cost !== null;
   const isStale = hasCreditCost && cost !== null && creditBalance >= cost;
 
-  if (hasCreditCost && cost !== null) {
+  if (hasCreditCost) {
     return {
       actionName,
       creditBalance,
       cost,
       hasCreditCost,
       isStale,
-      message: `You need ${cost} credits for this action.`,
+      message: `You need ${cost} credits to perform this action.`,
     };
   }
 
