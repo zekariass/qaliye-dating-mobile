@@ -29,24 +29,71 @@ import { useEmailAuth } from '@/hooks/auth/useEmailAuth';
 import { useSocialAuth } from '@/hooks/auth/useSocialAuth';
 import { useTheme } from '@/hooks/use-theme';
 
-function PulsingHeart() {
-  const scale = useRef(new Animated.Value(1)).current;
+// ─── Floating heart particle ──────────────────────────────────────────────────
+
+function FloatingHeart({ delay, x, size, opacity }: { delay: number; x: number; size: number; opacity: number }) {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(scale, { toValue: 1.3, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.delay(delay),
+        Animated.parallel([
+          Animated.timing(translateY, { toValue: -60, duration: 3000, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.sequence([
+            Animated.timing(fade, { toValue: opacity, duration: 800, useNativeDriver: true }),
+            Animated.timing(fade, { toValue: 0, duration: 2200, useNativeDriver: true }),
+          ]),
+        ]),
+        Animated.parallel([
+          Animated.timing(translateY, { toValue: 0, duration: 0, useNativeDriver: true }),
+          Animated.timing(fade, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ]),
       ]),
     );
     anim.start();
     return () => anim.stop();
-  }, [scale]);
+  }, []);
+
   return (
-    <Animated.Text style={{ fontSize: 18, color: '#FF6BB3', lineHeight: 22, marginBottom: 2, transform: [{ scale }] }}>
+    <Animated.Text
+      style={{
+        position: 'absolute',
+        bottom: 20,
+        left: x,
+        fontSize: size,
+        color: '#FF6BB3',
+        opacity: fade,
+        transform: [{ translateY }],
+      }}
+    >
       ♥
     </Animated.Text>
   );
 }
+
+// ─── Pulsing heart (used in tagline) ─────────────────────────────────────────
+
+function PulsingHeart({ style }: { style?: object }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.3, duration: 550, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 550, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.delay(500),
+      ]),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
+  return (
+    <Animated.Text style={[s.taglineHeart, style, { transform: [{ scale }] }]}>♥</Animated.Text>
+  );
+}
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function AuthScreen() {
   const { t } = useTranslation();
@@ -156,7 +203,7 @@ export default function AuthScreen() {
   async function handleApple() {
     try { await apple.mutateAsync(); } catch { /* error shown via effect */ }
   }
-function handlePhone() {
+  function handlePhone() {
     router.push('/phone-auth' as any);
   }
 
@@ -165,49 +212,82 @@ function handlePhone() {
   const isSocialLoading = google.isPending || apple.isPending;
 
   return (
-    <View style={[s.root, { backgroundColor: th.background }]}>
+    <View style={s.root}>
       <StatusBar barStyle="light-content" />
 
-      {/* ── Purple Hero ── */}
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <View style={s.hero}>
         <LinearGradient
-          colors={['#1A0633', '#2A0B4F', '#4B1389']}
-          start={{ x: 0.3, y: 0 }}
-          end={{ x: 0.7, y: 1 }}
+          colors={['#0D0520', '#1E0840', '#3A0E7A', '#5B18B8']}
+          start={{ x: 0.15, y: 0 }}
+          end={{ x: 0.85, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={[s.bubble, s.bubble1]} />
-        <View style={[s.bubble, s.bubble2]} />
-        <View style={[s.bubble, s.bubble3]} />
-        <View style={[s.bubble, s.bubble4]} />
+
+        {/* Decorative blobs */}
+        <View style={[s.blob, s.blob1]} />
+        <View style={[s.blob, s.blob2]} />
+        <View style={[s.blob, s.blob3]} />
+
+        {/* Floating hearts */}
+        <FloatingHeart delay={0}    x={40}  size={12} opacity={0.6} />
+        <FloatingHeart delay={900}  x={110} size={8}  opacity={0.4} />
+        <FloatingHeart delay={1800} x={200} size={14} opacity={0.5} />
+        <FloatingHeart delay={600}  x={280} size={9}  opacity={0.45} />
+        <FloatingHeart delay={2400} x={320} size={11} opacity={0.55} />
 
         <SafeAreaView edges={['top']} style={s.heroContent}>
-          <View style={s.logoRow}>
-            <Text style={s.logoText}>Qali</Text>
-            <View style={s.logoHeartWrap}>
-              <PulsingHeart />
-              <Text style={s.logoText}>ye</Text>
-            </View>
+          {/* Logo */}
+          <View style={s.logoWrap}>
+            <Text style={s.logoText}>Qaliye</Text>
           </View>
 
-          <Text style={s.tagline}>
-            {before1}<Text style={s.tagHL}>{h1}</Text>{after1}
-          </Text>
-          {!!line2 && (
+          {/* Tagline — replace first 'o' in each highlight with a pulsing heart */}
+          <View style={s.taglineWrap}>
             <Text style={s.tagline}>
-              {before2}<Text style={s.tagHL}>{h2}</Text>{after2}
+              {before1}
+              {h1.includes('o') ? (
+                <>
+                  <Text style={s.tagHL}>{h1.split('o')[0]}</Text>
+                  <PulsingHeart />
+                  <Text style={s.tagHL}>{h1.split('o').slice(1).join('o')}</Text>
+                </>
+              ) : (
+                <Text style={s.tagHL}>{h1}</Text>
+              )}
+              {after1}
             </Text>
-          )}
+            {!!line2 && (
+              <Text style={s.tagline}>
+                {before2}
+                {h2.includes('o') ? (
+                  <>
+                    <Text style={s.tagHL}>{h2.split('o')[0]}</Text>
+                    <PulsingHeart />
+                    <Text style={s.tagHL}>{h2.split('o').slice(1).join('o')}</Text>
+                  </>
+                ) : (
+                  <Text style={s.tagHL}>{h2}</Text>
+                )}
+                {after2}
+              </Text>
+            )}
+          </View>
 
+          {/* Decorative divider */}
           <View style={s.dividerDeco}>
             <View style={s.decoLine} />
-            <Text style={s.decoHeart}>♥</Text>
+            <View style={s.decoHeartRow}>
+              <Text style={s.decoHeart}>♥</Text>
+              <Text style={[s.decoHeart, { opacity: 0.5, fontSize: 7 }]}>♥</Text>
+              <Text style={[s.decoHeart, { opacity: 0.3, fontSize: 5 }]}>♥</Text>
+            </View>
             <View style={s.decoLine} />
           </View>
         </SafeAreaView>
       </View>
 
-      {/* ── Card ── */}
+      {/* ── Card ─────────────────────────────────────────────────────────── */}
       <KeyboardAvoidingView
         style={s.cardKav}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -219,74 +299,120 @@ function handlePhone() {
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
-          <View style={[s.card, { backgroundColor: th.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28 }]}>
-            <View style={[s.cardHandle, { backgroundColor: th.border }]} />
-            <Text style={[s.welcomeText, { color: th.text }]}>{t('auth.welcome')}</Text>
+          <View style={[s.card, { backgroundColor: isDark ? '#130B28' : '#FFFFFF' }]}>
+            {/* Handle */}
+            <View style={[s.handle, { backgroundColor: isDark ? '#3A2568' : '#DDD5F5' }]} />
 
-            {/* ── Social buttons ── */}
+            <Text style={[s.welcomeText, { color: isDark ? '#FFFFFF' : '#1A0B30' }]}>
+              {t('auth.welcome')}
+            </Text>
+
+            {/* Social buttons */}
             <View style={s.socialStack}>
               <TouchableOpacity
-                style={[s.socialBtn, s.googleBtn, { backgroundColor: th.surface, borderColor: th.border }]}
+                style={[
+                  s.socialBtn,
+                  {
+                    backgroundColor: isDark ? '#1E1438' : '#F7F4FF',
+                    borderColor: isDark ? '#3A2568' : '#E2D9FF',
+                  },
+                ]}
                 onPress={handleGoogle}
-                activeOpacity={0.85}
+                activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityLabel="Continue with Google"
               >
-                <Ionicons name="logo-google" size={20} color="#4285F4" />
-                <Text style={[s.socialLabel, { color: th.text }]}>
+                <View style={s.socialIconWrap}>
+                  <Ionicons name="logo-google" size={20} color="#4285F4" />
+                </View>
+                <Text style={[s.socialLabel, { color: isDark ? '#F0EAFF' : '#2D1560' }]}>
                   Continue with Google
                 </Text>
+                <View style={s.socialChevron}>
+                  <Ionicons name="chevron-forward" size={16} color={isDark ? '#7B5EA7' : '#B09DD8'} />
+                </View>
               </TouchableOpacity>
 
               {appleAvailable && (
-              <TouchableOpacity
-                style={[s.socialBtn, s.appleBtn, { backgroundColor: isDark ? '#FFFFFF' : '#000000' }]}
-                onPress={handleApple}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel="Continue with Apple"
-              >
-                <Ionicons name="logo-apple" size={22} color={isDark ? '#000000' : '#FFFFFF'} />
-                <Text style={[s.socialLabel, { color: isDark ? '#000000' : '#FFFFFF' }]}>
-                  Continue with Apple
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    s.socialBtn,
+                    {
+                      backgroundColor: isDark ? '#FFFFFF' : '#0D0D0D',
+                      borderColor: 'transparent',
+                    },
+                  ]}
+                  onPress={handleApple}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continue with Apple"
+                >
+                  <View style={s.socialIconWrap}>
+                    <Ionicons name="logo-apple" size={22} color={isDark ? '#000000' : '#FFFFFF'} />
+                  </View>
+                  <Text style={[s.socialLabel, { color: isDark ? '#000000' : '#FFFFFF' }]}>
+                    Continue with Apple
+                  </Text>
+                  <View style={s.socialChevron}>
+                    <Ionicons name="chevron-forward" size={16} color={isDark ? '#55555588' : '#FFFFFF88'} />
+                  </View>
+                </TouchableOpacity>
               )}
-
             </View>
 
             {!!generalError && !showEmailForm && (
-              <Text style={s.errorText}>{generalError}</Text>
+              <View style={s.errorBadge}>
+                <Ionicons name="alert-circle-outline" size={14} color={colors.danger} />
+                <Text style={s.errorText}>{generalError}</Text>
+              </View>
             )}
 
-            {/* ── Divider ── */}
+            {/* Divider */}
             <View style={s.orRow}>
-              <View style={[s.orLine, { backgroundColor: th.border }]} />
-              <Text style={[s.orText, { color: th.textMuted }]}>{t('auth.orContinueWith')}</Text>
-              <View style={[s.orLine, { backgroundColor: th.border }]} />
+              <View style={[s.orLine, { backgroundColor: isDark ? '#2E1F4A' : '#EDE5FF' }]} />
+              <Text style={[s.orText, { color: isDark ? '#6B5490' : '#9B85C4' }]}>
+                {t('auth.orContinueWith')}
+              </Text>
+              <View style={[s.orLine, { backgroundColor: isDark ? '#2E1F4A' : '#EDE5FF' }]} />
             </View>
 
-            {/* ── Phone section ── */}
+            {/* Phone button */}
             <TouchableOpacity
-              style={[s.emailToggle, s.phoneToggle, { borderColor: '#E05A00', backgroundColor: isDark ? 'rgba(255, 120, 20, 0.10)' : 'rgba(255, 120, 20, 0.04)' }]}
+              style={[
+                s.altBtn,
+                {
+                  backgroundColor: isDark ? 'rgba(255,110,0,0.10)' : 'rgba(255,110,0,0.06)',
+                  borderColor: isDark ? 'rgba(255,110,0,0.30)' : 'rgba(255,110,0,0.25)',
+                },
+              ]}
               onPress={handlePhone}
               activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel={t('auth.continueWithPhone')}
             >
-              <Text style={s.phoneFlag}>🇪🇹</Text>
-              <Text style={[s.emailToggleLabel, s.phoneToggleLabel]}>{t('auth.continueWithPhone')}</Text>
+              <Text style={s.altBtnFlag}>🇪🇹</Text>
+              <Text style={[s.altBtnLabel, { color: '#C85000' }]}>
+                {t('auth.continueWithPhone')}
+              </Text>
             </TouchableOpacity>
 
-            {/* ── Email section ── */}
+            {/* Email button or form */}
             {!showEmailForm ? (
               <TouchableOpacity
-                style={[s.emailToggle, { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(138, 44, 255, 0.12)' : 'rgba(138, 44, 255, 0.04)' }]}
+                style={[
+                  s.altBtn,
+                  {
+                    backgroundColor: isDark ? 'rgba(138,44,255,0.12)' : 'rgba(138,44,255,0.06)',
+                    borderColor: isDark ? 'rgba(138,44,255,0.35)' : 'rgba(138,44,255,0.22)',
+                  },
+                ]}
                 onPress={() => setShowEmailForm(true)}
                 activeOpacity={0.8}
               >
                 <Ionicons name="mail-outline" size={20} color={colors.primary} />
-                <Text style={[s.emailToggleLabel, { color: colors.primary }]}>Continue with Email</Text>
+                <Text style={[s.altBtnLabel, { color: colors.primary }]}>
+                  Continue with Email
+                </Text>
               </TouchableOpacity>
             ) : (
               <View style={s.emailForm}>
@@ -305,7 +431,7 @@ function handlePhone() {
 
                 <View style={s.inputGap}>
                   <AuthTextInput
-                    leftSlot={<Ionicons name="mail-outline" size={18} color={th.textMuted} />}
+                    leftSlot={<Ionicons name="mail-outline" size={18} color={isDark ? '#7B5EA7' : '#9B85C4'} />}
                     placeholder={t('auth.emailAddress')}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -319,12 +445,12 @@ function handlePhone() {
 
                 <View style={s.inputGap}>
                   <AuthTextInput
-                    leftSlot={<Ionicons name="lock-closed-outline" size={18} color={th.textMuted} />}
+                    leftSlot={<Ionicons name="lock-closed-outline" size={18} color={isDark ? '#7B5EA7' : '#9B85C4'} />}
                     rightSlot={
                       <Ionicons
                         name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                         size={18}
-                        color={th.textMuted}
+                        color={isDark ? '#7B5EA7' : '#9B85C4'}
                       />
                     }
                     onRightPress={() => setShowPassword((p) => !p)}
@@ -342,12 +468,12 @@ function handlePhone() {
                 {authTab === 'createAccount' && (
                   <View style={s.inputGap}>
                     <AuthTextInput
-                      leftSlot={<Ionicons name="lock-closed-outline" size={18} color={th.textMuted} />}
+                      leftSlot={<Ionicons name="lock-closed-outline" size={18} color={isDark ? '#7B5EA7' : '#9B85C4'} />}
                       rightSlot={
                         <Ionicons
                           name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                           size={18}
-                          color={th.textMuted}
+                          color={isDark ? '#7B5EA7' : '#9B85C4'}
                         />
                       }
                       onRightPress={() => setShowConfirmPassword((p) => !p)}
@@ -376,41 +502,48 @@ function handlePhone() {
                 </View>
 
                 {!!generalError && showEmailForm && (
-                  <Text style={s.errorText}>{generalError}</Text>
+                  <View style={s.errorBadge}>
+                    <Ionicons name="alert-circle-outline" size={14} color={colors.danger} />
+                    <Text style={s.errorText}>{generalError}</Text>
+                  </View>
                 )}
                 {confirmationSent && (
-                  <Text style={s.confirmText}>
-                    {t('auth.checkEmail')} ({confirmedEmail})
-                  </Text>
+                  <View style={s.confirmBadge}>
+                    <Ionicons name="checkmark-circle-outline" size={14} color="#16A34A" />
+                    <Text style={s.confirmText}>
+                      {t('auth.checkEmail')} ({confirmedEmail})
+                    </Text>
+                  </View>
                 )}
               </View>
             )}
 
-            {/* ── Privacy ── */}
-            <View style={s.privacyRow}>
-              <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />
+            {/* Privacy */}
+            <View style={[s.privacyRow, { borderTopColor: isDark ? '#2E1F4A' : '#EDE5FF' }]}>
+              <Ionicons name="shield-checkmark-outline" size={15} color={isDark ? '#6B5490' : '#B09DD8'} />
               <View style={s.privacyTexts}>
-                <Text style={[s.privacyText, { color: th.textMuted }]}>{t('auth.privacyLine1')}</Text>
-                <Text style={[s.privacyText, { color: th.textMuted }]}>{t('auth.privacyLine2')}</Text>
+                <Text style={[s.privacyText, { color: isDark ? '#6B5490' : '#9B85C4' }]}>
+                  {t('auth.privacyLine1')}
+                </Text>
+                <Text style={[s.privacyText, { color: isDark ? '#6B5490' : '#9B85C4' }]}>
+                  {t('auth.privacyLine2')}
+                </Text>
               </View>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ── Social auth loading overlay ── */}
-      <Modal
-        visible={isSocialLoading}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-      >
+      {/* Social auth loading overlay */}
+      <Modal visible={isSocialLoading} transparent animationType="fade" statusBarTranslucent>
         <View style={s.loadingOverlay}>
-          <View style={[s.loadingCard, { backgroundColor: th.surface }]}>
+          <View style={[s.loadingCard, { backgroundColor: isDark ? '#1E1438' : '#FFFFFF' }]}>
             <View style={s.loadingIconWrap}>
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
-            <Text style={[s.loadingText, { color: th.text }]}>{t('auth.signingIn', 'Signing in…')}</Text>
+            <Text style={[s.loadingText, { color: isDark ? '#FFFFFF' : '#1A0B30' }]}>
+              {t('auth.signingIn', 'Signing in…')}
+            </Text>
           </View>
         </View>
       </Modal>
@@ -418,279 +551,299 @@ function handlePhone() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    Styles
-   ═══════════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════════════════ */
 const s = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
+  root: { flex: 1 },
 
-  /* ── Hero ── */
+  /* ── Hero ─────────────────────────────────────────────────────────────── */
   hero: {
-    paddingBottom: spacing.xxl + 12,
+    paddingBottom: spacing.xxl + 16,
     overflow: 'hidden',
   },
   heroContent: {
     alignItems: 'center',
-    paddingTop: spacing.xl,
+    paddingTop: spacing.xl + 4,
+    paddingHorizontal: spacing.lg,
   },
-  bubble: {
+
+  /* Decorative blobs */
+  blob: {
     position: 'absolute',
     borderRadius: 999,
   },
-  bubble1: {
-    width: 180,
-    height: 180,
+  blob1: {
+    width: 220,
+    height: 220,
+    backgroundColor: '#9B42FF',
+    opacity: 0.18,
+    top: -60,
+    right: -60,
+  },
+  blob2: {
+    width: 160,
+    height: 160,
     backgroundColor: '#FF4FA3',
     opacity: 0.12,
-    top: -40,
-    right: -50,
+    top: 40,
+    left: -50,
   },
-  bubble2: {
-    width: 120,
-    height: 120,
-    backgroundColor: '#B777FF',
-    opacity: 0.18,
-    top: 60,
-    left: -30,
-  },
-  bubble3: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#FF9BCD',
-    opacity: 0.15,
-    bottom: 20,
-    right: 30,
-  },
-  bubble4: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#FFFFFF',
-    opacity: 0.08,
-    bottom: 40,
-    left: 60,
+  blob3: {
+    width: 100,
+    height: 100,
+    backgroundColor: '#C077FF',
+    opacity: 0.14,
+    bottom: 10,
+    right: 20,
   },
 
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: spacing.xs,
+  /* Logo */
+  logoWrap: {
+    marginBottom: spacing.sm,
   },
   logoText: {
-    fontSize: 48,
-    fontWeight: '800',
+    fontSize: 54,
+    fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: -1,
-    lineHeight: 56,
-  },
-  logoHeartWrap: {
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    letterSpacing: -2,
+    lineHeight: 60,
   },
 
+  /* Tagline */
+  taglineWrap: {
+    alignItems: 'center',
+    gap: 2,
+    marginBottom: spacing.md,
+  },
   tagline: {
     fontSize: fontSize.base,
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(255,255,255,0.78)',
     fontWeight: '500',
-    lineHeight: 24,
+    lineHeight: 23,
     textAlign: 'center',
   },
   tagHL: {
-    color: '#FFB6D9',
+    color: '#E8B4FF',
     fontWeight: '700',
   },
+  taglineHeart: {
+    fontSize: 14,
+    color: '#FF6BB3',
+    lineHeight: 23,
+  },
+
+  /* Divider decoration */
   dividerDeco: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.sm,
     gap: spacing.sm,
   },
   decoLine: {
-    width: 28,
+    width: 32,
     height: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 1,
+  },
+  decoHeartRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
   decoHeart: {
-    fontSize: 11,
+    fontSize: 9,
     color: '#FFB6D9',
   },
 
-  /* ── Card ── */
+  /* ── Card ─────────────────────────────────────────────────────────────── */
   cardKav: {
     flex: 1,
-    marginTop: -spacing.lg,
+    marginTop: -spacing.xl,
   },
-  cardScroll: {
-    flex: 1,
-  },
-  cardScrollContent: {
-    flexGrow: 1,
-  },
+  cardScroll: { flex: 1 },
+  cardScrollContent: { flexGrow: 1 },
   card: {
     flex: 1,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
     shadowColor: '#8A2CFF',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: -6 },
-    elevation: 8,
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: -8 },
+    elevation: 10,
   },
-  cardHandle: {
-    width: 36,
+  handle: {
+    width: 40,
     height: 4,
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: spacing.md,
   },
   welcomeText: {
-    fontSize: fontSize.xl,
+    fontSize: 22,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: spacing.md,
+    letterSpacing: -0.4,
+    marginBottom: spacing.lg,
   },
 
-  /* ── Social ── */
+  /* ── Social buttons ─────────────────────────────────────────────────── */
   socialStack: {
-    gap: spacing.sm + 2,
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
   socialBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm + 2,
-    paddingVertical: 14,
+    paddingVertical: 15,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.lg,
-    minHeight: 52,
-  },
-  googleBtn: {
     borderWidth: 1.5,
+    minHeight: 54,
   },
-  appleBtn: {},
-socialLabel: {
+  socialIconWrap: {
+    width: 32,
+    alignItems: 'center',
+  },
+  socialLabel: {
+    flex: 1,
     fontSize: fontSize.base,
     fontWeight: '600',
+    textAlign: 'center',
+    marginRight: 32,
+  },
+  socialChevron: {
+    width: 24,
+    alignItems: 'flex-end',
   },
 
-  errorText: {
-    fontSize: fontSize.xs,
-    color: colors.danger,
-    textAlign: 'center',
+  /* ── Error / Confirm badges ─────────────────────────────────────────── */
+  errorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
   },
+  errorText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.danger,
+    fontWeight: '500',
+  },
+  confirmBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(22,163,74,0.08)',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  confirmText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: '#16A34A',
+    fontWeight: '500',
+  },
 
-  /* ── Divider ── */
+  /* ── Or divider ─────────────────────────────────────────────────────── */
   orRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.md,
     gap: spacing.sm,
   },
-  orLine: {
-    flex: 1,
-    height: 1,
-  },
+  orLine: { flex: 1, height: 1 },
   orText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
 
-  /* ── Phone toggle ── */
-  phoneToggle: {
-  },
-  phoneFlag: {
-    fontSize: 20,
-  },
-  phoneToggleLabel: {
-    color: '#C04E00',
-  },
-
-  /* ── Email toggle ── */
-  emailToggle: {
+  /* ── Alt buttons (phone / email) ────────────────────────────────────── */
+  altBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    paddingVertical: 14,
+    paddingVertical: 15,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+    minHeight: 54,
   },
-  emailToggleLabel: {
+  altBtnFlag: { fontSize: 20, lineHeight: 26 },
+  altBtnLabel: {
     fontSize: fontSize.base,
     fontWeight: '600',
   },
 
-  /* ── Email form ── */
+  /* ── Email form ─────────────────────────────────────────────────────── */
   emailForm: {
     gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
-  inputGap: {
-    marginBottom: 2,
-  },
+  inputGap: { marginBottom: 2 },
   fieldErr: {
     fontSize: fontSize.xs,
     color: colors.danger,
     marginTop: 4,
     paddingHorizontal: spacing.xs,
   },
-  ctaWrap: {
-    marginTop: spacing.xs,
-  },
-  confirmText: {
-    fontSize: fontSize.xs,
-    color: '#16A34A',
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
+  ctaWrap: { marginTop: spacing.xs },
 
-  /* ── Privacy ── */
+  /* ── Privacy ────────────────────────────────────────────────────────── */
   privacyRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingTop: spacing.md,
     marginTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  privacyTexts: {
-    flex: 1,
-  },
+  privacyTexts: { flex: 1 },
   privacyText: {
-    fontSize: fontSize.xs,
-    lineHeight: 18,
-    textAlign: 'left',
+    fontSize: 11,
+    lineHeight: 17,
   },
 
-  /* ── Loading overlay ── */
+  /* ── Loading overlay ────────────────────────────────────────────────── */
   loadingOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(138, 44, 255, 0.25)',
+    backgroundColor: 'rgba(10, 4, 30, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   loadingCard: {
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xl,
     alignItems: 'center',
     gap: spacing.md,
     shadowColor: '#8A2CFF',
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
+    shadowOpacity: 0.3,
+    shadowRadius: 28,
     shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
+    elevation: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(138,44,255,0.2)',
+    minWidth: 200,
   },
   loadingIconWrap: {
     width: 56,
     height: 56,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(138, 44, 255, 0.10)',
+    backgroundColor: 'rgba(138,44,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },

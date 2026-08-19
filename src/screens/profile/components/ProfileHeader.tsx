@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import PremiumBadgeModal from '@/components/billing/PremiumBadgeModal';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { CountrySettings } from '@/types/billing';
@@ -127,25 +128,19 @@ export default function ProfileHeader({
           <View style={styles.nameRow}>
             <Text style={[styles.nameText, { color: th.text }]}>{displayName},</Text>
             <Text style={[styles.ageText, { color: th.text }]}> {age}</Text>
-            {isVerified && (
-              <Ionicons
-                name="checkmark-circle"
-                size={20}
-                color={colors.verifiedBlue}
-                style={{ marginLeft: 6 }}
-                accessibilityLabel="Verified"
-              />
+          </View>
+          <View style={styles.badgeRow}>
+            {isVerified && <VerifiedBadge pill />}
+            {isIncognito && (
+              <View style={[styles.incognitoBadge, { backgroundColor: th.backgroundSelected }]}>
+                <Ionicons name="eye-off" size={12} color={colors.primary} />
+                <Text style={[styles.incognitoText, { color: colors.primary }]}>Private mode</Text>
+              </View>
             )}
           </View>
-          {isIncognito && (
-            <View style={[styles.incognitoBadge, { backgroundColor: th.backgroundSelected }]}>
-              <Ionicons name="eye-off" size={12} color={colors.primary} />
-              <Text style={[styles.incognitoText, { color: colors.primary }]}>Private mode</Text>
-            </View>
-          )}
           <View style={styles.actionRow}>
             <Pressable
-              style={[styles.actionBtn, { borderColor: th.border, borderWidth: 1 }]}
+              style={[styles.actionBtn, { borderColor: th.border, borderWidth: 1.5 }]}
               onPress={() => router.push('/(app)/edit-profile' as any)}
               accessibilityLabel="Edit Profile"
               accessibilityRole="button"
@@ -154,7 +149,7 @@ export default function ProfileHeader({
               <Text style={[styles.actionBtnText, { color: th.textSecondary }]}>Edit</Text>
             </Pressable>
             <Pressable
-              style={[styles.actionBtn, { borderColor: th.border, borderWidth: 1 }]}
+              style={[styles.actionBtn, { borderColor: th.border, borderWidth: 1.5 }]}
               onPress={() => router.push('/(app)/settings' as any)}
               accessibilityLabel="Settings"
               accessibilityRole="button"
@@ -162,6 +157,17 @@ export default function ProfileHeader({
               <Ionicons name="settings" size={14} color={th.textSecondary} />
               <Text style={[styles.actionBtnText, { color: th.textSecondary }]}>Settings</Text>
             </Pressable>
+            {!isVerified && (
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.primary, borderColor: colors.primary, borderWidth: 1 }]}
+                onPress={() => router.push('/(app)/verify-identity' as any)}
+                accessibilityLabel="Verify Identity"
+                accessibilityRole="button"
+              >
+                <Ionicons name="shield-checkmark-outline" size={14} color="#FFFFFF" />
+                <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Verify</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>
@@ -262,6 +268,7 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
     marginTop: 2,
@@ -278,6 +285,12 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
   },
   incognitoBadge: {
     flexDirection: 'row',

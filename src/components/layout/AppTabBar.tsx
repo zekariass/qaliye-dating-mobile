@@ -501,12 +501,12 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
 
   // Bar bg matches the parent/screen background — full integration
   const barBg            = th.background;
-  const separatorColor   = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const separatorColor   = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.30)';
   const inactiveColor    = isDark ? '#64748B' : '#111827';
   const activeColor      = isDark ? '#A78BFA' : ACTIVE_COLOR; // slightly lighter tint in dark
   const swipeInactiveFill = isDark ? '#E5E7EB' : '#0B0B0B';
   // Center outer ring blends seamlessly with background
-  const centerOuterBorder = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
+  const centerOuterBorder = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.30)';
 
   // Standalone mode: use activeTab prop and manual navigation
   const isStandalone = activeTab !== undefined;

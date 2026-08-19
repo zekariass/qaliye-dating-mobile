@@ -25,6 +25,7 @@ export type NotificationPreferences = {
   matchNotificationsEnabled: boolean;
   likeNotificationsEnabled: boolean;
   superlikeNotificationsEnabled: boolean;
+  superMessageEnabled: boolean;
   messagePreviewEnabled: boolean;
   marketingNotificationsEnabled: boolean;
   marketingNotificationsOptedInAt: string | null;
@@ -37,6 +38,7 @@ export type NotificationPreferencesPatch = {
   matchNotificationsEnabled?: boolean;
   likeNotificationsEnabled?: boolean;
   superlikeNotificationsEnabled?: boolean;
+  superMessageEnabled?: boolean;
   messagePreviewEnabled?: boolean;
   marketingNotificationsEnabled?: boolean;
   marketingNotificationsConsentVersion?: string;

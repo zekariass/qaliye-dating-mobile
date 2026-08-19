@@ -496,13 +496,18 @@ export default function PhotoStep({ onComplete }: Props) {
   const isRejected = existingPrimary?.moderation_status === 'REJECTED';
 
   const handleSubmit = useCallback(async () => {
-    const hasPrimary = primarySlot.uri != null && primarySlot.status !== 'error';
-    if (!hasPrimary) {
+    const primaryOk = primarySlot.uri != null && primarySlot.status !== 'error';
+    if (!primaryOk) {
       setError('A profile photo is required.');
       return;
     }
     if (isRejected) {
       setError('Your profile photo was rejected. Please delete it and upload a new one.');
+      return;
+    }
+    const cardOk = cardSlots.some((s) => s != null && s.uri != null && s.status !== 'error');
+    if (!cardOk) {
+      setError('At least one discovery card photo is required.');
       return;
     }
 
@@ -512,7 +517,7 @@ export default function PhotoStep({ onComplete }: Props) {
     } catch (e: unknown) {
       setError((e as Error).message);
     }
-  }, [primarySlot, isRejected, onComplete]);
+  }, [primarySlot, cardSlots, isRejected, onComplete]);
 
   // ─── Derived ───────────────────────────────────────────────────────────────
 
@@ -524,7 +529,11 @@ export default function PhotoStep({ onComplete }: Props) {
   const anyCardBusy = cardSlots.some((s) => s && (s.status === 'uploading' || s.status === 'queued'));
   const anyCardError = cardSlots.some((s) => s && s.status === 'error');
   const primaryError = primarySlot.status === 'error';
-  const canSubmit = !primaryBusy && !anyCardBusy && !primaryError && !anyCardError && !isRejected && hasPrimary;
+
+  // At least one card photo that has a URI and is not in error state
+  const hasMinCard = cardSlots.some((s) => s != null && s.uri != null && s.status !== 'error');
+
+  const canSubmit = !primaryBusy && !anyCardBusy && !primaryError && !anyCardError && !isRejected && hasPrimary && hasMinCard;
 
   const GAP = 8;
   const cardWidth = Math.floor((screenW - spacing.md * 2 - GAP * 2) / 3);
@@ -645,15 +654,24 @@ export default function PhotoStep({ onComplete }: Props) {
       <View style={styles.sectionRow}>
         <View style={styles.sectionLeft}>
           <Text style={[styles.sectionLabel, { color: th.textMuted, marginBottom: 0, marginTop: 0 }]}>{t('onboarding.photo.discoveryCards')}</Text>
-          <Text style={styles.optionalText}>{t('onboarding.photo.optional')}</Text>
+          <View style={styles.requiredBadge}>
+            <Text style={styles.requiredBadgeText}>*</Text>
+            <Text style={styles.requiredBadgeText}>{t('onboarding.photo.required')}</Text>
+          </View>
         </View>
-        <Text style={[styles.sectionCount, { color: filledCards > 0 ? colors.primary : th.textMuted }]}>
+        <Text style={[styles.sectionCount, { color: hasMinCard ? colors.primary : '#EF4444' }]}>
           {filledCards} / {MAX_CARDS}
         </Text>
       </View>
       <Text style={[styles.cardHint, { color: th.textSecondary }]}>
         {t('onboarding.photo.cardHint')}
       </Text>
+      {!hasMinCard && (
+        <View style={styles.cardRequiredHint}>
+          <Ionicons name="information-circle-outline" size={14} color="#F59E0B" />
+          <Text style={styles.cardRequiredHintText}>At least 1 card photo is required to continue.</Text>
+        </View>
+      )}
 
       <View style={[styles.cardGrid, { gap: GAP }]}>
         {cardSlots.map((slot, i) => {
@@ -681,7 +699,10 @@ export default function PhotoStep({ onComplete }: Props) {
                     width: cardWidth,
                     height: cardHeight,
                     backgroundColor: th.surface,
-                    borderColor: getSlotBorderColor(slot?.status ?? 'idle', !!slotUri),
+                    borderColor: i === 0 && !hasMinCard && !slotUri
+                      ? '#F59E0B'
+                      : getSlotBorderColor(slot?.status ?? 'idle', !!slotUri),
+                    borderWidth: i === 0 && !hasMinCard && !slotUri ? 1.5 : 1.5,
                   },
                 ]}
               >
@@ -720,7 +741,10 @@ export default function PhotoStep({ onComplete }: Props) {
                   </>
                 ) : (
                   <View style={styles.slotEmpty}>
-                    <Ionicons name="add" size={26} color={th.textMuted} />
+                    <Ionicons name="add" size={26} color={i === 0 && !hasMinCard ? '#F59E0B' : th.textMuted} />
+                    {i === 0 && !hasMinCard && (
+                      <Text style={styles.slotRequiredLabel}>Required</Text>
+                    )}
                   </View>
                 )}
               </TouchableOpacity>
@@ -930,6 +954,21 @@ const styles = StyleSheet.create({
   fill: { width: '100%', height: '100%', resizeMode: 'cover' },
   slotEmpty: { alignItems: 'center', gap: 4 },
   slotEmptyText: { fontSize: 10, fontWeight: '600' },
+  slotRequiredLabel: { fontSize: 9, fontWeight: '700', color: '#F59E0B', letterSpacing: 0.3 },
+
+  cardRequiredHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: spacing.sm,
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.22)',
+  },
+  cardRequiredHintText: { fontSize: 12, color: '#D97706', fontWeight: '500', flex: 1 },
 
   // Upload overlay
   uploadOverlay: {

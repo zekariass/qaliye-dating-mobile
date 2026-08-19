@@ -299,6 +299,25 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
           </TouchableOpacity>
         )}
 
+        {/* Unsend (cancel like) button — sent likes only, bottom-right of photo */}
+        {!isReceived && (
+          <TouchableOpacity
+            style={[styles.unsendOverlayBtn, overlayBtnShadow, { backgroundColor: card }]}
+            onPress={onUnsend}
+            disabled={isUnsending}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Unsend like ${item.display_name}`}
+            hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+          >
+            {isUnsending ? (
+              <ActivityIndicator size="small" color={colors.danger} />
+            ) : (
+              <Ionicons name="heart-dislike" size={17} color={colors.danger} />
+            )}
+          </TouchableOpacity>
+        )}
+
       </View>
 
       {/* ── Info section ── */}
@@ -338,37 +357,16 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
 
         {/* Action type chip + unsend like button */}
         <View style={styles.chipRow}>
-          {(!isReceived || item.action_type === 'SUPERLIKE') && (
+          {item.action_type === 'SUPERLIKE' && (
             <View style={[styles.chip, { backgroundColor: chipBg }]}>
-              <Ionicons
-                name={item.action_type === 'SUPERLIKE' ? 'star' : 'heart'}
-                size={11}
-                color={purple}
-              />
+              <Ionicons name="star" size={11} color={purple} />
               <Text style={[styles.chipText, { color: purple }]} numberOfLines={2}>
-                {item.action_type === 'SUPERLIKE' ? 'Super Liked' : 'Liked'}
+                Super Liked
               </Text>
             </View>
           )}
 
-          {/* Unsend like button — sent likes only */}
-          {!isReceived && (
-            <TouchableOpacity
-              style={[styles.unsendBtn, { backgroundColor: chipBg }]}
-              onPress={onUnsend}
-              disabled={isUnsending}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel={`Unsend like ${item.display_name}`}
-              hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-            >
-              {isUnsending ? (
-                <ActivityIndicator size="small" color={colors.danger} />
-              ) : (
-                <Ionicons name="heart-dislike" size={17} color={colors.danger} />
-              )}
-            </TouchableOpacity>
-          )}
+
         </View>
 
         {/* Activity status */}
@@ -1169,10 +1167,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
-  unsendBtn: {
+  unsendOverlayBtn: {
+    position:       'absolute',
+    bottom:         8,
+    right:          8,
     width:          36,
-    height:         28,
-    borderRadius:   14,
+    height:         36,
+    borderRadius:   18,
     alignItems:     'center',
     justifyContent: 'center',
   },

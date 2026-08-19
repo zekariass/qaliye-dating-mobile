@@ -19,7 +19,6 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
-import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import type { ActivityStatus } from '@/types/activity';
@@ -239,11 +238,6 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
           <View style={styles.infoBox}>
             <View style={styles.nameRow}>
               <Text style={styles.name}>{card.display_name}</Text>
-              {card.is_verified && (
-                <View style={styles.badgeWrap}>
-                  <VerifiedBadge size={20} />
-                </View>
-              )}
               <Text style={styles.nameSeparator}>·</Text>
               <Text style={styles.age}>{card.age}</Text>
               {card.activity_status && card.activity_status !== 'HIDDEN' && card.activity_status !== 'OFFLINE' && (
@@ -260,12 +254,23 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
               <Ionicons name="location" size={14} color="rgba(255,255,255,0.85)" />
               <Text style={styles.distance}>{locationText}</Text>
             </View>
-            <View style={styles.pillRow}>
-              <View style={styles.pill}>
-                <Text style={styles.pillText}>{formatRelationshipIntention(card.relationship_intention)}</Text>
-              </View>
+            <View style={styles.intentionChip}>
+              <Ionicons name="heart" size={13} color="#FF8FAB" />
+              <Text style={styles.intentionLabel}>Intention</Text>
+              <View style={styles.intentionDivider} />
+              <Text style={styles.intentionValue}>
+                {formatRelationshipIntention(card.relationship_intention)}
+              </Text>
             </View>
           </View>
+
+          {/* Verified — bottom right of photo */}
+          {card.is_verified && (
+            <View style={styles.verifiedRow}>
+              <Ionicons name="shield-checkmark" size={12} color="#7EC8FF" />
+              <Text style={styles.verifiedText}>Verified</Text>
+            </View>
+          )}
         </View>
       </Animated.View>
     </GestureDetector>
@@ -384,8 +389,22 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
-  badgeWrap: {
-    marginBottom: 2,
+  verifiedRow: {
+    position: 'absolute',
+    bottom: 14,
+    right: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 3,
+  },
+  verifiedText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#7EC8FF',
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   age: {
     fontSize: 28,
@@ -416,18 +435,38 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
-  pillRow: {
+  intentionChip: {
     flexDirection: 'row',
-    marginTop: 2,
-  },
-  pill: {
-    paddingHorizontal: 14,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 4,
+    backgroundColor: 'rgba(255,255,255,0.13)',
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 10,
   },
+  intentionLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.65)',
+    letterSpacing: 0.2,
+  },
+  intentionDivider: {
+    width: 1,
+    height: 11,
+    backgroundColor: 'rgba(255,255,255,0.30)',
+    borderRadius: 1,
+  },
+  intentionValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  // keep for any external reference
   pillText: {
     fontSize: 13,
     color: '#FFFFFF',

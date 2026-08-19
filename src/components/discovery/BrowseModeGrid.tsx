@@ -22,7 +22,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
-import VerifiedBadge from '@/components/common/VerifiedBadge';
 import BrowseProfileDetailSheet from '@/components/discovery/BrowseProfileDetailSheet';
 import { CardDto } from '@/components/discovery/ProfileCard';
 import { colors, radius, spacing } from '@/constants/theme';
@@ -298,12 +297,7 @@ function BrowseProfileCard({
               </View>
             )}
 
-            {/* Verified badge — top right (below dots) */}
-            {item.is_verified && (
-              <View style={[styles.verifiedWrap, photos.length > 1 && { top: 34 }] }>
-                <VerifiedBadge size={18} />
-              </View>
-            )}
+            {/* Verified badge rendered inside cardInfo below */}
           </View>
 
           {/* Action stamps — LIKE / PASS / SUPER LIKE */}
@@ -338,8 +332,8 @@ function BrowseProfileCard({
               <ActivityStatusIndicator
                 status={item.activity_status}
                 showLabel
-                size={8}
-                labelFontSize={11}
+                size={10}
+                labelFontSize={13}
               />
             )}
           </View>
@@ -355,15 +349,29 @@ function BrowseProfileCard({
           </Text>
         ) : null}
 
-        {/* Intention pill */}
-        {item.relationship_intention ? (
-          <View style={[styles.intentionPill, { backgroundColor: iconBg, borderColor }]}>
-            <Ionicons name="heart-outline" size={12} color={colors.primary} />
-            <Text style={styles.intentionText} numberOfLines={1}>
-              {formatIntention(item.relationship_intention)}
-            </Text>
+        {/* Intention chip + Verified — same row */}
+        {(item.relationship_intention || item.is_verified) && (
+          <View style={styles.intentionRow}>
+            {item.relationship_intention ? (
+              <View style={[styles.intentionChip, { backgroundColor: iconBg }]}>
+                <Ionicons name="heart" size={13} color="#FF8FAB" />
+                <Text style={[styles.intentionLabel, { color: textColor, opacity: 0.60 }]}>
+                  Intention
+                </Text>
+                <View style={[styles.intentionDivider, { backgroundColor: borderColor }]} />
+                <Text style={[styles.intentionValue, { color: textColor }]} numberOfLines={1}>
+                  {formatIntention(item.relationship_intention)}
+                </Text>
+              </View>
+            ) : null}
+            {item.is_verified && (
+              <View style={styles.verifiedRow}>
+                <Ionicons name="shield-checkmark" size={12} color={colors.verifiedBlue} />
+                <Text style={styles.verifiedText}>Verified</Text>
+              </View>
+            )}
           </View>
-        ) : null}
+        )}
       </View>
 
       {/* Action buttons */}
@@ -852,11 +860,15 @@ const styles = StyleSheet.create({
   photoDotInactive: {
     backgroundColor: '#FFFFFF',
   },
-  verifiedWrap: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 3,
+  verifiedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  verifiedText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.verifiedBlue,
   },
   cardInfo: {
     position: 'absolute',
@@ -949,20 +961,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  intentionPill: {
+  intentionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: radius.full,
-    borderWidth: 1,
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  intentionText: {
+  intentionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  intentionLabel: {
     fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: 0.2,
+  },
+  intentionDivider: {
+    width: 1,
+    height: 11,
+    borderRadius: 1,
+  },
+  intentionValue: {
+    fontSize: 13,
     fontWeight: '700',
-    color: colors.primary,
   },
 
   // ── Action buttons row ──

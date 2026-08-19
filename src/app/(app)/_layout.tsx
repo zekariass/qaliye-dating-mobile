@@ -171,6 +171,10 @@ export default function AppLayout() {
           name="promotions"
           options={{ animation: 'slide_from_right' }}
         />
+        <Stack.Screen
+          name="verify-identity"
+          options={{ animation: 'slide_from_right' }}
+        />
       </Stack>
       <NotificationBanner />
       <ThemedAlert />

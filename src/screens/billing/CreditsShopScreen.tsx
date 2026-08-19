@@ -24,8 +24,7 @@ import { useRevenueCatPurchase } from '@/hooks/billing/useRevenueCatPurchase';
 import { useRevenueCatReconcile } from '@/hooks/billing/useRevenueCatReconcile';
 import { useTheme } from '@/hooks/use-theme';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
-import type { OfferDto, PaymentMethodDto } from '@/types/billing';
-import { isActiveSubscription, isPremiumPlan } from '@/types/billing';
+import type { OfferDto, OfferPromotionDto, PaymentMethodDto } from '@/types/billing';
 
 function packQuantity(productCode: string): number | null {
   const match = productCode.match(/(\d+)(?=\D*$)/);
@@ -44,24 +43,60 @@ type PackViewModel = {
   price: string;
   originalPrice?: string | null;
   hasDiscount: boolean;
+  promotion: OfferPromotionDto | null;
   quantity: number;
 };
+
+/** Format minor currency units (e.g. cents) into a display string. */
+function formatMinorUnits(amountMinor: number, currency: string): string {
+  const zeroDecimal = ['JPY', 'KRW', 'VND', 'CLP', 'GNF', 'ISK', 'MGA', 'PYG', 'RWF', 'UGX', 'XAF', 'XOF', 'BIF', 'DJF', 'KMF'];
+  const threeDecimal = ['KWD', 'BHD', 'OMR', 'JOD', 'TND'];
+  let amount: number;
+  if (zeroDecimal.includes(currency)) {
+    amount = amountMinor;
+  } else if (threeDecimal.includes(currency)) {
+    amount = amountMinor / 1000;
+  } else {
+    amount = amountMinor / 100;
+  }
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+}
+
+/** Returns a short urgency label like "Ends in 3h", "Ends in 2d", or "" if already expired. */
+function formatEndsAtLabel(endsAt: string): string {
+  const diffMs = new Date(endsAt).getTime() - Date.now();
+  if (diffMs <= 0) return '';
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffHours < 24) return `Ends in ${diffHours}h`;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays < 7) return `Ends in ${diffDays}d`;
+  return `Ends ${new Date(endsAt).toLocaleDateString()}`;
+}
 
 function buildPackViewModel(
   offer: OfferDto,
   rcPackage: PurchasesPackage | undefined,
-  hasActivePremium: boolean,
 ): PackViewModel {
   const quantity = packQuantity(offer.product_code) ?? 0;
   if (rcPackage) {
-    return { offer, rcPackage, price: rcPackage.product.priceString, originalPrice: null, hasDiscount: false, quantity };
+    return { offer, rcPackage, price: rcPackage.product.priceString, originalPrice: null, hasDiscount: false, promotion: null, quantity };
   }
-  const promotion = hasActivePremium ? null : (offer.promotion ?? null);
-  const effective = hasActivePremium ? null : (offer.effective_display_price ?? null);
-  const discounted = promotion?.effective_display_price ?? effective ?? null;
+  // The backend already enforces promotion eligibility per-user. If promotion is
+  // non-null it means this user qualifies — trust the server and always show it.
+  const rawPromotion = offer.promotion ?? null;
+  // Discard if discountAmountMinor === 0 (no real savings despite a promotion object).
+  const promotion = rawPromotion && rawPromotion.discount_amount_minor > 0 ? rawPromotion : null;
+  // effective_display_price on the offer reflects the final price after any discount.
+  // Use || (not ??) so an empty-string normalisation fallback is treated as absent.
+  const effective = offer.effective_display_price || null;
+  const discounted = (promotion?.effective_display_price || null) ?? effective ?? null;
   const base = offer.display_price;
   const hasDiscount = !!discounted && discounted !== base;
-  return { offer, price: hasDiscount ? discounted : base, originalPrice: hasDiscount ? base : null, hasDiscount, quantity };
+  return { offer, price: hasDiscount ? discounted : base, originalPrice: hasDiscount ? base : null, hasDiscount, promotion: hasDiscount ? promotion : null, quantity };
 }
 
 export default function CreditsShopScreen() {
@@ -83,21 +118,19 @@ export default function CreditsShopScreen() {
   const isBusy = isPurchasing || isCreatingOrder || purchaseState === 'purchasing' || purchaseState === 'processing';
   const isGlobalMarket = consumableOffers.some((o) => o.country_code === 'GLOBAL');
 
-  const hasActivePremium = isPremiumPlan(entitlements?.plan) && isActiveSubscription(entitlements?.subscription);
-
   const packs = useMemo<PackViewModel[]>(() => {
     if (isGlobalMarket) {
       if (reconciledOffers.length > 0) {
         return reconciledOffers.map(({ backendOffer, rcPackage }) =>
-          buildPackViewModel(backendOffer, rcPackage, hasActivePremium),
+          buildPackViewModel(backendOffer, rcPackage),
         );
       }
       return localOffers
         .filter((o) => o.country_code === 'GLOBAL')
-        .map((offer) => buildPackViewModel(offer, undefined, hasActivePremium));
+        .map((offer) => buildPackViewModel(offer, undefined));
     }
-    return localOffers.map((offer) => buildPackViewModel(offer, undefined, hasActivePremium));
-  }, [isGlobalMarket, reconciledOffers, localOffers, hasActivePremium]);
+    return localOffers.map((offer) => buildPackViewModel(offer, undefined));
+  }, [isGlobalMarket, reconciledOffers, localOffers]);
 
   const bestValueId = useMemo(() => {
     if (packs.length < 2) return null;
@@ -285,20 +318,27 @@ export default function CreditsShopScreen() {
                           <Text style={styles.bestValueText}>{t('billing.bestValue', 'Best value')}</Text>
                         </View>
                       )}
-                      {pack.hasDiscount && !isBestValue && (
-                        <View style={[styles.promoBadge, { backgroundColor: colors.warning + '22' }]}>
-                          <Text style={[styles.promoBadgeText, { color: colors.warning }]}>{t('promotion.offer.discount', 'Promo')}</Text>
-                        </View>
-                      )}
                     </View>
 
                     <View style={styles.packPriceCol}>
+                      {pack.promotion && (
+                        <View style={[styles.discountBadge, { backgroundColor: colors.success }]}>
+                          <Text style={styles.discountBadgeText} numberOfLines={1}>
+                            {pack.promotion.name}
+                          </Text>
+                        </View>
+                      )}
                       {pack.originalPrice && (
                         <Text style={[styles.originalPrice, { color: th.textSecondary }]}>{pack.originalPrice}</Text>
                       )}
                       <Text style={[styles.price, { color: isSelected ? colors.primary : th.text }]}>
                         {pack.price}
                       </Text>
+                      {pack.promotion?.ends_at && formatEndsAtLabel(pack.promotion.ends_at) ? (
+                        <Text style={[styles.endsAtLabel, { color: th.textSecondary }]}>
+                          {formatEndsAtLabel(pack.promotion.ends_at)}
+                        </Text>
+                      ) : null}
                     </View>
                   </Pressable>
                 );
@@ -342,6 +382,11 @@ export default function CreditsShopScreen() {
                     <Text style={[styles.bottomPackPrice, { color: colors.primary }]}>
                       {selectedPack.price}
                     </Text>
+                    {selectedPack.promotion && selectedPack.originalPrice && (
+                      <Text style={[styles.bottomDiscount, { color: colors.success }]}>
+                        {t('billing.discount', 'Discount')}{': \u2212'}{formatMinorUnits(selectedPack.promotion.discount_amount_minor, selectedPack.offer.currency)}
+                      </Text>
+                    )}
                   </View>
                 </>
               ) : (
@@ -489,23 +534,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
-  promoBadge: {
-    alignSelf: 'flex-start',
+  packPriceCol: { alignItems: 'flex-end', gap: 2 },
+  discountBadge: {
+    alignSelf: 'flex-end',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    maxWidth: 120,
   },
-  promoBadgeText: {
-    fontSize: 11,
+  discountBadgeText: {
+    color: '#fff',
+    fontSize: 10,
     fontWeight: '800',
   },
-  packPriceCol: { alignItems: 'flex-end', gap: 2 },
   originalPrice: {
     fontSize: 13,
     textDecorationLine: 'line-through',
     opacity: 0.7,
   },
   price: { fontSize: 20, fontWeight: '900' },
+  endsAtLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'right',
+    opacity: 0.75,
+  },
   processingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -553,6 +606,7 @@ const styles = StyleSheet.create({
   },
   bottomPackName: { fontSize: 14, fontWeight: '700' },
   bottomPackPrice: { fontSize: 16, fontWeight: '900' },
+  bottomDiscount: { fontSize: 11, fontWeight: '600', marginTop: 1 },
   bottomHint: { fontSize: 15, fontWeight: '600' },
   ctaBtn: {
     flexDirection: 'row',

@@ -135,7 +135,7 @@ const quotaRowStyles = StyleSheet.create({
 export default function BalancesScreen() {
   const router  = useRouter();
   const { colors: th }  = useTheme();
-  const { entitlements, isLoading, refreshEntitlements } = useEntitlements();
+  const { entitlements, isLoading, isRefetching, refreshEntitlements } = useEntitlements();
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
 
   if (isLoading || !entitlements) {
@@ -175,12 +175,16 @@ export default function BalancesScreen() {
         </Pressable>
         <Text style={[styles.headerTitle, { color: th.text }]}>Balances</Text>
         <Pressable
-          style={[styles.iconBtn, { backgroundColor: th.backgroundElement }]}
+          style={[styles.iconBtn, { backgroundColor: th.backgroundElement, opacity: isRefetching ? 0.5 : 1 }]}
           onPress={() => refreshEntitlements()}
+          disabled={isRefetching}
           accessibilityLabel="Refresh balances"
           accessibilityRole="button"
         >
-          <Ionicons name="refresh-outline" size={20} color={th.text} />
+          {isRefetching
+            ? <ActivityIndicator size="small" color={th.text} />
+            : <Ionicons name="refresh-outline" size={20} color={th.text} />
+          }
         </Pressable>
       </View>
 

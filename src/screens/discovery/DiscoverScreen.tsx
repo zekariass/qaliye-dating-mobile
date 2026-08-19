@@ -766,6 +766,21 @@ export default function DiscoverScreen() {
           onError: (err: any) => {
             setSuperMessageTarget(null);
             if (isInsufficientCreditsError(err)) return; // global modal already shown
+
+            // 409 — user already has an active Before Match Message for this person
+            const apiCode = err?.response?.data?.error?.code;
+            if (apiCode === 'DUPLICATE_ACTIVE_ACTION') {
+              themedAlert({
+                title: 'Message Already Sent',
+                message:
+                  "You've already sent a Before Match Message to this person. You can only send one message before matching.",
+                icon: 'chatbubble-ellipses',
+                iconColor: colors.primary,
+                buttons: [{ text: 'OK' }],
+              });
+              return;
+            }
+
             showActionErrorAlert(err, router, {
               subscriptionEnabled: entitlements?.country_settings?.subscription_enabled ?? true,
               creditsEnabled: entitlements?.country_settings?.credits_enabled ?? true,

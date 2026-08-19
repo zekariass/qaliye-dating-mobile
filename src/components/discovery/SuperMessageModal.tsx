@@ -102,7 +102,7 @@ export default function SuperMessageModal({
                 <View style={styles.titleRow}>
                   <Ionicons name="star" size={16} color="#F59E0B" style={{ marginRight: 4 }} />
                   <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#1A1A2E' }]}>
-                    Super Message
+                    Before Match Message
                   </Text>
                 </View>
                 <Text style={[styles.targetName, { color: th.textSecondary }]} numberOfLines={1}>
@@ -123,7 +123,7 @@ export default function SuperMessageModal({
           <View style={[styles.infoPill, { backgroundColor: isDark ? '#2E1A5A' : '#F3EEFF' }]}>
             <Ionicons name="information-circle-outline" size={14} color={colors.primary} />
             <Text style={[styles.infoText, { color: colors.primary }]}>
-              They'll see your message before matching. One pending Super Message per person.
+              You can send one message to a user before matching.
             </Text>
           </View>
 

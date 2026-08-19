@@ -105,6 +105,17 @@ export default function StatusContent({ profile }: StatusContentProps) {
                     <Ionicons name="arrow-forward" size={14} color="#fff" />
                   </Pressable>
                 )}
+                {item.label === 'Verification Status' && !profile.isVerified && (
+                  <Pressable
+                    style={[styles.completeBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => router.push('/(app)/verify-identity' as any)}
+                    accessibilityLabel="Verify your identity"
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="shield-checkmark-outline" size={14} color="#fff" />
+                    <Text style={styles.completeBtnText}>Verify</Text>
+                  </Pressable>
+                )}
               </View>
             </View>
           </View>

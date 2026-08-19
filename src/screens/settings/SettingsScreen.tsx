@@ -4,21 +4,21 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { themedAlert, themedError, themedSuccess } from '@/components/common/ThemedAlert';
-import { NotificationSettingsSection } from '@/components/notifications/NotificationSettingsSection';
+import { NotificationSettingsSheet } from '@/components/notifications/NotificationSettingsSheet';
 import { ReviewPassedProfilesSheet } from '@/components/settings/ReviewPassedProfilesSheet';
 import { colors } from '@/constants/theme';
 import { useActivityVisibility } from '@/hooks/activity/useActivityVisibility';
@@ -51,6 +51,7 @@ export default function SettingsScreen() {
   const { signOut, isSigningOut } = useSignOutWithDeactivation();
   const { confirmDelete, deleteStatus } = useDeleteAccount();
   const [revisitSheetVisible, setRevisitSheetVisible] = useState(false);
+  const [notifSheetVisible, setNotifSheetVisible] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
@@ -285,7 +286,27 @@ export default function SettingsScreen() {
         </View>
 
         {/* ── Notifications ── */}
-        <NotificationSettingsSection />
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Pressable
+            style={styles.optionRow}
+            onPress={() => setNotifSheetVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('notifications.title', 'Notifications')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('notifications.title', 'Notifications')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('notifications.subtitle', 'Choose how Qaliye notifies you.')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+        </View>
 
         {/* ── Discovery ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
@@ -320,6 +341,11 @@ export default function SettingsScreen() {
         <ReviewPassedProfilesSheet
           visible={revisitSheetVisible}
           onClose={() => setRevisitSheetVisible(false)}
+        />
+
+        <NotificationSettingsSheet
+          visible={notifSheetVisible}
+          onClose={() => setNotifSheetVisible(false)}
         />
 
         {/* ── Language ── */}

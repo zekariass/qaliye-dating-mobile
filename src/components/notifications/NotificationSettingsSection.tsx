@@ -305,6 +305,20 @@ export function NotificationSettingsSection() {
           <View style={[styles.divider, { borderColor: th.border }]} />
 
           <PreferenceRow
+            label={t('notifications.superMessage', 'Before Match Messages')}
+            sublabel={t(
+              'notifications.superMessageSub',
+              'Notify me when I receive a message before match',
+            )}
+            value={prefs.superMessageEnabled}
+            onValueChange={(v) => update({ superMessageEnabled: v })}
+            disabled={categoryDisabled}
+            isLoading={pendingField === 'superMessageEnabled' && isUpdating}
+          />
+
+          <View style={[styles.divider, { borderColor: th.border }]} />
+
+          <PreferenceRow
             label={t('notifications.marketing', 'Offers and updates')}
             sublabel={t('notifications.marketingSub', 'Promotions and feature announcements')}
             value={prefs.marketingNotificationsEnabled}
