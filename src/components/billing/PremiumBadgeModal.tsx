@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Linking,
@@ -17,10 +18,37 @@ import { useTheme } from '@/hooks/use-theme';
 import { getRevenueCatManagementURL } from '@/services/billing/revenueCatService';
 import {
     isActiveSubscription,
-    isFreePremiumPlan
+    isFreePremiumPlan,
+    type SubscriptionProvider,
 } from '@/types/billing';
 
 type ModalState = 'loading' | 'ready' | 'error';
+
+function formatProviderName(provider?: SubscriptionProvider): string {
+  if (!provider) return 'Local';
+  const names: Record<string, string> = {
+    TELEBIRR: 'Telebirr',
+    CBE_BIRR: 'CBE Birr',
+    CHAPA: 'Chapa',
+    ARIFPAY: 'ArifPay',
+    BANK_TRANSFER: 'Bank Transfer',
+    STRIPE: 'Stripe',
+    PROMOTION: 'Promotion',
+  };
+  return names[provider] ?? provider.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
+}
 
 export type PremiumBadgeModalProps = {
   visible: boolean;
@@ -28,6 +56,7 @@ export type PremiumBadgeModalProps = {
 };
 
 export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModalProps) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const router = useRouter();
   const { entitlements, refreshEntitlements, isFetching } = useEntitlements();
@@ -250,8 +279,57 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
               <Text style={[styles.message, { color: th.textSecondary }]}>
                 You are a Premium user.
               </Text>
-              <Text style={[styles.infoText, { color: th.textMuted }]}>
-                Paid using a local payment method.
+
+              <View style={[styles.localInfoCard, { backgroundColor: th.background, borderColor: th.border }]}>
+                <View style={styles.localInfoRow}>
+                  <Ionicons name="card-outline" size={16} color={th.textSecondary} />
+                  <Text style={[styles.localInfoLabel, { color: th.textSecondary }]}>
+                    {t('billing.paymentMethod', 'Payment Method')}
+                  </Text>
+                  <Text style={[styles.localInfoValue, { color: th.text }]}>
+                    {formatProviderName(provider)}
+                  </Text>
+                </View>
+
+                {subscription?.billing_interval_count && subscription?.billing_interval_unit ? (
+                  <View style={styles.localInfoRow}>
+                    <Ionicons name="calendar-outline" size={16} color={th.textSecondary} />
+                    <Text style={[styles.localInfoLabel, { color: th.textSecondary }]}>
+                      {t('billing.billingCycle', 'Billing Cycle')}
+                    </Text>
+                    <Text style={[styles.localInfoValue, { color: th.text }]}>
+                      {subscription.billing_interval_count} {subscription.billing_interval_unit.toLowerCase()}{subscription.billing_interval_count > 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {subscription?.auto_renew ? (
+                  <View style={styles.localInfoRow}>
+                    <Ionicons name="refresh-outline" size={16} color={th.textSecondary} />
+                    <Text style={[styles.localInfoLabel, { color: th.textSecondary }]}>
+                      {t('billing.renewal', 'Renewal')}
+                    </Text>
+                    <Text style={[styles.localInfoValue, { color: th.text }]}>
+                      {subscription?.expires_at
+                        ? t('billing.renewsOn', 'Renews {{date}}', { date: formatDate(subscription.expires_at) })
+                        : t('billing.autoRenew', 'Auto-renews')}
+                    </Text>
+                  </View>
+                ) : subscription?.expires_at ? (
+                  <View style={styles.localInfoRow}>
+                    <Ionicons name="time-outline" size={16} color={th.textSecondary} />
+                    <Text style={[styles.localInfoLabel, { color: th.textSecondary }]}>
+                      {t('billing.expires', 'Expires')}
+                    </Text>
+                    <Text style={[styles.localInfoValue, { color: th.text }]}>
+                      {formatDate(subscription.expires_at)}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <Text style={[styles.localInfoNote, { color: th.textMuted }]}>
+                {t('billing.localPaymentNote', 'Paid using a local payment method.')}
               </Text>
             </View>
           ) : null}
@@ -321,6 +399,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     marginTop: 4,
+    fontStyle: 'italic',
+  },
+  localInfoCard: {
+    width: '100%',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    padding: 14,
+    gap: 10,
+    marginTop: 8,
+  },
+  localInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  localInfoLabel: {
+    fontSize: 13,
+    flex: 1,
+  },
+  localInfoValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  localInfoNote: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 6,
     fontStyle: 'italic',
   },
   primaryBtn: {

@@ -33,6 +33,8 @@ const PROMOTION_ERROR_MESSAGES: Record<string, string> = {
   promotion_expired: 'This promotion has expired.',
   promotion_not_eligible: 'You are not eligible for this promotion.',
   promotion_capacity_exhausted: 'This promotion has reached its claim limit.',
+  promotion_already_redeemed: 'You have already redeemed this promotion.',
+  grant_failed: 'We could not grant your reward at this time. Please try again later.',
   user_has_active_subscription: 'You already have an active subscription.',
 };
 
@@ -75,8 +77,15 @@ export function PromotionAlert({ promotion, onExplicitDismiss, onProgrammaticClo
   const isUserClaim =
     promotion.trigger_type === 'USER_CLAIM' && promotion.can_redeem;
   const isPurchase = promotion.trigger_type === 'PURCHASE';
+  const isCredits = promotion.benefit_type === 'CREDITS';
   const durationLabel = formatDurationDays(promotion.duration_days);
   const endDateLabel = formatEndDate(promotion.ends_at);
+  const creditsLabel =
+    promotion.included_credits != null &&
+    promotion.included_credits > 0 &&
+    (promotion.benefit_type === 'FREE_PREMIUM' || isCredits)
+      ? t('promotion.creditsReward', '{{count}} credits', { count: promotion.included_credits })
+      : null;
 
   function handleClaim() {
     if (isClaiming || isRedeeming) return;
@@ -85,14 +94,47 @@ export function PromotionAlert({ promotion, onExplicitDismiss, onProgrammaticClo
       onSuccess: (data) => {
         setIsClaiming(false);
         onSuccess(promotion!.campaign_key);
-        themedSuccess(
-          t('promotion.claimSuccessTitle', 'Premium Activated!'),
-          data.message ||
+
+        // Build the success message based on what was granted
+        const grantedCredits = data.credits_granted;
+        const grantedSubscription = data.subscription_id != null;
+
+        let title: string;
+        let body: string;
+
+        if (grantedSubscription && grantedCredits != null && grantedCredits > 0) {
+          // Free premium + bonus credits
+          title = t('promotion.claimSuccessTitle', 'Premium Activated!');
+          body = data.message ||
+            t(
+              'promotion.claimSuccessWithCreditsBody',
+              'Your free premium access is now active. You also received {{count}} credits!',
+              { count: grantedCredits },
+            );
+        } else if (grantedSubscription) {
+          // Free premium only
+          title = t('promotion.claimSuccessTitle', 'Premium Activated!');
+          body = data.message ||
             t(
               'promotion.claimSuccessBody',
               'Your free premium access is now active.',
-            ),
-        );
+            );
+        } else if (grantedCredits != null && grantedCredits > 0) {
+          // Credits only
+          title = t('promotion.creditsGrantedTitle', 'Credits Received!');
+          body = data.message ||
+            t(
+              'promotion.creditsGrantedBody',
+              'You received {{count}} credits!',
+              { count: grantedCredits },
+            );
+        } else {
+          // Fallback — use server message
+          title = t('promotion.claimSuccessTitle', 'Success!');
+          body = data.message || t('promotion.claimSuccessBody', 'Your reward has been applied.');
+        }
+
+        themedSuccess(title, body);
       },
       onError: (err) => {
         setIsClaiming(false);
@@ -111,7 +153,15 @@ export function PromotionAlert({ promotion, onExplicitDismiss, onProgrammaticClo
 
   function handleViewOffer() {
     onProgrammaticClose();
-    router.push('/(app)/premium' as any);
+    // Route to Credits Shop for credits-based promotions, otherwise Premium.
+    const isCreditsPromo =
+      promotion!.benefit_type === 'CREDITS' ||
+      (promotion!.consumable_product_id != null && promotion!.subscription_product_id == null);
+    if (isCreditsPromo) {
+      router.push('/(app)/credits-shop' as any);
+    } else {
+      router.push('/(app)/premium' as any);
+    }
   }
 
   return (
@@ -138,14 +188,16 @@ export function PromotionAlert({ promotion, onExplicitDismiss, onProgrammaticClo
               {
                 backgroundColor: isPurchase
                   ? colors.warning + '20'
-                  : colors.primary + '20',
+                  : isCredits
+                    ? colors.success + '20'
+                    : colors.primary + '20',
               },
             ]}
           >
             <Ionicons
-              name={isPurchase ? 'pricetag-outline' : 'diamond-outline'}
+              name={isPurchase ? 'pricetag-outline' : isCredits ? 'cash-outline' : 'diamond-outline'}
               size={28}
-              color={isPurchase ? colors.warning : colors.primary}
+              color={isPurchase ? colors.warning : isCredits ? colors.success : colors.primary}
             />
           </View>
 
@@ -167,6 +219,20 @@ export function PromotionAlert({ promotion, onExplicitDismiss, onProgrammaticClo
               {promotion.description}
             </Text>
           ) : null}
+
+          {creditsLabel && (
+            <View
+              style={[
+                styles.pill2,
+                { backgroundColor: colors.success + '15' },
+              ]}
+            >
+              <Ionicons name="cash-outline" size={14} color={colors.success} />
+              <Text style={[styles.pillText, { color: colors.success }]}>
+                {creditsLabel}
+              </Text>
+            </View>
+          )}
 
           {durationLabel && (
             <View

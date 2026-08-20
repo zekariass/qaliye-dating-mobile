@@ -18,7 +18,7 @@ const SUPPORTED_ELIGIBILITY_TYPES = new Set([
   'NEVER_SUBSCRIBED',
   'NO_ACTIVE_SUBSCRIPTION',
 ]);
-const SUPPORTED_BENEFIT_TYPES = new Set(['FREE_PREMIUM', 'DISCOUNT']);
+const SUPPORTED_BENEFIT_TYPES = new Set(['FREE_PREMIUM', 'DISCOUNT', 'CREDITS']);
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
 export function parseUtcDate(iso: string | null | undefined): Date | null {
@@ -111,9 +111,11 @@ export function canShowCampaign(
 // ─── Deterministic campaign selection ────────────────────────────────────────
 function categoryOf(p: EligiblePromotionDto): number {
   if (p.trigger_type === 'USER_CLAIM' && p.benefit_type === 'FREE_PREMIUM') return 0;
-  if (p.benefit_type === 'FREE_PREMIUM') return 1;
-  if (p.trigger_type === 'PURCHASE' && p.benefit_type === 'DISCOUNT') return 2;
-  return 3;
+  if (p.trigger_type === 'USER_CLAIM' && p.benefit_type === 'CREDITS') return 1;
+  if (p.benefit_type === 'FREE_PREMIUM') return 2;
+  if (p.benefit_type === 'CREDITS') return 3;
+  if (p.trigger_type === 'PURCHASE' && p.benefit_type === 'DISCOUNT') return 4;
+  return 5;
 }
 
 export function selectPromotion(candidates: EligiblePromotionDto[]): EligiblePromotionDto | null {
@@ -158,10 +160,8 @@ export function useEligiblePromotions(userId?: string) {
       console.log('[promo] blocked: no userId');
       return null;
     }
-    if (hasActivePremium) {
-      console.log('[promo] blocked: has active premium');
-      return null;
-    }
+    // Premium users can still receive CREDITS promotions. We don't bail early
+    // here; instead non-CREDITS promotions are filtered out below.
     if (!store.acquireDisplayLock()) {
       console.log('[promo] blocked: display lock held');
       return null;
@@ -173,15 +173,15 @@ export function useEligiblePromotions(userId?: string) {
         queryFn: fetchEligiblePromotions,
         staleTime: 0,
       });
-      console.log('[promo] fresh promotions:', fresh?.length, JSON.stringify(fresh?.map(p => ({ key: p.campaign_key, status: p.status, trigger: p.trigger_type, canRedeem: p.can_redeem }))));
-
-      if (hasActivePremium) {
-        console.log('[promo] blocked: premium after fetch');
-        return null;
-      }
+      console.log('[promo] fresh promotions:', fresh?.length, JSON.stringify(fresh?.map(p => ({ key: p.campaign_key, status: p.status, trigger: p.trigger_type, canRedeem: p.can_redeem, benefit: p.benefit_type }))));
 
       const now = new Date();
       const displayable = fresh.filter((p) => {
+        // Premium users should only see CREDITS promotions.
+        if (hasActivePremium && p.benefit_type !== 'CREDITS') {
+          console.log('[promo] skipping non-CREDITS for premium user:', p.campaign_key, 'benefit:', p.benefit_type);
+          return false;
+        }
         const structValid = isPromoStructurallyValid(p);
         if (!structValid) {
           console.log('[promo] structurally invalid:', p.campaign_key, 'status:', p.status, 'trigger:', p.trigger_type, 'eligibility:', p.eligibility_type, 'benefit:', p.benefit_type, 'starts_at:', p.starts_at);

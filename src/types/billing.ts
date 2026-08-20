@@ -366,7 +366,7 @@ export type SuperLikeExhaustionContext = 'QUOTA' | 'CREDITS';
 export type RedemptionStatus = 'RESERVED' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
 
 export type PromotionTriggerType = 'USER_CLAIM' | 'PURCHASE' | 'AUTO_ON_SIGNUP';
-export type PromotionBenefitType = 'FREE_PREMIUM' | 'DISCOUNT';
+export type PromotionBenefitType = 'FREE_PREMIUM' | 'DISCOUNT' | 'CREDITS';
 export type PromotionEligibilityType =
   | 'ANY_ELIGIBLE_USER'
   | 'NEW_USER'
@@ -412,7 +412,8 @@ export type EligiblePromotionDto = {
   discount_type: PromotionDiscountType | null;
   discount_value: number | null;
   discount_currency: string | null;
-  subscription_product_id: string;
+  subscription_product_id: string | null;
+  consumable_product_id: string | null;
   duration_days: number | null;
   max_redemptions: number | null;
   reserved_count: number;
@@ -420,6 +421,7 @@ export type EligiblePromotionDto = {
   starts_at: string | null;
   ends_at: string | null;
   target_gender: 'MALE' | 'FEMALE' | null;
+  included_credits: number | null;
   can_redeem: boolean;
   priority: number;
 };
@@ -450,10 +452,11 @@ export type UserRedemptionDto = {
 
 export type RedeemPromotionResponse = {
   redemption_id: string;
-  subscription_id: string;
+  subscription_id: string | null;
   campaign_key: string;
   plan_code: string | null;
-  duration_days: number;
-  period_end: string;
+  duration_days: number | null;
+  period_end: string | null;
+  credits_granted: number | null;
   message: string;
 };

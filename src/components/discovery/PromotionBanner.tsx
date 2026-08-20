@@ -140,9 +140,23 @@ export function PromotionBanner({
         >
           {promotions.map((promo) => {
             const isPurchase = promo.trigger_type === 'PURCHASE';
+            const isCredits = promo.benefit_type === 'CREDITS';
             const iconName = isPurchase
               ? 'pricetag-outline'
-              : 'diamond-outline';
+              : isCredits
+                ? 'cash-outline'
+                : 'diamond-outline';
+            const isClaimable = promo.benefit_type === 'FREE_PREMIUM' || isCredits;
+            const hasIncludedCredits =
+              promo.included_credits != null &&
+              promo.included_credits > 0 &&
+              (promo.benefit_type === 'FREE_PREMIUM' || isCredits);
+            const creditsText = hasIncludedCredits
+              ? t('promotion.creditsReward', '{{count}} credits', { count: promo.included_credits as number })
+              : null;
+            const subtitleText = [promo.description, creditsText]
+              .filter(Boolean)
+              .join(' · ') || null;
 
             return (
               <View key={promo.campaign_key} style={[styles.slide, { width: slideWidth }]}>
@@ -162,12 +176,12 @@ export function PromotionBanner({
                   >
                     {promo.name}
                   </Text>
-                  {promo.description ? (
+                  {subtitleText ? (
                     <Text
                       style={styles.subtitle}
                       numberOfLines={1}
                     >
-                      {promo.description}
+                      {subtitleText}
                     </Text>
                   ) : null}
                 </View>
@@ -177,12 +191,12 @@ export function PromotionBanner({
                     style={styles.ctaText}
                     numberOfLines={1}
                   >
-                    {promo.benefit_type === 'FREE_PREMIUM'
+                    {isClaimable
                       ? t('promotion.claimNow', 'Claim')
                       : t('promotion.viewOffer', 'View offer')}
                   </Text>
                   <Ionicons
-                    name={promo.benefit_type === 'FREE_PREMIUM' ? 'gift-outline' : 'chevron-forward'}
+                    name={isClaimable ? 'gift-outline' : 'chevron-forward'}
                     size={14}
                     color="#FFFFFF"
                   />

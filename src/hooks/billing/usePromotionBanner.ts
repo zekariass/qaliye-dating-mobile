@@ -115,14 +115,11 @@ export function usePromotionBanner(
       console.log('[banner] skipping: no userId');
       return;
     }
-    if (hasActivePremium) {
-      console.log('[banner] skipping: has active premium');
-      hasEvaluatedRef.current = true;
-      return;
-    }
-
+    // Premium users can still receive CREDITS promotions, so we don't skip
+    // evaluation entirely. Non-CREDITS promotions are filtered out below when
+    // the user has active premium.
     hasEvaluatedRef.current = true;
-    console.log('[banner] evaluating promotions for user:', userId);
+    console.log('[banner] evaluating promotions for user:', userId, 'hasActivePremium:', hasActivePremium);
 
     (async () => {
       try {
@@ -133,6 +130,12 @@ export function usePromotionBanner(
         const now = new Date();
         const eligible = fresh
           .filter((p) => {
+            // Premium users should only see CREDITS promotions — skip
+            // FREE_PREMIUM and DISCOUNT since they already have premium.
+            if (hasActivePremium && p.benefit_type !== 'CREDITS') {
+              console.log('[banner] skipping non-CREDITS for premium user:', p.campaign_key, 'benefit:', p.benefit_type);
+              return false;
+            }
             const structValid = isPromoStructurallyValid(p);
             if (!structValid) {
               console.log('[banner] structurally invalid:', p.campaign_key, 'status:', p.status, 'trigger:', p.trigger_type, 'eligibility:', p.eligibility_type, 'benefit:', p.benefit_type);
@@ -176,11 +179,16 @@ export function usePromotionBanner(
     })();
   }, [userId, hasActivePremium, addTimer, store, startTimersFrom]);
 
-  // Dismiss banner if user gains premium while banner is visible
+  // Dismiss banner if user gains premium while banner is visible — but only
+  // if all visible promotions are non-CREDITS. CREDITS promotions are still
+  // relevant to premium users.
   useEffect(() => {
     if (hasActivePremium && isVisible) {
-      clearAllTimers();
-      setIsVisible(false);
+      const hasCreditsPromo = promotionsRef.current.some((p) => p.benefit_type === 'CREDITS');
+      if (!hasCreditsPromo) {
+        clearAllTimers();
+        setIsVisible(false);
+      }
     }
   }, [hasActivePremium, isVisible, clearAllTimers]);
 

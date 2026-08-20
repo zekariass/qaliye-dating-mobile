@@ -48,9 +48,9 @@ function formatLimitKey(key: string): string {
 }
 
 const CREDIT_KEY_MAP: Record<string, keyof EntitlementResponse['credits']> = {
-  super_likes: 'super_likes_available',
-  rewinds: 'rewinds_available',
-  boosts: 'boosts_available',
+  super_likes: 'credit_balance',
+  rewinds: 'credit_balance',
+  boosts: 'credit_balance',
 };
 
 function formatLimitValue(quota: QuotaInfo, creditsAvailable: number): string {

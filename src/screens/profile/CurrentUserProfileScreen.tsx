@@ -1,4 +1,5 @@
-import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
@@ -19,7 +20,7 @@ import Animated, {
 
 import { colors } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
-import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
+import { PROFILE_ME_QUERY_KEY, useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import { mapProfileMeDtoToCurrentUserProfile } from '@/utils/profileMappers';
 
@@ -42,6 +43,16 @@ export default function CurrentUserProfileScreen() {
 
   const { data: dto, isLoading, isError, error } = useCurrentProfile();
   const { entitlements } = useEntitlements();
+  const queryClient = useQueryClient();
+
+  // Refetch profile data when the screen gains focus (e.g. returning from
+  // EditProfileScreen). This ensures photos and other fields are always fresh,
+  // even if a PUT response replaced the cache with incomplete data.
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: PROFILE_ME_QUERY_KEY });
+    }, [queryClient]),
+  );
 
   // ─── Pager animation ────────────────────────────────────────────────────────
   const currentIndex = useSharedValue(0);

@@ -671,7 +671,6 @@ export default function LikesListScreen() {
   const { bg }    = useLikesTheme();
   const router    = useRouter();
   const { entitlements, refreshEntitlements } = useEntitlements();
-  const canSeeWhoLikedYou = entitlements?.features?.see_who_liked_you ?? false;
 
   // Activity status — merge visible ids from both pages
   const [visibleReceivedIds, setVisibleReceivedIds] = useState<string[]>([]);
@@ -919,7 +918,10 @@ export default function LikesListScreen() {
 
   const renderReceivedItem = useCallback(({ item }: { item: LikeItemDto }) => {
     const effectiveItem = revealedItems[item.action_id] ?? item;
-    if (!canSeeWhoLikedYou && !revealedItems[item.action_id] && !item.revealed_at) {
+    // The backend controls whether profile data is included. If the item
+    // hasn't been revealed (no revealed_at and not in revealedItems), show
+    // the blurred card so the user can reveal it via credits.
+    if (!item.revealed_at && !revealedItems[item.action_id]) {
       return (
         <BlurredLikeCard
           item={item}
@@ -942,7 +944,7 @@ export default function LikesListScreen() {
         myCountry={myCountry}
       />
     );
-  }, [canSeeWhoLikedYou, revealedItems, handleReveal, handleCardPress, handleLikeBack, revealingId, likingBackId, getStatus, myCountry]);
+  }, [revealedItems, handleReveal, handleCardPress, handleLikeBack, revealingId, likingBackId, getStatus, myCountry]);
 
   const renderSentItem = useCallback(({ item }: { item: LikeItemDto }) => (
     <LikeCard

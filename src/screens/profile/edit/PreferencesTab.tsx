@@ -30,10 +30,10 @@ type Props = {
 const DISTANCE_MARKS = [1, 100, 250, 400, 500];
 
 const LOCATION_MODES: { key: LocationMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-  { key: 'nearby',             label: 'Near Me',          icon: 'locate-outline' },
-  { key: 'diaspora',           label: 'Diaspora',         icon: 'earth-outline' },
-  { key: 'specific_countries', label: 'Specific',         icon: 'flag-outline' },
-  { key: 'anywhere',           label: 'Anywhere',         icon: 'globe-outline' },
+  { key: 'nearby',             label: 'Near Me',   icon: 'locate-outline' },
+  { key: 'diaspora',           label: 'Diaspora',  icon: 'earth-outline' },
+  { key: 'specific_countries', label: 'Specific',  icon: 'flag-outline' },
+  { key: 'anywhere',           label: 'Anywhere',  icon: 'globe-outline' },
 ];
 
 const HAS_CHILDREN_OPTIONS: { key: HasChildrenPref; label: string }[] = [
@@ -61,319 +61,306 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
   }, [prefs.religionPreferences, onPrefsChange]);
 
   return (
-    <View>
+    <View style={{ gap: 12 }}>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          CARD 1 · Who you want to meet
+      ═══════════════════════════════════════════════════════════════════ */}
       <SectionCard sem={sem}>
-        <SectionTitle title="Discovery Preferences" sem={sem} />
-        <Text className="text-sm mb-5" style={{ color: sem.textSecondary }}>
-          Control who you see and how discovery works.
-        </Text>
+        <SectionTitle title="Who You Want to Meet" sem={sem} />
 
         {/* ─── Interested In (locked — auto-derived from gender) ─── */}
-        <View className="mb-5">
-          <View className="flex-row items-center gap-1 mb-1.5">
-            <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
-              Interested in
-            </Text>
-            <Ionicons name="lock-closed-outline" size={12} color={sem.textMuted} />
-          </View>
+        <PrefsLabel label="Interested in" sem={sem}>
+          <Ionicons name="lock-closed-outline" size={13} color={sem.textMuted} />
+        </PrefsLabel>
+        <View
+          className="flex-row items-center rounded-2xl px-4 py-4 border"
+          style={{ backgroundColor: sem.surfaceMuted, borderColor: sem.border }}
+        >
           <View
-            className="flex-row items-center rounded-xl px-3 py-3 border"
-            style={{ backgroundColor: sem.surfaceMuted, borderColor: sem.border }}
+            className="w-8 h-8 rounded-full items-center justify-center mr-3"
+            style={{ backgroundColor: sem.accentSoft }}
           >
             <Ionicons
               name={prefs.interestedIn === 'MALE' ? 'male-outline' : 'female-outline'}
-              size={16}
+              size={17}
               color={sem.accent}
-              style={{ marginRight: 8 }}
             />
-            <Text className="flex-1 text-base font-medium" style={{ color: sem.textPrimary }}>
-              {prefs.interestedIn === 'MALE' ? 'Male' : 'Female'}
-            </Text>
-            <Text className="text-sm" style={{ color: sem.textMuted }}>Auto</Text>
           </View>
-          <Text className="text-sm mt-1.5 ml-1" style={{ color: sem.textMuted }}>
-            {userGender
-              ? `Set automatically based on your gender (${userGender === 'MALE' ? 'Man' : 'Woman'}).`
-              : 'Automatically set based on your profile gender.'}
+          <Text className="flex-1 text-base font-semibold" style={{ color: sem.textPrimary }}>
+            {prefs.interestedIn === 'MALE' ? 'Men' : 'Women'}
           </Text>
+          <View
+            className="px-3 py-1 rounded-full"
+            style={{ backgroundColor: sem.accentSoft }}
+          >
+            <Text className="text-xs font-semibold" style={{ color: sem.accent }}>Auto</Text>
+          </View>
         </View>
+        <Text className="text-sm mt-2 ml-0.5" style={{ color: sem.textMuted }}>
+          {userGender
+            ? `Automatically set based on your gender (${userGender === 'MALE' ? 'Man' : 'Woman'}).`
+            : 'Automatically set based on your profile gender.'}
+        </Text>
+
+        <SectionDivider sem={sem} />
 
         {/* ─── Location Mode ─── */}
-        <View className="mb-5">
-          <Text className="text-base font-semibold mb-2" style={{ color: sem.textPrimary }}>
-            Where to discover people
-          </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {LOCATION_MODES.map(({ key, label, icon }) => {
-              const isActive = prefs.locationMode === key;
-              return (
-                <Pressable
-                  key={key}
-                  onPress={() => onPrefsChange({ locationMode: key })}
-                  className="flex-row items-center rounded-full px-4 py-2.5 border gap-2"
-                  style={{
-                    backgroundColor: isActive ? sem.accentSoft : 'transparent',
-                    borderColor: isActive ? sem.accent : sem.border,
-                  }}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isActive }}
-                  accessibilityLabel={label}
-                >
-                  <Ionicons name={icon} size={14} color={isActive ? sem.accent : sem.textMuted} />
-                  <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textSecondary }}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          {prefs.locationMode === 'specific_countries' && (
-            <View className="mt-3">
-              <CountryMultiSelectPicker
-                selected={prefs.specificCountryCodes}
-                onChange={(codes) => onPrefsChange({ specificCountryCodes: codes })}
-                accentColor={sem.accent}
-                textColor={sem.textPrimary}
-                mutedColor={sem.textMuted}
-                borderColor={sem.border}
-                surfaceColor={sem.surface}
-              />
-            </View>
-          )}
+        <PrefsLabel label="Where to discover people" sem={sem} />
+        <View className="flex-row flex-wrap gap-2.5 mt-1">
+          {LOCATION_MODES.map(({ key, label, icon }) => {
+            const isActive = prefs.locationMode === key;
+            return (
+              <Pressable
+                key={key}
+                onPress={() => onPrefsChange({ locationMode: key })}
+                className="flex-row items-center rounded-2xl px-4 py-3 border gap-2"
+                style={{
+                  backgroundColor: isActive ? sem.accentSoft : sem.surfaceMuted,
+                  borderColor: isActive ? sem.accent : sem.border,
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isActive }}
+                accessibilityLabel={label}
+              >
+                <Ionicons name={icon} size={16} color={isActive ? sem.accent : sem.textMuted} />
+                <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textSecondary }}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
+        {prefs.locationMode === 'specific_countries' && (
+          <View className="mt-4">
+            <CountryMultiSelectPicker
+              selected={prefs.specificCountryCodes}
+              onChange={(codes) => onPrefsChange({ specificCountryCodes: codes })}
+              accentColor={sem.accent}
+              textColor={sem.textPrimary}
+              mutedColor={sem.textMuted}
+              borderColor={sem.border}
+              surfaceColor={sem.surface}
+            />
+          </View>
+        )}
+      </SectionCard>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          CARD 2 · Age & Distance
+      ═══════════════════════════════════════════════════════════════════ */}
+      <SectionCard sem={sem}>
+        <SectionTitle title="Age & Distance" sem={sem} />
 
         {/* ─── Age Range ─── */}
-        <View className="mb-5">
-          <Text className="text-base font-semibold mb-3" style={{ color: sem.textPrimary }}>
-            Age range
-          </Text>
-          <View className="flex-row items-center gap-3">
-            <View
-              className="px-3 py-2 rounded-lg border min-w-[50px] items-center"
-              style={{ borderColor: sem.border }}
-            >
-              <Text className="text-base font-bold" style={{ color: sem.textPrimary }}>
-                {prefs.minAge}
-              </Text>
-            </View>
-            <View className="flex-1">
-              <Slider
-                minimumValue={18}
-                maximumValue={prefs.maxAge - 1}
-                value={prefs.minAge}
-                step={1}
-                onValueChange={(v: number) => onPrefsChange({ minAge: Math.round(v) })}
-                minimumTrackTintColor={sem.accent}
-                maximumTrackTintColor={sem.accentSoft}
-                thumbTintColor={sem.accent}
-                accessibilityLabel={`Minimum age: ${prefs.minAge}`}
-              />
-              <Slider
-                minimumValue={prefs.minAge + 1}
-                maximumValue={100}
-                value={prefs.maxAge}
-                step={1}
-                onValueChange={(v: number) => onPrefsChange({ maxAge: Math.round(v) })}
-                minimumTrackTintColor={sem.accent}
-                maximumTrackTintColor={sem.accentSoft}
-                thumbTintColor={sem.accent}
-                accessibilityLabel={`Maximum age: ${prefs.maxAge}`}
-              />
-            </View>
-            <View
-              className="px-3 py-2 rounded-lg border min-w-[50px] items-center"
-              style={{ borderColor: sem.border }}
-            >
-              <Text className="text-base font-bold" style={{ color: sem.textPrimary }}>
-                {prefs.maxAge}
-              </Text>
-            </View>
+        <PrefsLabel label="Age range" sem={sem} />
+        <View className="flex-row items-center gap-3 mt-2">
+          <AgeDisplay value={prefs.minAge} label="Min" sem={sem} />
+          <View className="flex-1">
+            <Slider
+              minimumValue={18}
+              maximumValue={prefs.maxAge - 1}
+              value={prefs.minAge}
+              step={1}
+              onValueChange={(v: number) => onPrefsChange({ minAge: Math.round(v) })}
+              minimumTrackTintColor={sem.accent}
+              maximumTrackTintColor={sem.accentSoft}
+              thumbTintColor={sem.accent}
+              accessibilityLabel={`Minimum age: ${prefs.minAge}`}
+            />
+            <Slider
+              minimumValue={prefs.minAge + 1}
+              maximumValue={100}
+              value={prefs.maxAge}
+              step={1}
+              onValueChange={(v: number) => onPrefsChange({ maxAge: Math.round(v) })}
+              minimumTrackTintColor={sem.accent}
+              maximumTrackTintColor={sem.accentSoft}
+              thumbTintColor={sem.accent}
+              accessibilityLabel={`Maximum age: ${prefs.maxAge}`}
+            />
           </View>
-          <View className="flex-row justify-between mt-1 px-1">
-            <Text className="text-sm" style={{ color: sem.textMuted }}>Min age</Text>
-            <Text className="text-sm" style={{ color: sem.textMuted }}>Max age</Text>
-          </View>
+          <AgeDisplay value={prefs.maxAge} label="Max" sem={sem} />
         </View>
 
+        <SectionDivider sem={sem} />
+
         {/* ─── Maximum Distance ─── */}
-        <View className="mb-5">
-          <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
-              Maximum distance
-            </Text>
+        <View className="flex-row items-center justify-between mb-3">
+          <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
+            Maximum distance
+          </Text>
+          <View
+            className="px-3 py-1.5 rounded-full"
+            style={{ backgroundColor: sem.accentSoft }}
+          >
             <Text className="text-base font-bold" style={{ color: sem.accent }}>
               {prefs.maximumDistanceKm} km
             </Text>
           </View>
-          <Slider
-            minimumValue={1}
-            maximumValue={500}
-            value={prefs.maximumDistanceKm}
-            step={1}
-            onValueChange={(v: number) => onPrefsChange({ maximumDistanceKm: Math.round(v) })}
-            minimumTrackTintColor={sem.accent}
-            maximumTrackTintColor={sem.accentSoft}
-            thumbTintColor={sem.accent}
-            accessibilityLabel={`Maximum distance: ${prefs.maximumDistanceKm} kilometers`}
-          />
-          <View className="flex-row justify-between mt-1">
-            {DISTANCE_MARKS.map((d) => (
-              <Text
-                key={d}
-                className="text-sm font-medium"
-                style={{ color: d === prefs.maximumDistanceKm ? sem.accent : sem.textMuted }}
-              >
-                {d === 500 ? '500 km' : `${d} km`}
-              </Text>
-            ))}
-          </View>
         </View>
+        <Slider
+          minimumValue={1}
+          maximumValue={500}
+          value={prefs.maximumDistanceKm}
+          step={1}
+          onValueChange={(v: number) => onPrefsChange({ maximumDistanceKm: Math.round(v) })}
+          minimumTrackTintColor={sem.accent}
+          maximumTrackTintColor={sem.accentSoft}
+          thumbTintColor={sem.accent}
+          accessibilityLabel={`Maximum distance: ${prefs.maximumDistanceKm} kilometers`}
+        />
+        <View className="flex-row justify-between mt-2">
+          {DISTANCE_MARKS.map((d) => (
+            <Text
+              key={d}
+              className="text-xs font-medium"
+              style={{ color: d === prefs.maximumDistanceKm ? sem.accent : sem.textMuted }}
+            >
+              {d === 500 ? '500+' : `${d}`}
+            </Text>
+          ))}
+        </View>
+        <Text className="text-xs text-center mt-1" style={{ color: sem.textMuted }}>km</Text>
+      </SectionCard>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          CARD 3 · Filters & Children Preferences
+      ═══════════════════════════════════════════════════════════════════ */}
+      <SectionCard sem={sem}>
+        <SectionTitle title="Filters" sem={sem} />
 
         {/* ─── Toggles ─── */}
-        <View className="gap-1 mb-5">
-          <ToggleRow
-            icon="search-outline"
-            label="Expand search when limited"
-            helperText="Broaden discovery if few matches found."
-            value={prefs.expandSearchWhenLimited}
-            onToggle={(v) => onPrefsChange({ expandSearchWhenLimited: v })}
-            sem={sem}
-          />
-          <ToggleRow
-            icon="checkmark-circle-outline"
-            label="Show verified profiles only"
-            helperText="Only show people with a blue check."
-            value={prefs.verifiedProfilesOnly}
-            onToggle={(v) => onPrefsChange({ verifiedProfilesOnly: v })}
-            sem={sem}
-          />
-        </View>
+        <ToggleRow
+          icon="search-outline"
+          label="Expand search when limited"
+          helperText="Broaden discovery if few matches found."
+          value={prefs.expandSearchWhenLimited}
+          onToggle={(v) => onPrefsChange({ expandSearchWhenLimited: v })}
+          sem={sem}
+        />
+        <View style={{ height: 1, backgroundColor: sem.border, marginVertical: 4 }} />
+        <ToggleRow
+          icon="checkmark-circle-outline"
+          label="Show verified profiles only"
+          helperText="Only show people with a blue check."
+          value={prefs.verifiedProfilesOnly}
+          onToggle={(v) => onPrefsChange({ verifiedProfilesOnly: v })}
+          sem={sem}
+        />
+
+        <SectionDivider sem={sem} />
 
         {/* ─── Has Children Preference ─── */}
-        <View className="mb-5">
-          <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
-            Preferred: has children
-          </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {HAS_CHILDREN_OPTIONS.map(({ key, label }) => {
-              const isActive = prefs.hasChildrenPreference === key;
-              return (
-                <Pressable
-                  key={key}
-                  onPress={() => onPrefsChange({ hasChildrenPreference: key })}
-                  className="rounded-full px-4 py-2 border"
-                  style={{ backgroundColor: isActive ? sem.accentSoft : 'transparent', borderColor: isActive ? sem.accent : sem.border }}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textSecondary }}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+        <PrefsLabel label="Partner has children" sem={sem} />
+        <View className="flex-row flex-wrap gap-2.5 mt-1">
+          {HAS_CHILDREN_OPTIONS.map(({ key, label }) => {
+            const isActive = prefs.hasChildrenPreference === key;
+            return (
+              <ChipButton
+                key={key}
+                label={label}
+                isActive={isActive}
+                onPress={() => onPrefsChange({ hasChildrenPreference: key })}
+                role="radio"
+                sem={sem}
+              />
+            );
+          })}
         </View>
+
+        <SectionDivider sem={sem} />
 
         {/* ─── Wants Children Preference ─── */}
-        <View className="mb-5">
-          <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
-            Preferred: wants children
-          </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {WANTS_CHILDREN_OPTIONS.map(({ key, label }) => {
-              const isActive = prefs.wantsChildrenPreference === key;
-              return (
-                <Pressable
-                  key={key}
-                  onPress={() => onPrefsChange({ wantsChildrenPreference: key })}
-                  className="rounded-full px-4 py-2 border"
-                  style={{ backgroundColor: isActive ? sem.accentSoft : 'transparent', borderColor: isActive ? sem.accent : sem.border }}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textSecondary }}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+        <PrefsLabel label="Partner wants children" sem={sem} />
+        <View className="flex-row flex-wrap gap-2.5 mt-1">
+          {WANTS_CHILDREN_OPTIONS.map(({ key, label }) => {
+            const isActive = prefs.wantsChildrenPreference === key;
+            return (
+              <ChipButton
+                key={key}
+                label={label}
+                isActive={isActive}
+                onPress={() => onPrefsChange({ wantsChildrenPreference: key })}
+                role="radio"
+                sem={sem}
+              />
+            );
+          })}
         </View>
+      </SectionCard>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          CARD 4 · Culture & Background
+      ═══════════════════════════════════════════════════════════════════ */}
+      <SectionCard sem={sem}>
+        <SectionTitle title="Culture & Background" sem={sem} />
 
         {/* ─── Religion Preferences ─── */}
-        <View className="mb-5">
-          <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
-            Religion preferences
-          </Text>
-          <Text className="text-sm mb-2" style={{ color: sem.textMuted }}>
-            Leave empty to see all religions.
-          </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {RELIGION_OPTIONS.map((r) => {
-              const isActive = prefs.religionPreferences.includes(r);
-              return (
-                <Pressable
-                  key={r}
-                  onPress={() => handleToggleReligion(r)}
-                  className="rounded-full px-4 py-2 border"
-                  style={{ backgroundColor: isActive ? sem.accentSoft : 'transparent', borderColor: isActive ? sem.accent : sem.border }}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: isActive }}
-                >
-                  <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textSecondary }}>
-                    {r}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+        <PrefsLabel label="Religion" sem={sem} />
+        <Text className="text-sm mb-3" style={{ color: sem.textMuted }}>
+          Leave empty to see all religions.
+        </Text>
+        <View className="flex-row flex-wrap gap-2.5">
+          {RELIGION_OPTIONS.map((r) => {
+            const isActive = prefs.religionPreferences.includes(r);
+            return (
+              <ChipButton
+                key={r}
+                label={r}
+                isActive={isActive}
+                onPress={() => handleToggleReligion(r)}
+                role="checkbox"
+                sem={sem}
+              />
+            );
+          })}
         </View>
+
+        <SectionDivider sem={sem} />
 
         {/* ─── Language Preferences ─── */}
-        <View className="mb-5">
-          <Text className="text-sm font-semibold mb-2" style={{ color: sem.textPrimary }}>
-            Language preferences
-          </Text>
-          <Text className="text-sm mb-2" style={{ color: sem.textMuted }}>
-            Leave empty to see all languages.
-          </Text>
-          <LanguageMultiSelectPicker
-            selected={prefs.languagePreferences}
-            onChange={(items: LanguageOption[]) => onPrefsChange({ languagePreferences: items })}
-            accentColor={sem.accent}
-            textColor={sem.textPrimary}
-            mutedColor={sem.textMuted}
-            borderColor={sem.border}
-            surfaceColor={sem.surface}
-          />
-        </View>
+        <PrefsLabel label="Languages" sem={sem} />
+        <Text className="text-sm mb-3" style={{ color: sem.textMuted }}>
+          Leave empty to see all languages.
+        </Text>
+        <LanguageMultiSelectPicker
+          selected={prefs.languagePreferences}
+          onChange={(items: LanguageOption[]) => onPrefsChange({ languagePreferences: items })}
+          accentColor={sem.accent}
+          textColor={sem.textPrimary}
+          mutedColor={sem.textMuted}
+          borderColor={sem.border}
+          surfaceColor={sem.surface}
+        />
+
+        <SectionDivider sem={sem} />
 
         {/* ─── Ethnicity Preferences ─── */}
-        <View className="mb-6">
-          <Text className="text-base font-semibold mb-2" style={{ color: sem.textPrimary }}>
-            Ethnicity preferences
-          </Text>
-          <Text className="text-sm mb-2" style={{ color: sem.textMuted }}>
-            Leave empty to see all backgrounds.
-          </Text>
-          <EthnicityMultiSelectPicker
-            selected={prefs.ethnicityPreferences}
-            onChange={(items: EthnicityOption[]) => onPrefsChange({ ethnicityPreferences: items })}
-            accentColor={sem.accent}
-            textColor={sem.textPrimary}
-            mutedColor={sem.textMuted}
-            borderColor={sem.border}
-            surfaceColor={sem.surface}
-          />
-        </View>
+        <PrefsLabel label="Ethnicity" sem={sem} />
+        <Text className="text-sm mb-3" style={{ color: sem.textMuted }}>
+          Leave empty to see all backgrounds.
+        </Text>
+        <EthnicityMultiSelectPicker
+          selected={prefs.ethnicityPreferences}
+          onChange={(items: EthnicityOption[]) => onPrefsChange({ ethnicityPreferences: items })}
+          accentColor={sem.accent}
+          textColor={sem.textPrimary}
+          mutedColor={sem.textMuted}
+          borderColor={sem.border}
+          surfaceColor={sem.surface}
+        />
+      </SectionCard>
 
-        {/* ─── Actions ─── */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          Actions
+      ═══════════════════════════════════════════════════════════════════ */}
+      <View style={{ gap: 12, paddingBottom: 8 }}>
         <Pressable
           onPress={isSaving ? undefined : onSave}
           disabled={isSaving}
-          className="rounded-full py-4 items-center mb-3"
-          style={{ backgroundColor: sem.accent, opacity: isSaving ? 0.75 : 1 }}
+          className="rounded-2xl items-center justify-center"
+          style={{ backgroundColor: sem.accent, opacity: isSaving ? 0.75 : 1, minHeight: 60 }}
           accessibilityRole="button"
           accessibilityLabel="Save Preferences"
         >
@@ -393,24 +380,104 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
 
         <Pressable
           onPress={onReset}
-          className="rounded-full py-4 items-center border"
-          style={{ borderColor: sem.border }}
+          className="rounded-2xl items-center justify-center border"
+          style={{ borderColor: sem.border, minHeight: 60 }}
           accessibilityRole="button"
           accessibilityLabel="Reset preferences to defaults"
         >
           {({ pressed }) => (
             <Text
-              className="text-lg font-semibold"
+              className="text-base font-semibold"
               style={{ color: pressed ? sem.accentStrong : sem.textSecondary }}
             >
-              Reset
+              Reset to Defaults
             </Text>
           )}
         </Pressable>
-      </SectionCard>
+      </View>
     </View>
   );
 });
+
+// ─── Section Label ──────────────────────────────────────────────────────────────
+
+type PrefsLabelProps = {
+  label: string;
+  sem: SemanticTheme;
+  children?: React.ReactNode;
+};
+
+function PrefsLabel({ label, sem, children }: PrefsLabelProps) {
+  return (
+    <View className="flex-row items-center gap-1.5 mb-2">
+      <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
+        {label}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
+// ─── Section Divider ─────────────────────────────────────────────────────────
+
+function SectionDivider({ sem }: { sem: SemanticTheme }) {
+  return <View style={{ height: 1, backgroundColor: sem.border, marginVertical: 20 }} />;
+}
+
+// ─── Age Display Box ─────────────────────────────────────────────────────────
+
+type AgeDisplayProps = {
+  value: number;
+  label: string;
+  sem: SemanticTheme;
+};
+
+function AgeDisplay({ value, label, sem }: AgeDisplayProps) {
+  return (
+    <View className="items-center gap-1">
+      <View
+        className="px-4 py-3 rounded-2xl border items-center min-w-[62px]"
+        style={{ borderColor: sem.accent, backgroundColor: sem.accentSoft }}
+      >
+        <Text className="text-xl font-bold" style={{ color: sem.accent }}>
+          {value}
+        </Text>
+      </View>
+      <Text className="text-xs font-medium" style={{ color: sem.textMuted }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+// ─── Chip Button ─────────────────────────────────────────────────────────────
+
+type ChipButtonProps = {
+  label: string;
+  isActive: boolean;
+  onPress: () => void;
+  role: 'radio' | 'checkbox';
+  sem: SemanticTheme;
+};
+
+function ChipButton({ label, isActive, onPress, role, sem }: ChipButtonProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className="rounded-2xl px-5 py-3 border"
+      style={{
+        backgroundColor: isActive ? sem.accentSoft : sem.surfaceMuted,
+        borderColor: isActive ? sem.accent : sem.border,
+      }}
+      accessibilityRole={role}
+      accessibilityState={role === 'radio' ? { selected: isActive } : { checked: isActive }}
+    >
+      <Text className="text-sm font-semibold" style={{ color: isActive ? sem.accent : sem.textSecondary }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
 // ─── Toggle Row ─────────────────────────────────────────────────────────────────
 
@@ -425,19 +492,19 @@ type ToggleRowProps = {
 
 function ToggleRow({ icon, label, helperText, value, onToggle, sem }: ToggleRowProps) {
   return (
-    <View className="flex-row items-center py-3">
+    <View className="flex-row items-center py-4">
       <View
-        className="w-9 h-9 rounded-full items-center justify-center mr-3"
+        className="w-10 h-10 rounded-full items-center justify-center mr-4"
         style={{ backgroundColor: sem.accentSoft }}
       >
-        <Ionicons name={icon} size={18} color={sem.accent} />
+        <Ionicons name={icon} size={20} color={sem.accent} />
       </View>
       <View className="flex-1">
-        <Text className="text-base font-medium" style={{ color: sem.textPrimary }}>
+        <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
           {label}
         </Text>
         {helperText && (
-          <Text className="text-sm" style={{ color: sem.textMuted }}>
+          <Text className="text-sm mt-0.5" style={{ color: sem.textMuted }}>
             {helperText}
           </Text>
         )}

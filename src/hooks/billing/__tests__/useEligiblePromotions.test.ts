@@ -46,6 +46,7 @@ function makePromotion(overrides: Partial<EligiblePromotionDto> = {}): EligibleP
     discount_value: null,
     discount_currency: null,
     subscription_product_id: 'premium_monthly',
+    consumable_product_id: null,
     duration_days: 7,
     max_redemptions: null,
     reserved_count: 0,
@@ -53,6 +54,7 @@ function makePromotion(overrides: Partial<EligiblePromotionDto> = {}): EligibleP
     starts_at: '2025-07-10T00:00:00Z',
     ends_at: null,
     target_gender: null,
+    included_credits: null,
     can_redeem: true,
     priority: 0,
     ...overrides,
@@ -118,8 +120,12 @@ describe('isPromoStructurallyValid', () => {
     expect(isPromoStructurallyValid({ ...base, trigger_type: 'AUTO_ON_SIGNUP' as any })).toBe(false);
   });
 
+  it('returns true for CREDITS benefit_type', () => {
+    expect(isPromoStructurallyValid({ ...base, benefit_type: 'CREDITS', included_credits: 50 })).toBe(true);
+  });
+
   it('returns false for unsupported benefit_type', () => {
-    expect(isPromoStructurallyValid({ ...base, benefit_type: 'CREDITS' as any })).toBe(false);
+    expect(isPromoStructurallyValid({ ...base, benefit_type: 'UNKNOWN_BENEFIT' as any })).toBe(false);
   });
 
   it('returns false for unsupported eligibility_type', () => {
@@ -278,5 +284,23 @@ describe('selectPromotion', () => {
     const free = makePromotion({ campaign_key: 'free', trigger_type: 'PURCHASE', benefit_type: 'FREE_PREMIUM' });
     const discount = makePromotion({ campaign_key: 'disc', trigger_type: 'USER_CLAIM', benefit_type: 'DISCOUNT' });
     expect(selectPromotion([discount, free])?.campaign_key).toBe('free');
+  });
+
+  it('prefers USER_CLAIM + CREDITS over PURCHASE + DISCOUNT', () => {
+    const credits = makePromotion({ campaign_key: 'credits', trigger_type: 'USER_CLAIM', benefit_type: 'CREDITS', included_credits: 50 });
+    const discount = makePromotion({ campaign_key: 'disc', trigger_type: 'PURCHASE', benefit_type: 'DISCOUNT' });
+    expect(selectPromotion([discount, credits])?.campaign_key).toBe('credits');
+  });
+
+  it('prefers USER_CLAIM + FREE_PREMIUM over USER_CLAIM + CREDITS', () => {
+    const free = makePromotion({ campaign_key: 'free', trigger_type: 'USER_CLAIM', benefit_type: 'FREE_PREMIUM' });
+    const credits = makePromotion({ campaign_key: 'credits', trigger_type: 'USER_CLAIM', benefit_type: 'CREDITS', included_credits: 50 });
+    expect(selectPromotion([credits, free])?.campaign_key).toBe('free');
+  });
+
+  it('prefers CREDITS over DISCOUNT regardless of trigger_type', () => {
+    const credits = makePromotion({ campaign_key: 'credits', trigger_type: 'PURCHASE', benefit_type: 'CREDITS', included_credits: 50 });
+    const discount = makePromotion({ campaign_key: 'disc', trigger_type: 'USER_CLAIM', benefit_type: 'DISCOUNT' });
+    expect(selectPromotion([discount, credits])?.campaign_key).toBe('credits');
   });
 });

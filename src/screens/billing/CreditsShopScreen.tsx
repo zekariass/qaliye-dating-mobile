@@ -14,17 +14,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PaymentMethodSheet } from '@/components/billing/PaymentMethodSheet';
 import { PurchaseSuccessModal } from '@/components/billing/PurchaseSuccessModal';
-import { themedError } from '@/components/common/ThemedAlert';
+import { themedError, themedSuccess } from '@/components/common/ThemedAlert';
 import { colors, radius } from '@/constants/theme';
 import { useCreateOrder } from '@/hooks/billing/useCreateOrder';
+import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useOffers } from '@/hooks/billing/useOffers';
 import { usePaymentOptions } from '@/hooks/billing/usePaymentOptions';
+import { useRedeemPromotion } from '@/hooks/billing/useRedeemPromotion';
 import { useRevenueCatPurchase } from '@/hooks/billing/useRevenueCatPurchase';
 import { useRevenueCatReconcile } from '@/hooks/billing/useRevenueCatReconcile';
 import { useTheme } from '@/hooks/use-theme';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
 import type { OfferDto, OfferPromotionDto, PaymentMethodDto } from '@/types/billing';
+import { extractApiError } from '@/utils/apiError';
 
 function packQuantity(productCode: string): number | null {
   const match = productCode.match(/(\d+)(?=\D*$)/);
@@ -114,9 +117,75 @@ export default function CreditsShopScreen() {
   const { reconciledOffers, localOffers, isLoadingRc, hasRcPaymentMethod } = useRevenueCatReconcile(consumableOffers, paymentMethods);
   const { purchase, purchaseState, isPurchasing, reset, creditsDelta } = useRevenueCatPurchase();
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder();
+  const { data: eligiblePromotions = [] } = useEligiblePromotions();
+  const { mutate: redeemPromotion, isPending: isRedeeming } = useRedeemPromotion();
+  const [claimingKey, setClaimingKey] = useState<string | null>(null);
+
+  // ── Claimable CREDITS promotions ──────────────────────────────────────────
+  // Use eligiblePromotions directly (from GET /api/v1/billing/promotions) rather
+  // than relying on claimable_promotions attached to offers. The backend exposes
+  // CREDITS promotions through the promotions endpoint, and they may not be
+  // attached to every consumable offer's claimable_promotions field.
+  const creditsClaimable = useMemo(() => {
+    return eligiblePromotions
+      .filter(
+        (p) =>
+          p.benefit_type === 'CREDITS' &&
+          p.can_redeem === true,
+      )
+      .map((eligible) => ({ eligible }));
+  }, [eligiblePromotions]);
+
+  const handleClaimPromotion = useCallback((campaignKey: string) => {
+    if (isRedeeming || claimingKey) return;
+    const eligible = eligiblePromotions.find(
+      (p) => p.campaign_key === campaignKey && p.can_redeem && p.benefit_type === 'CREDITS',
+    );
+    if (!eligible) return;
+    setClaimingKey(campaignKey);
+    redeemPromotion(campaignKey, {
+      onSuccess: (data) => {
+        setClaimingKey(null);
+
+        const grantedCredits = data.credits_granted;
+        const grantedSubscription = data.subscription_id != null;
+
+        let title: string;
+        let body: string;
+
+        if (grantedSubscription && grantedCredits != null && grantedCredits > 0) {
+          title = t('promotion.claimSuccessTitle', 'Premium Activated!');
+          body = data.message ||
+            t(
+              'promotion.claimSuccessWithCreditsBody',
+              'Your free premium access is now active. You also received {{count}} credits!',
+              { count: grantedCredits },
+            );
+        } else if (grantedSubscription) {
+          title = t('promotion.claimSuccessTitle', 'Premium Activated!');
+          body = data.message || t('promotion.claimSuccessBody', 'Your free premium access is now active.');
+        } else if (grantedCredits != null && grantedCredits > 0) {
+          title = t('promotion.creditsGrantedTitle', 'Credits Received!');
+          body = data.message ||
+            t('promotion.creditsGrantedBody', 'You received {{count}} credits!', { count: grantedCredits });
+        } else {
+          title = t('promotion.claimSuccessTitle', 'Success!');
+          body = data.message || t('promotion.claimSuccessBody', 'Your reward has been applied.');
+        }
+
+        themedSuccess(title, body);
+      },
+      onError: (err) => {
+        setClaimingKey(null);
+        const detail = extractApiError(err);
+        themedError(t('promotion.claimErrorTitle', 'Claim Failed'), detail.message);
+      },
+    });
+  }, [isRedeeming, claimingKey, eligiblePromotions, redeemPromotion, t]);
 
   const isBusy = isPurchasing || isCreatingOrder || purchaseState === 'purchasing' || purchaseState === 'processing';
   const isGlobalMarket = consumableOffers.some((o) => o.country_code === 'GLOBAL');
+  const creditsEnabled = entitlements?.country_settings?.credits_enabled ?? true;
 
   const packs = useMemo<PackViewModel[]>(() => {
     if (isGlobalMarket) {
@@ -256,7 +325,17 @@ export default function CreditsShopScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottom + 116 }]}
         showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
+        {!creditsEnabled ? (
+          <View style={[styles.stateCard, { backgroundColor: th.surface, borderColor: th.border }]}>
+            <Ionicons name="ban-outline" size={40} color={th.textSecondary} />
+            <Text style={[styles.stateTitle, { color: th.text }]}>
+              {t('billing.creditsNotAvailable', 'Credits are not available for your country')}
+            </Text>
+            <Text style={[styles.stateBody, { color: th.textSecondary }]}>
+              {t('billing.creditsNotAvailableBody', 'Credit purchases are not supported in your region at this time.')}
+            </Text>
+          </View>
+        ) : isLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loaderText, { color: th.textSecondary }]}>
@@ -275,6 +354,50 @@ export default function CreditsShopScreen() {
           </View>
         ) : (
           <>
+            {creditsClaimable.map(({ eligible }) => {
+              const isClaiming = claimingKey === eligible.campaign_key;
+              const creditsLabel = eligible.included_credits != null
+                ? t('promotion.creditsReward', '{{count}} credits', { count: eligible.included_credits })
+                : null;
+              return (
+                <View
+                  key={eligible.campaign_key}
+                  style={[styles.claimableBanner, { backgroundColor: colors.success, borderColor: colors.success }]}
+                >
+                  <View style={styles.claimableIconCircle}>
+                    <Ionicons name="cash-outline" size={22} color="#FFFFFF" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.claimableName}>{eligible.name}</Text>
+                    {eligible.description ? (
+                      <Text style={styles.claimableDesc} numberOfLines={2}>
+                        {eligible.description}
+                      </Text>
+                    ) : null}
+                    {creditsLabel ? (
+                      <Text style={styles.claimableCredits} numberOfLines={1}>
+                        {creditsLabel}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Pressable
+                    style={[styles.claimBtn, isClaiming && styles.claimBtnDisabled]}
+                    onPress={() => handleClaimPromotion(eligible.campaign_key)}
+                    disabled={isClaiming || isRedeeming}
+                    accessibilityRole="button"
+                  >
+                    {isClaiming ? (
+                      <ActivityIndicator size="small" color={colors.success} />
+                    ) : (
+                      <Text style={[styles.claimBtnText, { color: colors.success }]}>
+                        {t('promotion.claimNow', 'Claim now')}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              );
+            })}
+
             <Text style={[styles.sectionTitle, { color: th.text }]}>
               {t('billing.choosePack', 'Choose a pack')}
             </Text>
@@ -362,11 +485,33 @@ export default function CreditsShopScreen() {
                 </Text>
               </View>
             )}
+
+            {(entitlements?.country_settings?.subscription_enabled ?? true) && (
+            <Pressable
+              style={[styles.crossLinkRow, { borderColor: th.border, backgroundColor: th.surface }]}
+              onPress={() => router.push('/(app)/premium' as any)}
+              accessibilityRole="link"
+              accessibilityLabel={t('billing.goToPremium', 'Go to Premium')}
+            >
+              <View style={[styles.crossLinkIconRing, { backgroundColor: `${colors.primary}15` }]}>
+                <Ionicons name="diamond-outline" size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.crossLinkTitle, { color: th.text }]}>
+                  {t('billing.goToPremium', 'Go to Premium')}
+                </Text>
+                <Text style={[styles.crossLinkSubtitle, { color: th.textSecondary }]}>
+                  {t('billing.goToPremiumBody', 'Unlock for unlimited actions')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={th.textSecondary} />
+            </Pressable>
+            )}
           </>
         )}
       </ScrollView>
 
-      {!isLoading && !noOffers && (
+      {!isLoading && !noOffers && creditsEnabled && (
         <View style={[styles.bottomBar, { backgroundColor: th.surface, borderColor: th.border, paddingBottom: bottom + 16 }]}>
           <View style={styles.bottomBarInner}>
             <View style={styles.bottomSummary}>
@@ -486,6 +631,58 @@ const styles = StyleSheet.create({
   centered: { paddingVertical: 80, alignItems: 'center', gap: 12 },
   loaderText: { fontSize: 14, fontWeight: '600' },
   sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 2 },
+  claimableBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 2,
+    padding: 12,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  claimableIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  claimableName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 3,
+  },
+  claimableDesc: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  claimableCredits: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 4,
+  },
+  claimBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  claimBtnDisabled: {
+    opacity: 0.6,
+  },
+  claimBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
   packsList: { gap: 12 },
   packCard: {
     flexDirection: 'row',
@@ -623,5 +820,30 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '800',
+  },
+  crossLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 8,
+  },
+  crossLinkIconRing: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  crossLinkTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  crossLinkSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
   },
 });

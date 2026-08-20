@@ -19,7 +19,6 @@ import { useUpdateProfilePreferences } from '@/hooks/profile/useProfilePreferenc
 import { useUpdateProfile } from '@/hooks/profile/useUpdateProfile';
 import { useUpdateProfileLocation } from '@/hooks/profile/useUpdateProfileLocation';
 import { useSemanticTheme } from '@/hooks/use-semantic-theme';
-import { isPremiumPlan } from '@/types/billing';
 import type { EthnicityOption, LanguageOption } from '@/types/catalog';
 import { isInsufficientCreditsError } from '@/utils/entitlements';
 import {
@@ -50,7 +49,6 @@ export default function EditProfileScreen() {
   const { sem } = useSemanticTheme();
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
   const { entitlements } = useEntitlements();
-  const canUseIncognito = entitlements?.features?.incognito_mode ?? isPremiumPlan(entitlements?.plan) ?? false;
 
   const [activeTab, setActiveTab] = useState<TabKey>('bio');
   const scrollRef = useRef<ScrollView>(null);
@@ -480,7 +478,6 @@ export default function EditProfileScreen() {
             sem={sem}
             discoveryMode={currentPrefs.discoveryMode}
             onDiscoveryModeChange={(mode: 'PUBLIC' | 'INCOGNITO') => handlePrefsChange({ discoveryMode: mode })}
-            incognitoEnabled={canUseIncognito}
           />
         );
       default:
@@ -498,7 +495,7 @@ export default function EditProfileScreen() {
         ref={scrollRef}
         className="flex-1"
         contentContainerStyle={{
-          padding: 10,
+          padding: 16,
           paddingBottom: showSaveButton
             ? 0  // save button below provides spacing
             : keyboardHeight > 0 ? keyboardHeight + safeBottom + 24 : safeBottom + 24,

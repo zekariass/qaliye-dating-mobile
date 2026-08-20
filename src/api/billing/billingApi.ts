@@ -471,14 +471,16 @@ function normalizeEligiblePromotion(raw: Record<string, unknown>): EligiblePromo
     discount_type: (raw.discountType ?? raw.discount_type ?? null) as PromotionDiscountType | null,
     discount_value: (raw.discountValue ?? raw.discount_value ?? null) as number | null,
     discount_currency: (raw.discountCurrency ?? raw.discount_currency ?? null) as string | null,
-    subscription_product_id: (raw.subscriptionProductId ?? raw.subscription_product_id ?? '') as string,
-    duration_days: (raw.durationDays ?? raw.duration_days ?? null) as number | null,
+    subscription_product_id: (raw.subscription_product_id ?? raw.subscriptionProductId ?? null) as string | null,
+    consumable_product_id: (raw.consumable_product_id ?? raw.consumableProductId ?? null) as string | null,
+    duration_days: (raw.duration_days ?? raw.durationDays ?? null) as number | null,
     max_redemptions: (raw.maxRedemptions ?? raw.max_redemptions ?? null) as number | null,
     reserved_count: (raw.reservedCount ?? raw.reserved_count ?? 0) as number,
     fulfilled_count: (raw.fulfilledCount ?? raw.fulfilled_count ?? 0) as number,
     starts_at: (raw.startsAt ?? raw.starts_at ?? '1970-01-01T00:00:00Z') as string | null,
     ends_at: (raw.endsAt ?? raw.ends_at ?? null) as string | null,
     target_gender: (raw.targetGender ?? raw.target_gender ?? null) as 'MALE' | 'FEMALE' | null,
+    included_credits: (raw.included_credits ?? raw.includedCredits ?? null) as number | null,
     can_redeem: (raw.canRedeem ?? raw.can_redeem ?? true) as boolean,
     priority: typeof raw.priority === 'number' ? (raw.priority as number) : 0,
   };
@@ -543,12 +545,13 @@ export async function redeemPromotion(campaignKey: string): Promise<RedeemPromot
   const res = await apiClient.post<unknown>(`${BASE}/promotions/${encodeURIComponent(campaignKey)}/redeem`);
   const raw = res.data as Record<string, unknown>;
   return {
-    redemption_id: (raw.redemptionId ?? raw.redemption_id ?? '') as string,
-    subscription_id: (raw.subscriptionId ?? raw.subscription_id ?? '') as string,
-    campaign_key: (raw.campaignKey ?? raw.campaign_key ?? '') as string,
-    plan_code: (raw.planCode ?? raw.plan_code ?? null) as string | null,
-    duration_days: (raw.durationDays ?? raw.duration_days ?? 0) as number,
-    period_end: (raw.periodEnd ?? raw.period_end ?? '') as string,
+    redemption_id: (raw.redemption_id ?? raw.redemptionId ?? '') as string,
+    subscription_id: (raw.subscription_id ?? raw.subscriptionId ?? null) as string | null,
+    campaign_key: (raw.campaign_key ?? raw.campaignKey ?? '') as string,
+    plan_code: (raw.plan_code ?? raw.planCode ?? null) as string | null,
+    duration_days: (raw.duration_days ?? raw.durationDays ?? null) as number | null,
+    period_end: (raw.period_end ?? raw.periodEnd ?? null) as string | null,
+    credits_granted: (raw.credits_granted ?? raw.creditsGranted ?? null) as number | null,
     message: (raw.message ?? '') as string,
   };
 }

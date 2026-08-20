@@ -191,7 +191,7 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
     age: dto.age,
     isVerified: dto.is_verified,
     location: address,
-    avatarUri: dto.photos.find((p) => p.is_primary)?.signed_url ?? dto.primary_photo_url ?? '',
+    avatarUri: (dto.photos ?? []).find((p) => p.is_primary)?.signed_url ?? dto.primary_photo_url ?? '',
 
     bio: dto.bio ?? '',
 
@@ -211,7 +211,7 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
     hasChildren: dto.has_children,
     wantsChildren: dto.wants_children,
 
-    photos: dto.photos.map((p) => ({
+    photos: (dto.photos ?? []).map((p) => ({
       id: p.id,
       uri: p.signed_url,
       order: p.photo_order,

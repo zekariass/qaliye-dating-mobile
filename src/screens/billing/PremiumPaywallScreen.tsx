@@ -35,6 +35,32 @@ import type { ClaimablePromotionDto, PaymentMethodDto } from '@/types/billing';
 import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan, type SubscriptionProvider } from '@/types/billing';
 import { extractApiError } from '@/utils/apiError';
 
+function formatProviderName(provider?: SubscriptionProvider): string {
+  if (!provider) return 'Local';
+  const names: Record<string, string> = {
+    TELEBIRR: 'Telebirr',
+    CBE_BIRR: 'CBE Birr',
+    CHAPA: 'Chapa',
+    ARIFPAY: 'ArifPay',
+    BANK_TRANSFER: 'Bank Transfer',
+    STRIPE: 'Stripe',
+    PROMOTION: 'Promotion',
+  };
+  return names[provider] ?? provider.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export default function PremiumPaywallScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -69,10 +95,35 @@ export default function PremiumPaywallScreen() {
     redeemPromotion(cp.campaign_key, {
       onSuccess: (data) => {
         setClaimingKey(null);
-        themedSuccess(
-          t('promotion.claimSuccessTitle', 'Premium Activated!'),
-          data.message || t('promotion.claimSuccessBody', 'Your free premium access is now active.'),
-        );
+
+        // Build the success message based on what was granted
+        const grantedCredits = data.credits_granted;
+        const grantedSubscription = data.subscription_id != null;
+
+        let title: string;
+        let body: string;
+
+        if (grantedSubscription && grantedCredits != null && grantedCredits > 0) {
+          title = t('promotion.claimSuccessTitle', 'Premium Activated!');
+          body = data.message ||
+            t(
+              'promotion.claimSuccessWithCreditsBody',
+              'Your free premium access is now active. You also received {{count}} credits!',
+              { count: grantedCredits },
+            );
+        } else if (grantedSubscription) {
+          title = t('promotion.claimSuccessTitle', 'Premium Activated!');
+          body = data.message || t('promotion.claimSuccessBody', 'Your free premium access is now active.');
+        } else if (grantedCredits != null && grantedCredits > 0) {
+          title = t('promotion.creditsGrantedTitle', 'Credits Received!');
+          body = data.message ||
+            t('promotion.creditsGrantedBody', 'You received {{count}} credits!', { count: grantedCredits });
+        } else {
+          title = t('promotion.claimSuccessTitle', 'Success!');
+          body = data.message || t('promotion.claimSuccessBody', 'Your reward has been applied.');
+        }
+
+        themedSuccess(title, body);
       },
       onError: (err) => {
         setClaimingKey(null);
@@ -223,6 +274,7 @@ export default function PremiumPaywallScreen() {
   }, [selectedOfferId, proceedWithMethod]);
 
   const isLoading = loadingEntitlements || loadingOffers || (isGlobalMarket && isLoadingRc);
+  const subscriptionEnabled = entitlements?.country_settings?.subscription_enabled ?? true;
   const noOffers = !isLoading && (
     isGlobalMarket
       ? reconciledOffers.length === 0 && localOffers.filter((o) => o.country_code === 'GLOBAL').length === 0
@@ -257,7 +309,17 @@ export default function PremiumPaywallScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
+        {!subscriptionEnabled ? (
+          <View style={[styles.unavailableCard, { backgroundColor: th.surface, borderColor: th.border }]}>
+            <Ionicons name="ban-outline" size={28} color={th.textSecondary} />
+            <Text style={[styles.unavailableTitle, { color: th.text }]}>
+              {t('billing.subscriptionNotAvailable', 'Premium subscription is not available for your country')}
+            </Text>
+            <Text style={[styles.unavailableBody, { color: th.textSecondary }]}>
+              {t('billing.subscriptionNotAvailableBody', 'Premium subscriptions are not supported in your region at this time.')}
+            </Text>
+          </View>
+        ) : isLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loaderText, { color: th.textSecondary }]}>
@@ -317,9 +379,57 @@ export default function PremiumPaywallScreen() {
                     );
                   }
                   return (
-                    <Text style={[styles.localPaymentNote, { color: th.textSecondary }]}>
-                      {t('billing.localPaymentNote', 'Paid using a local payment method.')}
-                    </Text>
+                    <View style={[styles.localInfoCard, { backgroundColor: th.surface, borderColor: th.border }]}>
+                      <View style={styles.localInfoRow}>
+                        <Ionicons name="card-outline" size={16} color={th.textSecondary} />
+                        <Text style={[styles.localInfoLabel, { color: th.textSecondary }]}>
+                          {t('billing.paymentMethod', 'Payment Method')}
+                        </Text>
+                        <Text style={[styles.localInfoValue, { color: th.text }]}>
+                          {formatProviderName(provider)}
+                        </Text>
+                      </View>
+
+                      {entitlements?.subscription?.billing_interval_count && entitlements?.subscription?.billing_interval_unit ? (
+                        <View style={styles.localInfoRow}>
+                          <Ionicons name="calendar-outline" size={16} color={th.textSecondary} />
+                          <Text style={[styles.localInfoLabel, { color: th.textSecondary }]}>
+                            {t('billing.billingCycle', 'Billing Cycle')}
+                          </Text>
+                          <Text style={[styles.localInfoValue, { color: th.text }]}>
+                            {entitlements.subscription.billing_interval_count} {entitlements.subscription.billing_interval_unit.toLowerCase()}{entitlements.subscription.billing_interval_count > 1 ? 's' : ''}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {entitlements?.subscription?.auto_renew ? (
+                        <View style={styles.localInfoRow}>
+                          <Ionicons name="refresh-outline" size={16} color={th.textSecondary} />
+                          <Text style={[styles.localInfoLabel, { color: th.textSecondary }]}>
+                            {t('billing.renewal', 'Renewal')}
+                          </Text>
+                          <Text style={[styles.localInfoValue, { color: th.text }]}>
+                            {entitlements?.subscription?.expires_at
+                              ? t('billing.renewsOn', 'Renews {{date}}', { date: formatDate(entitlements.subscription.expires_at) })
+                              : t('billing.autoRenew', 'Auto-renews')}
+                          </Text>
+                        </View>
+                      ) : entitlements?.subscription?.expires_at ? (
+                        <View style={styles.localInfoRow}>
+                          <Ionicons name="time-outline" size={16} color={th.textSecondary} />
+                          <Text style={[styles.localInfoLabel, { color: th.textSecondary }]}>
+                            {t('billing.expires', 'Expires')}
+                          </Text>
+                          <Text style={[styles.localInfoValue, { color: th.text }]}>
+                            {formatDate(entitlements.subscription.expires_at)}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      <Text style={[styles.localInfoNote, { color: th.textMuted }]}>
+                        {t('billing.localPaymentNote', 'Paid using a local payment method.')}
+                      </Text>
+                    </View>
                   );
                 })()}
               </View>
@@ -340,6 +450,13 @@ export default function PremiumPaywallScreen() {
                 if (!matchingPromo) return null;
                 if (isPremium && matchingPromo.trigger_type === 'USER_CLAIM') return null;
                 const isClaiming = claimingKey === cp.campaign_key;
+                const hasIncludedCredits =
+                  matchingPromo.included_credits != null &&
+                  matchingPromo.included_credits > 0 &&
+                  (matchingPromo.benefit_type === 'FREE_PREMIUM' || matchingPromo.benefit_type === 'CREDITS');
+                const creditsLabel = hasIncludedCredits
+                  ? t('promotion.creditsReward', '{{count}} credits', { count: matchingPromo.included_credits as number })
+                  : null;
                 return (
                   <View
                     key={cp.campaign_key}
@@ -353,6 +470,11 @@ export default function PremiumPaywallScreen() {
                       {cp.description ? (
                         <Text style={styles.claimableDesc} numberOfLines={2}>
                           {cp.description}
+                        </Text>
+                      ) : null}
+                      {creditsLabel ? (
+                        <Text style={styles.claimableCredits} numberOfLines={1}>
+                          {creditsLabel}
                         </Text>
                       ) : null}
                     </View>
@@ -518,6 +640,28 @@ export default function PremiumPaywallScreen() {
                 {t('billing.restoreDone', 'Restore complete. Check your plan status above.')}
               </Text>
             )}
+
+            {(entitlements?.country_settings?.credits_enabled ?? true) && (
+            <Pressable
+              style={[styles.crossLinkRow, { borderColor: th.border, backgroundColor: th.surface }]}
+              onPress={() => router.push('/(app)/credits-shop' as any)}
+              accessibilityRole="link"
+              accessibilityLabel={t('billing.goToCreditsShop', 'Go to Credits Shop')}
+            >
+              <View style={[styles.crossLinkIconRing, { backgroundColor: `${colors.success}15` }]}>
+                <Ionicons name="cash-outline" size={20} color={colors.success} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.crossLinkTitle, { color: th.text }]}>
+                  {t('billing.goToCreditsShop', 'Go to Credits Shop')}
+                </Text>
+                <Text style={[styles.crossLinkSubtitle, { color: th.textSecondary }]}>
+                  {t('billing.goToCreditsShopBody', 'Buy credits to use for actions without premium.')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={th.textSecondary} />
+            </Pressable>
+            )}
           </>
         )}
       </ScrollView>
@@ -627,6 +771,34 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 10,
   },
+  localInfoCard: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 14,
+    gap: 10,
+    marginTop: 10,
+  },
+  localInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  localInfoLabel: {
+    fontSize: 13,
+    flex: 1,
+  },
+  localInfoValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  localInfoNote: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   sectionTitle: { fontSize: 15, fontWeight: '700' },
   claimableBanner: {
     flexDirection: 'row',
@@ -659,6 +831,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     color: 'rgba(255,255,255,0.85)',
+  },
+  claimableCredits: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 4,
   },
   claimBtn: {
     backgroundColor: '#FFFFFF',
@@ -701,5 +879,30 @@ const styles = StyleSheet.create({
   },
   legalDot: {
     fontSize: 13,
+  },
+  crossLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 8,
+  },
+  crossLinkIconRing: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  crossLinkTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  crossLinkSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
   },
 });

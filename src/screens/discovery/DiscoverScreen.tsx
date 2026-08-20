@@ -214,7 +214,7 @@ function BoostControl({ boostStatus, isActivating, onActivate, themeColors, isDa
     return (
       <View style={boostStyles.boostedBadge}>
         <Ionicons name="rocket" size={14} color="#FFF" />
-        <Text style={boostStyles.boostedText}>Boosted</Text>
+        <Text style={boostStyles.boostedText}>Boost Active</Text>
       </View>
     );
   }
@@ -386,8 +386,12 @@ export default function DiscoverScreen() {
 
   useEffect(() => {
     if (hasActivePremium && (activePromotion || pendingPromotionRef.current)) {
-      setActivePromotion(null);
-      pendingPromotionRef.current = null;
+      // Premium users can still receive CREDITS promotions — only clear
+      // non-CREDITS promotions.
+      const activeIsCredits = activePromotion?.benefit_type === 'CREDITS';
+      const pendingIsCredits = pendingPromotionRef.current?.benefit_type === 'CREDITS';
+      if (!activeIsCredits) setActivePromotion(null);
+      if (!pendingIsCredits) pendingPromotionRef.current = null;
     }
   }, [hasActivePremium, activePromotion]);
 
@@ -466,9 +470,19 @@ export default function DiscoverScreen() {
     setActivePromotion(null);
   }, [userId, markClaimedOrRedeemed]);
 
-  const handleBannerTap = useCallback(() => {
+  const handleBannerTap = useCallback((promo: EligiblePromotionDto) => {
     dismissBanner();
-    router.push('/(app)/premium' as any);
+    // Route to Credits Shop when the promotion is credits-based or is tied to
+    // a consumable product without a subscription product. Otherwise route to
+    // the Premium paywall.
+    const isCreditsPromo =
+      promo.benefit_type === 'CREDITS' ||
+      (promo.consumable_product_id != null && promo.subscription_product_id == null);
+    if (isCreditsPromo) {
+      router.push('/(app)/credits-shop' as any);
+    } else {
+      router.push('/(app)/premium' as any);
+    }
   }, [dismissBanner, router]);
   const { data: profileDto } = useCurrentProfile();
   const isIncognito = profileDto?.discovery_mode === 'INCOGNITO';

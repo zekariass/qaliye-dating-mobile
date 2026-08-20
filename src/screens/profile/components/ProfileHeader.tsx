@@ -117,13 +117,19 @@ export default function ProfileHeader({
       </View>
 
       <View style={styles.infoRow}>
-        <Image
-          source={{ uri: avatarUri }}
-          style={styles.avatar}
-          contentFit="cover"
-          transition={200}
-          cachePolicy="memory-disk"
-        />
+        {avatarUri ? (
+          <Image
+            source={{ uri: avatarUri }}
+            style={styles.avatar}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: th.backgroundSelected, alignItems: 'center', justifyContent: 'center' }]}>
+            <Ionicons name="person" size={48} color={th.textMuted} />
+          </View>
+        )}
         <View style={styles.identity}>
           <View style={styles.nameRow}>
             <Text style={[styles.nameText, { color: th.text }]}>{displayName},</Text>
