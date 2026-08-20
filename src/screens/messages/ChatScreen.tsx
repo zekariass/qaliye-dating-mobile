@@ -184,7 +184,23 @@ function buildListData(
   }
 
   // Reverse for inverted FlatList (newest first)
-  return items.reverse();
+  const reversed = items.reverse();
+
+  // Deduplicate by key to prevent React "unique key" warnings.
+  // Duplicate date separators can appear if pagination overlaps or if
+  // mergeMessages introduces the same message twice with different references.
+  const seen = new Set<string>();
+  const deduped = reversed.filter((item) => {
+    const key =
+      item.kind === 'message'
+        ? (item.data.id ?? item.data.clientMessageId ?? `msg_${item.data.matchId}_${item.data.createdAt}`)
+        : item.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return deduped;
 }
 
 // ---------------------------------------------------------------------------
@@ -721,7 +737,14 @@ export default function ChatScreen() {
   const keyExtractor = useCallback(
     (item: ChatListItem) => {
       if (item.kind === 'message') {
-        return item.data.id ?? item.data.clientMessageId;
+        // Always return a non-undefined string. Fall back to clientMessageId,
+        // then to a composite of matchId + createdAt + body to guarantee uniqueness
+        // even if id and clientMessageId are both missing (e.g. malformed data).
+        return (
+          item.data.id ??
+          item.data.clientMessageId ??
+          `msg_${item.data.matchId}_${item.data.createdAt}_${item.data.body?.slice(0, 20)}`
+        );
       }
       return item.id;
     },

@@ -17,14 +17,14 @@ interface LifestyleItem {
 
 function buildLifestyleItems(p: CurrentUserProfile): LifestyleItem[] {
   const items: LifestyleItem[] = [
-    { icon: 'ban-outline', label: 'Smoking', value: p.smoking ? 'Yes' : 'No' },
-    { icon: 'wine-outline', label: 'Drinking', value: p.drinking ? 'Yes' : 'No' },
+    { icon: 'ban-outline', label: 'Smoking', value: p.smokingDetail ?? (p.smoking ? 'Yes' : 'No') },
+    { icon: 'wine-outline', label: 'Drinking', value: p.drinkingDetail ?? (p.drinking ? 'Yes' : 'No') },
   ];
   if (p.languages && p.languages.length > 0) {
     items.push({ icon: 'language-outline', label: 'Languages', value: p.languages.map((l) => l.name).join(', ') });
   }
   if (p.activityLevel) {
-    items.push({ icon: 'fitness-outline', label: 'Activity Level', value: p.activityLevel });
+    items.push({ icon: 'fitness-outline', label: 'Fitness', value: p.activityLevel });
   }
   return items;
 }

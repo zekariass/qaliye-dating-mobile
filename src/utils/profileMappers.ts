@@ -220,6 +220,8 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
 
     smoking: dto.smoking,
     drinking: dto.drinking,
+    smokingDetail: dto.smoking_detail ? (SMOKING_API_TO_LABEL[dto.smoking_detail] ?? null) : null,
+    drinkingDetail: dto.drinking_detail ? (DRINKING_API_TO_LABEL[dto.drinking_detail] ?? null) : null,
     languages: dto.languages ?? [],
     activityLevel: dto.activity_level ? (ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level) : null,
     interests: sanitizeInterests(dto.interests),
@@ -486,7 +488,7 @@ function buildOtherUserDetails(dto: OtherUserProfileDto): OtherUserDetailItem[] 
     items.push({ id: 'wchildren', label: 'Wants Children', icon: 'happy-outline', value: dto.wants_children ? 'Yes' : 'No' });
   }
   if (dto.activity_level) {
-    items.push({ id: 'activity', label: 'Activity Level', icon: 'walk-outline', value: ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level });
+    items.push({ id: 'activity', label: 'Fitness', icon: 'walk-outline', value: ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level });
   }
 
   return items;
@@ -530,7 +532,7 @@ function buildOtherUserDetailGroups(dto: OtherUserProfileDto): OtherUserDetailGr
 
   const lifestyle: OtherUserDetailItem[] = [];
   if (dto.activity_level)
-    lifestyle.push({ id: 'activity',  label: 'Activity level', icon: 'fitness-outline',       value: ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level });
+    lifestyle.push({ id: 'activity',  label: 'Fitness', icon: 'fitness-outline',       value: ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level });
   if (dto.interests && dto.interests.length > 0)
     lifestyle.push({ id: 'interests', label: 'Interests',      icon: 'color-palette-outline', value: '' });
   if (lifestyle.length > 0) groups.push({ title: 'Lifestyle', items: lifestyle });

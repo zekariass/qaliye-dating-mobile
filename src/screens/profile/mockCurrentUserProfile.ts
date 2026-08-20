@@ -48,6 +48,8 @@ export type CurrentUserProfile = {
   // Lifestyle tab — profiles (smoking, drinking, languages, activity, interests)
   smoking: boolean;
   drinking: boolean;
+  smokingDetail: string | null;
+  drinkingDetail: string | null;
   languages: LanguageOption[];
   activityLevel: string | null;
   interests: string[];
@@ -109,6 +111,8 @@ export const CURRENT_USER_PROFILE: CurrentUserProfile = {
 
   smoking: false,
   drinking: false,
+  smokingDetail: null,
+  drinkingDetail: null,
   languages: [],
   activityLevel: 'Moderate',
   interests: ['Travel', 'Coffee', 'Reading', 'Fitness', 'Music'],

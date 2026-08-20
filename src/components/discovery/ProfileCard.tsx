@@ -3,18 +3,18 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import {
-    StyleSheet,
-    Text,
-    useWindowDimensions,
-    View,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useDerivedValue,
-    useSharedValue,
-    withTiming,
+  Easing,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl + 6,
+    paddingBottom: spacing.lg + 3,
     paddingTop: spacing.xl,
     gap: 6,
     zIndex: 2,

@@ -196,7 +196,7 @@ export default function ProfileDetailsSection({ card }: Props) {
   const lifestyleItems: DetailItem[] = [
     smokingLabel  ? { icon: 'ban-outline',           label: 'Smoking',         value: smokingLabel }  : null,
     drinkingLabel ? { icon: 'wine-outline',          label: 'Drinking',        value: drinkingLabel } : null,
-    activityLabel ? { icon: 'fitness-outline',       label: 'Activity level',  value: activityLabel } : null,
+    activityLabel ? { icon: 'fitness-outline',       label: 'Fitness',  value: activityLabel } : null,
     (card.languages && card.languages.length > 0) ? { icon: 'language-outline', label: 'Languages', value: card.languages.map((l) => l.name).join(', ') } : null,
     (card.interests && card.interests.length > 0) ? { icon: 'color-palette-outline', label: 'Interests', value: '' } : null,
   ].filter(Boolean) as DetailItem[];

@@ -28,11 +28,10 @@ import { useTheme } from '@/hooks/use-theme';
 import {
     DatePickerField,
     LabeledField,
-    RowPair,
     SectionCard,
     SectionTitle,
     SelectField,
-    TextInputField,
+    TextInputField
 } from '@/screens/profile/edit/FormComponents';
 import {
     ACTIVITY_OPTIONS,
@@ -541,11 +540,11 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
             </View>
           )}
 
-          {/* Step 6: Lifestyle (Smoking, Drinking, Activity Level) */}
+          {/* Step 6: Lifestyle (Smoking, Drinking, Fitness) */}
           {subStep === 6 && (
             <View style={styles.stepContainer}>
               <View style={styles.iconCircle}>
-                <Ionicons name="fitness-outline" size={40} color={colors.primary} />
+                <Ionicons name="heart-circle-outline" size={40} color={colors.primary} />
               </View>
               <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
                 {t('onboarding.basicProfile.lifestyleSubtitle')}
@@ -553,60 +552,75 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
               <Text style={[styles.stepTitle, { color: th.text }]}>
                 {t('onboarding.basicProfile.lifestyle')}
               </Text>
-              <View style={{ width: '100%' }}>
-                <SectionCard sem={sem}>
-                  <SectionTitle title={t('onboarding.basicProfile.habits')} sem={sem} />
-                  <RowPair>
-                    <LabeledField label={t('onboarding.basicProfile.smoking')} sem={sem}>
-                      <Controller
-                        control={control}
-                        name="smoking_detail"
-                        render={({ field: { onChange, value } }) => (
-                          <SelectField
-                            value={value ?? ''}
-                            options={SMOKING_OPTIONS}
-                            onSelect={onChange}
-                            sem={sem}
-                            leftIcon="ban-outline"
-                            placeholder={t('onboarding.basicProfile.smokingPlaceholder')}
-                          />
-                        )}
+              <View style={styles.lifestyleFields}>
+                {/* Smoking */}
+                <View style={styles.lifestyleFieldWrap}>
+                  <View style={styles.lifestyleFieldHeader}>
+                    <Ionicons name="ban-outline" size={18} color={th.textSecondary} />
+                    <Text style={[styles.lifestyleFieldLabel, { color: th.textSecondary }]}>
+                      {t('onboarding.basicProfile.smoking')}
+                    </Text>
+                  </View>
+                  <Controller
+                    control={control}
+                    name="smoking_detail"
+                    render={({ field: { onChange, value } }) => (
+                      <SelectField
+                        value={value ?? ''}
+                        options={SMOKING_OPTIONS}
+                        onSelect={onChange}
+                        sem={sem}
+                        placeholder={t('onboarding.basicProfile.smokingPlaceholder')}
                       />
-                    </LabeledField>
-                    <LabeledField label={t('onboarding.basicProfile.drinking')} sem={sem}>
-                      <Controller
-                        control={control}
-                        name="drinking_detail"
-                        render={({ field: { onChange, value } }) => (
-                          <SelectField
-                            value={value ?? ''}
-                            options={DRINKING_OPTIONS}
-                            onSelect={onChange}
-                            sem={sem}
-                            leftIcon="wine-outline"
-                            placeholder={t('onboarding.basicProfile.drinkingPlaceholder')}
-                          />
-                        )}
+                    )}
+                  />
+                </View>
+
+                {/* Drinking */}
+                <View style={styles.lifestyleFieldWrap}>
+                  <View style={styles.lifestyleFieldHeader}>
+                    <Ionicons name="wine-outline" size={18} color={th.textSecondary} />
+                    <Text style={[styles.lifestyleFieldLabel, { color: th.textSecondary }]}>
+                      {t('onboarding.basicProfile.drinking')}
+                    </Text>
+                  </View>
+                  <Controller
+                    control={control}
+                    name="drinking_detail"
+                    render={({ field: { onChange, value } }) => (
+                      <SelectField
+                        value={value ?? ''}
+                        options={DRINKING_OPTIONS}
+                        onSelect={onChange}
+                        sem={sem}
+                        placeholder={t('onboarding.basicProfile.drinkingPlaceholder')}
                       />
-                    </LabeledField>
-                  </RowPair>
-                  <LabeledField label={t('onboarding.basicProfile.activityLevel')} sem={sem} flex={false}>
-                    <Controller
-                      control={control}
-                      name="activity_level"
-                      render={({ field: { onChange, value } }) => (
-                        <SelectField
-                          value={value ?? ''}
-                          options={ACTIVITY_OPTIONS}
-                          onSelect={onChange}
-                          sem={sem}
-                          leftIcon="fitness-outline"
-                          placeholder={t('onboarding.basicProfile.activityLevelPlaceholder')}
-                        />
-                      )}
-                    />
-                  </LabeledField>
-                </SectionCard>
+                    )}
+                  />
+                </View>
+
+                {/* Fitness */}
+                <View style={styles.lifestyleFieldWrap}>
+                  <View style={styles.lifestyleFieldHeader}>
+                    <Ionicons name="fitness-outline" size={18} color={th.textSecondary} />
+                    <Text style={[styles.lifestyleFieldLabel, { color: th.textSecondary }]}>
+                      {t('onboarding.basicProfile.activityLevel')}
+                    </Text>
+                  </View>
+                  <Controller
+                    control={control}
+                    name="activity_level"
+                    render={({ field: { onChange, value } }) => (
+                      <SelectField
+                        value={value ?? ''}
+                        options={ACTIVITY_OPTIONS}
+                        onSelect={onChange}
+                        sem={sem}
+                        placeholder={t('onboarding.basicProfile.activityLevelPlaceholder')}
+                      />
+                    )}
+                  />
+                </View>
               </View>
             </View>
           )}
@@ -892,4 +906,23 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   fieldErrorText: { color: '#FF6B6B', fontSize: 13, flex: 1 },
+
+  // Lifestyle fields — full-width, spacious, no cramped SectionCard
+  lifestyleFields: {
+    width: '100%',
+    gap: spacing.lg,
+  },
+  lifestyleFieldWrap: {
+    width: '100%',
+  },
+  lifestyleFieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  lifestyleFieldLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

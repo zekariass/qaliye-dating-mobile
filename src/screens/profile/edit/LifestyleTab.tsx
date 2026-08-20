@@ -68,7 +68,7 @@ export const LifestyleTab = memo(function LifestyleTab({ draft, onChange, onTogg
           </LabeledField>
         </RowPair>
 
-        <LabeledField label="Activity level" sem={sem} flex={false}>
+        <LabeledField label="Fitness" sem={sem} flex={false}>
           <View className="w-1/2 pr-1.5">
             <SelectField
               value={lifestyle.activityLevel}
@@ -76,7 +76,7 @@ export const LifestyleTab = memo(function LifestyleTab({ draft, onChange, onTogg
               onSelect={(v) => onChange('lifestyle.activityLevel', v)}
               sem={sem}
               leftIcon="fitness-outline"
-              placeholder="Activity level"
+              placeholder="Fitness"
             />
           </View>
         </LabeledField>

@@ -16,7 +16,7 @@ interface Props {
   disabled?: boolean;
 }
 
-const BTN = 54;
+const BTN = 48;
 
 export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLike, onSuperMessage, disabled }: Props) {
   const { colors: th } = useTheme();

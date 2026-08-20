@@ -3,24 +3,24 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    AppState,
-    Dimensions,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  AppState,
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withRepeat,
-    withSequence,
-    withTiming,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -56,12 +56,12 @@ import { useDiscoveryStore } from '@/stores/discovery-store';
 import { usePromotionStore } from '@/stores/promotion-store';
 import type { EligiblePromotionDto } from '@/types/billing';
 import {
-    canRewind as checkCanRewind,
-    canSuperLike as checkCanSuperLike,
-    getBoostStatus,
-    getQuotaErrorType,
-    isInsufficientCreditsError,
-    isLimitExceededError,
+  canRewind as checkCanRewind,
+  canSuperLike as checkCanSuperLike,
+  getBoostStatus,
+  getQuotaErrorType,
+  isInsufficientCreditsError,
+  isLimitExceededError,
 } from '@/utils/entitlements';
 import { showActionErrorAlert } from '@/utils/limitExceededAlert';
 
@@ -1106,7 +1106,7 @@ export default function DiscoverScreen() {
 
         {/* Fixed action buttons — float on the right edge over content */}
         {!isLoading && !isError && !isEmpty && (
-          <View style={[styles.actionOverlay, { bottom: TOTAL_TAB + 8 }]}>
+          <View style={[styles.actionOverlay, { bottom: TOTAL_TAB + 30 }]}>
             <CardActionButtons
               onRewind={handleRewind}
               onPass={handlePass}
@@ -1244,7 +1244,8 @@ const styles = StyleSheet.create({
   // ── Card area ───────────────────────────────────────────────────────────
   cardArea: {
     marginHorizontal: 6,
-    paddingVertical: 4,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   actionOverlay: {
     position: 'absolute',
