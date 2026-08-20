@@ -565,13 +565,26 @@ export default function DiscoverScreen() {
     prevIsRefetchingRef.current = isRefetching;
 
     if (justCompletedRefetch || cursorReset) {
-      shownIdsRef.current = new Set(apiCards.map((c) => c.user_id));
-      setDisplayQueue(apiCards);
+      // Full reset: deduplicate apiCards by user_id in case the backend returns duplicates
+      const seen = new Set<string>();
+      const deduped = apiCards.filter((c) => {
+        if (seen.has(c.user_id)) return false;
+        seen.add(c.user_id);
+        return true;
+      });
+      shownIdsRef.current = new Set(deduped.map((c) => c.user_id));
+      setDisplayQueue(deduped);
     } else {
+      // Append-only: filter out cards already shown, and also deduplicate against
+      // the current displayQueue as a safety net in case shownIdsRef is out of sync.
       const newCards = apiCards.filter((c) => !shownIdsRef.current.has(c.user_id));
       if (newCards.length > 0) {
         newCards.forEach((c) => shownIdsRef.current.add(c.user_id));
-        setDisplayQueue((prev) => [...prev, ...newCards]);
+        setDisplayQueue((prev) => {
+          const existingIds = new Set(prev.map((c) => c.user_id));
+          const toAdd = newCards.filter((c) => !existingIds.has(c.user_id));
+          return [...prev, ...toAdd];
+        });
       }
     }
 
@@ -673,7 +686,10 @@ export default function DiscoverScreen() {
               // Restore the profile card so the user can retry after purchasing credits
               shownIdsRef.current.delete(card.user_id);
               setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
-              setDisplayQueue((prev) => [card, ...prev]);
+              setDisplayQueue((prev) => {
+                const filtered = prev.filter((c) => c.user_id !== card.user_id);
+                return [card, ...filtered];
+              });
               return; // global InsufficientCreditsModal already shown by interceptor
             }
             if (!isLimitExceededError(e)) return;
@@ -681,11 +697,17 @@ export default function DiscoverScreen() {
             if (isSuperLike || errorType === 'SUPER_LIKE') {
               shownIdsRef.current.delete(card.user_id);
               setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
-              setDisplayQueue((prev) => [card, ...prev]);
+              setDisplayQueue((prev) => {
+                const filtered = prev.filter((c) => c.user_id !== card.user_id);
+                return [card, ...filtered];
+              });
             } else if (direction === 'LIKE' || errorType === 'LIKES') {
               shownIdsRef.current.delete(card.user_id);
               setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
-              setDisplayQueue((prev) => [card, ...prev]);
+              setDisplayQueue((prev) => {
+                const filtered = prev.filter((c) => c.user_id !== card.user_id);
+                return [card, ...filtered];
+              });
             } else {
               return;
             }
@@ -723,7 +745,11 @@ export default function DiscoverScreen() {
         if (restoredCard) {
           setRewindIncoming(effectiveDir);
           shownIdsRef.current.delete(restoredCard.user_id);
-          setDisplayQueue((prev) => [restoredCard, ...prev]);
+          setDisplayQueue((prev) => {
+            // Avoid duplicates: remove any existing entry for this user before prepending
+            const filtered = prev.filter((c) => c.user_id !== restoredCard.user_id);
+            return [restoredCard, ...filtered];
+          });
           shownIdsRef.current.add(restoredCard.user_id);
           setTimeout(() => {
             setRewindIncoming(false);
@@ -887,7 +913,7 @@ export default function DiscoverScreen() {
           >
             <Text
               style={{
-                fontSize: 22,
+                fontSize: 28,
                 fontWeight: '700',
                 color: checkCanRewind(entitlements) ? '#F97316' : th.textSecondary,
               }}

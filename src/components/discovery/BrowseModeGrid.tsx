@@ -3,22 +3,22 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-    Easing,
-    runOnJS,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
@@ -37,7 +37,7 @@ import { formatDistance } from '@/utils/formatDistance';
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - spacing.md * 2;
 const CARD_H = CARD_W * 1.1;
-const ACTION_BTN = 44;
+const ACTION_BTN = 50;
 const TOTAL_STARS = 12;
 const STAR_RADIUS = 16;
 
@@ -385,7 +385,7 @@ function BrowseProfileCard({
           accessibilityLabel="Pass profile"
           accessibilityRole="button"
         >
-          <Ionicons name="close" size={22} color={colors.danger} />
+          <Ionicons name="close" size={30} color={colors.danger} />
         </TouchableOpacity>
 
         {/* Like */}
@@ -397,7 +397,7 @@ function BrowseProfileCard({
           accessibilityLabel="Like profile"
           accessibilityRole="button"
         >
-          <Ionicons name="heart" size={20} color={colors.heartPink} />
+          <Ionicons name="heart" size={30} color={colors.heartPink} />
         </TouchableOpacity>
 
         {/* Super Like — star burst style matching swipe mode */}
@@ -438,7 +438,7 @@ function BrowseProfileCard({
           accessibilityLabel="Send super message"
           accessibilityRole="button"
         >
-          <Ionicons name="chatbubble-ellipses" size={24} color="#F59E0B" />
+          <Ionicons name="chatbubble-ellipses" size={30} color="#F59E0B" />
         </TouchableOpacity>
 
         {/* View profile — at the right end */}
@@ -450,7 +450,7 @@ function BrowseProfileCard({
           accessibilityLabel="View profile"
           accessibilityRole="button"
         >
-          <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
+          <Ionicons name="information-circle-outline" size={30} color={colors.primary} />
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -514,7 +514,14 @@ export default function BrowseModeGrid({
     const original = allItems.filter((it) => !hiddenIds.has(it.user_id) && !swipedIds.has(it.user_id));
     // Avoid duplicates: skip original items already in restored
     const restoredIds = new Set(restored.map((it) => it.user_id));
-    return [...restored, ...original.filter((it) => !restoredIds.has(it.user_id))];
+    const combined = [...restored, ...original.filter((it) => !restoredIds.has(it.user_id))];
+    // Final safety net: deduplicate by user_id (preserving first occurrence)
+    const seen = new Set<string>();
+    return combined.filter((it) => {
+      if (seen.has(it.user_id)) return false;
+      seen.add(it.user_id);
+      return true;
+    });
   }, [allItems, restoredItems, hiddenIds, swipedIds]);
 
   // Map userId back to full CardDto for the detail sheet

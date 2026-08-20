@@ -16,7 +16,7 @@ interface Props {
   disabled?: boolean;
 }
 
-const BTN = 48;
+const BTN = 54;
 
 export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLike, onSuperMessage, disabled }: Props) {
   const { colors: th } = useTheme();
@@ -42,7 +42,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Like profile"
         >
-          <Ionicons name="heart" size={20} color="#FF2D55" />
+          <Ionicons name="heart" size={30} color="#FF2D55" />
         </TouchableOpacity>
 
         {/* SuperLike */}
@@ -83,7 +83,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Send super message"
         >
-          <Ionicons name="chatbubble-ellipses" size={24} color="#F59E0B" />
+          <Ionicons name="chatbubble-ellipses" size={30} color="#F59E0B" />
         </TouchableOpacity>
 
         {/* Pass */}
@@ -128,16 +128,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5EEFF',
   },
   icon: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: '700',
   },
   rewindIcon: {
     color: '#F97316',
-    fontSize: 20,
+    fontSize: 28,
   },
   passIcon: {
     color: colors.danger,
-    fontSize: 18,
+    fontSize: 24,
   },
   star: {
     position: 'absolute',

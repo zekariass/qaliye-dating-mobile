@@ -82,10 +82,18 @@ export function useDiscoveryProfiles() {
       lastPage.hasMore && lastPage.nextCursor ? lastPage.nextCursor : undefined,
   });
 
-  const cards = useMemo(
-    () => query.data?.pages.flatMap((page) => page.profiles.map(mapProfileToCard)) ?? [],
-    [query.data],
-  );
+  const cards = useMemo(() => {
+    const all = query.data?.pages.flatMap((page) => page.profiles.map(mapProfileToCard)) ?? [];
+    // Deduplicate by user_id, preserving first occurrence. This prevents the
+    // same user from appearing twice after cursor resets, preference changes,
+    // or rewind operations that cause pages to overlap.
+    const seen = new Set<string>();
+    return all.filter((c) => {
+      if (seen.has(c.user_id)) return false;
+      seen.add(c.user_id);
+      return true;
+    });
+  }, [query.data]);
 
   const cursorReset =
     (query.data?.pages[query.data.pages.length - 1]?.cursorReset) ?? false;
