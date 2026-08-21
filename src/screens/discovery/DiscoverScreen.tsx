@@ -1244,7 +1244,6 @@ const styles = StyleSheet.create({
 
   // ── Card area ───────────────────────────────────────────────────────────
   cardArea: {
-    marginHorizontal: 6,
     paddingTop: 4,
     paddingBottom: 4,
   },

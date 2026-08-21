@@ -7,38 +7,27 @@ import { Dimensions, useWindowDimensions } from 'react-native';
 /**
  * Returns the visual card width for the swipe discovery screen.
  *
- * On phones (< 500 px) the caller should use `flex: 1` (fills the container).
- * This function is only called on tablets/iPads (width >= 500).
+ * On phones (< 500 px) the caller uses `flex: 1` (fills the container at
+ * full width with no horizontal margins).
  *
- * Breakpoints are calibrated so the card occupies a comfortable portion of the
- * screen at every size while keeping natural horizontal breathing room:
+ * On tablets/iPads a uniform 3.5 % margin is applied on each side so the
+ * card stays visibly inset from the screen edges without wasting screen space.
  *
- *   375 – 499 px   phone  → flex:1 (full width, handled by caller)
- *   500 – 767 px   small tablet / large phone  → 90 %
- *   768 – 1023 px  medium tablet / iPad mini/Air → 86 %
- *   1024 px +      large iPad / iPad Pro        → 82 %
- *
- * Results for common breakpoints:
- *   500 px  →  450 px
- *   768 px  →  660 px
- *   1024 px →  840 px
- *   1180 px →  968 px
- *   1366 px → 1120 px
+ *   500 px  →  465 px  (17 px each side)
+ *   768 px  →  714 px  (27 px each side)
+ *   1024 px →  952 px  (36 px each side)
+ *   1180 px → 1097 px  (41 px each side)
+ *   1366 px → 1270 px  (48 px each side)
  */
 export function getSwipeCardWidth(screenW: number): number {
-  if (screenW >= 1024) return Math.round(screenW * 0.82);
-  if (screenW >= 768)  return Math.round(screenW * 0.86);
-  return Math.round(screenW * 0.90); // 500–767 px
+  return Math.round(screenW * 0.93);
 }
 
 /**
  * Returns the horizontal offset (from the screen's right edge) that keeps
- * the action-button rail flush with the card's right edge.
+ * the action-button rail flush with the card's right edge (10 px inside).
  *
- * Pass the same `screenW` and `cardW` that the ProfileCard uses so both
- * always agree, regardless of screen size.
- *
- * On phones `cardW === screenW` so the offset is simply `inset`.
+ * On phones cardW === screenW, so the result is simply `inset`.
  */
 export function getActionOverlayRight(screenW: number, inset = 10): number {
   if (screenW < 500) return inset;
