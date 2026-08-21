@@ -19,7 +19,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, spacing } from '@/constants/theme';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import type { ActivityStatus } from '@/types/activity';
 import { formatDistance } from '@/utils/formatDistance';
@@ -226,12 +226,12 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
             </View>
           )}
 
-          {/* Swipe stamps */}
+          {/* Swipe stamps — Tinder-style icons */}
           <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]}>
-            <Text style={styles.likeStampText}>LIKE</Text>
+            <Ionicons name="heart" size={100} color="#FF2D55" />
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.passStamp, passStampStyle]}>
-            <Text style={styles.passStampText}>PASS</Text>
+            <Ionicons name="close" size={110} color="#FF3B30" />
           </Animated.View>
 
           {/* Profile info overlay — bottom left */}
@@ -331,30 +331,12 @@ const styles = StyleSheet.create({
   stamp: {
     position: 'absolute',
     top: '18%',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 3,
-    borderRadius: radius.sm,
   },
   likeStamp: {
     left: spacing.lg,
-    borderColor: colors.primary,
-  },
-  likeStampText: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: colors.primary,
-    letterSpacing: 2,
   },
   passStamp: {
     right: spacing.lg,
-    borderColor: colors.danger,
-  },
-  passStampText: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: colors.danger,
-    letterSpacing: 2,
   },
   bottomGradient: {
     position: 'absolute',

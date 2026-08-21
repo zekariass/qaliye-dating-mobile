@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { revealLike } from '@/api/discovery/discoveryApi';
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { themedAlert, themedError } from '@/components/common/ThemedAlert';
+import MatchCelebrationOverlay from '@/components/discovery/MatchCelebrationOverlay';
 import { colors } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
@@ -292,9 +293,9 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
             hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
           >
             {isLikingBack ? (
-              <ActivityIndicator size="small" color={purple} />
+              <ActivityIndicator size="small" color="#FF2D55" />
             ) : (
-              <Ionicons name="heart" size={17} color={purple} />
+              <Ionicons name="heart" size={17} color="#FF2D55" />
             )}
           </TouchableOpacity>
         )}
@@ -780,6 +781,12 @@ export default function LikesListScreen() {
   const [removedSentIds, setRemovedSentIds] = useState<Set<string>>(new Set());
   const [unsendingId,    setUnsendingId]    = useState<string | null>(null);
 
+  // Match celebration overlay state
+  const [matchVisible, setMatchVisible] = useState(false);
+  const [matchName,    setMatchName]    = useState('');
+  const [matchPhoto,   setMatchPhoto]   = useState<string | undefined>(undefined);
+  const [matchId,      setMatchId]      = useState<string | null>(null);
+
   const filteredSentItems = useMemo(
     () => removedSentIds.size > 0
       ? sentItems.filter((i) => !removedSentIds.has(i.action_id))
@@ -843,27 +850,10 @@ export default function LikesListScreen() {
     try {
       const response = await swipeAction({ type: 'LIKE', targetUserId: item.user_id });
       if (response.is_match && response.match) {
-        themedAlert({
-          title: "It's a Match!",
-          message: `You and ${item.display_name} are now matched.`,
-          icon: 'heart',
-          iconColor: colors.secondary,
-          buttons: [
-            {
-              text: 'Send Message',
-              onPress: () => router.push({
-                pathname: '/(app)/chat' as any,
-                params: {
-                  matchId:     response.match!.match_id,
-                  displayName: item.display_name,
-                  avatarUrl:   item.primary_photo_url ?? '',
-                  isVerified:  item.is_verified ? '1' : '0',
-                },
-              }),
-            },
-            { text: 'Keep Swiping', style: 'cancel' },
-          ],
-        });
+        setMatchName(item.display_name);
+        setMatchPhoto(item.primary_photo_url ?? undefined);
+        setMatchId(response.match.match_id);
+        setMatchVisible(true);
       } else {
         themedAlert({
           title: 'Like sent',
@@ -1075,6 +1065,30 @@ export default function LikesListScreen() {
           </Animated.View>
         </View>
       </GestureDetector>
+
+      {/* Match celebration overlay */}
+      <MatchCelebrationOverlay
+        visible={matchVisible}
+        name={matchName}
+        photoUrl={matchPhoto}
+        myPhotoUrl={myProfile?.primary_photo_url ?? undefined}
+        onSendMessage={() => {
+          setMatchVisible(false);
+          if (matchId) {
+            router.push({
+              pathname: '/(app)/chat' as any,
+              params: {
+                matchId,
+                displayName: matchName,
+                avatarUrl:   matchPhoto ?? '',
+              },
+            });
+          }
+        }}
+        onKeepSwiping={() => {
+          setMatchVisible(false);
+        }}
+      />
     </View>
   );
 }

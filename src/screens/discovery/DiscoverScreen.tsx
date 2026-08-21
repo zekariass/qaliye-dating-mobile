@@ -1082,7 +1082,7 @@ export default function DiscoverScreen() {
               <View style={styles.rewindOverlay} pointerEvents="none">
                 <View style={[styles.rewindSpinnerWrap, { backgroundColor: isDark ? th.backgroundElement : th.surface }]}>
                   <ActivityIndicator size="large" color={colors.primary} />
-                  <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Rewinding…</Text>
+                  <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Getting them back…</Text>
                 </View>
               </View>
             )}

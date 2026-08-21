@@ -302,10 +302,10 @@ function BrowseProfileCard({
 
           {/* Action stamps — LIKE / PASS / SUPER LIKE */}
           <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]} pointerEvents="none">
-            <Text style={styles.likeStampText}>LIKE</Text>
+            <Ionicons name="heart" size={100} color="#FF2D55" />
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.passStamp, passStampStyle]} pointerEvents="none">
-            <Text style={styles.passStampText}>PASS</Text>
+            <Ionicons name="close" size={110} color="#FF3B30" />
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.superLikeStamp, superLikeStampStyle]} pointerEvents="none">
             <Text style={styles.superLikeStampText}>SUPER LIKE</Text>
@@ -757,7 +757,7 @@ export default function BrowseModeGrid({
         <View style={styles.rewindOverlay} pointerEvents="none">
           <View style={[styles.rewindSpinnerWrap, { backgroundColor: isDark ? th.backgroundElement : th.surface }]}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Rewinding…</Text>
+            <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Getting them back…</Text>
           </View>
         </View>
       )}
@@ -916,35 +916,21 @@ const styles = StyleSheet.create({
   stamp: {
     position: 'absolute',
     top: '18%',
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderWidth: 3,
-    borderRadius: radius.sm,
     zIndex: 5,
   },
   likeStamp: {
     left: spacing.lg,
-    borderColor: colors.primary,
-  },
-  likeStampText: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: colors.primary,
-    letterSpacing: 2,
   },
   passStamp: {
     right: spacing.lg,
-    borderColor: colors.danger,
-  },
-  passStampText: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: colors.danger,
-    letterSpacing: 2,
   },
   superLikeStamp: {
     left: '50%',
     marginLeft: -80,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderWidth: 3,
+    borderRadius: radius.sm,
     borderColor: colors.primary,
   },
   superLikeStampText: {
