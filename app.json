@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.qaliye.app",
-      "supportsTablet": false,
+      "supportsTablet": true,
       "appStoreUrl": "https://apps.apple.com/app/id6794608729",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
