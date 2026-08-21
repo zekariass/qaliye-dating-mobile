@@ -56,10 +56,11 @@ function formatRelativeTime(iso: string | null | undefined): string {
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 const RAW_SCREEN_W = Dimensions.get('window').width;
-const SCREEN_W  = Math.min(RAW_SCREEN_W, 720);
+const IS_TABLET = RAW_SCREEN_W >= 500;
+const CONTENT_W = IS_TABLET ? Math.round(RAW_SCREEN_W * 0.9) : RAW_SCREEN_W;
 const OUTER_PAD = 16;
 const COL_GAP   = 12;
-const CARD_W    = Math.floor((SCREEN_W - OUTER_PAD * 2 - COL_GAP) / 2);
+const CARD_W    = Math.floor((CONTENT_W - OUTER_PAD * 2 - COL_GAP) / 2);
 const IMG_H     = Math.round(CARD_W * 1.15);
 const ROW_GAP   = 14;
 
@@ -591,7 +592,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: OUTER_PAD,
     alignSelf: 'center',
-    width: SCREEN_W,
+    width: CONTENT_W,
   },
 
   columnWrapper: {

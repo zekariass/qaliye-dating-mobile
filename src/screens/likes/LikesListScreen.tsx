@@ -41,13 +41,16 @@ import { formatDistance } from '@/utils/formatDistance';
 
 // ─── Layout constants (identical to MatchesListScreen) ────────────────────────
 // NOTE: useWindowDimensions causes a runtime error in this RN version.
-// Cap effective screen width so grids don't stretch on tablets/iPads.
+// SCREEN_W is the full device width (used for pager mechanics).
+// CONTENT_W is the capped list width used only on tablets (>= 500 px).
 
 const RAW_SCREEN_W = Dimensions.get('window').width;
-const SCREEN_W  = Math.min(RAW_SCREEN_W, 720);
+const SCREEN_W  = RAW_SCREEN_W; // pager track / snap always uses full width
+const IS_TABLET = RAW_SCREEN_W >= 500;
+const CONTENT_W = IS_TABLET ? Math.round(RAW_SCREEN_W * 0.9) : RAW_SCREEN_W;
 const OUTER_PAD = 10;
 const COL_GAP   = 16;
-const CARD_W    = Math.floor((SCREEN_W - OUTER_PAD * 2 - COL_GAP) / 2);
+const CARD_W    = Math.floor((CONTENT_W - OUTER_PAD * 2 - COL_GAP) / 2);
 const CARD_H    = Math.round(CARD_W * 1.70);
 const IMG_H     = Math.round(CARD_H * 0.60);
 const ROW_GAP   = 20;
@@ -1132,7 +1135,7 @@ const styles = StyleSheet.create({
   // paddingHorizontal on listContent (not columnWrapper) — matches MatchesListScreen
   listContent: {
     paddingHorizontal: OUTER_PAD,
-    width: SCREEN_W,
+    width: CONTENT_W,
   },
 
   columnWrapper: {

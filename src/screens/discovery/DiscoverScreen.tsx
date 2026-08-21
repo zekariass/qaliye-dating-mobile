@@ -64,6 +64,7 @@ import {
     isLimitExceededError,
 } from '@/utils/entitlements';
 import { showActionErrorAlert } from '@/utils/limitExceededAlert';
+import { getActionOverlayRight } from '@/utils/responsive';
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -1106,7 +1107,7 @@ export default function DiscoverScreen() {
 
         {/* Fixed action buttons — float on the right edge over content */}
         {!isLoading && !isError && !isEmpty && (
-          <View style={[styles.actionOverlay, { bottom: TOTAL_TAB + 30, right: SCREEN_W > 460 ? Math.max(10, (SCREEN_W - 420) / 2 + 10) : 10 }]}>
+          <View style={[styles.actionOverlay, { bottom: TOTAL_TAB + 30, right: getActionOverlayRight(SCREEN_W) }]}>
             <CardActionButtons
               onRewind={handleRewind}
               onPass={handlePass}
@@ -1246,7 +1247,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
     paddingTop: 4,
     paddingBottom: 4,
-    alignItems: 'center',
   },
   actionOverlay: {
     position: 'absolute',

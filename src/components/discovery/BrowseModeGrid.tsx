@@ -34,7 +34,7 @@ import type { ActivityStatus } from '@/types/activity';
 import type { SwipeActionResponse } from '@/types/discovery';
 import { formatDistance } from '@/utils/formatDistance';
 
-const MAX_CARD_W = 420;
+const TABLET_BREAK = 500;
 const ACTION_BTN = 50;
 const TOTAL_STARS = 12;
 const STAR_RADIUS = 16;
@@ -121,7 +121,8 @@ function BrowseProfileCard({
   const { data: myProfile } = useCurrentProfile();
   const myCountry = myProfile?.address?.country_name ?? '';
   const { width: screenW } = useWindowDimensions();
-  const CARD_W = Math.min(screenW - spacing.md * 2, MAX_CARD_W);
+  const isTablet = screenW >= TABLET_BREAK;
+  const CARD_W = isTablet ? Math.round(screenW * 0.9) : (screenW - spacing.md * 2);
   const CARD_H = CARD_W * 1.1;
 
   const translateX = useSharedValue(0);
@@ -1009,7 +1010,7 @@ const styles = StyleSheet.create({
   // ── Skeleton ──
   skeletonPhoto: {
     width: '100%',
-    height: MAX_CARD_W * 1.1,
+    height: 462,
     backgroundColor: 'rgba(138,44,255,0.08)',
   },
   skeletonInfo: {

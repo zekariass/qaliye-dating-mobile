@@ -23,6 +23,7 @@ import { colors, spacing } from '@/constants/theme';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import type { ActivityStatus } from '@/types/activity';
 import { formatDistance } from '@/utils/formatDistance';
+import { getSwipeCardWidth } from '@/utils/responsive';
 
 const SWIPE_THRESHOLD = 120;
 
@@ -82,7 +83,8 @@ interface Props {
 const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   function ProfileCard({ card, isTop, onSwipe, animateIn = false as const }, ref) {
   const { width } = useWindowDimensions();
-  const CARD_W = Math.min(width - 32, 420);
+  const isTablet = width >= 500;
+  const tabletCardW = isTablet ? getSwipeCardWidth(width) : undefined;
   const { data: myProfile } = useCurrentProfile();
   const myCountry = myProfile?.address?.country_name ?? '';
 
@@ -187,7 +189,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View style={[styles.swipeWrap, animatedStyle]}>
-        <View style={[styles.imageCard, { width: CARD_W, alignSelf: 'center' }]}>
+        <View style={[styles.imageCard, isTablet && { width: tabletCardW, alignSelf: 'center' as const }]}>
           {/* Photo */}
           {safePhotos.length > 0 ? (
             <Image

@@ -4,51 +4,46 @@ import { Dimensions, useWindowDimensions } from 'react-native';
 // Responsive layout helpers for phone + tablet/iPad support
 // ---------------------------------------------------------------------------
 
-/** Max content width for full-screen experiences (swipe cards, etc.) */
-export const MAX_CARD_WIDTH = 420;
-
-/** Max content width for list/grid screens */
-export const MAX_CONTENT_WIDTH = 600;
-
-/** Max content width for two-column grids */
-export const MAX_GRID_WIDTH = 720;
-
 /**
- * Returns the effective card width for the swipe screen.
- * On phones this is `screenWidth - padding`.
- * On tablets/iPads this is capped at MAX_CARD_WIDTH and centered.
+ * Returns the visual card width for the swipe discovery screen.
+ *
+ * On phones (< 500 px) the caller should use `flex: 1` (fills the container).
+ * This function is only called on tablets/iPads (width >= 500).
+ *
+ * Breakpoints are calibrated so the card occupies a comfortable portion of the
+ * screen at every size while keeping natural horizontal breathing room:
+ *
+ *   375 – 499 px   phone  → flex:1 (full width, handled by caller)
+ *   500 – 767 px   small tablet / large phone  → 90 %
+ *   768 – 1023 px  medium tablet / iPad mini/Air → 86 %
+ *   1024 px +      large iPad / iPad Pro        → 82 %
+ *
+ * Results for common breakpoints:
+ *   500 px  →  450 px
+ *   768 px  →  660 px
+ *   1024 px →  840 px
+ *   1180 px →  968 px
+ *   1366 px → 1120 px
  */
-export function getCardWidth(screenWidth: number, padding = 32): number {
-  return Math.min(screenWidth - padding, MAX_CARD_WIDTH);
+export function getSwipeCardWidth(screenW: number): number {
+  if (screenW >= 1024) return Math.round(screenW * 0.82);
+  if (screenW >= 768)  return Math.round(screenW * 0.86);
+  return Math.round(screenW * 0.90); // 500–767 px
 }
 
 /**
- * Returns the horizontal margin needed to center content
- * when the screen is wider than maxWidth.
+ * Returns the horizontal offset (from the screen's right edge) that keeps
+ * the action-button rail flush with the card's right edge.
+ *
+ * Pass the same `screenW` and `cardW` that the ProfileCard uses so both
+ * always agree, regardless of screen size.
+ *
+ * On phones `cardW === screenW` so the offset is simply `inset`.
  */
-export function getCenterMargin(screenWidth: number, contentWidth: number): number {
-  if (screenWidth <= contentWidth) return 0;
-  return Math.floor((screenWidth - contentWidth) / 2);
-}
-
-/**
- * Returns { width, marginHorizontal } for a centered card
- * that respects a max width on tablets.
- */
-export function getCenteredCardLayout(screenWidth: number, maxWidth = MAX_CARD_WIDTH, padding = 32) {
-  const width = Math.min(screenWidth - padding, maxWidth);
-  const marginHorizontal = getCenterMargin(screenWidth, width);
-  return { width, marginHorizontal };
-}
-
-/**
- * Returns the effective screen width capped at maxContentWidth,
- * plus the horizontal margin to center it.
- */
-export function getCenteredContentLayout(screenWidth: number, maxContentWidth = MAX_CONTENT_WIDTH) {
-  const width = Math.min(screenWidth, maxContentWidth);
-  const marginHorizontal = getCenterMargin(screenWidth, width);
-  return { width, marginHorizontal };
+export function getActionOverlayRight(screenW: number, inset = 10): number {
+  if (screenW < 500) return inset;
+  const cardW = getSwipeCardWidth(screenW);
+  return Math.floor((screenW - cardW) / 2) + inset;
 }
 
 // Re-export useWindowDimensions so components can import from one place
