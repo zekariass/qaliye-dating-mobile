@@ -33,6 +33,7 @@ import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
 import type { SwipeActionResponse } from '@/types/discovery';
 import { formatDistance } from '@/utils/formatDistance';
+import { rs, useTabletScale } from '@/utils/responsive';
 
 const TABLET_BREAK = 500;
 const ACTION_BTN = 50;
@@ -124,6 +125,7 @@ function BrowseProfileCard({
   const isTablet = screenW >= TABLET_BREAK;
   const CARD_W = isTablet ? Math.round(screenW * 0.9) : (screenW - spacing.md * 2);
   const CARD_H = CARD_W * 1.1;
+  const scale = useTabletScale();
 
   const translateX = useSharedValue(0);
   const cardOpacity = useSharedValue(1);
@@ -315,14 +317,14 @@ function BrowseProfileCard({
 
           {/* Name + age + location — bottom of photo */}
           <View style={styles.cardInfo}>
-            <Text style={styles.cardName} numberOfLines={1}>
+            <Text style={[styles.cardName, { fontSize: rs(22, scale) }]} numberOfLines={1}>
               {item.display_name}
-              <Text style={styles.cardAge}>  · {item.age}</Text>
+              <Text style={[styles.cardAge, { fontSize: rs(18, scale) }]}>  · {item.age}</Text>
             </Text>
             {locationText ? (
               <View style={styles.locationRow}>
-                <Ionicons name="location" size={11} color="rgba(255,255,255,0.85)" />
-                <Text style={styles.locationText} numberOfLines={1}>
+                <Ionicons name="location" size={rs(11, scale)} color="rgba(255,255,255,0.85)" />
+                <Text style={[styles.locationText, { fontSize: rs(12, scale) }]} numberOfLines={1}>
                   {locationText}
                   {item.distance_km != null && item.distance_km > 0
                     ? `  ·  ${formatDistance(item.distance_km)}`
@@ -334,8 +336,8 @@ function BrowseProfileCard({
               <ActivityStatusIndicator
                 status={item.activity_status}
                 showLabel
-                size={10}
-                labelFontSize={13}
+                size={rs(10, scale)}
+                labelFontSize={rs(13, scale)}
               />
             )}
           </View>
@@ -356,20 +358,20 @@ function BrowseProfileCard({
           <View style={styles.intentionRow}>
             {item.relationship_intention ? (
               <View style={[styles.intentionChip, { backgroundColor: iconBg }]}>
-                <Ionicons name="heart" size={13} color="#FF8FAB" />
-                <Text style={[styles.intentionLabel, { color: textColor, opacity: 0.60 }]}>
+                <Ionicons name="heart" size={rs(13, scale)} color="#FF8FAB" />
+                <Text style={[styles.intentionLabel, { color: textColor, opacity: 0.60, fontSize: rs(12, scale) }]}>
                   Intention
                 </Text>
                 <View style={[styles.intentionDivider, { backgroundColor: borderColor }]} />
-                <Text style={[styles.intentionValue, { color: textColor }]} numberOfLines={1}>
+                <Text style={[styles.intentionValue, { color: textColor, fontSize: rs(13, scale) }]} numberOfLines={1}>
                   {formatIntention(item.relationship_intention)}
                 </Text>
               </View>
             ) : null}
             {item.is_verified && (
               <View style={styles.verifiedRow}>
-                <Ionicons name="shield-checkmark" size={12} color={colors.verifiedBlue} />
-                <Text style={styles.verifiedText}>Verified</Text>
+                <Ionicons name="shield-checkmark" size={rs(12, scale)} color={colors.verifiedBlue} />
+                <Text style={[styles.verifiedText, { fontSize: rs(12, scale) }]}>Verified</Text>
               </View>
             )}
           </View>
@@ -380,38 +382,38 @@ function BrowseProfileCard({
       <View style={[styles.actionRow, { borderColor }]}>
         {/* Pass */}
         <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg }]}
+          style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2 }]}
           onPress={handlePass}
           disabled={animating || isActing}
           activeOpacity={0.7}
           accessibilityLabel="Pass profile"
           accessibilityRole="button"
         >
-          <Ionicons name="close" size={30} color={colors.danger} />
+          <Ionicons name="close" size={rs(30, scale)} color={colors.danger} />
         </TouchableOpacity>
 
         {/* Like */}
         <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg }]}
+          style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2 }]}
           onPress={handleLike}
           disabled={animating || isActing}
           activeOpacity={0.7}
           accessibilityLabel="Like profile"
           accessibilityRole="button"
         >
-          <Ionicons name="heart" size={30} color={colors.heartPink} />
+          <Ionicons name="heart" size={rs(30, scale)} color={colors.heartPink} />
         </TouchableOpacity>
 
         {/* Super Like — star burst style matching swipe mode */}
         <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg, opacity: canSuperLike ? 1 : 0.4 }]}
+          style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2, opacity: canSuperLike ? 1 : 0.4 }]}
           onPress={handleSuperLike}
           disabled={animating || isActing || !canSuperLike}
           activeOpacity={0.7}
           accessibilityLabel="Super like profile"
           accessibilityRole="button"
         >
-          <Ionicons name="star" size={26} color={colors.primary} />
+          <Ionicons name="star" size={rs(26, scale)} color={colors.primary} />
           {Array.from({ length: TOTAL_STARS }).map((_, i) => {
             const angle = (i / TOTAL_STARS) * 2 * Math.PI - Math.PI / 2;
             const x = Math.cos(angle) * STAR_RADIUS;
@@ -433,19 +435,19 @@ function BrowseProfileCard({
 
         {/* Super Message */}
         <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg }]}
+          style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2 }]}
           onPress={() => onSuperMessage(item.user_id)}
           disabled={animating || isActing}
           activeOpacity={0.7}
           accessibilityLabel="Send super message"
           accessibilityRole="button"
         >
-          <Ionicons name="chatbubble-ellipses" size={30} color="#F59E0B" />
+          <Ionicons name="chatbubble-ellipses" size={rs(30, scale)} color="#F59E0B" />
         </TouchableOpacity>
 
         {/* View profile — at the right end */}
         <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg }]}
+          style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2 }]}
           onPress={() => onPress(item.user_id)}
           disabled={animating || isActing}
           activeOpacity={0.7}

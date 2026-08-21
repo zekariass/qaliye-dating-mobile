@@ -38,6 +38,7 @@ import type { ActivityStatus } from '@/types/activity';
 import type { LikeDirection, LikeItemDto } from '@/types/discovery';
 import { isInsufficientCreditsError } from '@/utils/entitlements';
 import { formatDistance } from '@/utils/formatDistance';
+import { rs, useTabletScale } from '@/utils/responsive';
 
 // ─── Layout constants (identical to MatchesListScreen) ────────────────────────
 // NOTE: useWindowDimensions causes a runtime error in this RN version.
@@ -255,6 +256,7 @@ interface LikeCardProps {
 function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack, isLikingBack, activityStatus, myCountry }: LikeCardProps) {
   const { card, textPrimary, textMuted, purple, chipBg } = useLikesTheme();
   const location = formatLocation(item, myCountry);
+  const scale = useTabletScale();
 
   return (
     <TouchableOpacity
@@ -332,7 +334,7 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
         {/* Name + verified badge */}
         <View style={styles.nameRow}>
           <View style={styles.nameLeft}>
-            <Text style={[styles.nameText, { color: textPrimary }]} numberOfLines={1}>
+            <Text style={[styles.nameText, { color: textPrimary, fontSize: rs(14, scale) }]} numberOfLines={1}>
               {item.display_name}, {item.age}
             </Text>
             {item.is_verified && (
@@ -350,7 +352,7 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
         {(location || item.distance_km !== null) ? (
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={13} color={purple} />
-            <Text style={[styles.locationText, { color: textMuted }]} numberOfLines={1}>
+            <Text style={[styles.locationText, { color: textMuted, fontSize: rs(11, scale) }]} numberOfLines={1}>
               {location ?? 'Location unknown'}
             </Text>
             {item.distance_km !== null && (

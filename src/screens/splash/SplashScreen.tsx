@@ -16,7 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { colors, fontSize, spacing } from '@/constants/theme';
+import { colors, fontSize } from '@/constants/theme';
 import { useBootstrapApp } from '@/hooks/auth/useBootstrapApp';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -282,16 +282,14 @@ export default function SplashScreen() {
         resizeMode="contain"
       />
 
-      <View style={styles.center}>
+      {/* Text + progress bar — anchored to bottom, well clear of the centered animation */}
+      <View style={styles.bottom}>
         <Animated.View style={titleStyle}>
           <AnimatedTitle text="Qaliye" color="#FFFFFF" />
         </Animated.View>
         <Animated.Text style={[styles.tagline, { color: 'rgba(255,255,255,0.85)' }, taglineStyle]}>
           Find your soulmate.
         </Animated.Text>
-      </View>
-
-      <View style={styles.bottom}>
         <View style={styles.progressTrack}>
           <ShimmerBar />
         </View>
@@ -522,11 +520,6 @@ const styles = StyleSheet.create({
   mergedHeart: {
     zIndex: 10,
   },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   logo: {
     position: 'absolute',
     top: 56,
@@ -537,7 +530,6 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
-    marginTop: 80,
   },
   titleLetter: {
     fontSize: fontSize['3xl'],
@@ -549,13 +541,15 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: fontSize.md,
-    marginTop: spacing.sm,
     fontWeight: '500',
   },
   bottom: {
     position: 'absolute',
-    bottom: H * 0.08,
-    alignSelf: 'center',
+    bottom: H * 0.07,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    gap: 10,
   },
   progressTrack: {
     width: 140,

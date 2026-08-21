@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { rs, useTabletScale } from '@/utils/responsive';
 
 const TOTAL_STARS = 12;
 const STAR_RADIUS = 16; // distance from button center to star center
@@ -20,40 +21,43 @@ const BTN = 48;
 
 export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLike, onSuperMessage, disabled }: Props) {
   const { colors: th } = useTheme();
+  const scale = useTabletScale();
+  const btnSize = rs(BTN, scale);
+  const btnStyle = { width: btnSize, height: btnSize, borderRadius: btnSize / 2 };
   return (
     <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
       <View style={styles.container}>
         {/* Rewind */}
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: th.surface }]}
+          style={[styles.button, btnStyle, { backgroundColor: th.surface }]}
           onPress={onRewind}
           disabled={disabled}
           activeOpacity={0.75}
           accessibilityLabel="Rewind profile"
         >
-          <Text style={[styles.icon, styles.rewindIcon]}>↺</Text>
+          <Text style={[styles.icon, styles.rewindIcon, { fontSize: rs(28, scale) }]}>↺</Text>
         </TouchableOpacity>
 
         {/* Like */}
         <TouchableOpacity
-          style={[styles.button, styles.likeButton, { backgroundColor: th.backgroundSelected }]}
+          style={[styles.button, btnStyle, styles.likeButton, { backgroundColor: th.backgroundSelected }]}
           onPress={onLike}
           disabled={disabled}
           activeOpacity={0.75}
           accessibilityLabel="Like profile"
         >
-          <Ionicons name="heart" size={30} color="#FF2D55" />
+          <Ionicons name="heart" size={rs(30, scale)} color="#FF2D55" />
         </TouchableOpacity>
 
         {/* SuperLike */}
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: th.backgroundSelected }]}
+          style={[styles.button, btnStyle, { backgroundColor: th.backgroundSelected }]}
           onPress={onSuperLike}
           disabled={disabled}
           activeOpacity={0.75}
           accessibilityLabel="Super like profile"
         >
-          <Ionicons name="star" size={26} color={colors.primary} />
+          <Ionicons name="star" size={rs(26, scale)} color={colors.primary} />
           {Array.from({ length: TOTAL_STARS }).map((_, i) => {
             const angle = (i / TOTAL_STARS) * 2 * Math.PI - Math.PI / 2;
             const x = Math.cos(angle) * STAR_RADIUS;
@@ -77,24 +81,24 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
 
         {/* Super Message */}
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: th.surface }]}
+          style={[styles.button, btnStyle, { backgroundColor: th.surface }]}
           onPress={onSuperMessage}
           disabled={disabled}
           activeOpacity={0.75}
           accessibilityLabel="Send super message"
         >
-          <Ionicons name="chatbubble-ellipses" size={30} color="#F59E0B" />
+          <Ionicons name="chatbubble-ellipses" size={rs(30, scale)} color="#F59E0B" />
         </TouchableOpacity>
 
         {/* Pass */}
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: th.surface }]}
+          style={[styles.button, btnStyle, { backgroundColor: th.surface }]}
           onPress={onPass}
           disabled={disabled}
           activeOpacity={0.75}
           accessibilityLabel="Pass profile"
         >
-          <Text style={[styles.icon, styles.passIcon]}>✕</Text>
+          <Text style={[styles.icon, styles.passIcon, { fontSize: rs(24, scale) }]}>✕</Text>
         </TouchableOpacity>
       </View>
     </View>

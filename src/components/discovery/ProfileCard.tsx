@@ -23,7 +23,7 @@ import { colors, spacing } from '@/constants/theme';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import type { ActivityStatus } from '@/types/activity';
 import { formatDistance } from '@/utils/formatDistance';
-import { getSwipeCardWidth } from '@/utils/responsive';
+import { getSwipeCardWidth, rs, useTabletScale } from '@/utils/responsive';
 
 const SWIPE_THRESHOLD = 120;
 
@@ -85,6 +85,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   const { width } = useWindowDimensions();
   const isTablet = width >= 500;
   const tabletCardW = isTablet ? getSwipeCardWidth(width) : undefined;
+  const scale = useTabletScale();
   const { data: myProfile } = useCurrentProfile();
   const myCountry = myProfile?.address?.country_name ?? '';
 
@@ -239,28 +240,28 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
           {/* Profile info overlay — bottom left */}
           <View style={styles.infoBox}>
             <View style={styles.nameRow}>
-              <Text style={styles.name}>{card.display_name}</Text>
-              <Text style={styles.nameSeparator}>·</Text>
-              <Text style={styles.age}>{card.age}</Text>
+              <Text style={[styles.name, { fontSize: rs(32, scale) }]}>{card.display_name}</Text>
+              <Text style={[styles.nameSeparator, { fontSize: rs(28, scale) }]}>·</Text>
+              <Text style={[styles.age, { fontSize: rs(28, scale) }]}>{card.age}</Text>
               {card.activity_status && card.activity_status !== 'HIDDEN' && card.activity_status !== 'OFFLINE' && (
                 <ActivityStatusIndicator
                   status={card.activity_status}
                   showLabel
-                  size={10}
-                  labelFontSize={13}
+                  size={rs(10, scale)}
+                  labelFontSize={rs(13, scale)}
                   style={styles.statusDot}
                 />
               )}
             </View>
             <View style={styles.distanceRow}>
-              <Ionicons name="location" size={14} color="rgba(255,255,255,0.85)" />
-              <Text style={styles.distance}>{locationText}</Text>
+              <Ionicons name="location" size={rs(14, scale)} color="rgba(255,255,255,0.85)" />
+              <Text style={[styles.distance, { fontSize: rs(14, scale) }]}>{locationText}</Text>
             </View>
             <View style={styles.intentionChip}>
-              <Ionicons name="heart" size={13} color="#FF8FAB" />
-              <Text style={styles.intentionLabel}>Intention</Text>
+              <Ionicons name="heart" size={rs(13, scale)} color="#FF8FAB" />
+              <Text style={[styles.intentionLabel, { fontSize: rs(12, scale) }]}>Intention</Text>
               <View style={styles.intentionDivider} />
-              <Text style={styles.intentionValue}>
+              <Text style={[styles.intentionValue, { fontSize: rs(13, scale) }]}>
                 {formatRelationshipIntention(card.relationship_intention)}
               </Text>
             </View>
@@ -269,8 +270,8 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
           {/* Verified — bottom right of photo */}
           {card.is_verified && (
             <View style={styles.verifiedRow}>
-              <Ionicons name="shield-checkmark" size={12} color="#7EC8FF" />
-              <Text style={styles.verifiedText}>Verified</Text>
+              <Ionicons name="shield-checkmark" size={rs(12, scale)} color="#7EC8FF" />
+              <Text style={[styles.verifiedText, { fontSize: rs(12, scale) }]}>Verified</Text>
             </View>
           )}
         </View>

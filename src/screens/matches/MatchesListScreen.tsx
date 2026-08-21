@@ -28,6 +28,7 @@ import type { ActivityStatus } from '@/types/activity';
 import type { InboxItem } from '@/types/chat';
 import type { MatchItemDto } from '@/types/discovery';
 import { formatDistance } from '@/utils/formatDistance';
+import { rs, useTabletScale } from '@/utils/responsive';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -167,6 +168,7 @@ const MatchCard = React.memo(function MatchCard({
   const chipBg    = isDark ? '#2E1F50' : colors.backgroundLavender;
   const enterDelay = Math.min(index * 60, 360);
   const location   = formatLocation(item, myCountry);
+  const scale      = useTabletScale();
 
   return (
     <Animated.View entering={FadeInDown.delay(enterDelay).duration(400)}>
@@ -221,7 +223,7 @@ const MatchCard = React.memo(function MatchCard({
             <Text
               style={[
                 styles.nameText,
-                { color: th.text },
+                { color: th.text, fontSize: rs(16, scale) },
                 item.is_unread && styles.nameTextBold,
               ]}
               numberOfLines={1}
@@ -231,7 +233,7 @@ const MatchCard = React.memo(function MatchCard({
             {item.is_verified && (
               <Ionicons
                 name="checkmark-circle"
-                size={16}
+                size={rs(16, scale)}
                 color={colors.verifiedBlue}
                 style={styles.verifiedIcon}
               />
@@ -241,8 +243,8 @@ const MatchCard = React.memo(function MatchCard({
           {/* Location + distance */}
           {(location || item.distance_km !== null) && (
             <View style={styles.locationRow}>
-              <Ionicons name="location" size={13} color={colors.primary} />
-              <Text style={[styles.locationText, { color: th.textSecondary }]} numberOfLines={1}>
+              <Ionicons name="location" size={rs(13, scale)} color={colors.primary} />
+              <Text style={[styles.locationText, { color: th.textSecondary, fontSize: rs(12, scale) }]} numberOfLines={1}>
                 {location ?? 'Location unknown'}
               </Text>
               {item.distance_km !== null && (
