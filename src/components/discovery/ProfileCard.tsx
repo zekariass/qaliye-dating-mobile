@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg + 3,
+    paddingBottom: spacing.lg + 6,
     paddingTop: spacing.xl,
     gap: 6,
     zIndex: 2,

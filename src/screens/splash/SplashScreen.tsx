@@ -5,14 +5,14 @@ import * as NativeSplash from 'expo-splash-screen';
 import { useCallback, useEffect, useState } from 'react';
 import { Dimensions, Image, StatusBar, StyleSheet, View } from 'react-native';
 import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withRepeat,
-    withSequence,
-    withSpring,
-    withTiming,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -275,12 +275,14 @@ export default function SplashScreen() {
 
       <CircleMergeAnimation />
 
+      {/* Logo — positioned at top-left corner so it doesn't overlap the heart animation */}
+      <AnimatedImage
+        source={require('@/assets/images/splash-icon.png')}
+        style={[styles.logo, logoStyle]}
+        resizeMode="contain"
+      />
+
       <View style={styles.center}>
-        <AnimatedImage
-          source={require('@/assets/images/logo-glow.png')}
-          style={[styles.logo, logoStyle]}
-          resizeMode="contain"
-        />
         <Animated.View style={titleStyle}>
           <AnimatedTitle text="Qaliye" color="#FFFFFF" />
         </Animated.View>
@@ -526,9 +528,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: 150,
-    height: 150,
-    marginBottom: spacing.xl,
+    position: 'absolute',
+    top: 56,
+    left: 24,
+    width: 120,
+    height: 120,
+    zIndex: 20,
   },
   titleRow: {
     flexDirection: 'row',
