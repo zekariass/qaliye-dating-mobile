@@ -3,18 +3,18 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
+    StyleSheet,
+    Text,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useDerivedValue,
-  useSharedValue,
-  withTiming,
+    Easing,
+    useAnimatedStyle,
+    useDerivedValue,
+    useSharedValue,
+    withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -82,7 +82,7 @@ interface Props {
 const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   function ProfileCard({ card, isTop, onSwipe, animateIn = false as const }, ref) {
   const { width } = useWindowDimensions();
-  const CARD_W = width - 32;
+  const CARD_W = Math.min(width - 32, 420);
   const { data: myProfile } = useCurrentProfile();
   const myCountry = myProfile?.address?.country_name ?? '';
 
@@ -187,7 +187,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View style={[styles.swipeWrap, animatedStyle]}>
-        <View style={styles.imageCard}>
+        <View style={[styles.imageCard, { width: CARD_W, alignSelf: 'center' }]}>
           {/* Photo */}
           {safePhotos.length > 0 ? (
             <Image

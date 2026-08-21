@@ -41,8 +41,10 @@ import { formatDistance } from '@/utils/formatDistance';
 
 // ─── Layout constants (identical to MatchesListScreen) ────────────────────────
 // NOTE: useWindowDimensions causes a runtime error in this RN version.
+// Cap effective screen width so grids don't stretch on tablets/iPads.
 
-const SCREEN_W  = Dimensions.get('window').width;
+const RAW_SCREEN_W = Dimensions.get('window').width;
+const SCREEN_W  = Math.min(RAW_SCREEN_W, 720);
 const OUTER_PAD = 10;
 const COL_GAP   = 16;
 const CARD_W    = Math.floor((SCREEN_W - OUTER_PAD * 2 - COL_GAP) / 2);
@@ -1113,22 +1115,24 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  // The sliding track — 2× screen width, rows side by side
+  // The sliding track — 2× actual screen width, rows side by side
   pagerTrack: {
     flex:          1,
     flexDirection: 'row',
-    width:         SCREEN_W * 2,
+    width:         RAW_SCREEN_W * 2,
   },
 
   // Each page occupies exactly one screen width
   page: {
-    width:    SCREEN_W,
+    width:    RAW_SCREEN_W,
     overflow: 'hidden',
+    alignItems: 'center',
   },
 
   // paddingHorizontal on listContent (not columnWrapper) — matches MatchesListScreen
   listContent: {
     paddingHorizontal: OUTER_PAD,
+    width: SCREEN_W,
   },
 
   columnWrapper: {

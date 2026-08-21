@@ -3,22 +3,22 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Easing,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
+    Easing,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
 } from 'react-native-reanimated';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
@@ -34,9 +34,7 @@ import type { ActivityStatus } from '@/types/activity';
 import type { SwipeActionResponse } from '@/types/discovery';
 import { formatDistance } from '@/utils/formatDistance';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const CARD_W = SCREEN_W - spacing.md * 2;
-const CARD_H = CARD_W * 1.1;
+const MAX_CARD_W = 420;
 const ACTION_BTN = 50;
 const TOTAL_STARS = 12;
 const STAR_RADIUS = 16;
@@ -122,6 +120,9 @@ function BrowseProfileCard({
 }) {
   const { data: myProfile } = useCurrentProfile();
   const myCountry = myProfile?.address?.country_name ?? '';
+  const { width: screenW } = useWindowDimensions();
+  const CARD_W = Math.min(screenW - spacing.md * 2, MAX_CARD_W);
+  const CARD_H = CARD_W * 1.1;
 
   const translateX = useSharedValue(0);
   const cardOpacity = useSharedValue(1);
@@ -195,7 +196,7 @@ function BrowseProfileCard({
       stampOpacity.value = withTiming(1, { duration: 250 });
 
       // After stamp is visible, slide card off screen
-      const targetX = action === 'pass' ? -SCREEN_W - 60 : SCREEN_W + 60;
+      const targetX = action === 'pass' ? -screenW - 60 : screenW + 60;
       setTimeout(() => {
         translateX.value = withTiming(targetX, {
           duration: 600,
@@ -251,14 +252,14 @@ function BrowseProfileCard({
   }));
 
   return (
-    <Animated.View style={[styles.card, { backgroundColor: cardBg }, cardAnimatedStyle]}>
+    <Animated.View style={[styles.card, { width: CARD_W, backgroundColor: cardBg }, cardAnimatedStyle]}>
       {/* Photo — tap to view profile, swipe horizontally to browse photos */}
       <GestureDetector gesture={photoGesture}>
         <Animated.View
           accessibilityLabel={`View ${item.display_name}'s profile`}
           accessibilityRole="button"
         >
-          <View style={styles.photoWrap}>
+          <View style={[styles.photoWrap, { height: CARD_H }]}>
             <Animated.View style={[styles.photo, photoSlideStyle]}>
               {currentPhoto ? (
                 <Image
@@ -788,6 +789,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingBottom: 100,
     gap: 14,
+    alignItems: 'center',
   },
 
   // ── Rewind overlay ──
@@ -816,7 +818,6 @@ const styles = StyleSheet.create({
 
   // ── Card ──
   card: {
-    width: CARD_W,
     borderRadius: radius.lg,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -827,7 +828,6 @@ const styles = StyleSheet.create({
   },
   photoWrap: {
     width: '100%',
-    height: CARD_H,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
   // ── Skeleton ──
   skeletonPhoto: {
     width: '100%',
-    height: CARD_H,
+    height: MAX_CARD_W * 1.1,
     backgroundColor: 'rgba(138,44,255,0.08)',
   },
   skeletonInfo: {

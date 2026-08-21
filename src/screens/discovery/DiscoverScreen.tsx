@@ -3,24 +3,24 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  AppState,
-  Dimensions,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    AppState,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withRepeat,
+    withSequence,
+    withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -56,19 +56,18 @@ import { useDiscoveryStore } from '@/stores/discovery-store';
 import { usePromotionStore } from '@/stores/promotion-store';
 import type { EligiblePromotionDto } from '@/types/billing';
 import {
-  canRewind as checkCanRewind,
-  canSuperLike as checkCanSuperLike,
-  getBoostStatus,
-  getQuotaErrorType,
-  isInsufficientCreditsError,
-  isLimitExceededError,
+    canRewind as checkCanRewind,
+    canSuperLike as checkCanSuperLike,
+    getBoostStatus,
+    getQuotaErrorType,
+    isInsufficientCreditsError,
+    isLimitExceededError,
 } from '@/utils/entitlements';
 import { showActionErrorAlert } from '@/utils/limitExceededAlert';
 
 // ---------------------------------------------------------------------------
 // Layout
 // ---------------------------------------------------------------------------
-const { height: SCREEN_H } = Dimensions.get('window');
 const HEADER_H = 56;
 const TAB_BAR_PADDING = 18;
 const TAB_BAR_H = 68;
@@ -287,6 +286,7 @@ export default function DiscoverScreen() {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const { bottom: safeBottom } = useSafeAreaInsets();
+  const { height: SCREEN_H, width: SCREEN_W } = useWindowDimensions();
 
   const cardStackRef        = useRef<CardStackHandle>(null);
   const scrollRef            = useRef<ScrollView>(null);
@@ -1106,7 +1106,7 @@ export default function DiscoverScreen() {
 
         {/* Fixed action buttons — float on the right edge over content */}
         {!isLoading && !isError && !isEmpty && (
-          <View style={[styles.actionOverlay, { bottom: TOTAL_TAB + 30 }]}>
+          <View style={[styles.actionOverlay, { bottom: TOTAL_TAB + 30, right: SCREEN_W > 460 ? Math.max(10, (SCREEN_W - 420) / 2 + 10) : 10 }]}>
             <CardActionButtons
               onRewind={handleRewind}
               onPass={handlePass}
@@ -1246,6 +1246,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
     paddingTop: 4,
     paddingBottom: 4,
+    alignItems: 'center',
   },
   actionOverlay: {
     position: 'absolute',
