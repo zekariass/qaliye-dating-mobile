@@ -8,6 +8,7 @@ import { useMeStore } from '@/stores/me-store';
 export type BootstrapResult = {
   isBootstrapping: boolean;
   hasActiveSession: boolean;
+  isPasswordRecovery: boolean;
 };
 
 function clearAllSessionState() {
@@ -20,6 +21,7 @@ export function useBootstrapApp(): BootstrapResult {
   const [state, setState] = useState<BootstrapResult>({
     isBootstrapping: true,
     hasActiveSession: false,
+    isPasswordRecovery: false,
   });
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export function useBootstrapApp(): BootstrapResult {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
-      setState({ isBootstrapping: false, hasActiveSession: !!session });
+      setState((prev) => ({ ...prev, isBootstrapping: false, hasActiveSession: !!session }));
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -35,7 +37,14 @@ export function useBootstrapApp(): BootstrapResult {
       if (event === 'SIGNED_OUT' || !session) {
         clearAllSessionState();
       }
-      setState((prev) => ({ ...prev, isBootstrapping: false, hasActiveSession: !!session }));
+      const isRecovery = event === 'PASSWORD_RECOVERY';
+      const wasRecovery = event === 'USER_UPDATED' || event === 'SIGNED_OUT';
+      setState((prev) => ({
+        ...prev,
+        isBootstrapping: false,
+        hasActiveSession: !!session,
+        isPasswordRecovery: isRecovery ? true : wasRecovery ? false : prev.isPasswordRecovery,
+      }));
     });
 
     return () => {

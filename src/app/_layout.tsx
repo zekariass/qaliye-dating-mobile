@@ -1,6 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -42,7 +42,26 @@ export default function RootLayout() {
         try {
           if (url.includes('error=')) return;
 
-          await supabase.auth.exchangeCodeForSession(url);
+          // Hash/implicit flow: #access_token=...&refresh_token=...
+          const hashIndex = url.indexOf('#');
+          if (hashIndex !== -1) {
+            const fragment = url.slice(hashIndex + 1);
+            const hashParams = new URLSearchParams(fragment);
+            const accessToken = hashParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token');
+            if (accessToken && refreshToken) {
+              await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+            }
+          } else {
+            // PKCE flow: ?code=...
+            await supabase.auth.exchangeCodeForSession(url);
+          }
+
+          // For password-recovery links, navigate to the reset screen.
+          // Normal OAuth sign-ins are handled by onAuthStateChange → useBootstrapApp.
+          if (url.includes('type=recovery')) {
+            router.replace('/reset-password' as any);
+          }
         } catch {
           // Non-fatal — session exchange failure will leave user on auth screen
         }

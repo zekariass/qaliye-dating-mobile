@@ -4,21 +4,22 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { themedAlert, themedError, themedSuccess } from '@/components/common/ThemedAlert';
 import { NotificationSettingsSheet } from '@/components/notifications/NotificationSettingsSheet';
+import { ChangePasswordSheet } from '@/components/settings/ChangePasswordSheet';
 import { ReviewPassedProfilesSheet } from '@/components/settings/ReviewPassedProfilesSheet';
 import { colors } from '@/constants/theme';
 import { useActivityVisibility } from '@/hooks/activity/useActivityVisibility';
@@ -29,6 +30,7 @@ import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useSignOutWithDeactivation } from '@/hooks/notifications/useSignOutWithDeactivation';
 import { useTheme } from '@/hooks/use-theme';
 import { useRateUs } from '@/hooks/useRateUs';
+import { supabase } from '@/lib/supabase';
 import { LANGUAGE_LABELS, LANGUAGE_LIST, useLanguageStore } from '@/stores/language-store';
 import { ThemeMode, useThemeStore } from '@/stores/theme-store';
 import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
@@ -52,7 +54,9 @@ export default function SettingsScreen() {
   const { confirmDelete, deleteStatus } = useDeleteAccount();
   const [revisitSheetVisible, setRevisitSheetVisible] = useState(false);
   const [notifSheetVisible, setNotifSheetVisible] = useState(false);
+  const [changePasswordSheetVisible, setChangePasswordSheetVisible] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [isEmailAuthUser, setIsEmailAuthUser] = useState(false);
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
   const { entitlements } = useEntitlements();
@@ -88,6 +92,20 @@ export default function SettingsScreen() {
       }
     }, [refetchPending]),
   );
+
+  // Detect whether the current user signed in with email/password.
+  // Only show the "Change Password" row for email-auth users — Google/Apple
+  // and phone users don't have a password to change.
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        setIsEmailAuthUser(false);
+        return;
+      }
+      const hasEmailProvider = (user.app_metadata?.providers ?? []).includes('email');
+      setIsEmailAuthUser(hasEmailProvider);
+    });
+  }, []);
 
   const handleSignOut = useCallback(() => {
     themedAlert({
@@ -493,8 +511,29 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: th.text }]}>
             {t('settings.account', 'Account')}
           </Text>
+          {isEmailAuthUser && (
+            <Pressable
+              style={styles.optionRow}
+              onPress={() => setChangePasswordSheetVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('settings.changePassword', 'Change Password')}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.optionLabel, { color: th.text }]}>
+                  {t('settings.changePassword', 'Change Password')}
+                </Text>
+                <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                  {t('settings.changePasswordSub', 'Update your account password')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+            </Pressable>
+          )}
           <Pressable
-            style={styles.optionRow}
+            style={[styles.optionRow, isEmailAuthUser && { borderTopWidth: 1, borderTopColor: th.border }]}
             onPress={handleSignOut}
             accessibilityRole="button"
             accessibilityLabel={t('settings.signOut', 'Sign Out')}
@@ -613,6 +652,12 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Change password sheet ── */}
+      <ChangePasswordSheet
+        visible={changePasswordSheetVisible}
+        onClose={() => setChangePasswordSheetVisible(false)}
+      />
     </>
   );
 }

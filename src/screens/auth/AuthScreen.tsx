@@ -463,6 +463,18 @@ export default function AuthScreen() {
                     accessibilityLabel={t('auth.password')}
                   />
                   {!!passwordError && <Text style={s.fieldErr}>{passwordError}</Text>}
+                  {authTab === 'login' && (
+                    <TouchableOpacity
+                      style={s.forgotPasswordRow}
+                      onPress={() => router.push('/forgot-password' as any)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('auth.forgotPassword')}
+                    >
+                      <Text style={[s.forgotPasswordText, { color: isDark ? '#9B85C4' : colors.primary }]}>
+                        {t('auth.forgotPassword')}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {authTab === 'createAccount' && (
@@ -798,6 +810,16 @@ const s = StyleSheet.create({
     color: colors.danger,
     marginTop: 4,
     paddingHorizontal: spacing.xs,
+  },
+  forgotPasswordRow: {
+    alignSelf: 'flex-end',
+    paddingVertical: 4,
+    paddingHorizontal: spacing.xs,
+    marginTop: 4,
+  },
+  forgotPasswordText: {
+    fontSize: fontSize.xs,
+    fontWeight: '600',
   },
   ctaWrap: { marginTop: spacing.xs },
 

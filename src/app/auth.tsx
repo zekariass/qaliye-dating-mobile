@@ -13,7 +13,7 @@ import { useMeStore } from '@/stores/me-store';
 const OVERLAY_DURATION_MS = 5000;
 
 export default function Auth() {
-  const { isBootstrapping, hasActiveSession } = useBootstrapApp();
+  const { isBootstrapping, hasActiveSession, isPasswordRecovery } = useBootstrapApp();
   const meData = useMeStore((s) => s.data);
   const meStatus = useMeStore((s) => s.status);
   const isOnboarded = useMeStore((s) => s.isOnboarded);
@@ -49,6 +49,14 @@ export default function Auth() {
   }, [accountJustDeleted, setAccountJustDeleted]);
 
   if (isBootstrapping) return null;
+
+  // If a password-recovery session is active, send the user to the reset screen
+  // instead of into the app. This handles the edge case where the user navigates
+  // back to /auth while holding a recovery session.
+  if (isPasswordRecovery) {
+    return <Redirect href={'/reset-password' as any} />;
+  }
+
   if (hasActiveSession && (meStatus === 'idle' || meStatus === 'loading')) return null;
 
   // If meStatus is 'error', the session is invalid (e.g. account_deleted 403).

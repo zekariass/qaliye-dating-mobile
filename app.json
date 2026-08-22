@@ -2,7 +2,7 @@
   "expo": {
     "name": "Qaliye",
     "slug": "qaliye-mobile",
-    "scheme": "qaliyedating",
+    "scheme": ["qaliyedating", "qaliyemobile"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

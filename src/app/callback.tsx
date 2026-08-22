@@ -11,7 +11,10 @@ export default function OAuthCallback() {
   const handledRef = useRef(false);
 
   // Expo Router parses deep-link query params into search params
-  const params = useGlobalSearchParams<{ code?: string; error?: string; error_description?: string }>();
+  const params = useGlobalSearchParams<{ code?: string; error?: string; error_description?: string; type?: string }>();
+
+  // True if this is a password-recovery callback (set once we know the URL)
+  const [isRecovery, setIsRecovery] = useState(false);
 
   useEffect(() => {
     if (handledRef.current) return;
@@ -19,6 +22,10 @@ export default function OAuthCallback() {
     const handleUrl = async (incomingUrl: string) => {
       if (handledRef.current) return;
       handledRef.current = true;
+
+      // Detect recovery before any async work so the redirect is set correctly
+      const recovery = incomingUrl.includes('type=recovery');
+      setIsRecovery(recovery);
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -36,6 +43,26 @@ export default function OAuthCallback() {
           throw new Error(desc ?? code);
         }
 
+        // Hash/implicit flow: #access_token=...&refresh_token=...&type=recovery
+        // (Used by Supabase token-based email verification)
+        const hashIndex = incomingUrl.indexOf('#');
+        if (hashIndex !== -1) {
+          const fragment = incomingUrl.slice(hashIndex + 1);
+          const hashParams = new URLSearchParams(fragment);
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          if (accessToken && refreshToken) {
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (error) throw error;
+            setStatus('success');
+            return;
+          }
+        }
+
+        // PKCE flow: ?code=...
         const { error } = await supabase.auth.exchangeCodeForSession(incomingUrl);
         if (error) throw error;
         setStatus('success');
@@ -76,6 +103,10 @@ export default function OAuthCallback() {
   }, [params.code, params.error]);
 
   if (status === 'success') {
+    // Password-recovery tokens must land on the reset screen, not the app
+    if (isRecovery || params.type === 'recovery') {
+      return <Redirect href={'/reset-password' as any} />;
+    }
     return <Redirect href="/(app)/(tabs)" />;
   }
 
