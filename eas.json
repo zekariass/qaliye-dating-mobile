@@ -15,9 +15,10 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "92774223454-18vpu3rf051ek4jqf6l4m8ctuurjlnsv.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "92774223454-mmu2j3123bc6g7hf1fc3ui9nucljhfk9.apps.googleusercontent.com",
         "EXPO_PUBLIC_APPLE_SERVICE_ID": "com.qaliye.app.signin",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "test_hSTBkakzfDkSyxsfLNsTczsgWUT",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "test_hSTBkakzfDkSyxsfLNsTczsgWUT"
-      }
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_RApqaKcQSEHhZiZjPgBWbSPHClb",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ"
+      },
+      "channel": "development"
     },
     "ios-simulator": {
       "developmentClient": true,
@@ -33,9 +34,10 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "92774223454-18vpu3rf051ek4jqf6l4m8ctuurjlnsv.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "92774223454-mmu2j3123bc6g7hf1fc3ui9nucljhfk9.apps.googleusercontent.com",
         "EXPO_PUBLIC_APPLE_SERVICE_ID": "com.qaliye.app.signin",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "test_hSTBkakzfDkSyxsfLNsTczsgWUT",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "test_hSTBkakzfDkSyxsfLNsTczsgWUT"
-      }
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_RApqaKcQSEHhZiZjPgBWbSPHClb",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ"
+      },
+      "channel": "ios-simulator"
     },
     "preview": {
       "distribution": "internal",
@@ -47,9 +49,10 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "92774223454-18vpu3rf051ek4jqf6l4m8ctuurjlnsv.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "92774223454-mmu2j3123bc6g7hf1fc3ui9nucljhfk9.apps.googleusercontent.com",
         "EXPO_PUBLIC_APPLE_SERVICE_ID": "com.qaliye.app.signin",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "TODO_PROD_REVENUECAT_IOS_KEY",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "TODO_PROD_REVENUECAT_ANDROID_KEY"
-      }
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_RApqaKcQSEHhZiZjPgBWbSPHClb",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ"
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
@@ -67,9 +70,10 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "92774223454-18vpu3rf051ek4jqf6l4m8ctuurjlnsv.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "92774223454-mmu2j3123bc6g7hf1fc3ui9nucljhfk9.apps.googleusercontent.com",
         "EXPO_PUBLIC_APPLE_SERVICE_ID": "com.qaliye.app.signin",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "TODO_PROD_REVENUECAT_IOS_KEY",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "TODO_PROD_REVENUECAT_ANDROID_KEY"
-      }
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_RApqaKcQSEHhZiZjPgBWbSPHClb",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ"
+      },
+      "channel": "production"
     }
   },
   "submit": {

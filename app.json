@@ -2,7 +2,10 @@
   "expo": {
     "name": "Qaliye",
     "slug": "qaliye-mobile",
-    "scheme": ["qaliyedating", "qaliyemobile"],
+    "scheme": [
+      "qaliyedating",
+      "qaliyemobile"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -32,7 +35,11 @@
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.CAMERA"
       ]
     },
     "web": {
@@ -52,7 +59,9 @@
           "color": "#8A2CFF",
           "defaultChannel": "qaliye-default",
           "notificationPermission": "Qaliye sends notifications about matches, messages, and likes.",
-          "sounds": ["./assets/sounds/notification.mp3"]
+          "sounds": [
+            "./assets/sounds/notification.mp3"
+          ]
         }
       ],
       [
@@ -115,6 +124,12 @@
         "projectId": "9d04f735-1300-4ef9-ad68-1325fd6d43ff"
       }
     },
-    "owner": "zekariasn"
+    "owner": "zekariasn",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/9d04f735-1300-4ef9-ad68-1325fd6d43ff"
+    }
   }
 }
