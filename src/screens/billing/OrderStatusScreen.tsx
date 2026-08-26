@@ -49,7 +49,7 @@ export default function OrderStatusScreen() {
     setShowCheckoutModal(true);
   }, [orderId, checkoutUrl, order?.provider_checkout_url, order?.status]);
 
-  const returnUrl = Linking.createURL('payments/chapa/callback');
+  const returnUrl = Linking.createURL('payments/chapa/callback', { scheme: 'qaliyedating' });
 
   const handleCheckoutReturned = useCallback(() => {
     setShowCheckoutModal(false);

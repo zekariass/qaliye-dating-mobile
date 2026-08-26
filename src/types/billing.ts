@@ -263,6 +263,9 @@ export type CreateOrderRequest = {
   payment_method_id: string;
   idempotency_key?: string;
   platform?: BillingPlatform;
+  // Chapa-specific: the deep-link the WebView should be redirected to after
+  // payment so the app can intercept it and trigger verification automatically.
+  return_url?: string;
 };
 
 export type VerifyPaymentRequest = {

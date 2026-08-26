@@ -475,6 +475,9 @@ interface Props {
   swipedIds: Set<string>;
   onCardAction: (userId: string, swiped: boolean, card?: CardDto) => void;
   onSuperMessage?: (userId: string, displayName: string, photoUrl: string | null) => void;
+  /** Called after a successful Like or Super Like. Passes true when the action
+   *  produced a match so the caller can suppress overlapping prompts. */
+  onLikeSuccess?: (isMatch: boolean) => void;
 }
 
 export default function BrowseModeGrid({
@@ -492,6 +495,7 @@ export default function BrowseModeGrid({
   swipedIds,
   onCardAction,
   onSuperMessage,
+  onLikeSuccess,
 }: Props) {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
@@ -566,8 +570,11 @@ export default function BrowseModeGrid({
       }
       try {
         const response = await swipeAction({ type, targetUserId: userId });
-        if ((type === 'LIKE' || type === 'SUPER_LIKE') && response.is_match && onMatch) {
-          onMatch(response);
+        if (type === 'LIKE' || type === 'SUPER_LIKE') {
+          if (response.is_match && onMatch) {
+            onMatch(response);
+          }
+          onLikeSuccess?.(!!response.is_match);
         }
       } catch (e) {
         // On error, restore the card so the user can retry
@@ -581,7 +588,7 @@ export default function BrowseModeGrid({
         // Insufficient-credit errors are handled globally by the interceptor
       }
     },
-    [swipeAction, onMatch, cardMap, onCardAction, sheetVisible],
+    [swipeAction, onMatch, onLikeSuccess, cardMap, onCardAction, sheetVisible],
   );
 
   // ── Rewind: call API, show spinner, prepend restored card ──

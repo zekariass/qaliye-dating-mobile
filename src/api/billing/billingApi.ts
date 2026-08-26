@@ -351,6 +351,7 @@ export async function createOrder(body: CreateOrderRequest): Promise<OrderRespon
       payment_method_id: body.payment_method_id,
       idempotency_key: body.idempotency_key,
       platform: body.platform,
+      return_url: body.return_url,
     },
     { headers: { 'Content-Type': 'application/json' } },
   );
@@ -515,7 +516,7 @@ function normalizeUserRedemption(raw: Record<string, unknown>): UserRedemptionDt
 export async function fetchEligiblePromotions(): Promise<EligiblePromotionDto[]> {
   const res = await apiClient.get<unknown>(`${BASE}/promotions`);
   const raw = res.data;
-  console.log('[promo] RAW API response:', JSON.stringify(raw, null, 2));
+  if (__DEV__) console.log('[promo] RAW API response:', JSON.stringify(raw, null, 2));
   const items = Array.isArray(raw) ? raw : [];
   return items.map((item) => normalizeEligiblePromotion(item as Record<string, unknown>));
 }
@@ -534,10 +535,10 @@ export async function fetchPromotionRedemptions(params?: {
   if (params?.page_size != null) queryParams.pageSize = params.page_size;
   const res = await apiClient.get<unknown>(`${BASE}/promotions/redemptions`, { params: queryParams });
   const raw = res.data;
-  console.log('[redemptions] RAW API response:', JSON.stringify(raw, null, 2));
+  if (__DEV__) console.log('[redemptions] RAW API response:', JSON.stringify(raw, null, 2));
   const items = Array.isArray(raw) ? raw : [];
   const normalized = items.map((item) => normalizeUserRedemption(item as Record<string, unknown>));
-  console.log('[redemptions] NORMALIZED:', JSON.stringify(normalized, null, 2));
+  if (__DEV__) console.log('[redemptions] NORMALIZED:', JSON.stringify(normalized, null, 2));
   return normalized;
 }
 

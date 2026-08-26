@@ -62,7 +62,7 @@ function RedemptionItem({ item }: { item: UserRedemptionDto }) {
       (computedExpiry != null && new Date(computedExpiry).getTime() < Date.now())
     );
 
-  console.log('[redemptions] ITEM:', item.campaign_name, 'status:', item.status, 'subStatus:', item.subscription_status, 'subPeriodEnd:', item.subscription_period_end, 'expiredAt:', item.expired_at, 'fulfilledAt:', item.fulfilled_at, 'durationDays:', item.duration_days, 'computedExpiry:', computedExpiry, 'hasExpired:', hasExpired);
+  if (__DEV__) console.log('[redemptions] ITEM:', item.campaign_name, 'status:', item.status, 'subStatus:', item.subscription_status, 'subPeriodEnd:', item.subscription_period_end, 'expiredAt:', item.expired_at, 'fulfilledAt:', item.fulfilled_at, 'durationDays:', item.duration_days, 'computedExpiry:', computedExpiry, 'hasExpired:', hasExpired);
 
   const effectiveStatus: RedemptionStatus = hasExpired ? 'EXPIRED' : item.status;
   const cfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.RESERVED;

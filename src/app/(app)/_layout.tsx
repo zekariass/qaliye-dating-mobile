@@ -4,6 +4,7 @@ import { Redirect, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
 import { InsufficientCreditsModal } from '@/components/billing/InsufficientCreditsModal';
@@ -242,7 +243,7 @@ function SplashStyleLoader({ isDark }: { isDark: boolean }) {
     );
 
     // Three ripple rings expanding outward, staggered
-    const ringAnim = (scale: Animated.SharedValue<number>, opacity: Animated.SharedValue<number>, delay: number) => {
+    const ringAnim = (scale: SharedValue<number>, opacity: SharedValue<number>, delay: number) => {
       scale.value = withDelay(
         delay,
         withRepeat(

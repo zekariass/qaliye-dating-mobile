@@ -1063,6 +1063,7 @@ export default function ChatScreen() {
       {/* Notification prompt — shown on first message send */}
       <NotificationPromptModal
         visible={notifPrompt.visible}
+        isLoading={notifPrompt.isLoading}
         onEnable={notifPrompt.handleEnable}
         onDismiss={notifPrompt.handleDismiss}
       />

@@ -15,9 +15,13 @@ import {
     View,
 } from 'react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Sentry from '@sentry/react-native';
+
 import { completeOnboarding, fetchOnboardingStatus } from '@/api/onboardingApi';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useNotificationPermission } from '@/hooks/notifications/useNotificationPermission';
+import { NOTIFICATION_PROMPT_SHOWN_KEY } from '@/hooks/notifications/useNotificationPrompt';
 import { useTheme } from '@/hooks/use-theme';
 import { useMeStore } from '@/stores/me-store';
 
@@ -45,15 +49,40 @@ export default function CompletionStep() {
     if (Platform.OS === 'web') return;
     if (notifStatus === 'granted' || notifRequested) return;
     // Delay slightly so the entrance animation finishes first
-    const timer = setTimeout(() => setShowNotifModal(true), 800);
+    const timer = setTimeout(async () => {
+      setShowNotifModal(true);
+      // Write the shared flag so in-app prompts (like / message) know this
+      // user has already seen a notification permission ask and don't repeat it.
+      try {
+        await AsyncStorage.setItem(NOTIFICATION_PROMPT_SHOWN_KEY, 'true');
+      } catch { /* non-fatal */ }
+      Sentry.addBreadcrumb({
+        category: 'notification_prompt',
+        message: 'notification_prompt_shown',
+        data: { trigger: 'onboarding_completion' },
+        level: 'info',
+      });
+    }, 800);
     return () => clearTimeout(timer);
   }, [notifStatus, notifRequested]);
 
   const handleEnableNotifications = useCallback(async () => {
     if (notifLoading) return;
     setNotifLoading(true);
+    Sentry.addBreadcrumb({
+      category: 'notification_prompt',
+      message: 'notification_prompt_enable_tapped',
+      data: { trigger: 'onboarding_completion' },
+      level: 'info',
+    });
     try {
       const granted = await requestPermission();
+      Sentry.addBreadcrumb({
+        category: 'notification_prompt',
+        message: 'notification_permission_result',
+        data: { granted, trigger: 'onboarding_completion' },
+        level: 'info',
+      });
       if (!granted) {
         // Permission denied or module unavailable — open device settings
         await Linking.openSettings();

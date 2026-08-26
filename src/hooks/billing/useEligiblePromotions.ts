@@ -155,15 +155,15 @@ export function useEligiblePromotions(userId?: string) {
   );
 
   const tryShowPromotion = useCallback(async (): Promise<EligiblePromotionDto | null> => {
-    console.log('[promo] tryShowPromotion called, userId:', userId, 'hasActivePremium:', hasActivePremium);
+    if (__DEV__) console.log('[promo] tryShowPromotion called, userId:', userId, 'hasActivePremium:', hasActivePremium);
     if (!userId) {
-      console.log('[promo] blocked: no userId');
+      if (__DEV__) console.log('[promo] blocked: no userId');
       return null;
     }
     // Premium users can still receive CREDITS promotions. We don't bail early
     // here; instead non-CREDITS promotions are filtered out below.
     if (!store.acquireDisplayLock()) {
-      console.log('[promo] blocked: display lock held');
+      if (__DEV__) console.log('[promo] blocked: display lock held');
       return null;
     }
 
@@ -173,45 +173,45 @@ export function useEligiblePromotions(userId?: string) {
         queryFn: fetchEligiblePromotions,
         staleTime: 0,
       });
-      console.log('[promo] fresh promotions:', fresh?.length, JSON.stringify(fresh?.map(p => ({ key: p.campaign_key, status: p.status, trigger: p.trigger_type, canRedeem: p.can_redeem, benefit: p.benefit_type }))));
+      if (__DEV__) console.log('[promo] fresh promotions:', fresh?.length, JSON.stringify(fresh?.map(p => ({ key: p.campaign_key, status: p.status, trigger: p.trigger_type, canRedeem: p.can_redeem, benefit: p.benefit_type }))));
 
       const now = new Date();
       const displayable = fresh.filter((p) => {
         // Premium users should only see CREDITS promotions.
         if (hasActivePremium && p.benefit_type !== 'CREDITS') {
-          console.log('[promo] skipping non-CREDITS for premium user:', p.campaign_key, 'benefit:', p.benefit_type);
+          if (__DEV__) console.log('[promo] skipping non-CREDITS for premium user:', p.campaign_key, 'benefit:', p.benefit_type);
           return false;
         }
         const structValid = isPromoStructurallyValid(p);
         if (!structValid) {
-          console.log('[promo] structurally invalid:', p.campaign_key, 'status:', p.status, 'trigger:', p.trigger_type, 'eligibility:', p.eligibility_type, 'benefit:', p.benefit_type, 'starts_at:', p.starts_at);
+          if (__DEV__) console.log('[promo] structurally invalid:', p.campaign_key, 'status:', p.status, 'trigger:', p.trigger_type, 'eligibility:', p.eligibility_type, 'benefit:', p.benefit_type, 'starts_at:', p.starts_at);
           return false;
         }
         const timeValid = isPromoCurrentlyValid(p, now);
         if (!timeValid) {
-          console.log('[promo] not currently valid:', p.campaign_key, 'status:', p.status, 'starts_at:', p.starts_at, 'ends_at:', p.ends_at, 'now:', now.toISOString());
+          if (__DEV__) console.log('[promo] not currently valid:', p.campaign_key, 'status:', p.status, 'starts_at:', p.starts_at, 'ends_at:', p.ends_at, 'now:', now.toISOString());
           return false;
         }
         const record = store.getRecord(userId, p.campaign_key);
         const canShow = canShowCampaign(p, record, userId, store, now);
         if (!canShow) {
-          console.log('[promo] canShowCampaign false:', p.campaign_key, 'record:', JSON.stringify(record), 'sessionShown:', store.isShownThisSession(userId, p.campaign_key));
+          if (__DEV__) console.log('[promo] canShowCampaign false:', p.campaign_key, 'record:', JSON.stringify(record), 'sessionShown:', store.isShownThisSession(userId, p.campaign_key));
           return false;
         }
-        console.log('[promo] displayable:', p.campaign_key);
+        if (__DEV__) console.log('[promo] displayable:', p.campaign_key);
         return true;
       });
 
-      console.log('[promo] displayable count:', displayable.length);
+      if (__DEV__) console.log('[promo] displayable count:', displayable.length);
       const selected = selectPromotion(displayable);
-      console.log('[promo] selected:', selected?.campaign_key ?? 'none');
+      if (__DEV__) console.log('[promo] selected:', selected?.campaign_key ?? 'none');
       if (!selected) return null;
 
       store.recordShown(userId, selected.campaign_key);
       store.markShownThisSession(userId, selected.campaign_key);
       return selected;
     } catch (err) {
-      console.log('[promo] error in tryShowPromotion:', err);
+      if (__DEV__) console.log('[promo] error in tryShowPromotion:', err);
       return null;
     } finally {
       store.releaseDisplayLock();

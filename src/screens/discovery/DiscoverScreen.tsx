@@ -37,6 +37,7 @@ import { BANNER_H, PromotionBanner } from '@/components/discovery/PromotionBanne
 import SuperMessageModal, { type SuperMessageTarget } from '@/components/discovery/SuperMessageModal';
 import { SwipeIcon } from '@/components/layout/AppTabBar';
 import { NotificationPromptModal } from '@/components/notifications/NotificationPromptModal';
+import { IdentityVerificationPromptModal } from '@/components/profile/IdentityVerificationPromptModal';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useActivateBoost } from '@/hooks/billing/useActivateBoost';
@@ -49,6 +50,7 @@ import { useSendSuperMessage } from '@/hooks/discovery/useSendSuperMessage';
 import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
 import { useNotificationPrompt } from '@/hooks/notifications/useNotificationPrompt';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
+import { useIdentityVerificationPrompt } from '@/hooks/profile/useIdentityVerificationPrompt';
 import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useTheme } from '@/hooks/use-theme';
 import { useReviewPrompt } from '@/hooks/useReviewPrompt';
@@ -335,6 +337,7 @@ export default function DiscoverScreen() {
   const sendSuperMessage = useSendSuperMessage();
   const { onMatch: onReviewMatch } = useReviewPrompt();
   const notifPrompt = useNotificationPrompt();
+  const idVerifPrompt = useIdentityVerificationPrompt();
   const { mutate: rewind } = useRewind();
   const { entitlements, refreshEntitlements } = useEntitlements();
 
@@ -407,18 +410,18 @@ export default function DiscoverScreen() {
   }, [matchVisible]);
 
   const handleTryShowPromotion = useCallback(async () => {
-    console.log('[promo] handleTryShowPromotion called, userId:', userId, 'activePromo:', !!activePromotionRef.current, 'matchVisible:', matchVisibleRef.current);
+    if (__DEV__) console.log('[promo] handleTryShowPromotion called, userId:', userId, 'activePromo:', !!activePromotionRef.current, 'matchVisible:', matchVisibleRef.current);
     if (!userId) return;
     if (activePromotionRef.current) return;
     const promo = await tryShowPromotion();
-    console.log('[promo] handleTryShowPromotion result:', promo?.campaign_key ?? 'null');
+    if (__DEV__) console.log('[promo] handleTryShowPromotion result:', promo?.campaign_key ?? 'null');
     if (!promo) return;
     if (matchVisibleRef.current) {
-      console.log('[promo] deferring to pending (match visible)');
+      if (__DEV__) console.log('[promo] deferring to pending (match visible)');
       pendingPromotionRef.current = promo;
       return;
     }
-    console.log('[promo] setting active promotion');
+    if (__DEV__) console.log('[promo] setting active promotion');
     setActivePromotion(promo);
   }, [tryShowPromotion, userId]);
 
@@ -670,6 +673,11 @@ export default function DiscoverScreen() {
           onSuccess: (response) => {
             if (direction === 'LIKE') {
               notifPrompt.onLike();
+              // Show identity verification prompt only when no match overlay
+              // is about to appear and no other modal is currently blocking.
+              if (!response.is_match) {
+                idVerifPrompt.onLikeOrSuperLike(notifPrompt.visible);
+              }
             }
             if (response.is_match && response.match) {
               setMatchName(response.match.other_user.display_name);
@@ -720,7 +728,7 @@ export default function DiscoverScreen() {
         },
       );
     },
-    [swipe, router, onReviewMatch, handleTryShowPromotion, entitlements, notifPrompt],
+    [swipe, router, onReviewMatch, handleTryShowPromotion, entitlements, notifPrompt, idVerifPrompt],
   );
 
   // ── Rewind handler ──────────────────────────────────────────────────────────
@@ -1008,6 +1016,12 @@ export default function DiscoverScreen() {
                 });
               }
             }}
+            onLikeSuccess={(isMatch) => {
+              // Don't show the prompt when a match overlay is about to appear.
+              if (!isMatch) {
+                idVerifPrompt.onLikeOrSuperLike(notifPrompt.visible);
+              }
+            }}
           />
         ) : (
         <>
@@ -1153,6 +1167,9 @@ export default function DiscoverScreen() {
         onKeepSwiping={() => {
           setMatchVisible(false);
           onReviewMatch();
+          // Delay so the match overlay's fade-out completes (~300ms) before
+          // the notification prompt appears — prevents two modals overlapping.
+          setTimeout(() => notifPrompt.onMatch(), 400);
         }}
       />
 
@@ -1176,8 +1193,16 @@ export default function DiscoverScreen() {
       {/* ── Notification prompt — shown on first like ── */}
       <NotificationPromptModal
         visible={notifPrompt.visible}
+        isLoading={notifPrompt.isLoading}
         onEnable={notifPrompt.handleEnable}
         onDismiss={notifPrompt.handleDismiss}
+      />
+
+      {/* ── Identity verification nudge — shown on a progressive schedule ── */}
+      <IdentityVerificationPromptModal
+        visible={idVerifPrompt.visible}
+        onVerifyNow={idVerifPrompt.handleVerifyNow}
+        onDismiss={idVerifPrompt.handleDismiss}
       />
 
       {/* InsufficientCreditsModal is mounted globally in _layout.tsx */}
