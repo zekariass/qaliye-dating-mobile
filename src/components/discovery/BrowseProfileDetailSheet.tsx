@@ -285,7 +285,7 @@ export default function BrowseProfileDetailSheet({
               {/* Verified badge */}
               {card.is_verified && (
                 <View style={[styles.heroVerified, heroPhotos.length > 1 && { top: 84 }]}>
-                  <VerifiedBadge size={20} />
+                  <VerifiedBadge pill dark />
                 </View>
               )}
 

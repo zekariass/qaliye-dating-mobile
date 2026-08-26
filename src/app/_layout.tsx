@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { router, Stack } from 'expo-router';
@@ -5,6 +6,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+import '@/lib/sentry';
 
 import {
     Inter_400Regular,
@@ -25,7 +28,7 @@ import { applyFontOverride } from '@/utils/fontOverride';
 applyFontOverride();
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayout() {
   // Native splash is hidden by the React SplashScreen component
   // once its animated content has rendered, avoiding a blank gap.
 
@@ -110,3 +113,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);

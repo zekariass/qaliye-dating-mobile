@@ -6,7 +6,7 @@
       "qaliyedating",
       "qaliyemobile"
     ],
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
@@ -112,7 +112,15 @@
         }
       ],
       "expo-asset",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "react-native-qaliye",
+          "organization": "habesha-drive"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

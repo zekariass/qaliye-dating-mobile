@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as NativeSplash from 'expo-splash-screen';
 import { useCallback, useEffect, useState } from 'react';
-import { Dimensions, Image, StatusBar, StyleSheet, View } from 'react-native';
+import { Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withSpring,
-  withTiming,
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withRepeat,
+    withSequence,
+    withSpring,
+    withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -293,6 +294,9 @@ export default function SplashScreen() {
         <View style={styles.progressTrack}>
           <ShimmerBar />
         </View>
+        <Text style={styles.versionText}>
+          v{Constants.expoConfig?.version ?? '1.0.0'}
+        </Text>
       </View>
     </Animated.View>
   );
@@ -563,5 +567,11 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.9)',
+  },
+  versionText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.45)',
+    marginTop: 4,
   },
 });

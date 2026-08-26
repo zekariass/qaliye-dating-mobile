@@ -19,6 +19,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { colors, spacing } from '@/constants/theme';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import type { ActivityStatus } from '@/types/activity';
@@ -270,8 +271,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
           {/* Verified — bottom right of photo */}
           {card.is_verified && (
             <View style={styles.verifiedRow}>
-              <Ionicons name="shield-checkmark" size={rs(12, scale)} color="#7EC8FF" />
-              <Text style={[styles.verifiedText, { fontSize: rs(12, scale) }]}>Verified</Text>
+              <VerifiedBadge pill dark />
             </View>
           )}
         </View>
@@ -378,18 +378,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 14,
     right: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
     zIndex: 3,
-  },
-  verifiedText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#7EC8FF',
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   age: {
     fontSize: 28,

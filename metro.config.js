@@ -1,7 +1,9 @@
-const { getDefaultConfig } = require('expo/metro-config');
+const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 const { withNativeWind } = require('nativewind/metro');
 
-const config = getDefaultConfig(__dirname);
+// getSentryExpoConfig is a drop-in for getDefaultConfig that assigns unique Debug IDs
+// to bundles and source maps so Sentry can symbolicate stack traces.
+const config = getSentryExpoConfig(__dirname);
 
 config.resolver.unstable_enablePackageExports = true;
 

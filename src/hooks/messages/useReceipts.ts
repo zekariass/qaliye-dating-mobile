@@ -1,6 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 
-import { markDelivered, markRead } from '@/api/chat/chatApi';
+import { markDelivered, markRead, type InboxFilter } from '@/api/chat/chatApi';
+import { inboxQueryKey, type InboxCacheData } from '@/hooks/messages/useInbox';
 import { useChatStore } from '@/stores/chat-store';
 
 // ---------------------------------------------------------------------------
@@ -14,6 +16,7 @@ const DEBOUNCE_MS = 500;
 // ---------------------------------------------------------------------------
 
 export function useReceipts(matchId: string) {
+  const queryClient = useQueryClient();
   const deliveryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDelivery = useRef<number>(0);
@@ -68,6 +71,27 @@ export function useReceipts(matchId: string) {
             myLastReadSequence: seq,
             myLastDeliveredSequence: seq,
           });
+          // Optimistically clear the badge in the inbox cache so the unread
+          // count drops to 0 immediately without waiting for the next refetch.
+          for (const filter of ['ALL', 'UNREAD'] as InboxFilter[]) {
+            queryClient.setQueryData(
+              inboxQueryKey(filter),
+              (old: InboxCacheData | undefined) => {
+                if (!old) return old;
+                return {
+                  ...old,
+                  pages: old.pages.map((page) => ({
+                    ...page,
+                    items: page.items.map((item) =>
+                      item.matchId === matchId
+                        ? { ...item, unreadCount: 0 }
+                        : item,
+                    ),
+                  })),
+                };
+              },
+            );
+          }
         } catch {
           // Non-fatal — will be retried on next visible check
         }

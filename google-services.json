@@ -22,11 +22,35 @@
           }
         },
         {
+          "client_id": "92774223454-aalmgpckdmnmnd65d1j3t4e88j2m72at.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.qaliye.app",
+            "certificate_hash": "72d2192a5463f1f1ed8f102cd171450db2f0a0dc"
+          }
+        },
+        {
           "client_id": "92774223454-isbapj5jd18tk4no76j4o0bbj8vbrm3a.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.qaliye.app",
             "certificate_hash": "67b10c6585a9c3fd516b29bf0cb6ae6cd036052c"
+          }
+        },
+        {
+          "client_id": "92774223454-nm3njmal4hl6d8aphuqssaej76sjre0c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.qaliye.app",
+            "certificate_hash": "de4c1819c3992e3264e937787e58aab61f487a45"
+          }
+        },
+        {
+          "client_id": "92774223454-v7asaila6thurspk9kcfmp88qq31hg8u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.qaliye.app",
+            "certificate_hash": "ce296d896e784a128d317502bd069250696e7602"
           }
         },
         {

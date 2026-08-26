@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import type { InboxFilter } from '@/api/chat/chatApi';
-import { upsertInboxItem, useInbox } from '@/hooks/messages/useInbox';
+import { useInbox } from '@/hooks/messages/useInbox';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -58,22 +58,12 @@ export function useInboxChannel(
         config: { private: true },
       });
 
-      channel.on('broadcast', { event: 'inbox.match.updated' }, (payload) => {
-        const p = payload?.payload;
-        const matchId = p?.matchId ?? p?.match_id;
-        const preview = p?.preview ?? p?.lastMessage ?? p?.last_message;
-        const senderDisplayName = p?.senderDisplayName ?? p?.sender_display_name;
-        const createdAt = p?.createdAt ?? p?.created_at ?? new Date().toISOString();
-
-        if (matchId) {
-          upsertInboxItem(queryClientRef.current, matchId, {
-            preview,
-            senderDisplayName,
-            createdAt,
-          });
-        } else {
-          invalidateRef.current();
-        }
+      channel.on('broadcast', { event: 'inbox.match.updated' }, () => {
+        // Always refetch so the server's unread_count (which correctly excludes
+        // your own sent messages) is used. Optimistic construction from the
+        // partial broadcast payload was incrementing the badge for your own
+        // outgoing messages, producing incorrect unread counts.
+        invalidateRef.current();
       });
 
       channel.on('broadcast', { event: 'inbox.match.removed' }, (payload) => {

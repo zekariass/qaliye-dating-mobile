@@ -22,6 +22,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
 import BrowseProfileDetailSheet from '@/components/discovery/BrowseProfileDetailSheet';
 import { CardDto } from '@/components/discovery/ProfileCard';
 import { colors, radius, spacing } from '@/constants/theme';
@@ -369,10 +370,7 @@ function BrowseProfileCard({
               </View>
             ) : null}
             {item.is_verified && (
-              <View style={styles.verifiedRow}>
-                <Ionicons name="shield-checkmark" size={rs(12, scale)} color={colors.verifiedBlue} />
-                <Text style={[styles.verifiedText, { fontSize: rs(12, scale) }]}>Verified</Text>
-              </View>
+              <VerifiedBadge pill dark />
             )}
           </View>
         )}
@@ -869,16 +867,6 @@ const styles = StyleSheet.create({
   },
   photoDotInactive: {
     backgroundColor: '#FFFFFF',
-  },
-  verifiedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  verifiedText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.verifiedBlue,
   },
   cardInfo: {
     position: 'absolute',

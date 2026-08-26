@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -542,6 +543,10 @@ export default function AuthScreen() {
                 </Text>
               </View>
             </View>
+
+            <Text style={[s.versionText, { color: isDark ? '#4A3868' : '#C4B5E0' }]}>
+              v{Constants.expoConfig?.version ?? '1.0.0'}
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -837,6 +842,12 @@ const s = StyleSheet.create({
   privacyText: {
     fontSize: 11,
     lineHeight: 17,
+  },
+  versionText: {
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: spacing.md,
   },
 
   /* ── Loading overlay ────────────────────────────────────────────────── */
