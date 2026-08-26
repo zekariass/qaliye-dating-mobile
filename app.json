@@ -120,7 +120,8 @@
           "project": "react-native-qaliye",
           "organization": "habesha-drive"
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
