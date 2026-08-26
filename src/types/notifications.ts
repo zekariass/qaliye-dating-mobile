@@ -44,12 +44,19 @@ export type NotificationPreferencesPatch = {
   marketingNotificationsConsentVersion?: string;
 };
 
+export type MarketingNavigation = {
+  screen: string;
+  params?: Record<string, unknown>;
+};
+
 export type NotificationPayloadData = {
   type: NotificationType;
   match_id?: string;
   message_id?: string;
   discovery_action_id?: string;
   campaign_id?: string;
+  /** Only present for MARKETING notifications. Contains the deep-link target. */
+  navigation?: MarketingNavigation;
 };
 
 export type ValidatedNavIntent = {

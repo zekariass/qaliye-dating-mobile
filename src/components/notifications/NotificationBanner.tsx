@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { navigateMarketingIntent } from '@/services/notifications/marketingNavigation';
 import { useNotificationsStore } from '@/stores/notifications-store';
 import type { ValidatedNavIntent } from '@/types/notifications';
 
@@ -75,7 +76,12 @@ export function NotificationBanner() {
         router.push('/(app)/settings' as any);
         break;
       case 'MARKETING':
-        router.push('/(app)/(tabs)/index' as any);
+        navigateMarketingIntent(
+          router,
+          navIntent.screen || undefined,
+          navIntent.params as Record<string, unknown> | undefined,
+          navIntent.campaign_id,
+        );
         break;
     }
   };

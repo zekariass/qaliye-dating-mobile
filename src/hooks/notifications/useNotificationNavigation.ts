@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 
 import type * as NotificationsType from 'expo-notifications';
 
+import { navigateMarketingIntent } from '@/services/notifications/marketingNavigation';
 import { Expo } from '@/services/notifications/notificationsModule';
 import {
     buildNavIntent,
@@ -58,7 +59,12 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
           router.push('/(app)/settings' as any);
           break;
         case 'MARKETING':
-          router.push('/(app)/(tabs)/index' as any);
+          navigateMarketingIntent(
+            router,
+            intent.screen || undefined,
+            intent.params as Record<string, unknown> | undefined,
+            intent.campaign_id,
+          );
           break;
         default:
           break;

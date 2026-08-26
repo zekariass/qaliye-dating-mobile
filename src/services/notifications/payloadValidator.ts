@@ -1,4 +1,5 @@
 import type {
+    MarketingNavigation,
     NotificationPayloadData,
     NotificationType,
     ValidatedNavIntent,
@@ -28,6 +29,38 @@ export function validatePayload(raw: unknown): NotificationPayloadData | null {
 
   if (!SUPPORTED_TYPES.includes(type)) return null;
 
+  // Extract deep-link navigation for MARKETING notifications only.
+  //
+  // FCM (Android) requires all data-payload values to be strings, so the
+  // backend JSON-serializes the nested `navigation` object before sending.
+  // We therefore handle both the already-parsed object case (iOS / local
+  // test sends) and the JSON-string case (FCM on Android).
+  let navigation: MarketingNavigation | undefined;
+  if (type === 'MARKETING') {
+    let nav: unknown = data.navigation;
+
+    // Deserialize if the backend sent it as a JSON string (FCM requirement)
+    if (typeof nav === 'string') {
+      try { nav = JSON.parse(nav); } catch { nav = undefined; }
+    }
+
+    if (nav && typeof nav === 'object' && !Array.isArray(nav)) {
+      const navObj = nav as Record<string, unknown>;
+      if (typeof navObj.screen === 'string' && navObj.screen) {
+        // `params` may also be a JSON string for the same reason
+        let params: Record<string, unknown> | undefined;
+        let rawParams = navObj.params;
+        if (typeof rawParams === 'string') {
+          try { rawParams = JSON.parse(rawParams); } catch { rawParams = undefined; }
+        }
+        if (rawParams && typeof rawParams === 'object' && !Array.isArray(rawParams)) {
+          params = rawParams as Record<string, unknown>;
+        }
+        navigation = { screen: navObj.screen, params };
+      }
+    }
+  }
+
   return {
     type,
     match_id: isValidUuid(data.match_id) ? data.match_id : undefined,
@@ -36,6 +69,7 @@ export function validatePayload(raw: unknown): NotificationPayloadData | null {
       ? data.discovery_action_id
       : undefined,
     campaign_id: isValidUuid(data.campaign_id) ? data.campaign_id : undefined,
+    navigation,
   };
 }
 
@@ -65,6 +99,12 @@ export function buildNavIntent(
     case 'ACCOUNT_ALERT':
       return { type, screen: 'settings' };
     case 'MARKETING':
-      return { type, campaign_id, screen: 'index' };
+      return {
+        type,
+        campaign_id,
+        // screen holds the deep-link target name (empty string = no deep-link → home)
+        screen: payload.navigation?.screen ?? '',
+        params: payload.navigation?.params,
+      };
   }
 }
