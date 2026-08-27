@@ -406,6 +406,16 @@
     "connectionErrorTitle": "የግንኙነት ችግር",
     "connectionErrorBody": "ሰርቨሮችን ማድረስ አልቻልንም። እባክዎ የእርስዎን የእርስዎን የበይነመረብ ግንኙነት ያረጋግጡ እና እንደገና ይሞክሩ።"
   },
+  "appUpdate": {
+    "mandatoryTitle": "ዝመና ያስፈልጋል",
+    "mandatoryBody": "ቀጥሎ ለመጠቀም አዲስ የቃሊዬ ስሪት ያስፈልጋል። እባክዎ የቅርብ ጊዜ ማሻሻያዎችን ለማግኘት እና ቃሊዬን ቀጥሎ ለመጠቀም መተግበሪያውን ያዘመኑ።",
+    "optionalTitle": "ዝመና ይገኛል",
+    "optionalBody": "ማሻሻያዎችና የችግር ጥገናዎች አሉት የቃሊዬ አዲስ ስሪት ይገኛል።",
+    "updateNow": "አሁን ያዘመኑ",
+    "later": "በኋላ",
+    "storeErrorTitle": "ሱፍ መክፈት አልተቻለም",
+    "storeErrorBody": "እባክዎ ቃሊዬን ለማዘመን የመተግበሪያ ሱፉን በእጅ ይክፈቱ።"
+  },
   "billing": {
     "settingsSection": "ደንብ እና ክሬዲቶች",
     "premiumTitle": "ፕሬሚየም አግኝ",

@@ -406,6 +406,16 @@
     "connectionErrorTitle": "ዓቕቢ ግንኙነት",
     "connectionErrorBody": "ሰርቨራት ክበጽሕ ኣይክኣልናን። እባኽኹም ዓውዲ መርሕኹም ኣረጋግጹ እሞ ደጊምኩም ፈትኑ።"
   },
+  "appUpdate": {
+    "mandatoryTitle": "ምሕዳስ ይድልየና",
+    "mandatoryBody": "ንምቕጻል ሓዱሽ ናይ ቃልያኤ ስርሓት ይድልየና። እባኽኹም ናይ ቀረባ ግዜ ምምሕያሻታት ንምርካብን ቃልያኤ ንምቕጻልን ኣፕሊኬሽኑ ኣምስሉ።",
+    "optionalTitle": "ምሕዳስ ቅሩብ እዩ",
+    "optionalBody": "ምምሕያሻታትን ምስታፍ ጌረሮታትን ዘለዎ ሓዱሽ ናይ ቃልያኤ ስርሓት ቅሩብ እዩ።",
+    "updateNow": "ሕጂ ኣምስሉ",
+    "later": "ድሕሪ",
+    "storeErrorTitle": "ስቶር ክኽፈት ኣይክኣለን",
+    "storeErrorBody": "እባኽኹም ቃልያኤ ንምሕዳስ ናይ ኣፕሊኬሽን ስቶር ብኢድካ ክፈቱ።"
+  },
   "billing": {
     "settingsSection": "ምዝገባ & ክሬዲቶች",
     "premiumTitle": "ፕሪሚየም ጀምር",

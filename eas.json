@@ -16,7 +16,8 @@
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "92774223454-mmu2j3123bc6g7hf1fc3ui9nucljhfk9.apps.googleusercontent.com",
         "EXPO_PUBLIC_APPLE_SERVICE_ID": "com.qaliye.app.signin",
         "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_RApqaKcQSEHhZiZjPgBWbSPHClb",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ"
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://611c7bf220192e1a50aecebce523902b@o4511372220497920.ingest.de.sentry.io/4511967156961360"
       },
       "channel": "development"
     },
@@ -35,7 +36,8 @@
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "92774223454-mmu2j3123bc6g7hf1fc3ui9nucljhfk9.apps.googleusercontent.com",
         "EXPO_PUBLIC_APPLE_SERVICE_ID": "com.qaliye.app.signin",
         "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_RApqaKcQSEHhZiZjPgBWbSPHClb",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ"
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://611c7bf220192e1a50aecebce523902b@o4511372220497920.ingest.de.sentry.io/4511967156961360"
       },
       "channel": "ios-simulator"
     },
@@ -50,7 +52,8 @@
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "92774223454-mmu2j3123bc6g7hf1fc3ui9nucljhfk9.apps.googleusercontent.com",
         "EXPO_PUBLIC_APPLE_SERVICE_ID": "com.qaliye.app.signin",
         "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_RApqaKcQSEHhZiZjPgBWbSPHClb",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ"
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://611c7bf220192e1a50aecebce523902b@o4511372220497920.ingest.de.sentry.io/4511967156961360"
       },
       "channel": "preview"
     },
@@ -71,7 +74,8 @@
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "92774223454-mmu2j3123bc6g7hf1fc3ui9nucljhfk9.apps.googleusercontent.com",
         "EXPO_PUBLIC_APPLE_SERVICE_ID": "com.qaliye.app.signin",
         "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_RApqaKcQSEHhZiZjPgBWbSPHClb",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ"
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_EQNGEQMGOAfiRNdkLrqpLVelHxJ",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://611c7bf220192e1a50aecebce523902b@o4511372220497920.ingest.de.sentry.io/4511967156961360"
       },
       "channel": "production"
     }

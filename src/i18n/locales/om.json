@@ -350,6 +350,16 @@
     "connectionErrorTitle": "Rakkoo qunnamtii",
     "connectionErrorBody": "Sarvaraa qabachuu hin dandeenye. Maaloo qunnamtii intarneetii kee mirkaneessi irra deebi'ii yaali."
   },
+  "appUpdate": {
+    "mandatoryTitle": "Haaraa'uu Barbaachisa",
+    "mandatoryBody": "Itti fufuuuf haaraa appii Qaliyee barbaachisa. Maaloo fooyya'iinsa dhiyoo ta'e argachuuf fi Qaliyee itti fayyadamauf appii haari'i.",
+    "optionalTitle": "Haaraa'uu Argama",
+    "optionalBody": "Haaraa'uu Qaliyee fooyya'iinsa fi dogoggora sirreessii qabu jira.",
+    "updateNow": "Amma Haari'i",
+    "later": "Booda",
+    "storeErrorTitle": "Stooree banuu hin dandeenye",
+    "storeErrorBody": "Maaloo Qaliyee haaruuf stooree appii harkaan bani."
+  },
   "billing": {
     "settingsSection": "Gamaggamaa & Kreediitii",
     "premiumTitle": "Premium Argadhu",

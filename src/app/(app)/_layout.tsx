@@ -7,11 +7,13 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 import type { SharedValue } from 'react-native-reanimated';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
+import { AppUpdateModal } from '@/components/app/AppUpdateModal';
 import { InsufficientCreditsModal } from '@/components/billing/InsufficientCreditsModal';
 import { ThemedAlert } from '@/components/common/ThemedAlert';
 import { NotificationBanner } from '@/components/notifications/NotificationBanner';
 import { colors, spacing } from '@/constants/theme';
 import { useHeartbeat } from '@/hooks/activity/useHeartbeat';
+import { useAppVersionCheck } from '@/hooks/app/useAppVersionCheck';
 import { useBootstrapApp } from '@/hooks/auth/useBootstrapApp';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
@@ -36,6 +38,7 @@ export default function AppLayout() {
 
   useHeartbeat();
   useEligiblePromotions();
+  useAppVersionCheck();
 
   useEffect(() => {
     if (hasActiveSession && meStatus === 'idle') {
@@ -180,6 +183,7 @@ export default function AppLayout() {
       <NotificationBanner />
       <ThemedAlert />
       <InsufficientCreditsModal />
+      <AppUpdateModal />
     </View>
   );
 }

@@ -468,6 +468,16 @@
     "connectionErrorTitle": "Connection problem",
     "connectionErrorBody": "We couldn't reach our servers. Please check your internet connection and try again."
   },
+  "appUpdate": {
+    "mandatoryTitle": "Update Required",
+    "mandatoryBody": "A new version of Qaliye is required to continue. Please update the app to get the latest improvements and continue using Qaliye.",
+    "optionalTitle": "Update Available",
+    "optionalBody": "A new version of Qaliye is available with improvements and bug fixes.",
+    "updateNow": "Update Now",
+    "later": "Later",
+    "storeErrorTitle": "Could not open store",
+    "storeErrorBody": "Please open the app store manually to update Qaliye."
+  },
   "billing": {
     "settingsSection": "Subscription & Credits",
     "premiumTitle": "Go Premium",
