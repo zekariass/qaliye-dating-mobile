@@ -1,14 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 interface PrefItem {
-  icon: IoniconName;
+  icon: string;
   label: string;
   value: string;
 }
@@ -66,7 +64,7 @@ function buildPreferences(p: CurrentUserProfile): PrefItem[] {
     items.push({ icon: 'heart-outline', label: 'Wants Children Pref', value: formatEnum(p.wantsChildrenPreference) });
   }
   if (p.religionPreferences?.length) {
-    items.push({ icon: 'moon-outline', label: 'Religion Preferences', value: p.religionPreferences.join(', ') });
+    items.push({ icon: 'mci:hands-pray', label: 'Religion Preferences', value: p.religionPreferences.join(', ') });
   }
   if (p.languagePreferences?.length) {
     items.push({ icon: 'chatbubble-outline', label: 'Language Preferences', value: p.languagePreferences.map((l) => l.name).join(', ') });
@@ -113,7 +111,13 @@ export default function PreferencesContent({ profile }: PreferencesContentProps)
             {idx > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
             <View style={styles.listRow}>
               <View style={[styles.detailIconWrap, { backgroundColor: iconBg, borderColor: borderCol }]}>
-                <Ionicons name={item.icon} size={17} color={colors.primary} />
+                {item.icon.startsWith('mci:') ? (
+                  <MaterialCommunityIcons name={item.icon.slice(4) as any} size={17} color={colors.primary} />
+                ) : /^[a-z-]+$/i.test(item.icon) ? (
+                  <Ionicons name={item.icon as any} size={17} color={colors.primary} />
+                ) : (
+                  <Text style={{ fontSize: 17 }}>{item.icon}</Text>
+                )}
               </View>
               <View style={styles.detailBody}>
                 <Text style={[styles.detailLabel, { color: mutedCol }]}>{item.label}</Text>

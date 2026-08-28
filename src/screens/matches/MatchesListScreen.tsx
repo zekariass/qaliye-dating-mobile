@@ -437,7 +437,7 @@ export default function MatchesListScreen() {
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
   const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ item: MatchItemDto }> }) => {
+    ({ viewableItems }: { viewableItems: { item: MatchItemDto }[] }) => {
       setVisibleIds(viewableItems.map((v) => v.item.user_id));
     },
   );
@@ -449,7 +449,7 @@ export default function MatchesListScreen() {
   } = useMatches();
 
   const inboxUnreadMap = useMemo<Record<string, number>>(() => {
-    const data = qc.getQueryData<{ pages: Array<{ items: InboxItem[] }> }>(
+    const data = qc.getQueryData<{ pages: { items: InboxItem[] }[] }>(
       inboxQueryKey('ALL'),
     );
     if (!data) return {};

@@ -4,7 +4,7 @@ import * as Sentry from '@sentry/react-native';
 // Minimal router interface — keeps this module free of expo-router imports
 // ---------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 interface RouterLike {
   push: (href: any) => void;
 }

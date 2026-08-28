@@ -286,7 +286,7 @@ export default function MessagesListScreen() {
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
   const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ item: UnifiedItem }> }) => {
+    ({ viewableItems }: { viewableItems: { item: UnifiedItem }[] }) => {
       setVisibleIds(
         viewableItems
           .filter((v) => v.item.kind === 'conversation')

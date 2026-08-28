@@ -127,6 +127,28 @@ export type SubscriptionInfo = {
   auto_renew: boolean;
 } | null;
 
+/**
+ * Merged limit + cost entry for a single action.
+ *
+ * Replaces the old separate `QuotaInfo` (from `limits`) and `ActionCostInfo`
+ * (from `costs`). The backend now returns a single `limits_and_costs` map
+ * keyed by UPPER_SNAKE_CASE action codes (LIKE, SUPER_LIKE, …).
+ */
+export type ActionLimitAndCost = {
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  resets_at: string | null;
+  member_credit_cost: number;
+  actual_credit_cost: number;
+  period_type: string;
+  apply_credit_after_limit: boolean;
+};
+
+/**
+ * @deprecated Use `ActionLimitAndCost` instead. Kept for backward compat with
+ * code that hasn't been migrated yet.
+ */
 export type QuotaInfo = {
   used: number;
   limit: number | null;
@@ -134,7 +156,18 @@ export type QuotaInfo = {
   resets_at?: string;
 };
 
-export type EntitlementLimits = Record<string, QuotaInfo>;
+/**
+ * @deprecated Use `ActionLimitAndCost` instead.
+ */
+export type ActionCostInfo = {
+  member_credit_cost: number;
+  actual_credit_cost: number;
+  limit_value: number | null;
+  period_type: string;
+  apply_credit_after_limit: boolean;
+};
+
+export type EntitlementLimitsAndCosts = Record<string, ActionLimitAndCost>;
 
 export type EntitlementCredits = {
   credit_balance: number;
@@ -149,6 +182,23 @@ export type EntitlementFeatures = {
   incognito_mode: boolean;
 };
 
+/**
+ * Canonical action codes used as keys in `limits_and_costs`.
+ */
+export const ACTION_CODES = {
+  LIKE: 'LIKE',
+  SUPER_LIKE: 'SUPER_LIKE',
+  REWIND: 'REWIND',
+  BOOST: 'BOOST',
+  VOICE_MESSAGE: 'VOICE_MESSAGE',
+  IMAGE_MESSAGE: 'IMAGE_MESSAGE',
+} as const;
+
+/**
+ * @deprecated Use `ACTION_CODES` instead. Kept for backward compat.
+ * Old camelCase limit keys (likes, super_likes, …) are no longer returned
+ * by the API — use the UPPER_SNAKE_CASE action codes in `ACTION_CODES`.
+ */
 export const LIMIT_KEYS = {
   LIKES: 'likes',
   SUPER_LIKES: 'super_likes',
@@ -174,25 +224,16 @@ export type PlanLimits = {
   IMAGE_CHAT_MSGS: number | null;
 };
 
-export type ActionCostInfo = {
-  member_credit_cost: number;
-  actual_credit_cost: number;
-  limit_value: number | null;
-  period_type: string;
-  apply_credit_after_limit: boolean;
-};
-
 export type EntitlementResponse = {
   plan: BillingPlan;
   subscription: SubscriptionInfo;
-  limits: EntitlementLimits;
+  limits_and_costs: EntitlementLimitsAndCosts;
   credits: EntitlementCredits;
   active_boost: ActiveBoostInfo;
   features: EntitlementFeatures;
   plan_limits: PlanLimits;
   boost_duration_minutes: number;
   country_settings?: CountrySettings;
-  costs?: Record<string, ActionCostInfo>;
 };
 
 export type OfferDto = {

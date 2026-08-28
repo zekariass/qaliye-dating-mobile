@@ -1,13 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
@@ -95,7 +95,7 @@ type TextInputFieldProps = {
   onChangeText: (v: string) => void;
   sem: SemanticTheme;
   placeholder?: string;
-  leftIcon?: React.ComponentProps<typeof Ionicons>['name'];
+  leftIcon?: string;
   editable?: boolean;
   rightElement?: React.ReactNode;
 };
@@ -118,7 +118,13 @@ export const TextInputField = memo(function TextInputField({
       }}
     >
       {leftIcon && (
-        <Ionicons name={leftIcon} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+        leftIcon.startsWith('mci:') ? (
+          <MaterialCommunityIcons name={leftIcon.slice(4) as any} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+        ) : /^[a-z-]+$/i.test(leftIcon) ? (
+          <Ionicons name={leftIcon as any} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+        ) : (
+          <Text style={{ fontSize: 16, marginRight: 8 }}>{leftIcon}</Text>
+        )
       )}
       <TextInput
         value={value}
@@ -141,7 +147,7 @@ type SelectFieldProps = {
   options: readonly string[];
   onSelect: (v: string) => void;
   sem: SemanticTheme;
-  leftIcon?: React.ComponentProps<typeof Ionicons>['name'];
+  leftIcon?: string;
   placeholder?: string;
 };
 
@@ -173,7 +179,13 @@ export const SelectField = memo(function SelectField({
         accessibilityLabel={placeholder ? `${placeholder}: ${value}` : value}
       >
         {leftIcon && (
-          <Ionicons name={leftIcon} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+          leftIcon.startsWith('mci:') ? (
+            <MaterialCommunityIcons name={leftIcon.slice(4) as any} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+          ) : /^[a-z-]+$/i.test(leftIcon) ? (
+            <Ionicons name={leftIcon as any} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+          ) : (
+            <Text style={{ fontSize: 16, marginRight: 8 }}>{leftIcon}</Text>
+          )
         )}
         <Text
           className="flex-1 text-base"
@@ -380,8 +392,9 @@ export const DatePickerField = memo(function DatePickerField({
   const years = (() => {
     const now = new Date();
     const maxYear = now.getFullYear() - 18;
+    const minYear = now.getFullYear() - 100;
     const arr: number[] = [];
-    for (let y = 1950; y <= maxYear; y++) arr.push(y);
+    for (let y = minYear; y <= maxYear; y++) arr.push(y);
     return arr;
   })();
 
@@ -465,63 +478,75 @@ export const DatePickerField = memo(function DatePickerField({
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={dpStyles.overlay} onPress={() => setOpen(false)}>
-          <Pressable style={[dpStyles.card, { backgroundColor: sem.surface, borderColor: sem.border }]} onPress={(e) => e.stopPropagation()}>
-            <Text style={[dpStyles.title, { color: sem.textPrimary }]}>Date of Birth</Text>
-            <Text style={[dpStyles.subtitle, { color: sem.textSecondary }]}>You must be 18 or older</Text>
-
-            <View style={dpStyles.pickerRow}>
-              {/* Day */}
-              <View style={dpStyles.column}>
-                <ScrollView
-                  ref={dayScrollRef}
-                  style={{ height: PICKER_H }}
-                  onScroll={handleDayScroll}
-                  scrollEventThrottle={16}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingVertical: ITEM_H * 2 }}
-                >
-                  {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
-                    <Pressable key={d} onPress={() => { setDay(d); setDateError(null); scrollToValue(dayScrollRef, d - 1); }}>
-                      <Text style={[dpStyles.item, { color: d === validDay ? sem.accent : sem.textSecondary }]}>{d}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
+          <Pressable style={[dpStyles.card, { backgroundColor: sem.surface }]} onPress={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <View style={dpStyles.header}>
+              <View style={dpStyles.headerIconWrap}>
+                <Ionicons name="calendar" size={22} color={sem.accent} />
               </View>
+              <Text style={[dpStyles.title, { color: sem.textPrimary }]}>Date of Birth</Text>
+              <Text style={[dpStyles.subtitle, { color: sem.textSecondary }]}>You must be 18 or older</Text>
+            </View>
 
-              {/* Month */}
-              <View style={dpStyles.column}>
-                <ScrollView
-                  ref={monthScrollRef}
-                  style={{ height: PICKER_H }}
-                  onScroll={handleMonthScroll}
-                  scrollEventThrottle={16}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingVertical: ITEM_H * 2 }}
-                >
-                  {MONTHS_FULL.map((m, idx) => (
-                    <Pressable key={m} onPress={() => { setMonth(idx); setDateError(null); scrollToValue(monthScrollRef, idx); }}>
-                      <Text style={[dpStyles.item, { color: idx === month ? sem.accent : sem.textSecondary }]}>{m}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
+            {/* Picker */}
+            <View style={[dpStyles.pickerWrap, { backgroundColor: sem.surfaceMuted }]}>
+              {/* Selection highlight band */}
+              <View style={[dpStyles.selectionBand, { borderTopColor: sem.border, borderBottomColor: sem.border }]} />
 
-              {/* Year */}
-              <View style={dpStyles.column}>
-                <ScrollView
-                  ref={yearScrollRef}
-                  style={{ height: PICKER_H }}
-                  onScroll={handleYearScroll}
-                  scrollEventThrottle={16}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingVertical: ITEM_H * 2 }}
-                >
-                  {years.map((y) => (
-                    <Pressable key={y} onPress={() => { setYear(y); setDateError(null); scrollToValue(yearScrollRef, years.indexOf(y)); }}>
-                      <Text style={[dpStyles.item, { color: y === year ? sem.accent : sem.textSecondary }]}>{y}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
+              <View style={dpStyles.pickerRow}>
+                {/* Day */}
+                <View style={dpStyles.column}>
+                  <ScrollView
+                    ref={dayScrollRef}
+                    style={{ height: PICKER_H }}
+                    onScroll={handleDayScroll}
+                    scrollEventThrottle={16}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingVertical: ITEM_H * 2 }}
+                  >
+                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
+                      <Pressable key={d} onPress={() => { setDay(d); setDateError(null); scrollToValue(dayScrollRef, d - 1); }}>
+                        <Text style={[dpStyles.item, { color: d === validDay ? sem.accent : sem.textSecondary, fontWeight: d === validDay ? '700' : '400' }]}>{d}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Month */}
+                <View style={dpStyles.column}>
+                  <ScrollView
+                    ref={monthScrollRef}
+                    style={{ height: PICKER_H }}
+                    onScroll={handleMonthScroll}
+                    scrollEventThrottle={16}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingVertical: ITEM_H * 2 }}
+                  >
+                    {MONTHS_FULL.map((m, idx) => (
+                      <Pressable key={m} onPress={() => { setMonth(idx); setDateError(null); scrollToValue(monthScrollRef, idx); }}>
+                        <Text style={[dpStyles.item, { color: idx === month ? sem.accent : sem.textSecondary, fontWeight: idx === month ? '700' : '400' }]}>{m}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Year */}
+                <View style={dpStyles.column}>
+                  <ScrollView
+                    ref={yearScrollRef}
+                    style={{ height: PICKER_H }}
+                    onScroll={handleYearScroll}
+                    scrollEventThrottle={16}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingVertical: ITEM_H * 2 }}
+                  >
+                    {years.map((y) => (
+                      <Pressable key={y} onPress={() => { setYear(y); setDateError(null); scrollToValue(yearScrollRef, years.indexOf(y)); }}>
+                        <Text style={[dpStyles.item, { color: y === year ? sem.accent : sem.textSecondary, fontWeight: y === year ? '700' : '400' }]}>{y}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
               </View>
             </View>
 
@@ -532,12 +557,19 @@ export const DatePickerField = memo(function DatePickerField({
               </View>
             )}
 
+            {/* Buttons */}
             <View style={dpStyles.buttonRow}>
-              <Pressable style={[dpStyles.button, { borderColor: sem.border }]} onPress={() => setOpen(false)}>
-                <Text style={[dpStyles.buttonText, { color: sem.textSecondary }]}>Cancel</Text>
+              <Pressable
+                style={[dpStyles.buttonSecondary, { borderColor: sem.border }]}
+                onPress={() => setOpen(false)}
+              >
+                <Text style={[dpStyles.buttonSecondaryText, { color: sem.textSecondary }]}>Cancel</Text>
               </Pressable>
-              <Pressable style={[dpStyles.button, { borderColor: sem.accent, backgroundColor: sem.accentSoft }]} onPress={handleConfirm}>
-                <Text style={[dpStyles.buttonText, { color: sem.accent }]}>Confirm</Text>
+              <Pressable
+                style={[dpStyles.buttonPrimary, { backgroundColor: sem.accent }]}
+                onPress={handleConfirm}
+              >
+                <Text style={dpStyles.buttonPrimaryText}>Confirm</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -550,56 +582,73 @@ export const DatePickerField = memo(function DatePickerField({
 const dpStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   card: {
     width: '100%',
-    maxWidth: 360,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 20,
+    maxWidth: 380,
+    borderRadius: 20,
+    padding: 24,
+  },
+  // Header
+  header: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  headerIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     textAlign: 'center',
     marginBottom: 4,
+    letterSpacing: -0.2,
   },
   subtitle: {
     fontSize: 13,
     textAlign: 'center',
+  },
+  // Picker
+  pickerWrap: {
+    borderRadius: 14,
+    padding: 8,
     marginBottom: 16,
+    position: 'relative',
+  },
+  selectionBand: {
+    position: 'absolute',
+    top: '50%',
+    left: 8,
+    right: 8,
+    height: 40,
+    marginTop: -20,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
   },
   pickerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
-    marginBottom: 16,
+    gap: 4,
   },
   column: {
     flex: 1,
   },
   item: {
     fontSize: 16,
-    fontWeight: '500',
     textAlign: 'center',
     height: 40,
     lineHeight: 40,
   },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  button: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
+  // Error
   errorRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -613,8 +662,31 @@ const dpStyles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
-  buttonText: {
+  // Buttons
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  buttonSecondary: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  buttonSecondaryText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  buttonPrimary: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  buttonPrimaryText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

@@ -1,7 +1,7 @@
 import { apiClient } from '../apiClient';
 
 import type {
-    ActionCostInfo,
+    ActionLimitAndCost,
     BillingIntervalUnit,
     BillingPlatform,
     BoostActivationRequest,
@@ -26,7 +26,6 @@ import type {
     PromotionBenefitType,
     PromotionDiscountType,
     PromotionTriggerType,
-    QuotaInfo,
     RedeemPromotionResponse,
     RedemptionStatus,
     SubscriptionProvider,
@@ -39,15 +38,6 @@ import type {
 
 const BASE = '/api/v1/billing';
 
-function normalizeQuota(raw: Record<string, unknown>): QuotaInfo {
-  return {
-    used: (raw.used ?? 0) as number,
-    limit: (raw.limit ?? null) as number | null,
-    remaining: (raw.remaining ?? null) as number | null,
-    resets_at: (raw.resets_at ?? raw.resetsAt) as string | undefined,
-  };
-}
-
 function normalizeCountrySettings(raw: Record<string, unknown>): CountrySettings {
   return {
     country_code: (raw.country_code ?? raw.countryCode ?? '') as string,
@@ -57,11 +47,14 @@ function normalizeCountrySettings(raw: Record<string, unknown>): CountrySettings
   };
 }
 
-function normalizeActionCost(raw: Record<string, unknown>): ActionCostInfo {
+function normalizeActionLimitAndCost(raw: Record<string, unknown>): ActionLimitAndCost {
   return {
+    used: (raw.used ?? 0) as number,
+    limit: (raw.limit ?? raw.limit_value ?? null) as number | null,
+    remaining: (raw.remaining ?? null) as number | null,
+    resets_at: (raw.resets_at ?? raw.resetsAt ?? null) as string | null,
     member_credit_cost: (raw.member_credit_cost ?? raw.memberCreditCost ?? 0) as number,
     actual_credit_cost: (raw.actual_credit_cost ?? raw.actualCreditCost ?? 0) as number,
-    limit_value: (raw.limit_value ?? raw.limitValue ?? null) as number | null,
     period_type: (raw.period_type ?? raw.periodType ?? '') as string,
     apply_credit_after_limit: (raw.apply_credit_after_limit ?? raw.applyCreditAfterLimit ?? false) as boolean,
   };
@@ -69,26 +62,16 @@ function normalizeActionCost(raw: Record<string, unknown>): ActionCostInfo {
 
 function normalizeEntitlements(raw: Record<string, unknown>): EntitlementResponse {
   const subRaw = (raw.subscription ?? null) as Record<string, unknown> | null;
-  const limitsRaw = (raw.limits ?? {}) as Record<string, Record<string, unknown>>;
+  const lacRaw = (raw.limits_and_costs ?? raw.limitsAndCosts ?? {}) as Record<string, Record<string, unknown>>;
   const creditsRaw = (raw.credits ?? {}) as Record<string, unknown>;
   const featuresRaw = (raw.features ?? {}) as Record<string, unknown>;
   const boostRaw = (raw.activeBoost ?? raw.active_boost ?? null) as Record<string, unknown> | null;
   const planLimitsRaw = (raw.planLimits ?? raw.plan_limits ?? {}) as Record<string, unknown>;
   const countrySettingsRaw = (raw.countrySettings ?? raw.country_settings ?? null) as Record<string, unknown> | null;
-  const costsRaw = (raw.costs ?? raw.Costs ?? {}) as Record<string, Record<string, unknown>>;
-  if (__DEV__) {
-    console.log('[normalizeEntitlements] raw.costs exists:', 'costs' in raw, '| costsRaw keys:', Object.keys(costsRaw));
-  }
 
-  const limits: Record<string, QuotaInfo> = {};
-  for (const [key, val] of Object.entries(limitsRaw)) {
-    const snakeKey = key === 'superLikes' ? 'super_likes' : key;
-    limits[snakeKey] = normalizeQuota(val as Record<string, unknown>);
-  }
-
-  const costs: Record<string, ActionCostInfo> = {};
-  for (const [key, val] of Object.entries(costsRaw)) {
-    costs[key] = normalizeActionCost(val as Record<string, unknown>);
+  const limits_and_costs: Record<string, ActionLimitAndCost> = {};
+  for (const [key, val] of Object.entries(lacRaw)) {
+    limits_and_costs[key] = normalizeActionLimitAndCost(val as Record<string, unknown>);
   }
 
   return {
@@ -103,7 +86,7 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
           auto_renew: (subRaw.auto_renew ?? subRaw.autoRenew ?? false) as boolean,
         }
       : null,
-    limits,
+    limits_and_costs,
     credits: {
       credit_balance: (creditsRaw.credit_balance ?? creditsRaw.creditBalance ?? 0) as number,
       boosts_available: (creditsRaw.boosts_available ?? creditsRaw.boostsAvailable ?? 0) as number,
@@ -133,16 +116,12 @@ function normalizeEntitlements(raw: Record<string, unknown>): EntitlementRespons
     },
     boost_duration_minutes: (raw.boost_duration_minutes ?? raw.boostDurationMinutes ?? 30) as number,
     country_settings: countrySettingsRaw ? normalizeCountrySettings(countrySettingsRaw) : undefined,
-    costs,
   };
 }
 
 export async function fetchEntitlements(): Promise<EntitlementResponse> {
   const res = await apiClient.get<unknown>(`${BASE}/entitlements`);
   const raw = res.data as Record<string, unknown>;
-  if (__DEV__) {
-    console.log('[fetchEntitlements] raw.costs keys:', raw.costs ? Object.keys(raw.costs as object) : 'MISSING');
-  }
   return normalizeEntitlements(raw);
 }
 

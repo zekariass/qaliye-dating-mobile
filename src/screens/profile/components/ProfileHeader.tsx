@@ -9,8 +9,8 @@ import PremiumBadgeModal from '@/components/billing/PremiumBadgeModal';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { CountrySettings } from '@/types/billing';
-import { isFreePremiumPlan, isPremiumPlan, type BillingPlan } from '@/types/billing';
+import type { BillingPlan, CountrySettings } from '@/types/billing';
+import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 
 interface ProfileHeaderProps {
   avatarUri: string;

@@ -279,7 +279,7 @@ export default function EditProfileScreen() {
   );
 
   const handleReorderPhotos = useCallback(
-    async (items: Array<{ id: string; photo_order: number; is_primary: boolean }>) => {
+    async (items: { id: string; photo_order: number; is_primary: boolean }[]) => {
       await reorderPhotosMutation.mutateAsync({ photos: items });
     },
     [reorderPhotosMutation],

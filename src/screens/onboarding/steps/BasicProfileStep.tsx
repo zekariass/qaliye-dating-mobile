@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -58,6 +58,21 @@ import {
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
+function calculateAge(dobDisplay: string): number | null {
+  const match = dobDisplay.match(/^(\d{1,2})\s+(\w{3})\s+(\d{4})$/);
+  if (!match) return null;
+  const day = parseInt(match[1], 10);
+  const monthIdx = MONTHS_SHORT.indexOf(match[2]);
+  const year = parseInt(match[3], 10);
+  if (monthIdx < 0) return null;
+  const now = new Date();
+  let age = now.getFullYear() - year;
+  if (now.getMonth() < monthIdx || (now.getMonth() === monthIdx && now.getDate() < day)) {
+    age--;
+  }
+  return age;
+}
+
 type Props = { onComplete: () => Promise<void>; isCompleted: boolean };
 
 // ─── Zod schema ──────────────────────────────────────────────────────────────
@@ -113,9 +128,9 @@ type FormValues = z.infer<typeof schema>;
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const GENDERS: { labelKey: string; value: Gender; icon: 'male' | 'female' }[] = [
-  { labelKey: 'onboarding.basicProfile.genderMan', value: 'MALE', icon: 'male' },
-  { labelKey: 'onboarding.basicProfile.genderWoman', value: 'FEMALE', icon: 'female' },
+const GENDERS: { labelKey: string; value: Gender; icon: 'man' | 'woman' }[] = [
+  { labelKey: 'onboarding.basicProfile.genderMan', value: 'MALE', icon: 'man' },
+  { labelKey: 'onboarding.basicProfile.genderWoman', value: 'FEMALE', icon: 'woman' },
 ];
 
 const INTENTIONS: { labelKey: string; value: RelationshipIntention; icon: string }[] = [
@@ -123,8 +138,32 @@ const INTENTIONS: { labelKey: string; value: RelationshipIntention; icon: string
   { labelKey: 'onboarding.basicProfile.lookingForRelationship', value: 'SERIOUS_RELATIONSHIP', icon: '❤️' },
   { labelKey: 'onboarding.basicProfile.lookingForLongTerm', value: 'LONG_TERM', icon: '🌱' },
   { labelKey: 'onboarding.basicProfile.lookingForFriendship', value: 'FRIENDSHIP', icon: '🤝' },
-  { labelKey: 'onboarding.basicProfile.lookingForNotSure', value: 'NOT_SURE_YET', icon: '🌟' },
+  { labelKey: 'onboarding.basicProfile.lookingForNotSure', value: 'NOT_SURE_YET', icon: '🤔' },
 ];
+
+const RELIGION_ICONS: Record<string, string> = {
+  'Orthodox Christian': 'mci:cross',
+  'Protestant': 'mci:cross',
+  'Catholic': 'mci:cross',
+  'Muslim': 'mci:star-crescent',
+  'Traditional': 'mci:nature',
+  'Other': 'mci:hands-pray',
+  'Prefer not to say': 'mci:eye-off',
+};
+
+const FITNESS_ICONS: Record<string, string> = {
+  'Active: Exercises 4+ times a week': 'barbell-outline',
+  'Moderate: Exercises a few times a week': 'walk-outline',
+  'Occasional: Exercises once in a while': 'footsteps-outline',
+  'Rarely: Prefers non-physical activities': 'bed-outline',
+  'Prefer not to say': 'eye-off-outline',
+};
+
+const LIFESTYLE_COLORS = {
+  smoking: '#EF4444',  // red
+  drinking: '#F59E0B', // amber
+  fitness: '#10B981',  // green
+};
 
 const TOTAL_STEPS = 8;
 
@@ -142,6 +181,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
     setError,
     reset,
     trigger,
+    watch,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -153,6 +193,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
   const [isPrefilling, setIsPrefilling] = useState(isCompleted);
   const [subStep, setSubStep] = useState(0);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const dobValue = watch('date_of_birth');
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -313,7 +354,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
 
       <ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xxxl + insets.bottom + spacing.lg }]}
+        contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         scrollEnabled
@@ -380,30 +421,44 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                 control={control}
                 name="gender"
                 render={({ field: { onChange, value } }) => (
-                  <View style={styles.genderRow}>
-                    {GENDERS.map((g) => {
-                      const sel = value === g.value;
-                      return (
-                        <TouchableOpacity
-                          key={g.value}
-                          style={[
-                            styles.genderCard,
-                            {
-                              backgroundColor: sel ? colors.primary : th.surface,
-                              borderColor: errors.gender ? '#FF6B6B' : sel ? colors.primary : th.border,
-                            },
-                          ]}
-                          onPress={() => onChange(g.value)}
-                          activeOpacity={0.8}
-                        >
-                          <Ionicons name={g.icon} size={48} color={sel ? '#FFFFFF' : th.text} style={{ opacity: sel ? 1 : 0.55 }} />
-                          <Text style={[styles.genderLabel, { color: sel ? '#FFFFFF' : th.text }]}>
-                            {t(g.labelKey)}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                  <>
+                    <View style={styles.genderRow}>
+                      {GENDERS.map((g) => {
+                        const sel = value === g.value;
+                        return (
+                          <TouchableOpacity
+                            key={g.value}
+                            style={[
+                              styles.genderCard,
+                              {
+                                backgroundColor: sel ? colors.primary : th.surface,
+                                borderColor: errors.gender ? '#FF6B6B' : sel ? colors.primary : th.border,
+                              },
+                            ]}
+                            onPress={() => onChange(g.value)}
+                            activeOpacity={0.8}
+                          >
+                            <Ionicons name={g.icon} size={48} color={sel ? '#FFFFFF' : th.text} style={{ opacity: sel ? 1 : 0.55 }} />
+                            <Text style={[styles.genderLabel, { color: sel ? '#FFFFFF' : th.text }]}>
+                              {t(g.labelKey)}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    {value && (
+                      <View style={[styles.meetHint, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30` }]}>
+                        <Ionicons name="heart" size={16} color={colors.primary} />
+                        <Text style={[styles.meetHintText, { color: th.text }]}>
+                          {t('onboarding.basicProfile.youWillMeet', {
+                            gender: value === 'MALE'
+                              ? t('onboarding.basicProfile.youWillMeetWomen')
+                              : t('onboarding.basicProfile.youWillMeetMen'),
+                          })}
+                        </Text>
+                      </View>
+                    )}
+                  </>
                 )}
               />
               {errors.gender && <FieldError message={errors.gender.message} />}
@@ -435,6 +490,30 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                 )}
               />
               {errors.date_of_birth && <FieldError message={errors.date_of_birth.message} />}
+
+              {/* Age display */}
+              {dobValue && !errors.date_of_birth && (() => {
+                const age = calculateAge(dobValue);
+                if (age == null) return null;
+                if (age < 18) {
+                  return (
+                    <View style={[styles.ageBox, { backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' }]}>
+                      <Ionicons name="alert-circle" size={18} color="#EF4444" />
+                      <Text style={[styles.ageBoxText, { color: '#EF4444' }]}>
+                        {t('onboarding.basicProfile.under18', { age })}
+                      </Text>
+                    </View>
+                  );
+                }
+                return (
+                  <View style={[styles.ageBox, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30` }]}>
+                    <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                    <Text style={[styles.ageBoxText, { color: th.text }]}>
+                      {t('onboarding.basicProfile.ageConfirmation', { age })}
+                    </Text>
+                  </View>
+                );
+              })()}
             </View>
           )}
 
@@ -509,7 +588,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
           {subStep === 5 && (
             <View style={styles.stepContainer}>
               <View style={styles.iconCircle}>
-                <Ionicons name="leaf-outline" size={40} color={colors.primary} />
+                <MaterialCommunityIcons name="hands-pray" size={40} color={colors.primary} />
               </View>
               <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
                 {t('onboarding.basicProfile.religionSubtitle')}
@@ -517,26 +596,52 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
               <Text style={[styles.stepTitle, { color: th.text }]}>
                 {t('onboarding.basicProfile.religion')}
               </Text>
-              <View style={{ width: '100%' }}>
-                <SectionCard sem={sem}>
-                  <LabeledField label={t('onboarding.basicProfile.religionLabel')} sem={sem}>
-                    <Controller
-                      control={control}
-                      name="religion"
-                      render={({ field: { onChange, value } }) => (
-                        <SelectField
-                          value={value ?? ''}
-                          options={RELIGION_OPTIONS}
-                          onSelect={onChange}
-                          sem={sem}
-                          leftIcon="leaf-outline"
-                          placeholder={t('onboarding.basicProfile.religionPlaceholder')}
-                        />
-                      )}
-                    />
-                  </LabeledField>
-                </SectionCard>
-              </View>
+              <Controller
+                control={control}
+                name="religion"
+                render={({ field: { onChange, value } }) => (
+                  <View style={styles.religionGrid}>
+                    {RELIGION_OPTIONS.map((opt) => {
+                      const sel = value === opt;
+                      const icon = RELIGION_ICONS[opt] ?? 'mci:hands-pray';
+                      return (
+                        <TouchableOpacity
+                          key={opt}
+                          style={[
+                            styles.religionCard,
+                            {
+                              backgroundColor: sel ? colors.primary : th.surface,
+                              borderColor: sel ? colors.primary : th.border,
+                            },
+                          ]}
+                          onPress={() => onChange(opt)}
+                          activeOpacity={0.8}
+                        >
+                          {icon.startsWith('mci:') ? (
+                            <MaterialCommunityIcons
+                              name={icon.slice(4) as any}
+                              size={26}
+                              color={sel ? '#FFFFFF' : th.text}
+                              style={{ opacity: sel ? 1 : 0.7 }}
+                            />
+                          ) : (
+                            <Text style={{ fontSize: 26, opacity: sel ? 1 : 0.7 }}>{icon}</Text>
+                          )}
+                          <Text
+                            style={[
+                              styles.religionLabel,
+                              { color: sel ? '#FFFFFF' : th.text },
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {opt}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              />
             </View>
           )}
 
@@ -546,81 +651,145 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
               <View style={styles.iconCircle}>
                 <Ionicons name="heart-circle-outline" size={40} color={colors.primary} />
               </View>
-              <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
-                {t('onboarding.basicProfile.lifestyleSubtitle')}
-              </Text>
-              <Text style={[styles.stepTitle, { color: th.text }]}>
+              <Text style={[styles.stepTitle, { color: th.text, marginBottom: spacing.sm }]}>
                 {t('onboarding.basicProfile.lifestyle')}
+              </Text>
+              <Text style={[styles.stepSubtitle, { color: th.textSecondary, marginBottom: spacing.xl }]}>
+                {t('onboarding.basicProfile.lifestyleSubtitle')}
               </Text>
               <View style={styles.lifestyleFields}>
                 {/* Smoking */}
-                <View style={styles.lifestyleFieldWrap}>
-                  <View style={styles.lifestyleFieldHeader}>
-                    <Ionicons name="ban-outline" size={18} color={th.textSecondary} />
-                    <Text style={[styles.lifestyleFieldLabel, { color: th.textSecondary }]}>
-                      {t('onboarding.basicProfile.smoking')}
-                    </Text>
-                  </View>
-                  <Controller
-                    control={control}
-                    name="smoking_detail"
-                    render={({ field: { onChange, value } }) => (
-                      <SelectField
-                        value={value ?? ''}
-                        options={SMOKING_OPTIONS}
-                        onSelect={onChange}
-                        sem={sem}
-                        placeholder={t('onboarding.basicProfile.smokingPlaceholder')}
-                      />
-                    )}
-                  />
-                </View>
+                <Controller
+                  control={control}
+                  name="smoking_detail"
+                  render={({ field: { onChange, value } }) => (
+                    <View style={[styles.lifestyleSection, { backgroundColor: th.surface, borderColor: `${LIFESTYLE_COLORS.smoking}40` }]}>
+                      <View style={styles.lifestyleFieldHeader}>
+                        <View style={[styles.lifestyleHeaderIcon, { backgroundColor: `${LIFESTYLE_COLORS.smoking}20` }]}>
+                          <Ionicons name="ban-outline" size={16} color={LIFESTYLE_COLORS.smoking} />
+                        </View>
+                        <Text style={[styles.lifestyleFieldLabel, { color: th.text }]}>
+                          {t('onboarding.basicProfile.smoking')}
+                        </Text>
+                      </View>
+                      <View style={styles.chipRow}>
+                        {SMOKING_OPTIONS.map((opt) => {
+                          const sel = value === opt;
+                          return (
+                            <TouchableOpacity
+                              key={opt}
+                              style={[
+                                styles.chip,
+                                {
+                                  backgroundColor: sel ? LIFESTYLE_COLORS.smoking : th.backgroundElement,
+                                  borderColor: sel ? LIFESTYLE_COLORS.smoking : `${LIFESTYLE_COLORS.smoking}30`,
+                                },
+                              ]}
+                              onPress={() => onChange(sel ? '' : opt)}
+                              activeOpacity={0.8}
+                            >
+                              <Text style={[styles.chipText, { color: sel ? '#FFFFFF' : th.text }]}>
+                                {opt}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+                />
 
                 {/* Drinking */}
-                <View style={styles.lifestyleFieldWrap}>
-                  <View style={styles.lifestyleFieldHeader}>
-                    <Ionicons name="wine-outline" size={18} color={th.textSecondary} />
-                    <Text style={[styles.lifestyleFieldLabel, { color: th.textSecondary }]}>
-                      {t('onboarding.basicProfile.drinking')}
-                    </Text>
-                  </View>
-                  <Controller
-                    control={control}
-                    name="drinking_detail"
-                    render={({ field: { onChange, value } }) => (
-                      <SelectField
-                        value={value ?? ''}
-                        options={DRINKING_OPTIONS}
-                        onSelect={onChange}
-                        sem={sem}
-                        placeholder={t('onboarding.basicProfile.drinkingPlaceholder')}
-                      />
-                    )}
-                  />
-                </View>
+                <Controller
+                  control={control}
+                  name="drinking_detail"
+                  render={({ field: { onChange, value } }) => (
+                    <View style={[styles.lifestyleSection, { backgroundColor: th.surface, borderColor: `${LIFESTYLE_COLORS.drinking}40` }]}>
+                      <View style={styles.lifestyleFieldHeader}>
+                        <View style={[styles.lifestyleHeaderIcon, { backgroundColor: `${LIFESTYLE_COLORS.drinking}20` }]}>
+                          <Ionicons name="wine-outline" size={16} color={LIFESTYLE_COLORS.drinking} />
+                        </View>
+                        <Text style={[styles.lifestyleFieldLabel, { color: th.text }]}>
+                          {t('onboarding.basicProfile.drinking')}
+                        </Text>
+                      </View>
+                      <View style={styles.chipRow}>
+                        {DRINKING_OPTIONS.map((opt) => {
+                          const sel = value === opt;
+                          return (
+                            <TouchableOpacity
+                              key={opt}
+                              style={[
+                                styles.chip,
+                                {
+                                  backgroundColor: sel ? LIFESTYLE_COLORS.drinking : th.backgroundElement,
+                                  borderColor: sel ? LIFESTYLE_COLORS.drinking : `${LIFESTYLE_COLORS.drinking}30`,
+                                },
+                              ]}
+                              onPress={() => onChange(sel ? '' : opt)}
+                              activeOpacity={0.8}
+                            >
+                              <Text style={[styles.chipText, { color: sel ? '#FFFFFF' : th.text }]}>
+                                {opt}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+                />
 
                 {/* Fitness */}
-                <View style={styles.lifestyleFieldWrap}>
-                  <View style={styles.lifestyleFieldHeader}>
-                    <Ionicons name="fitness-outline" size={18} color={th.textSecondary} />
-                    <Text style={[styles.lifestyleFieldLabel, { color: th.textSecondary }]}>
-                      {t('onboarding.basicProfile.activityLevel')}
-                    </Text>
-                  </View>
-                  <Controller
-                    control={control}
-                    name="activity_level"
-                    render={({ field: { onChange, value } }) => (
-                      <SelectField
-                        value={value ?? ''}
-                        options={ACTIVITY_OPTIONS}
-                        onSelect={onChange}
-                        sem={sem}
-                        placeholder={t('onboarding.basicProfile.activityLevelPlaceholder')}
-                      />
-                    )}
-                  />
-                </View>
+                <Controller
+                  control={control}
+                  name="activity_level"
+                  render={({ field: { onChange, value } }) => (
+                    <View style={[styles.lifestyleSection, { backgroundColor: th.surface, borderColor: `${LIFESTYLE_COLORS.fitness}40` }]}>
+                      <View style={styles.lifestyleFieldHeader}>
+                        <View style={[styles.lifestyleHeaderIcon, { backgroundColor: `${LIFESTYLE_COLORS.fitness}20` }]}>
+                          <Ionicons name="fitness-outline" size={16} color={LIFESTYLE_COLORS.fitness} />
+                        </View>
+                        <Text style={[styles.lifestyleFieldLabel, { color: th.text }]}>
+                          {t('onboarding.basicProfile.activityLevel')}
+                        </Text>
+                      </View>
+                      <View style={styles.fitnessList}>
+                        {ACTIVITY_OPTIONS.map((opt) => {
+                          const sel = value === opt;
+                          const icon = FITNESS_ICONS[opt] ?? 'barbell-outline';
+                          return (
+                            <TouchableOpacity
+                              key={opt}
+                              style={[
+                                styles.fitnessCard,
+                                {
+                                  backgroundColor: sel ? LIFESTYLE_COLORS.fitness : th.backgroundElement,
+                                  borderColor: sel ? LIFESTYLE_COLORS.fitness : `${LIFESTYLE_COLORS.fitness}30`,
+                                },
+                              ]}
+                              onPress={() => onChange(sel ? '' : opt)}
+                              activeOpacity={0.8}
+                            >
+                              <Ionicons
+                                name={icon as any}
+                                size={22}
+                                color={sel ? '#FFFFFF' : LIFESTYLE_COLORS.fitness}
+                                style={{ opacity: sel ? 1 : 0.7 }}
+                              />
+                              <Text
+                                style={[styles.fitnessCardText, { color: sel ? '#FFFFFF' : th.text }]}
+                                numberOfLines={2}
+                              >
+                                {opt}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+                />
               </View>
             </View>
           )}
@@ -631,9 +800,6 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
               <View style={styles.iconCircle}>
                 <Ionicons name="school-outline" size={40} color={colors.primary} />
               </View>
-              <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
-                {t('onboarding.basicProfile.educationOccupationSubtitle')}
-              </Text>
               <Text style={[styles.stepTitle, { color: th.text }]}>
                 {t('onboarding.basicProfile.educationOccupation')}
               </Text>
@@ -685,8 +851,10 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
             <Text style={styles.errorText}>{errors.root.message}</Text>
           </View>
         )}
+      </ScrollView>
 
-        {/* Navigation buttons */}
+      {/* Sticky bottom navigation */}
+      <View style={[styles.stickyNav, { paddingBottom: insets.bottom + spacing.sm }]}>
         <View style={styles.navRow}>
           {subStep > 0 && (
             <TouchableOpacity
@@ -726,7 +894,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
             </TouchableOpacity>
           )}
         </View>
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -746,7 +914,7 @@ const styles = StyleSheet.create({
   loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxxl,
+    paddingBottom: spacing.lg,
   },
 
   // Progress dots
@@ -824,6 +992,35 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.2,
   },
+  meetHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  meetHintText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  ageBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  ageBoxText: {
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
 
   // Intention rows
   intentionList: {
@@ -842,6 +1039,31 @@ const styles = StyleSheet.create({
   intentionEmoji: { fontSize: 18 },
   intentionText: { fontSize: 15, fontWeight: '600' },
 
+  // Religion grid
+  religionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    width: '100%',
+  },
+  religionCard: {
+    width: '47%',
+    flexGrow: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  religionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    letterSpacing: 0.1,
+  },
+
   // Error
   errorBox: {
     flexDirection: 'row',
@@ -858,11 +1080,14 @@ const styles = StyleSheet.create({
   errorText: { color: '#FF6B6B', fontSize: 14, flex: 1 },
 
   // Navigation
+  stickyNav: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
   navRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    marginTop: spacing.xl,
     gap: spacing.sm,
   },
   backBtn: {
@@ -907,22 +1132,67 @@ const styles = StyleSheet.create({
   },
   fieldErrorText: { color: '#FF6B6B', fontSize: 13, flex: 1 },
 
-  // Lifestyle fields — full-width, spacious, no cramped SectionCard
+  // Lifestyle fields
   lifestyleFields: {
     width: '100%',
-    gap: spacing.lg,
+    gap: spacing.md,
   },
-  lifestyleFieldWrap: {
+  lifestyleSection: {
     width: '100%',
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    padding: spacing.md,
   },
   lifestyleFieldHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
+    gap: 10,
+    marginBottom: spacing.sm,
+  },
+  lifestyleHeaderIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   lifestyleFieldLabel: {
     fontSize: 16,
+    fontWeight: '700',
+  },
+  // Chips (smoking, drinking)
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+  },
+  chipText: {
+    fontSize: 14,
     fontWeight: '600',
+  },
+  // Fitness cards
+  fitnessList: {
+    gap: 8,
+    width: '100%',
+  },
+  fitnessCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+  },
+  fitnessCardText: {
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
   },
 });

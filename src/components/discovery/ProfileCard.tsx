@@ -28,7 +28,7 @@ import { getSwipeCardWidth, rs, useTabletScale } from '@/utils/responsive';
 
 const SWIPE_THRESHOLD = 120;
 
-function formatRelationshipIntention(value: string): string {
+function toTitleCase(value: string): string {
   return value
     .replace(/_/g, ' ')
     .toLowerCase()
@@ -258,14 +258,29 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
               <Ionicons name="location" size={rs(14, scale)} color="rgba(255,255,255,0.85)" />
               <Text style={[styles.distance, { fontSize: rs(14, scale) }]}>{locationText}</Text>
             </View>
-            <View style={styles.intentionChip}>
-              <Ionicons name="heart" size={rs(13, scale)} color="#FF8FAB" />
-              <Text style={[styles.intentionLabel, { fontSize: rs(12, scale) }]}>Intention</Text>
-              <View style={styles.intentionDivider} />
-              <Text style={[styles.intentionValue, { fontSize: rs(13, scale) }]}>
-                {formatRelationshipIntention(card.relationship_intention)}
-              </Text>
-            </View>
+            {(() => {
+              const intention = card.relationship_intention
+                ? toTitleCase(card.relationship_intention)
+                : null;
+              const religion = card.religion ? toTitleCase(card.religion) : null;
+              if (!intention && !religion) return null;
+              return (
+                <View style={styles.intentionChip}>
+                  <Ionicons name="heart" size={rs(13, scale)} color="#FF8FAB" />
+                  {intention && (
+                    <Text style={[styles.intentionValue, { fontSize: rs(13, scale) }]}>
+                      {intention}
+                    </Text>
+                  )}
+                  {intention && religion && <View style={styles.intentionDivider} />}
+                  {religion && (
+                    <Text style={[styles.intentionValue, { fontSize: rs(13, scale) }]}>
+                      {religion}
+                    </Text>
+                  )}
+                </View>
+              );
+            })()}
           </View>
 
           {/* Verified — bottom right of photo */}

@@ -72,7 +72,7 @@ export const PersonalTab = memo(function PersonalTab({ draft, onChange, onChange
               options={RELIGION_OPTIONS}
               onSelect={(v) => onChange('personal.religion', v)}
               sem={sem}
-              leftIcon="leaf-outline"
+              leftIcon="mci:hands-pray"
               placeholder="Religion"
             />
           </LabeledField>

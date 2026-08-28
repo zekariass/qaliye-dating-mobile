@@ -101,7 +101,7 @@ export async function sendMessageWithAttachments(
     formData,
     {
       headers: { 'Content-Type': 'multipart/form-data' },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       ...(actionCode ? ({ metadata: { actionCode } } as any) : {}),
     },
   );

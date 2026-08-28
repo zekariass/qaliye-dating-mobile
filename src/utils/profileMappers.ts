@@ -104,11 +104,12 @@ export const DRINKING_API_TO_LABEL: Record<string, string> = {
 };
 
 export const ACTIVITY_API_TO_LABEL: Record<string, string> = {
-  SEDENTARY: 'Sedentary',
-  LIGHT: 'Light',
-  MODERATE: 'Moderate',
-  ACTIVE: 'Active',
-  VERY_ACTIVE: 'Very active',
+  VERY_ACTIVE: 'Active: Exercises 4+ times a week',
+  ACTIVE: 'Active: Exercises 4+ times a week',
+  MODERATE: 'Moderate: Exercises a few times a week',
+  LIGHT: 'Occasional: Exercises once in a while',
+  SEDENTARY: 'Rarely: Prefers non-physical activities',
+  PREFER_NOT_TO_SAY: 'Prefer not to say',
 };
 
 const GENDER_API_TO_LABEL: Record<string, string> = {

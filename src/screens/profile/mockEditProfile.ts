@@ -94,7 +94,13 @@ export const YES_NO_OPTIONS = ['Yes', 'No', 'Prefer not to say'] as const;
 
 export const SMOKING_OPTIONS = ['No', 'Yes', 'Occasionally', 'Trying to quit'] as const;
 export const DRINKING_OPTIONS = ['No', 'Socially', 'Occasionally', 'Yes'] as const;
-export const ACTIVITY_OPTIONS = ['Sedentary', 'Light', 'Moderate', 'Active', 'Very active'] as const;
+export const ACTIVITY_OPTIONS = [
+  'Active: Exercises 4+ times a week',
+  'Moderate: Exercises a few times a week',
+  'Occasional: Exercises once in a while',
+  'Rarely: Prefers non-physical activities',
+  'Prefer not to say',
+] as const;
 
 export const INTEREST_OPTIONS = [
   'Travel',
@@ -186,7 +192,7 @@ export const INITIAL_DRAFT: EditProfileDraft = {
   lifestyle: {
     smoking: 'No',
     drinking: 'Socially',
-    activityLevel: 'Moderate',
+    activityLevel: 'Moderate: Exercises a few times a week',
     interests: ['Travel', 'Coffee', 'Reading', 'Fitness', 'Music'],
     languages: [],
   },

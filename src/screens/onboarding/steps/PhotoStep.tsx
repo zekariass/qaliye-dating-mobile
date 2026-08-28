@@ -3,15 +3,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 import { deleteProfilePhoto, fetchProfilePhotos, registerProfilePhoto } from '@/api/profile/profileApi';
@@ -23,6 +23,7 @@ import type { ProfilePhotoDto } from '@/types/profile';
 import { extractApiError, getApiErrorMessage } from '@/utils/apiError';
 import type { ProcessedImage } from '@/utils/imageProcessor';
 import { processWithCrop } from '@/utils/imageProcessor';
+import { getModerationMessage, isModerationRejection } from '@/utils/photoModeration';
 import type { ImagePickerAsset } from 'expo-image-picker';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -37,6 +38,8 @@ type PhotoSlot = {
   status: UploadStatus;
   processed: ProcessedImage | null;
   errorMessage: string | null;
+  /** True when the error is a content-moderation rejection (not retryable). */
+  isModerationRejection?: boolean;
 };
 
 type CardSlot = PhotoSlot | null;
@@ -122,6 +125,7 @@ export default function PhotoStep({ onComplete }: Props) {
     message: string;
     isPrimary: boolean;
     slotIdx: number;
+    isModerationRejection: boolean;
   } | null>(null);
 
   // Crop modal state
@@ -133,7 +137,7 @@ export default function PhotoStep({ onComplete }: Props) {
   const [cropProcessing, setCropProcessing] = useState(false);
 
   // Upload queue management
-  const uploadQueue = useRef<Array<() => Promise<void>>>([]);
+  const uploadQueue = useRef<(() => Promise<void>)[]>([]);
   const activeUploads = useRef(0);
   const uploadCancelRefs = useRef<Record<string, boolean>>({});
   const successTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -276,9 +280,10 @@ export default function PhotoStep({ onComplete }: Props) {
         return;
       }
       const detail = extractApiError(err);
-      const msg = getApiErrorMessage(detail);
-      onSlotUpdate((prev) => ({ ...prev, status: 'error', errorMessage: msg }));
-      setErrorModal({ slotKey, message: msg, isPrimary, slotIdx: isPrimary ? 0 : photoOrder - 1 });
+      const moderationRejection = isModerationRejection(detail);
+      const msg = moderationRejection ? getModerationMessage() : getApiErrorMessage(detail);
+      onSlotUpdate((prev) => ({ ...prev, status: 'error', errorMessage: msg, isModerationRejection: moderationRejection }));
+      setErrorModal({ slotKey, message: msg, isPrimary, slotIdx: isPrimary ? 0 : photoOrder - 1, isModerationRejection: moderationRejection });
     }
   }, []);
 
@@ -491,6 +496,27 @@ export default function PhotoStep({ onComplete }: Props) {
     );
   }, [primarySlot, enqueueUpload, doUpload]);
 
+  // ─── Choose Another Photo (for moderation rejections) ───────────────────────
+
+  const handleChooseAnotherPrimary = useCallback(() => {
+    // Clear the failed slot, then open the picker
+    setPrimarySlot({ uri: null, serverId: null, status: 'idle', processed: null, errorMessage: null });
+    setError(null);
+    // Defer picker call so state updates flush first
+    setTimeout(() => pickPrimary(), 0);
+  }, [pickPrimary]);
+
+  const handleChooseAnotherCard = useCallback((slotIdx: number) => {
+    setCardSlots((prev) => {
+      const next = [...prev];
+      next[slotIdx] = null;
+      return next;
+    });
+    setError(null);
+    // Defer picker call so state updates flush first
+    setTimeout(() => pickCard(slotIdx), 0);
+  }, [pickCard]);
+
   // ─── Submit ────────────────────────────────────────────────────────────────
 
   const isRejected = existingPrimary?.moderation_status === 'REJECTED';
@@ -505,9 +531,9 @@ export default function PhotoStep({ onComplete }: Props) {
       setError('Your profile photo was rejected. Please delete it and upload a new one.');
       return;
     }
-    const cardOk = cardSlots.some((s) => s != null && s.uri != null && s.status !== 'error');
+    const cardOk = cardSlots.filter((s) => s != null && s.uri != null && s.status !== 'error').length >= 2;
     if (!cardOk) {
-      setError('At least one discovery card photo is required.');
+      setError('At least two discovery card photos are required.');
       return;
     }
 
@@ -530,10 +556,11 @@ export default function PhotoStep({ onComplete }: Props) {
   const anyCardError = cardSlots.some((s) => s && s.status === 'error');
   const primaryError = primarySlot.status === 'error';
 
-  // At least one card photo that has a URI and is not in error state
-  const hasMinCard = cardSlots.some((s) => s != null && s.uri != null && s.status !== 'error');
+  // At least two card photos that have a URI and are not in error state
+  const validCardCount = cardSlots.filter((s) => s != null && s.uri != null && s.status !== 'error').length;
+  const hasMinCards = validCardCount >= 2;
 
-  const canSubmit = !primaryBusy && !anyCardBusy && !primaryError && !anyCardError && !isRejected && hasPrimary && hasMinCard;
+  const canSubmit = !primaryBusy && !anyCardBusy && !primaryError && !anyCardError && !isRejected && hasPrimary && hasMinCards;
 
   const GAP = 8;
   const cardWidth = Math.floor((screenW - spacing.md * 2 - GAP * 2) / 3);
@@ -564,15 +591,15 @@ export default function PhotoStep({ onComplete }: Props) {
       <View style={styles.sectionRow}>
         <Text style={[styles.sectionLabel, { color: th.textMuted, marginBottom: 0, marginTop: 0 }]}>{t('onboarding.photo.profileAvatar')}</Text>
         <View style={styles.requiredBadge}>
-          <Text style={styles.requiredBadgeText}>*</Text>
-          <Text style={styles.requiredBadgeText}>{t('onboarding.photo.required')}</Text>
+          <Text style={styles.requiredStarText}>*</Text>
+          <Text style={[styles.requiredLabelText, { color: th.textMuted }]}>{t('onboarding.photo.required')}</Text>
         </View>
       </View>
       <View style={[styles.primaryRow, { backgroundColor: th.surface, borderColor: th.border }]}>
         <TouchableOpacity
           onPress={() => {
             if (primarySlot.status === 'error') {
-              setErrorModal({ slotKey: 'primary', message: primarySlot.errorMessage ?? 'Upload failed', isPrimary: true, slotIdx: 0 });
+              setErrorModal({ slotKey: 'primary', message: primarySlot.errorMessage ?? 'Upload failed', isPrimary: true, slotIdx: 0, isModerationRejection: !!primarySlot.isModerationRejection });
             } else {
               pickPrimary();
             }
@@ -643,7 +670,7 @@ export default function PhotoStep({ onComplete }: Props) {
             </View>
           )}
           {existingPrimary?.moderation_status === 'REJECTED' && existingPrimary.rejection_reason && (
-            <Text style={[styles.primaryInfoMeta, { color: '#EF4444' }]} numberOfLines={2}>
+            <Text style={[styles.primaryInfoMeta, { color: th.textSecondary }]} numberOfLines={2}>
               {existingPrimary.rejection_reason}
             </Text>
           )}
@@ -655,21 +682,21 @@ export default function PhotoStep({ onComplete }: Props) {
         <View style={styles.sectionLeft}>
           <Text style={[styles.sectionLabel, { color: th.textMuted, marginBottom: 0, marginTop: 0 }]}>{t('onboarding.photo.discoveryCards')}</Text>
           <View style={styles.requiredBadge}>
-            <Text style={styles.requiredBadgeText}>*</Text>
-            <Text style={styles.requiredBadgeText}>{t('onboarding.photo.required')}</Text>
+            <Text style={styles.requiredStarText}>*</Text>
+            <Text style={[styles.requiredLabelText, { color: th.textMuted }]}>{t('onboarding.photo.required')}</Text>
           </View>
         </View>
-        <Text style={[styles.sectionCount, { color: hasMinCard ? colors.primary : '#EF4444' }]}>
+        <Text style={[styles.sectionCount, { color: hasMinCards ? colors.primary : th.textMuted }]}>
           {filledCards} / {MAX_CARDS}
         </Text>
       </View>
       <Text style={[styles.cardHint, { color: th.textSecondary }]}>
         {t('onboarding.photo.cardHint')}
       </Text>
-      {!hasMinCard && (
+      {!hasMinCards && (
         <View style={styles.cardRequiredHint}>
           <Ionicons name="information-circle-outline" size={14} color="#F59E0B" />
-          <Text style={styles.cardRequiredHintText}>At least 1 card photo is required to continue.</Text>
+          <Text style={styles.cardRequiredHintText}>At least 2 card photos are required to continue.</Text>
         </View>
       )}
 
@@ -686,7 +713,7 @@ export default function PhotoStep({ onComplete }: Props) {
               <TouchableOpacity
                 onPress={() => {
                   if (isError) {
-                    setErrorModal({ slotKey: `card_${i}`, message: slot?.errorMessage ?? 'Upload failed', isPrimary: false, slotIdx: i });
+                    setErrorModal({ slotKey: `card_${i}`, message: slot?.errorMessage ?? 'Upload failed', isPrimary: false, slotIdx: i, isModerationRejection: !!slot?.isModerationRejection });
                   } else if (!isBusy && !hasServer && !slotUri) {
                     pickCard(i);
                   }
@@ -699,10 +726,10 @@ export default function PhotoStep({ onComplete }: Props) {
                     width: cardWidth,
                     height: cardHeight,
                     backgroundColor: th.surface,
-                    borderColor: i === 0 && !hasMinCard && !slotUri
+                    borderColor: i < 2 && !hasMinCards && !slotUri
                       ? '#F59E0B'
                       : getSlotBorderColor(slot?.status ?? 'idle', !!slotUri),
-                    borderWidth: i === 0 && !hasMinCard && !slotUri ? 1.5 : 1.5,
+                    borderWidth: i < 2 && !hasMinCards && !slotUri ? 1 : 1.5,
                   },
                 ]}
               >
@@ -741,8 +768,8 @@ export default function PhotoStep({ onComplete }: Props) {
                   </>
                 ) : (
                   <View style={styles.slotEmpty}>
-                    <Ionicons name="add" size={26} color={i === 0 && !hasMinCard ? '#F59E0B' : th.textMuted} />
-                    {i === 0 && !hasMinCard && (
+                    <Ionicons name="add" size={26} color={i < 2 && !hasMinCards ? '#F59E0B' : th.textMuted} />
+                    {i < 2 && !hasMinCards && (
                       <Text style={styles.slotRequiredLabel}>Required</Text>
                     )}
                   </View>
@@ -768,7 +795,7 @@ export default function PhotoStep({ onComplete }: Props) {
       {(primaryError || anyCardError) && (
         <View style={styles.errorBox}>
           <Ionicons name="alert-circle-outline" size={16} color="#FF6B6B" />
-          <Text style={styles.errorText}>Some photos failed to upload. Tap the photo to retry or remove it.</Text>
+          <Text style={styles.errorText}>Some photos failed to upload. Tap the photo to retry, choose another, or remove it.</Text>
         </View>
       )}
 
@@ -811,15 +838,55 @@ export default function PhotoStep({ onComplete }: Props) {
         <View style={styles.errorModalOverlay}>
           <View style={[styles.errorModalCard, { backgroundColor: th.surface }]}>
             <View style={styles.errorModalIcon}>
-              <Ionicons name="alert-circle" size={40} color="#EF4444" />
+              <Ionicons
+                name={errorModal?.isModerationRejection ? 'shield-outline' : 'alert-circle'}
+                size={40}
+                color="#EF4444"
+              />
             </View>
             <Text style={[styles.errorModalTitle, { color: th.text }]}>
-              Upload failed
+              {errorModal?.isModerationRejection ? 'Photo not approved' : 'Upload failed'}
             </Text>
             <Text style={[styles.errorModalMessage, { color: th.textSecondary }]}>
               {errorModal?.message}
             </Text>
             <View style={styles.errorModalActions}>
+              {errorModal?.isModerationRejection ? (
+                /* Moderation rejection: Choose Another Photo (no Retry) */
+                <TouchableOpacity
+                  style={[styles.errorModalBtn, styles.errorModalBtnPrimary]}
+                  onPress={() => {
+                    if (errorModal?.isPrimary) {
+                      handleChooseAnotherPrimary();
+                    } else if (errorModal) {
+                      handleChooseAnotherCard(errorModal.slotIdx);
+                    }
+                    setErrorModal(null);
+                  }}
+                >
+                  <Text style={styles.errorModalBtnTextPrimary}>
+                    Choose Another Photo
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                /* Technical error: Retry */
+                <TouchableOpacity
+                  style={[styles.errorModalBtn, styles.errorModalBtnPrimary]}
+                  onPress={() => {
+                    if (errorModal?.isPrimary) {
+                      handleRetryPrimary();
+                    } else if (errorModal) {
+                      handleRetry(errorModal.slotIdx);
+                    }
+                    setErrorModal(null);
+                  }}
+                >
+                  <Text style={styles.errorModalBtnTextPrimary}>
+                    Retry
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {/* Secondary action: Remove Photo */}
               <TouchableOpacity
                 style={[styles.errorModalBtn, styles.errorModalBtnSecondary, { borderColor: th.border }]}
                 onPress={() => {
@@ -832,34 +899,19 @@ export default function PhotoStep({ onComplete }: Props) {
                 }}
               >
                 <Text style={[styles.errorModalBtnText, { color: th.textSecondary }]}>
-                  Remove
+                  Remove Photo
                 </Text>
               </TouchableOpacity>
+              {/* Tertiary action: Close */}
               <TouchableOpacity
-                style={[styles.errorModalBtn, styles.errorModalBtnPrimary]}
-                onPress={() => {
-                  if (errorModal?.isPrimary) {
-                    handleRetryPrimary();
-                  } else if (errorModal) {
-                    handleRetry(errorModal.slotIdx);
-                  }
-                  setErrorModal(null);
-                }}
+                style={[styles.errorModalBtn, styles.errorModalBtnSecondary, { borderColor: th.border }]}
+                onPress={() => setErrorModal(null)}
               >
-                <Text style={styles.errorModalBtnTextPrimary}>
-                  Retry
+                <Text style={[styles.errorModalBtnText, { color: th.textSecondary }]}>
+                  Close
                 </Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.errorModalClose}
-              onPress={() => setErrorModal(null)}
-              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-            >
-              <Text style={[styles.errorModalCloseText, { color: th.textMuted }]}>
-                Dismiss
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -910,7 +962,8 @@ const styles = StyleSheet.create({
   sectionLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   sectionCount: { fontSize: 12, fontWeight: '700' },
   requiredBadge: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  requiredBadgeText: { color: '#EF4444', fontSize: 11, fontWeight: '700' },
+  requiredStarText: { color: '#EF4444', fontSize: 11, fontWeight: '700' },
+  requiredLabelText: { fontSize: 11, fontWeight: '700' },
   optionalText: { color: '#9CA3AF', fontSize: 11, fontWeight: '600' },
 
   // Primary row
@@ -1103,14 +1156,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   errorModalActions: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 10,
     width: '100%',
     marginBottom: spacing.sm,
   },
   errorModalBtn: {
-    flex: 1,
-    paddingVertical: 12,
+    width: '100%',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.full,
     alignItems: 'center',
   },
@@ -1128,13 +1182,5 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 15,
     fontWeight: '700',
-  },
-  errorModalClose: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-  },
-  errorModalCloseText: {
-    fontSize: 14,
-    fontWeight: '500',
   },
 });

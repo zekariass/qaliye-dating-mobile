@@ -1,3 +1,6 @@
+import { isVoiceAttachment } from '@/components/messages/SupportVoiceMessage';
+import type { SupportAttachment } from '@/types/support';
+
 jest.mock('expo-audio', () => ({
   useAudioPlayer: jest.fn(() => ({
     play: jest.fn(),
@@ -36,9 +39,6 @@ jest.mock('@/hooks/use-theme', () => ({
     mode: 'light',
   }),
 }));
-
-import { isVoiceAttachment } from '@/components/messages/SupportVoiceMessage';
-import type { SupportAttachment } from '@/types/support';
 
 function makeAttachment(overrides: Partial<SupportAttachment> = {}): SupportAttachment {
   return {

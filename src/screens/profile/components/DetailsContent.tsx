@@ -1,14 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 interface DetailItem {
-  icon: IoniconName;
+  icon: string;
   label: string;
   value: string;
 }
@@ -56,7 +54,7 @@ function buildDetails(p: CurrentUserProfile): DetailItem[] {
     items.push({ icon: 'people-outline', label: 'Ethnicity', value: p.ethnicities.map((e) => e.name).join(', ') });
   }
   if (p.nationality) items.push({ icon: 'globe-outline', label: 'Nationality', value: p.nationality });
-  if (p.religion) items.push({ icon: 'leaf-outline', label: 'Religion', value: p.religion });
+  if (p.religion) items.push({ icon: 'mci:hands-pray', label: 'Religion', value: p.religion });
   if (p.educationLevel) items.push({ icon: 'school-outline', label: 'Education Level', value: p.educationLevel });
   if (p.occupation) items.push({ icon: 'briefcase-outline', label: 'Occupation', value: p.occupation });
   items.push({
@@ -116,7 +114,13 @@ export default function DetailsContent({ profile }: DetailsContentProps) {
             {idx > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
             <View style={styles.listRow}>
               <View style={[styles.detailIconWrap, { backgroundColor: iconBg, borderColor: borderCol }]}>
-                <Ionicons name={item.icon} size={17} color={colors.primary} />
+                {item.icon.startsWith('mci:') ? (
+                  <MaterialCommunityIcons name={item.icon.slice(4) as any} size={17} color={colors.primary} />
+                ) : /^[a-z-]+$/i.test(item.icon) ? (
+                  <Ionicons name={item.icon as any} size={17} color={colors.primary} />
+                ) : (
+                  <Text style={{ fontSize: 17 }}>{item.icon}</Text>
+                )}
               </View>
               <View style={styles.detailBody}>
                 <Text style={[styles.detailLabel, { color: mutedCol }]}>{item.label}</Text>

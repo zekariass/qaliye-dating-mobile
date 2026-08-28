@@ -39,7 +39,7 @@ type Props = {
   isVerified: boolean;
   sem: SemanticTheme;
   onRegisterPhoto: (storageBucket: string, storagePath: string, photoOrder: number, isPrimary: boolean) => Promise<void>;
-  onReorderPhotos: (items: Array<{ id: string; photo_order: number; is_primary: boolean }>) => Promise<void>;
+  onReorderPhotos: (items: { id: string; photo_order: number; is_primary: boolean }[]) => Promise<void>;
   onDeletePhoto: (photoId: string) => Promise<void>;
   isUploading?: boolean;
 };

@@ -1,3 +1,5 @@
+import { usePromotionStore } from '../promotion-store';
+
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
@@ -10,8 +12,6 @@ jest.mock('zustand/middleware', () => {
     createJSONStorage: () => undefined,
   };
 });
-
-import { usePromotionStore } from '../promotion-store';
 
 const USER = 'user-1';
 const CAM = 'promo_a';

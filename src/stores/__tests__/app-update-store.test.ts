@@ -1,3 +1,5 @@
+import { useAppUpdateStore, UPDATE_CHECK_THROTTLE_MS } from '../app-update-store';
+
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
@@ -10,8 +12,6 @@ jest.mock('zustand/middleware', () => {
     createJSONStorage: () => undefined,
   };
 });
-
-import { useAppUpdateStore, UPDATE_CHECK_THROTTLE_MS } from '../app-update-store';
 
 describe('app-update-store', () => {
   beforeEach(() => {

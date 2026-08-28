@@ -1,4 +1,11 @@
 // Mock expo-application — use a mutable holder so tests can simulate an update.
+import { fetchAppVersion } from '@/api/app/appVersionApi';
+import { useAppUpdateStore } from '@/stores/app-update-store';
+import { useInsufficientCreditsStore } from '@/stores/insufficient-credits-store';
+import * as Application from 'expo-application';
+
+import { runAppVersionCheck } from '../useAppVersionCheck';
+
 jest.mock('expo-application', () => ({
   nativeApplicationVersion: '1.3.0',
 }));
@@ -32,13 +39,6 @@ jest.mock('zustand/middleware', () => {
     createJSONStorage: () => undefined,
   };
 });
-
-import { fetchAppVersion } from '@/api/app/appVersionApi';
-import { useAppUpdateStore } from '@/stores/app-update-store';
-import { useInsufficientCreditsStore } from '@/stores/insufficient-credits-store';
-import * as Application from 'expo-application';
-
-import { runAppVersionCheck } from '../useAppVersionCheck';
 
 const mockedFetchAppVersion = fetchAppVersion as jest.MockedFunction<typeof fetchAppVersion>;
 const mockedInsufficientGetState = useInsufficientCreditsStore.getState as jest.Mock;

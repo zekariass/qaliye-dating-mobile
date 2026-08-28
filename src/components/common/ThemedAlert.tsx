@@ -31,6 +31,8 @@ export type ThemedAlertOptions = {
   icon?: React.ComponentProps<typeof Ionicons>['name'];
   iconColor?: string;
   loading?: boolean;
+  /** When set, shows a countdown and auto-dismisses after this many milliseconds. */
+  autoDismissMs?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -65,13 +67,22 @@ export function ThemedAlert() {
   const { colors: th } = useTheme();
   const [visible, setVisible] = useState(false);
   const [opts, setOpts] = useState<ThemedAlertOptions>({});
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   const show = useCallback((o: ThemedAlertOptions) => {
     setOpts(o);
     setVisible(true);
+    if (o.autoDismissMs && o.autoDismissMs > 0) {
+      setCountdown(Math.ceil(o.autoDismissMs / 1000));
+    } else {
+      setCountdown(null);
+    }
   }, []);
 
-  const hide = useCallback(() => setVisible(false), []);
+  const hide = useCallback(() => {
+    setVisible(false);
+    setCountdown(null);
+  }, []);
 
   useEffect(() => {
     const instance = { show, hide };
@@ -82,6 +93,22 @@ export function ThemedAlert() {
       }
     };
   }, [show, hide]);
+
+  // Countdown + auto-dismiss timer
+  useEffect(() => {
+    if (!visible || !opts.autoDismissMs || countdown === null) return;
+
+    if (countdown <= 0) {
+      hide();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown((c) => (c !== null ? c - 1 : null));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [visible, opts.autoDismissMs, countdown, hide]);
 
   const buttons = opts.buttons ?? [{ text: 'OK', style: 'default' }];
 
@@ -129,6 +156,24 @@ export function ThemedAlert() {
           {/* Message */}
           {opts.message ? (
             <Text style={[styles.message, { color: th.textSecondary }]}>{opts.message}</Text>
+          ) : null}
+
+          {/* Countdown indicator */}
+          {countdown !== null && countdown > 0 ? (
+            <View style={styles.countdownRow}>
+              <View style={[styles.countdownBar, { backgroundColor: th.border }]}>
+                <View
+                  style={[
+                    styles.countdownBarFill,
+                    {
+                      backgroundColor: opts.iconColor ?? colors.primary,
+                      width: `${(countdown / Math.ceil((opts.autoDismissMs ?? 1) / 1000)) * 100}%`,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.countdownText, { color: th.textMuted }]}>{countdown}</Text>
+            </View>
           ) : null}
 
           {/* Buttons */}
@@ -248,5 +293,28 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  countdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+    marginTop: 4,
+  },
+  countdownBar: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  countdownBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  countdownText: {
+    fontSize: 13,
+    fontWeight: '600',
+    minWidth: 16,
+    textAlign: 'center',
   },
 });

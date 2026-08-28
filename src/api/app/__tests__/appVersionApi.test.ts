@@ -1,4 +1,7 @@
 // Mock axios so the dedicated versionClient doesn't make real HTTP calls.
+import axios from 'axios';
+import { fetchAppVersion } from '../appVersionApi';
+
 jest.mock('axios', () => {
   const instance = {
     get: jest.fn(),
@@ -8,9 +11,6 @@ jest.mock('axios', () => {
     __mockInstance: instance,
   };
 });
-
-import axios from 'axios';
-import { fetchAppVersion } from '../appVersionApi';
 
 const mockInstance = (axios as unknown as { __mockInstance: { get: jest.Mock } }).__mockInstance;
 const mockedGet = mockInstance.get;

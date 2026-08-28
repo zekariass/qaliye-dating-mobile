@@ -9,7 +9,7 @@
  * All audio-related files should import from here instead of 'expo-audio'.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import type * as ExpoAudio from 'expo-audio';
 
 export type { PermissionResponse } from 'expo-audio';

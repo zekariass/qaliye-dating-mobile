@@ -29,7 +29,7 @@ export type ProfileDiscoveryPreferencesDto = {
   min_age: number;
   max_age: number;
   max_distance_km: number;
-  preferred_residency_types: Array<'ETHIOPIA' | 'ERITREA' | 'DIASPORA'>;
+  preferred_residency_types: ('ETHIOPIA' | 'ERITREA' | 'DIASPORA')[];
   show_verified_only: boolean;
   location_mode: 'nearby' | 'diaspora' | 'specific_countries' | 'anywhere';
   specific_country_codes: string[];

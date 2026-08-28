@@ -5,12 +5,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
-    Modal,
-    Pressable,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,9 +16,7 @@ import { fetchOnboardingStatus } from '@/api/onboardingApi';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useCountrySettings } from '@/hooks/billing/useCountrySettings';
 import { useTheme } from '@/hooks/use-theme';
-import { supabase } from '@/lib/supabase';
-import { useDiscoveryStore } from '@/stores/discovery-store';
-import { LANGUAGE_LABELS, LANGUAGE_LIST, useLanguageStore } from '@/stores/language-store';
+import { useLanguageStore } from '@/stores/language-store';
 import { useMeStore } from '@/stores/me-store';
 import { OnboardingStatus, OnboardingStep } from '@/types/api';
 import { extractApiError } from '@/utils/apiError';
@@ -85,7 +81,6 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { colors: th, mode } = useTheme();
   const markOnboarded = useMeStore((s) => s.markOnboarded);
-  const clearMe = useMeStore((s) => s.clearMe);
   const fetchMe = useMeStore((s) => s.fetchMe);
   const { identity_verification_required: countrySettingRequired } = useCountrySettings();
 
@@ -166,13 +161,6 @@ export default function OnboardingScreen() {
   const handleGoBackToPhoto = useCallback(() => {
     setDisplayStep('ADD_PHOTO');
   }, []);
-
-  const handleSignOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    clearMe();
-    useDiscoveryStore.getState().setViewMode('swipe');
-    router.replace('/auth' as never);
-  }, [clearMe, router]);
 
   // ─── Derived ───────────────────────────────────────────────────────────────
   const isCompletionStep = displayStep === 'COMPLETE' || displayStep === 'DONE';
@@ -283,6 +271,7 @@ export default function OnboardingScreen() {
           )}
 
           {/* Right — language switcher */}
+          {/* Language switcher temporarily disabled — will be re-enabled in the future.
           <TouchableOpacity
             style={[styles.headerBtn, { backgroundColor: th.surface, borderColor: th.border }]}
             onPress={() => setLangOpen(true)}
@@ -292,6 +281,8 @@ export default function OnboardingScreen() {
               {LANGUAGE_LABELS[language].code}
             </Text>
           </TouchableOpacity>
+          */}
+          <View style={styles.headerBtn} />
 
         </View>
 
@@ -301,6 +292,7 @@ export default function OnboardingScreen() {
         )}
 
         {/* ── Language picker modal ────────────────────────────────────── */}
+        {/* Language switcher temporarily disabled — will be re-enabled in the future.
         <Modal
           visible={langOpen}
           transparent
@@ -338,6 +330,7 @@ export default function OnboardingScreen() {
             </View>
           </Pressable>
         </Modal>
+        */}
 
         {/* ── Screen content ──────────────────────────────────────────────── */}
         {isLoading ? (
@@ -392,20 +385,6 @@ export default function OnboardingScreen() {
           <View style={styles.stepContent}>
             {renderStep()}
           </View>
-        )}
-
-        {/* ── Sign out ─────────────────────────────────────────────────────── */}
-        {!isCompletionStep && (
-          <TouchableOpacity
-            onPress={handleSignOut}
-            style={styles.signOutBtn}
-            activeOpacity={0.65}
-          >
-            <Ionicons name="log-out-outline" size={16} color={colors.danger} />
-            <Text style={[styles.signOutText, { color: colors.danger }]}>
-              {t('onboarding.signOut')}
-            </Text>
-          </TouchableOpacity>
         )}
 
       </SafeAreaView>
@@ -602,24 +581,4 @@ const styles = StyleSheet.create({
 
   // ── Step content ─────────────────────────────────────────────────────────────
   stepContent: { flex: 1 },
-
-  // ── Sign out ─────────────────────────────────────────────────────────────────
-  signOutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 22,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: colors.danger,
-    backgroundColor: `${colors.danger}12`,
-    marginBottom: 12,
-  },
-  signOutText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
 });

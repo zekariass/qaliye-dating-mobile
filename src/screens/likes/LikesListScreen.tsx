@@ -805,12 +805,12 @@ export default function LikesListScreen() {
   const receivedViewConfig = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
   const sentViewConfig     = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
   const onReceivedViewChange = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ item: LikeItemDto }> }) => {
+    ({ viewableItems }: { viewableItems: { item: LikeItemDto }[] }) => {
       setVisibleReceivedIds(viewableItems.map((v) => v.item.user_id));
     },
   );
   const onSentViewChange = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ item: LikeItemDto }> }) => {
+    ({ viewableItems }: { viewableItems: { item: LikeItemDto }[] }) => {
       setVisibleSentIds(viewableItems.map((v) => v.item.user_id));
     },
   );

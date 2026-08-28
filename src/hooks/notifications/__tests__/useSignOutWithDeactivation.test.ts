@@ -1,14 +1,14 @@
 import { Platform } from 'react-native';
 
-jest.mock('react', () => ({
-  ...jest.requireActual('react'),
-  useCallback: (fn: unknown) => fn,
-}));
-
 import { deactivateDevice } from '@/api/notifications/notificationsApi';
 import { supabase } from '@/lib/supabase';
 import { readInstallationId } from '@/services/notifications/installationId';
 import { useSignOutWithDeactivation } from '../useSignOutWithDeactivation';
+
+jest.mock('react', () => ({
+  ...jest.requireActual('react'),
+  useCallback: (fn: unknown) => fn,
+}));
 
 jest.mock('@/api/notifications/notificationsApi', () => ({
   deactivateDevice: jest.fn(),

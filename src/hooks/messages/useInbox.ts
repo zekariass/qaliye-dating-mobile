@@ -56,7 +56,7 @@ function mapInboxItemDto(dto: InboxItemDto): InboxItem {
 // ---------------------------------------------------------------------------
 
 export type InboxCacheData = {
-  pages: Array<{ items: InboxItem[]; nextCursor: string | null }>;
+  pages: { items: InboxItem[]; nextCursor: string | null }[];
   pageParams: unknown[];
 };
 

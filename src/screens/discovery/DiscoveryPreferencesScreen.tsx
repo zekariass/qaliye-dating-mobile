@@ -163,8 +163,13 @@ export default function DiscoveryPreferencesScreen() {
       payload,
       {
         onSuccess: () => {
-          themedAlert({ message: t('discovery.preferences.saved'), icon: 'checkmark-circle', iconColor: colors.success });
-          router.back();
+          themedAlert({
+            message: t('discovery.preferences.saved'),
+            icon: 'checkmark-circle',
+            iconColor: colors.success,
+            autoDismissMs: 3000,
+          });
+          setTimeout(() => router.back(), 3000);
         },
         onError: (err) => {
           if (isInsufficientCreditsError(err)) return;

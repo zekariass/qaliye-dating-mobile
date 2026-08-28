@@ -123,7 +123,7 @@ export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, on
             options={RELIGION_OPTIONS}
             onSelect={(v) => onChange('personal.religion', v)}
             sem={sem}
-            leftIcon="leaf-outline"
+            leftIcon="mci:hands-pray"
             placeholder="Religion"
           />
         </LabeledField>

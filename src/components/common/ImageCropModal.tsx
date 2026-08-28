@@ -127,7 +127,7 @@ export function ImageCropModal({
     }
   }, [visible, resetCrop]);
 
-  const getDistance = (touches: Array<{ pageX: number; pageY: number }>) => {
+  const getDistance = (touches: { pageX: number; pageY: number }[]) => {
     const dx = touches[1].pageX - touches[0].pageX;
     const dy = touches[1].pageY - touches[0].pageY;
     return Math.sqrt(dx * dx + dy * dy);

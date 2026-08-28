@@ -1,3 +1,5 @@
+import { usePhoneOtp } from '../usePhoneOtp';
+
 jest.mock('react', () => ({
   ...jest.requireActual('react'),
   useCallback: (fn: Function) => fn,
@@ -9,8 +11,6 @@ jest.mock('react', () => ({
     return [val, set];
   },
 }));
-
-import { usePhoneOtp } from '../usePhoneOtp';
 
 const mockSignInWithOtp = jest.fn();
 const mockVerifyOtp = jest.fn();

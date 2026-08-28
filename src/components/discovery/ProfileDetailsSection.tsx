@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
@@ -30,20 +30,19 @@ const DRINKING_API_TO_LABEL: Record<string, string> = {
 };
 
 const ACTIVITY_API_TO_LABEL: Record<string, string> = {
-  SEDENTARY: 'Sedentary',
-  LIGHT: 'Light',
-  MODERATE: 'Moderate',
-  ACTIVE: 'Active',
-  VERY_ACTIVE: 'Very active',
+  VERY_ACTIVE: 'Active: Exercises 4+ times a week',
+  ACTIVE: 'Active: Exercises 4+ times a week',
+  MODERATE: 'Moderate: Exercises a few times a week',
+  LIGHT: 'Occasional: Exercises once in a while',
+  SEDENTARY: 'Rarely: Prefers non-physical activities',
+  PREFER_NOT_TO_SAY: 'Prefer not to say',
 };
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 interface DetailItem {
-  icon: IoniconName;
+  icon: string;
   label: string;
   value: string;
 }
@@ -104,7 +103,13 @@ function SectionGroup({
             {idx > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
             <View style={styles.listRow}>
               <View style={[styles.detailIconWrap, { backgroundColor: iconBg, borderColor: borderCol }]}>
-                <Ionicons name={item.icon} size={17} color={colors.primary} />
+                {item.icon.startsWith('mci:') ? (
+                  <MaterialCommunityIcons name={item.icon.slice(4) as any} size={17} color={colors.primary} />
+                ) : /^[a-z-]+$/i.test(item.icon) ? (
+                  <Ionicons name={item.icon as any} size={17} color={colors.primary} />
+                ) : (
+                  <Text style={{ fontSize: 17 }}>{item.icon}</Text>
+                )}
               </View>
               <View style={styles.detailBody}>
                 <Text style={[styles.detailLabel, { color: mutedCol }]}>{item.label}</Text>
@@ -175,7 +180,7 @@ export default function ProfileDetailsSection({ card }: Props) {
   const heritageItems: DetailItem[] = [
     (card.ethnicities && card.ethnicities.length > 0) ? { icon: 'people-outline',   label: 'Ethnicity',   value: card.ethnicities.map((e) => e.name).join(', ') } : null,
     card.nationality                                  ? { icon: 'flag-outline',     label: 'Nationality', value: /^[A-Z]{2}$/.test(card.nationality) ? getCountryName(card.nationality) : formatLabel(card.nationality) }                   : null,
-    card.religion                                     ? { icon: 'leaf-outline',     label: 'Religion',    value: formatLabel(card.religion) }                      : null,
+    card.religion                                     ? { icon: 'mci:hands-pray',     label: 'Religion',    value: formatLabel(card.religion) }                      : null,
   ].filter(Boolean) as DetailItem[];
 
   const workItems: DetailItem[] = [

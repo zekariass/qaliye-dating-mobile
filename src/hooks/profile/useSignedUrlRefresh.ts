@@ -59,7 +59,7 @@ export function useSignedUrlRefresh() {
             return false;
           }
           const data = query.state.data as
-            | { pages: Array<{ profiles: Array<{ photos: Array<{ expiresAt?: string; expires_at?: string }> }> }> }
+            | { pages: { profiles: { photos: { expiresAt?: string; expires_at?: string }[] }[] }[] }
             | undefined;
           const firstPage = data?.pages?.[0];
           if (!firstPage?.profiles?.length) return false;

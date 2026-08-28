@@ -31,8 +31,8 @@ import { useRevenueCatReconcile } from '@/hooks/billing/useRevenueCatReconcile';
 import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useTheme } from '@/hooks/use-theme';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
-import type { ClaimablePromotionDto, PaymentMethodDto } from '@/types/billing';
-import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan, type SubscriptionProvider } from '@/types/billing';
+import type { ClaimablePromotionDto, PaymentMethodDto, SubscriptionProvider } from '@/types/billing';
+import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 import { extractApiError } from '@/utils/apiError';
 
 function formatProviderName(provider?: SubscriptionProvider): string {

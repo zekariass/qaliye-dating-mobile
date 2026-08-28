@@ -118,87 +118,123 @@ export default function PreferencesStep({ onComplete, isCompleted }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-      <Text style={[styles.title, { color: th.text }]}>{t('onboarding.preferences.title')}</Text>
-      <Text style={[styles.subtitle, { color: th.textSecondary }]}>
-        {t('onboarding.preferences.subtitle')}
-      </Text>
-
-      {/* Locked gender preference */}
-      <View style={[styles.lockedCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-        <View style={styles.lockedCardRow}>
-          <Ionicons name="lock-closed" size={14} color={colors.primary} />
-          <Text style={[styles.lockedCardLabel, { color: th.textMuted }]}>{t('onboarding.preferences.lockedLabel')}</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerIconCircle}>
+          <Ionicons name="heart-outline" size={32} color={colors.primary} />
         </View>
-        <View style={styles.lockedValueRow}>
-          <Ionicons
-            name={interestedIn === 'MALE' ? 'male' : 'female'}
-            size={22}
-            color={colors.primary}
-          />
-          <Text style={[styles.lockedValueText, { color: th.text }]}>
-            {interestedIn === 'MALE' ? t('onboarding.preferences.men') : interestedIn === 'FEMALE' ? t('onboarding.preferences.women') : '—'}
-          </Text>
-        </View>
-        <Text style={[styles.lockedCardHint, { color: th.textMuted }]}>
-          {t('onboarding.preferences.lockedHint')} ({userGender === 'MALE' ? t('onboarding.preferences.man') : userGender === 'FEMALE' ? t('onboarding.preferences.woman') : 'unknown'})
+        <Text style={[styles.title, { color: th.text }]}>{t('onboarding.preferences.title')}</Text>
+        <Text style={[styles.subtitle, { color: th.textSecondary }]}>
+          {t('onboarding.preferences.subtitle')}
         </Text>
       </View>
 
-      {/* Age range */}
-      <Text style={[styles.label, { color: th.textMuted }]}>{t('onboarding.preferences.ageRange')}</Text>
-      <View style={[styles.sliderCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-        <View style={styles.sliderHeader}>
-          <View style={styles.sliderTitleRow}>
-            <Ionicons name="people-outline" size={15} color={th.textSecondary} />
-            <Text style={[styles.sliderCardLabel, { color: th.textSecondary }]}>{t('onboarding.preferences.agePreference')}</Text>
+      {/* Locked gender preference card */}
+      <View style={[styles.lockedCard, { backgroundColor: th.surface, borderColor: th.border }]}>
+        <View style={styles.lockedCardTop}>
+          <View style={[styles.lockedIconBadge, { backgroundColor: colors.primary + '15' }]}>
+            <Ionicons
+              name={interestedIn === 'MALE' ? 'man' : 'woman'}
+              size={24}
+              color={colors.primary}
+            />
           </View>
-          <Text style={[styles.sliderCardValue, { color: th.text }]}>{ageLabel}</Text>
+          <View style={styles.lockedCardInfo}>
+            <Text style={[styles.lockedCardLabel, { color: th.textMuted }]}>
+              {t('onboarding.preferences.lockedLabel')}
+            </Text>
+            <Text style={[styles.lockedValueText, { color: th.text }]}>
+              {interestedIn === 'MALE' ? t('onboarding.preferences.men') : interestedIn === 'FEMALE' ? t('onboarding.preferences.women') : '—'}
+            </Text>
+          </View>
+          <View style={[styles.lockedBadge, { backgroundColor: colors.primary + '12' }]}>
+            <Ionicons name="lock-closed" size={11} color={colors.primary} />
+            <Text style={[styles.lockedBadgeText, { color: colors.primary }]}>
+              {userGender === 'MALE' ? t('onboarding.preferences.man') : userGender === 'FEMALE' ? t('onboarding.preferences.woman') : ''}
+            </Text>
+          </View>
         </View>
-        <View style={styles.sliderRow}>
-          <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>18</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={18}
-            maximumValue={99}
-            step={1}
-            value={minAge}
-            onValueChange={(v: number) => setMinAge(Math.min(v, maxAge - 1))}
-            minimumTrackTintColor={colors.primary}
-            maximumTrackTintColor={th.border}
-            thumbTintColor={colors.primary}
-          />
-          <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>100+</Text>
+        <Text style={[styles.lockedCardHint, { color: th.textMuted }]}>
+          {t('onboarding.preferences.lockedHint')}
+        </Text>
+      </View>
+
+      {/* Age range card */}
+      <View style={[styles.prefCard, { backgroundColor: th.surface, borderColor: th.border }]}>
+        <View style={styles.prefCardHeader}>
+          <View style={styles.prefCardTitleRow}>
+            <View style={[styles.prefCardIconBadge, { backgroundColor: colors.primary + '12' }]}>
+              <Ionicons name="people-outline" size={16} color={colors.primary} />
+            </View>
+            <Text style={[styles.prefCardTitle, { color: th.text }]}>{t('onboarding.preferences.ageRange')}</Text>
+          </View>
+          <View style={[styles.prefCardValuePill, { backgroundColor: colors.primary + '12' }]}>
+            <Text style={[styles.prefCardValueText, { color: colors.primary }]}>{ageLabel}</Text>
+          </View>
         </View>
-        <View style={styles.sliderRow}>
-          <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>18</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={19}
-            maximumValue={100}
-            step={1}
-            value={maxAge}
-            onValueChange={(v: number) => setMaxAge(Math.max(v, minAge + 1))}
-            minimumTrackTintColor={colors.primary}
-            maximumTrackTintColor={th.border}
-            thumbTintColor={colors.primary}
-          />
-          <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>100+</Text>
+
+        {/* Min age slider */}
+        <View style={styles.sliderBlock}>
+          <View style={styles.sliderLabelRow}>
+            <Text style={[styles.sliderLabel, { color: th.textSecondary }]}>{t('onboarding.preferences.min')}</Text>
+            <Text style={[styles.sliderValue, { color: th.text }]}>{minAge}</Text>
+          </View>
+          <View style={styles.sliderRow}>
+            <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>18</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={18}
+              maximumValue={99}
+              step={1}
+              value={minAge}
+              onValueChange={(v: number) => setMinAge(Math.min(v, maxAge - 1))}
+              minimumTrackTintColor={colors.primary}
+              maximumTrackTintColor={th.border}
+              thumbTintColor={colors.primary}
+            />
+            <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>100+</Text>
+          </View>
         </View>
-        <View style={styles.ageLabelsRow}>
-          <Text style={[styles.ageRangeHint, { color: th.textMuted }]}>{t('onboarding.preferences.min')}: {minAge}</Text>
-          <Text style={[styles.ageRangeHint, { color: th.textMuted }]}>{t('onboarding.preferences.max')}: {maxAge === 100 ? '100+' : maxAge}</Text>
+
+        {/* Divider */}
+        <View style={[styles.sliderDivider, { backgroundColor: th.border }]} />
+
+        {/* Max age slider */}
+        <View style={styles.sliderBlock}>
+          <View style={styles.sliderLabelRow}>
+            <Text style={[styles.sliderLabel, { color: th.textSecondary }]}>{t('onboarding.preferences.max')}</Text>
+            <Text style={[styles.sliderValue, { color: th.text }]}>{maxAge === 100 ? '100+' : maxAge}</Text>
+          </View>
+          <View style={styles.sliderRow}>
+            <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>18</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={19}
+              maximumValue={100}
+              step={1}
+              value={maxAge}
+              onValueChange={(v: number) => setMaxAge(Math.max(v, minAge + 1))}
+              minimumTrackTintColor={colors.primary}
+              maximumTrackTintColor={th.border}
+              thumbTintColor={colors.primary}
+            />
+            <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>100+</Text>
+          </View>
         </View>
       </View>
 
-      {/* Max distance */}
-      <Text style={[styles.label, { color: th.textMuted }]}>{t('onboarding.preferences.maxDistance')}</Text>
-      <View style={[styles.sliderCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-        <View style={styles.sliderHeader}>
-          <View style={styles.sliderTitleRow}>
-            <Ionicons name="location-outline" size={15} color={th.textSecondary} />
-            <Text style={[styles.sliderCardLabel, { color: th.textSecondary }]}>{t('onboarding.preferences.distancePreference')}</Text>
+      {/* Max distance card */}
+      <View style={[styles.prefCard, { backgroundColor: th.surface, borderColor: th.border }]}>
+        <View style={styles.prefCardHeader}>
+          <View style={styles.prefCardTitleRow}>
+            <View style={[styles.prefCardIconBadge, { backgroundColor: colors.primary + '12' }]}>
+              <Ionicons name="location-outline" size={16} color={colors.primary} />
+            </View>
+            <Text style={[styles.prefCardTitle, { color: th.text }]}>{t('onboarding.preferences.maxDistance')}</Text>
           </View>
-          <Text style={[styles.sliderCardValue, { color: th.text }]}>{distanceLabel}</Text>
+          <View style={[styles.prefCardValuePill, { backgroundColor: colors.primary + '12' }]}>
+            <Text style={[styles.prefCardValueText, { color: colors.primary }]}>{distanceLabel}</Text>
+          </View>
         </View>
         <View style={styles.sliderRow}>
           <Text style={[styles.sliderSideLabel, { color: th.textMuted }]}>5</Text>
@@ -243,72 +279,163 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
 
-  title: { fontSize: 26, fontWeight: '800', marginBottom: 6, letterSpacing: -0.4, marginTop: spacing.xs },
-  subtitle: { fontSize: 15, marginBottom: spacing.lg, lineHeight: 22 },
-
-  label: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginTop: spacing.md,
+  // Header
+  header: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  headerIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
+    backgroundColor: colors.primary + '10',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 
+  // Locked gender card
   lockedCard: {
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: colors.primary,
     padding: spacing.md,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
-  lockedCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  lockedCardLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  lockedValueRow: {
+  lockedCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.xs,
   },
+  lockedIconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockedCardInfo: {
+    flex: 1,
+  },
+  lockedCardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
   lockedValueText: {
     fontSize: 18,
     fontWeight: '700',
   },
+  lockedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+  },
+  lockedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
   lockedCardHint: {
     fontSize: 12,
+    marginTop: 2,
   },
 
-  sliderCard: {
-    borderRadius: 16,
+  // Preference cards (age, distance)
+  prefCard: {
+    borderRadius: radius.lg,
     borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
-  sliderHeader: {
+  prefCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: spacing.sm,
   },
-  sliderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  sliderCardLabel: { fontSize: 13, fontWeight: '500' },
-  sliderCardValue: { fontSize: 16, fontWeight: '700' },
-  sliderRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sliderSideLabel: { fontSize: 11, width: 28, textAlign: 'center', fontWeight: '500' },
-  slider: { flex: 1, height: 40 },
-  ageLabelsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
-  ageRangeHint: { fontSize: 11 },
+  prefCardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  prefCardIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  prefCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  prefCardValuePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+  },
+  prefCardValueText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
 
+  // Sliders
+  sliderBlock: {
+    paddingVertical: 4,
+  },
+  sliderLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  sliderLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  sliderValue: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  sliderDivider: {
+    height: 1,
+    marginVertical: spacing.sm,
+  },
+  sliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sliderSideLabel: {
+    fontSize: 11,
+    width: 28,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  slider: {
+    flex: 1,
+    height: 40,
+  },
+
+  // Error
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -323,15 +450,16 @@ const styles = StyleSheet.create({
   },
   errorText: { color: '#FF6B6B', fontSize: 13, flex: 1 },
 
+  // Submit button
   btn: {
     backgroundColor: colors.primary,
-    borderRadius: 14,
+    borderRadius: radius.full,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: spacing.lg,
     shadowColor: colors.primary,
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 },
     elevation: 8,
   },

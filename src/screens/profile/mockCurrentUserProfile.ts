@@ -114,7 +114,7 @@ export const CURRENT_USER_PROFILE: CurrentUserProfile = {
   smokingDetail: null,
   drinkingDetail: null,
   languages: [],
-  activityLevel: 'Moderate',
+  activityLevel: 'Moderate: Exercises a few times a week',
   interests: ['Travel', 'Coffee', 'Reading', 'Fitness', 'Music'],
 
   isVisible: true,

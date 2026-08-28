@@ -1,5 +1,5 @@
-import type { EntitlementResponse, PlanLimits, QuotaInfo } from '@/types/billing';
-import { LIMIT_KEYS } from '@/types/billing';
+import type { ActionLimitAndCost, EntitlementResponse, PlanLimits } from '@/types/billing';
+import { ACTION_CODES } from '@/types/billing';
 
 export function formatLimit(value: number | null | undefined): string {
   if (value === null || value === undefined) return 'Unlimited';
@@ -19,9 +19,9 @@ export type PlanLimitDisplay = {
 
 export function getPlanLimitDisplays(entitlements: EntitlementResponse | null): PlanLimitDisplay[] {
   const pl = entitlements?.plan_limits;
-  const limits = entitlements?.limits;
-  const voiceLimit = pl?.VOICE_CHAT_MSGS ?? limits?.[LIMIT_KEYS.VOICE_CHAT_MSGS]?.limit ?? null;
-  const imageLimit = pl?.IMAGE_CHAT_MSGS ?? limits?.[LIMIT_KEYS.IMAGE_CHAT_MSGS]?.limit ?? null;
+  const lac = entitlements?.limits_and_costs;
+  const voiceLimit = pl?.VOICE_CHAT_MSGS ?? lac?.[ACTION_CODES.VOICE_MESSAGE]?.limit ?? null;
+  const imageLimit = pl?.IMAGE_CHAT_MSGS ?? lac?.[ACTION_CODES.IMAGE_MESSAGE]?.limit ?? null;
   return [
     { label: 'Likes', icon: 'heart', value: pl?.LIKES ?? null, formatted: formatLimit(pl?.LIKES) },
     { label: 'Super Likes', icon: 'star', value: pl?.SUPERLIKES ?? null, formatted: formatLimit(pl?.SUPERLIKES) },
@@ -37,24 +37,30 @@ export type LimitStatus = {
   remaining: number | null;
   isUnlimited: boolean;
   isExhausted: boolean;
-  resetsAt?: string;
+  resetsAt?: string | null;
 };
 
-function getLimit(entitlements: EntitlementResponse | null, key: string): QuotaInfo | null {
-  if (!entitlements?.limits) return null;
-  return entitlements.limits[key] ?? null;
+/**
+ * Looks up a single action's merged limit+cost entry from `limits_and_costs`.
+ * Accepts both canonical codes (LIKE) and legacy variants (LIKES) via
+ * `normalizeActionCode`.
+ */
+function getAction(entitlements: EntitlementResponse | null, actionCode: string): ActionLimitAndCost | null {
+  if (!entitlements?.limits_and_costs) return null;
+  const canonical = normalizeActionCode(actionCode) ?? actionCode;
+  return entitlements.limits_and_costs[canonical] ?? null;
 }
 
 export function getLikesStatus(entitlements: EntitlementResponse | null): LimitStatus {
-  const limit = getLimit(entitlements, LIMIT_KEYS.LIKES);
-  const remaining = limit?.remaining ?? null;
+  const action = getAction(entitlements, ACTION_CODES.LIKE);
+  const remaining = action?.remaining ?? null;
   const isUnlimited = remaining === null;
   return {
     available: isUnlimited ? Infinity : (remaining ?? 0),
     remaining,
     isUnlimited,
     isExhausted: !isUnlimited && remaining === 0,
-    resetsAt: limit?.resets_at,
+    resetsAt: action?.resets_at,
   };
 }
 
@@ -70,12 +76,12 @@ export type TwoTierStatus = {
   isUnlimited: boolean;
   isExhausted: boolean;
   usingCredits: boolean;
-  resetsAt?: string;
+  resetsAt?: string | null;
 };
 
 export function getSuperLikesStatus(entitlements: EntitlementResponse | null): TwoTierStatus {
-  const limit = getLimit(entitlements, LIMIT_KEYS.SUPER_LIKES);
-  const dailyRemaining = limit?.remaining ?? null;
+  const action = getAction(entitlements, ACTION_CODES.SUPER_LIKE);
+  const dailyRemaining = action?.remaining ?? null;
   const isUnlimited = dailyRemaining === null;
   const credits = entitlements?.credits.credit_balance ?? 0;
   const dailyNum = isUnlimited ? Infinity : (dailyRemaining ?? 0);
@@ -88,7 +94,7 @@ export function getSuperLikesStatus(entitlements: EntitlementResponse | null): T
     isUnlimited,
     isExhausted: !isUnlimited && dailyNum === 0 && credits === 0,
     usingCredits,
-    resetsAt: limit?.resets_at,
+    resetsAt: action?.resets_at,
   };
 }
 
@@ -98,8 +104,8 @@ export function canSuperLike(entitlements: EntitlementResponse | null): boolean 
 }
 
 export function getRewindsStatus(entitlements: EntitlementResponse | null): TwoTierStatus {
-  const limit = getLimit(entitlements, LIMIT_KEYS.REWINDS);
-  const dailyRemaining = limit?.remaining ?? null;
+  const action = getAction(entitlements, ACTION_CODES.REWIND);
+  const dailyRemaining = action?.remaining ?? null;
   const isUnlimited = dailyRemaining === null;
   const credits = entitlements?.credits.credit_balance ?? 0;
   const dailyNum = isUnlimited ? Infinity : (dailyRemaining ?? 0);
@@ -112,7 +118,7 @@ export function getRewindsStatus(entitlements: EntitlementResponse | null): TwoT
     isUnlimited,
     isExhausted: !isUnlimited && dailyNum === 0 && credits === 0,
     usingCredits,
-    resetsAt: limit?.resets_at,
+    resetsAt: action?.resets_at,
   };
 }
 
@@ -131,12 +137,12 @@ export type BoostStatus = {
   durationMinutes: number;
   canActivate: boolean;
   isExhausted: boolean;
-  resetsAt?: string;
+  resetsAt?: string | null;
 };
 
 export function getBoostStatus(entitlements: EntitlementResponse | null): BoostStatus {
-  const limit = getLimit(entitlements, LIMIT_KEYS.BOOSTS);
-  const dailyRemaining = limit?.remaining ?? null;
+  const action = getAction(entitlements, ACTION_CODES.BOOST);
+  const dailyRemaining = action?.remaining ?? null;
   const isUnlimited = dailyRemaining === null;
   const credits = entitlements?.credits.credit_balance ?? 0;
   const dailyNum = isUnlimited ? Infinity : (dailyRemaining ?? 0);
@@ -153,7 +159,7 @@ export function getBoostStatus(entitlements: EntitlementResponse | null): BoostS
     durationMinutes: entitlements?.boost_duration_minutes ?? 30,
     canActivate: !isActive && (isUnlimited || totalAvailable > 0),
     isExhausted: !isActive && !isUnlimited && dailyNum === 0 && credits === 0,
-    resetsAt: limit?.resets_at,
+    resetsAt: action?.resets_at,
   };
 }
 
@@ -168,15 +174,15 @@ export function hasFeature(entitlements: EntitlementResponse | null, feature: ke
 // ── Chat message quota helpers ─────────────────────────────────────────────
 
 export function getVoiceChatMsgsStatus(entitlements: EntitlementResponse | null): LimitStatus {
-  const limit = getLimit(entitlements, LIMIT_KEYS.VOICE_CHAT_MSGS);
-  const remaining = limit?.remaining ?? null;
+  const action = getAction(entitlements, ACTION_CODES.VOICE_MESSAGE);
+  const remaining = action?.remaining ?? null;
   const isUnlimited = remaining === null;
   return {
     available: isUnlimited ? Infinity : (remaining ?? 0),
     remaining,
     isUnlimited,
     isExhausted: !isUnlimited && remaining === 0,
-    resetsAt: limit?.resets_at,
+    resetsAt: action?.resets_at,
   };
 }
 
@@ -186,15 +192,15 @@ export function canSendVoiceChatMsg(entitlements: EntitlementResponse | null): b
 }
 
 export function getImageChatMsgsStatus(entitlements: EntitlementResponse | null): LimitStatus {
-  const limit = getLimit(entitlements, LIMIT_KEYS.IMAGE_CHAT_MSGS);
-  const remaining = limit?.remaining ?? null;
+  const action = getAction(entitlements, ACTION_CODES.IMAGE_MESSAGE);
+  const remaining = action?.remaining ?? null;
   const isUnlimited = remaining === null;
   return {
     available: isUnlimited ? Infinity : (remaining ?? 0),
     remaining,
     isUnlimited,
     isExhausted: !isUnlimited && remaining === 0,
-    resetsAt: limit?.resets_at,
+    resetsAt: action?.resets_at,
   };
 }
 
@@ -288,21 +294,25 @@ export function getQuotaErrorType(error: unknown): ActionType | string | null {
 
 // ── Action-cost helpers for the insufficient-credits modal ───────────────────
 
+/**
+ * @deprecated With the merged `limits_and_costs` map, action codes ARE the
+ * keys — no separate limit-key mapping is needed. Kept for backward compat.
+ */
 export const ACTION_CODE_LIMIT_KEY: Record<string, string | undefined> = {
-  LIKES: LIMIT_KEYS.LIKES,
-  LIKE: LIMIT_KEYS.LIKES,
-  SUPER_LIKE: LIMIT_KEYS.SUPER_LIKES,
-  SUPERLIKES: LIMIT_KEYS.SUPER_LIKES,
-  REWIND: LIMIT_KEYS.REWINDS,
-  REWINDS: LIMIT_KEYS.REWINDS,
-  BOOST: LIMIT_KEYS.BOOSTS,
-  BOOSTS: LIMIT_KEYS.BOOSTS,
-  VOICE_MESSAGE: LIMIT_KEYS.VOICE_CHAT_MSGS,
-  IMAGE_MESSAGE: LIMIT_KEYS.IMAGE_CHAT_MSGS,
+  LIKES: 'LIKE',
+  LIKE: 'LIKE',
+  SUPER_LIKE: 'SUPER_LIKE',
+  SUPERLIKES: 'SUPER_LIKE',
+  REWIND: 'REWIND',
+  REWINDS: 'REWIND',
+  BOOST: 'BOOST',
+  BOOSTS: 'BOOST',
+  VOICE_MESSAGE: 'VOICE_MESSAGE',
+  IMAGE_MESSAGE: 'IMAGE_MESSAGE',
 };
 
 // Map action-code variants (from 429 errors, URL inference, etc.) to the
-// canonical key used in the entitlements `costs` map.
+// canonical key used in the `limits_and_costs` map.
 export const ACTION_CODE_CANONICAL: Record<string, string | undefined> = {
   LIKES: 'LIKE',
   LIKE: 'LIKE',
@@ -315,7 +325,7 @@ export const ACTION_CODE_CANONICAL: Record<string, string | undefined> = {
 };
 
 /**
- * Normalize an action code to the canonical key used in the costs map.
+ * Normalize an action code to the canonical key used in `limits_and_costs`.
  * Falls back to the original code if no alias is known.
  */
 export function normalizeActionCode(code: string | null | undefined): string | null {
@@ -398,23 +408,17 @@ export function getActionName(actionCode: string | null | undefined): string {
   return map[actionCode] ?? actionCode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function getLimitRemaining(entitlements: EntitlementResponse | null, actionCode: string): number | null {
-  const limitKey = ACTION_CODE_LIMIT_KEY[actionCode] ?? actionCode;
-  const limit = entitlements?.limits?.[limitKey];
-  return limit?.remaining ?? null;
-}
-
 export function getActionCostSummary(
   actionCode: string | null | undefined,
   entitlements: EntitlementResponse | null,
 ): ActionCostSummary {
   const actionName = getActionName(actionCode);
   const creditBalance = entitlements?.credits?.credit_balance ?? 0;
-  // Use canonical action code for costs lookup (e.g. LIKES → LIKE)
+  // Use canonical action code for limits_and_costs lookup (e.g. LIKES → LIKE)
   const canonicalCode = normalizeActionCode(actionCode);
-  const costInfo = canonicalCode ? entitlements?.costs?.[canonicalCode] : undefined;
+  const action = canonicalCode ? getAction(entitlements, canonicalCode) : null;
 
-  if (!costInfo) {
+  if (!action) {
     return {
       actionName,
       creditBalance,
@@ -427,12 +431,12 @@ export function getActionCostSummary(
     };
   }
 
-  const limitValue: number | null = costInfo.limit_value ?? null;
-  const remaining = getLimitRemaining(entitlements, actionCode ?? '');
+  const limitValue: number | null = action.limit ?? null;
+  const remaining = action.remaining ?? null;
   const isUnlimited = limitValue === null;
 
   // Determine which cost to display based on the user's situation:
-  //  1. Unlimited plan (limit_value = null) → member_credit_cost
+  //  1. Unlimited plan (limit = null) → member_credit_cost
   //  2. Has remaining free quota → member_credit_cost (what they'd pay)
   //  3. Free quota exhausted, credits apply after limit → actual_credit_cost
   //  4. Free quota exhausted, credits don't apply → actual_credit_cost as
@@ -441,15 +445,15 @@ export function getActionCostSummary(
   let cost: number | null = null;
 
   if (isUnlimited) {
-    cost = costInfo.member_credit_cost ?? costInfo.actual_credit_cost ?? null;
+    cost = action.member_credit_cost ?? action.actual_credit_cost ?? null;
   } else if ((remaining ?? 0) > 0) {
-    cost = costInfo.member_credit_cost ?? costInfo.actual_credit_cost ?? null;
-  } else if (costInfo.apply_credit_after_limit) {
-    cost = costInfo.actual_credit_cost ?? costInfo.member_credit_cost ?? null;
+    cost = action.member_credit_cost ?? action.actual_credit_cost ?? null;
+  } else if (action.apply_credit_after_limit) {
+    cost = action.actual_credit_cost ?? action.member_credit_cost ?? null;
   } else {
     // apply_credit_after_limit = false → credits can't buy more, but show
     // actual_credit_cost so the user understands the action's value
-    cost = costInfo.actual_credit_cost ?? null;
+    cost = action.actual_credit_cost ?? null;
   }
 
   const hasCreditCost = cost !== null;
@@ -457,13 +461,13 @@ export function getActionCostSummary(
   // When apply_credit_after_limit is false and quota is exhausted, credits
   // can't buy more — the modal is correctly shown, so it's NOT stale even if
   // the balance exceeds the displayed cost.
-  const creditsCanHelp = isUnlimited || (remaining ?? 0) > 0 || costInfo.apply_credit_after_limit;
+  const creditsCanHelp = isUnlimited || (remaining ?? 0) > 0 || action.apply_credit_after_limit;
   const isStale = hasCreditCost && creditsCanHelp && creditBalance >= cost;
 
   // isLimitExceeded: quota is exhausted AND credits can't help (the user has
   // enough credits but the limit itself is the blocker)
-  const isLimitExceeded = !isUnlimited && (remaining ?? 0) <= 0 && !costInfo.apply_credit_after_limit;
-  const periodType = costInfo.period_type ?? null;
+  const isLimitExceeded = !isUnlimited && (remaining ?? 0) <= 0 && !action.apply_credit_after_limit;
+  const periodType = action.period_type ?? null;
 
   if (isLimitExceeded) {
     return {

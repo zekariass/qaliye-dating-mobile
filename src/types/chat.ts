@@ -240,7 +240,7 @@ export interface MessageCreatedData {
   body: string | null;
   created_at: string;
   edited_at: string | null;
-  attachments?: Array<{
+  attachments?: {
     id: string;
     attachment_type: ChatAttachmentType;
     file_name: string;
@@ -248,7 +248,7 @@ export interface MessageCreatedData {
     file_size_bytes: number;
     duration_ms: number | null;
     created_at: string;
-  }>;
+  }[];
 }
 
 export interface ReceiptUpdatedData {

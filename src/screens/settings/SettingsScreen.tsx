@@ -1,4 +1,3 @@
-import i18n from '@/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -12,7 +11,6 @@ import {
     StyleSheet,
     Switch,
     Text,
-    TouchableOpacity,
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,7 +29,7 @@ import { useSignOutWithDeactivation } from '@/hooks/notifications/useSignOutWith
 import { useTheme } from '@/hooks/use-theme';
 import { useRateUs } from '@/hooks/useRateUs';
 import { supabase } from '@/lib/supabase';
-import { LANGUAGE_LABELS, LANGUAGE_LIST, useLanguageStore } from '@/stores/language-store';
+import { useLanguageStore } from '@/stores/language-store';
 import { ThemeMode, useThemeStore } from '@/stores/theme-store';
 import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 import { extractApiError, getApiErrorTitle } from '@/utils/apiError';
@@ -367,6 +365,7 @@ export default function SettingsScreen() {
         />
 
         {/* ── Language ── */}
+        {/* Language switcher temporarily disabled — will be re-enabled in the future.
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
           <Text style={[styles.sectionTitle, { color: th.text }]}>
             {t('settings.language', 'Language')}
@@ -394,6 +393,7 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
           </Pressable>
         </View>
+        */}
 
         {/* ── Appearance ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
@@ -591,6 +591,7 @@ export default function SettingsScreen() {
       </Modal>
 
       {/* ── Language picker modal ── */}
+      {/* Language switcher temporarily disabled — will be re-enabled in the future.
       <Modal
         visible={langOpen}
         transparent
@@ -630,6 +631,7 @@ export default function SettingsScreen() {
           </View>
         </Pressable>
       </Modal>
+      */}
 
       {/* ── Sign-out loading overlay ── */}
       <Modal

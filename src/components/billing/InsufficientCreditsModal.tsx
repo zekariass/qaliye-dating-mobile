@@ -35,17 +35,17 @@ import { formatPeriodType, formatTryAgainLabel, getActionCostSummary, getActionN
 //  │                               │
 //  │  [ Go Premium     ]           │
 //  │  [ Buy Credits    ]           │
-//  │  [ Not Now        ]           │
+//  │  [ Close          ]           │
 //  └───────────────────────────────┘
 //
 // Title:  action name from getActionName(actionCode)
-// Cost:   from entitlements.costs[actionCode]
+// Cost:   from entitlements.limits_and_costs[actionCode]
 // Balance: from entitlements.credits.credit_balance
 //
 // Buttons (filtered by country_settings):
 //   subscription_enabled → Go Premium
 //   credits_enabled      → Buy Credits
-//   always               → Not Now
+//   always               → Close
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function InsufficientCreditsModal() {
@@ -88,8 +88,8 @@ export function InsufficientCreditsModal() {
   useEffect(() => {
     if (visible && __DEV__) {
       console.log('[InsufficientCreditsModal] actionCode:', actionCode);
-      console.log('[InsufficientCreditsModal] costs map:', entitlements?.costs);
-      console.log('[InsufficientCreditsModal] costInfo for action:', actionCode ? entitlements?.costs?.[actionCode] : undefined);
+      console.log('[InsufficientCreditsModal] limits_and_costs map:', entitlements?.limits_and_costs);
+      console.log('[InsufficientCreditsModal] action entry:', actionCode ? entitlements?.limits_and_costs?.[actionCode] : undefined);
       console.log('[InsufficientCreditsModal] summary:', summary);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,7 +109,7 @@ export function InsufficientCreditsModal() {
         const fresh = result.data ?? entitlements;
         const freshSummary = getActionCostSummary(actionCode, fresh);
         if (!freshSummary.isStale) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           return apiClient.request({ ...(retryConfig as any), _insufficientCreditRetry: true });
         }
         throw new Error('still-insufficient');
@@ -144,7 +144,7 @@ export function InsufficientCreditsModal() {
   // canonical action code so variants like LIKES → LIKE resolve correctly)
   const canonicalCode = normalizeActionCode(actionCode);
   const directCost = canonicalCode
-    ? entitlements?.costs?.[canonicalCode]?.actual_credit_cost ?? null
+    ? entitlements?.limits_and_costs?.[canonicalCode]?.actual_credit_cost ?? null
     : null;
   const cost    = summary.cost ?? directCost;
   const balance = summary.creditBalance;
@@ -271,10 +271,10 @@ export function InsufficientCreditsModal() {
                     <Ionicons
                       name="close-outline"
                       size={16}
-                      color={th.textSecondary}
+                      color={colors.danger}
                     />
-                    <Text style={[styles.btnTextMuted, { color: th.textSecondary, opacity: p ? 0.7 : 1 }]}>
-                      Not Now
+                    <Text style={[styles.btnTextMuted, { color: colors.danger, opacity: p ? 0.7 : 1 }]}>
+                      Close
                     </Text>
                   </View>
                 )}

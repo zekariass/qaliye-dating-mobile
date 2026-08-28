@@ -1,3 +1,14 @@
+import type { CampaignRecord } from '@/stores/promotion-store';
+import type { EligiblePromotionDto } from '@/types/billing';
+import {
+    canShowCampaign,
+    getCooldownSequence,
+    isPromoCurrentlyValid,
+    isPromoStructurallyValid,
+    parseUtcDate,
+    selectPromotion,
+} from '../useEligiblePromotions';
+
 jest.mock('@/api/billing/billingApi', () => ({
   fetchEligiblePromotions: jest.fn(),
 }));
@@ -14,17 +25,6 @@ jest.mock('zustand/middleware', () => {
     createJSONStorage: () => undefined,
   };
 });
-
-import type { CampaignRecord } from '@/stores/promotion-store';
-import type { EligiblePromotionDto } from '@/types/billing';
-import {
-    canShowCampaign,
-    getCooldownSequence,
-    isPromoCurrentlyValid,
-    isPromoStructurallyValid,
-    parseUtcDate,
-    selectPromotion,
-} from '../useEligiblePromotions';
 
 const H24 = 24 * 3600_000;
 const D3 = 3 * 24 * 3600_000;

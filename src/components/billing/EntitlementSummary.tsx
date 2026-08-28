@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
-import type { EntitlementResponse, QuotaInfo } from '@/types/billing';
+import type { ActionLimitAndCost, EntitlementResponse } from '@/types/billing';
 import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 
 type Props = {
@@ -22,41 +22,37 @@ function formatDate(iso?: string): string {
   });
 }
 
-const LIMIT_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-  likes: 'heart',
-  super_likes: 'star',
-  rewinds: 'arrow-undo',
-  boosts: 'rocket',
-  voiceChatMsgs: 'mic',
-  imageChatMsgs: 'image',
+const ACTION_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  LIKE: 'heart',
+  SUPER_LIKE: 'star',
+  REWIND: 'arrow-undo',
+  BOOST: 'rocket',
+  VOICE_MESSAGE: 'mic',
+  IMAGE_MESSAGE: 'image',
 };
 
-const LIMIT_LABEL: Record<string, string> = {
-  likes: 'Likes',
-  super_likes: 'Super Likes',
-  rewinds: 'Rewinds',
-  boosts: 'Boosts',
-  voiceChatMsgs: 'Voice Msgs',
-  imageChatMsgs: 'Image Msgs',
+const ACTION_LABEL: Record<string, string> = {
+  LIKE: 'Likes',
+  SUPER_LIKE: 'Super Likes',
+  REWIND: 'Rewinds',
+  BOOST: 'Boosts',
+  VOICE_MESSAGE: 'Voice Msgs',
+  IMAGE_MESSAGE: 'Image Msgs',
 };
 
-function formatLimitKey(key: string): string {
-  return LIMIT_LABEL[key] ?? key
+const ACTION_ORDER = ['LIKE', 'SUPER_LIKE', 'REWIND', 'BOOST', 'VOICE_MESSAGE', 'IMAGE_MESSAGE'];
+
+function formatActionLabel(code: string): string {
+  return ACTION_LABEL[code] ?? code
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 
-const CREDIT_KEY_MAP: Record<string, keyof EntitlementResponse['credits']> = {
-  super_likes: 'credit_balance',
-  rewinds: 'credit_balance',
-  boosts: 'credit_balance',
-};
-
-function formatLimitValue(quota: QuotaInfo, creditsAvailable: number): string {
-  const limit = quota.limit;
+function formatLimitValue(action: ActionLimitAndCost, creditsAvailable: number): string {
+  const limit = action.limit;
   if (limit === null || limit === undefined) return 'Unlimited';
-  const remaining = quota.remaining ?? 0;
+  const remaining = action.remaining ?? 0;
   const total = remaining + creditsAvailable;
   return `${total}`;
 }
@@ -72,10 +68,14 @@ export function EntitlementSummary({
   const isPremium = isPremiumPlan(plan);
   const isFreePremium = isFreePremiumPlan(plan);
 
-  const limitEntries = Object.entries(entitlements.limits);
-  const rows: [string, QuotaInfo][][] = [];
-  for (let i = 0; i < limitEntries.length; i += 2) {
-    rows.push(limitEntries.slice(i, i + 2) as [string, QuotaInfo][]);
+  const lacMap = entitlements.limits_and_costs ?? {};
+  const entries: [string, ActionLimitAndCost][] = ACTION_ORDER
+    .filter((code) => lacMap[code])
+    .map((code) => [code, lacMap[code]] as [string, ActionLimitAndCost]);
+
+  const rows: [string, ActionLimitAndCost][][] = [];
+  for (let i = 0; i < entries.length; i += 2) {
+    rows.push(entries.slice(i, i + 2));
   }
 
   return (
@@ -105,15 +105,14 @@ export function EntitlementSummary({
 
       {rows.map((row, rowIndex) => (
         <View key={rowIndex} style={styles.gridRow}>
-          {row.map(([key, quota]) => {
-            const creditKey = CREDIT_KEY_MAP[key];
-            const creditsAvailable = creditKey ? entitlements.credits[creditKey] : 0;
+          {row.map(([code, action]) => {
+            const creditsAvailable = entitlements.credits.credit_balance;
             return (
             <LimitCard
-              key={key}
-              icon={LIMIT_ICON[key] ?? 'help-circle-outline'}
-              label={formatLimitKey(key)}
-              value={formatLimitValue(quota, creditsAvailable)}
+              key={code}
+              icon={ACTION_ICON[code] ?? 'help-circle-outline'}
+              label={formatActionLabel(code)}
+              value={formatLimitValue(action, creditsAvailable)}
               textColor={textColor}
               secondaryColor={secondaryColor}
               borderColor={borderColor}
