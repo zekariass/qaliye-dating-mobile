@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, spacing } from '@/constants/theme';
 import { useBootstrapApp } from '@/hooks/auth/useBootstrapApp';
 import { useTheme } from '@/hooks/use-theme';
 import AuthScreen from '@/screens/auth/AuthScreen';
@@ -90,23 +90,25 @@ export default function Auth() {
               ]}
               hitSlop={12}
             >
-              <Ionicons name="close" size={24} color={colors.danger} />
+              <Ionicons name="close" size={22} color={colors.danger} />
             </Pressable>
-            <View style={[deletedOverlay.iconCircle, { backgroundColor: colors.danger + '20' }]}>
-              <Ionicons name="checkmark-circle-outline" size={28} color={colors.danger} />
+            <View style={deletedOverlay.content}>
+              <View style={[deletedOverlay.iconCircle, { backgroundColor: colors.danger + '20' }]}>
+                <Ionicons name="checkmark-circle-outline" size={32} color={colors.danger} />
+              </View>
+              <Text style={[deletedOverlay.title, { color: th.text }]}>
+                {t('settings.accountDeletedOverlayTitle', 'Account Deleted')}
+              </Text>
+              <Text style={[deletedOverlay.body, { color: th.textSecondary }]}>
+                {t(
+                  'settings.accountDeletedOverlayBody',
+                  'Your account and all associated data have been permanently deleted. You will be signed out shortly.',
+                )}
+              </Text>
+              <Text style={[deletedOverlay.countdown, { color: th.textSecondary }]}>
+                {countdown}s
+              </Text>
             </View>
-            <Text style={[deletedOverlay.title, { color: th.text }]}>
-              {t('settings.accountDeletedOverlayTitle', 'Account Deleted')}
-            </Text>
-            <Text style={[deletedOverlay.body, { color: th.textSecondary }]}>
-              {t(
-                'settings.accountDeletedOverlayBody',
-                'Your account and all associated data have been permanently deleted. You will be signed out shortly.',
-              )}
-            </Text>
-            <Text style={[deletedOverlay.countdown, { color: th.textSecondary }]}>
-              {countdown}s
-            </Text>
           </View>
         </View>
       </Modal>
@@ -117,7 +119,7 @@ export default function Auth() {
 const deletedOverlay = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(26, 6, 51, 0.6)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
@@ -126,43 +128,54 @@ const deletedOverlay = StyleSheet.create({
     position: 'relative',
     width: '100%',
     maxWidth: 340,
-    borderRadius: radius.lg,
+    borderRadius: 24,
     borderWidth: 1,
-    padding: spacing.lg,
+    paddingVertical: 36,
+    paddingHorizontal: 28,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 12,
+  },
+  content: {
     alignItems: 'center',
     gap: 10,
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: '#FCA5A5',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     textAlign: 'center',
   },
   body: {
     fontSize: 14,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
   },
   closeBtn: {
     position: 'absolute',
     top: 10,
     right: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
   countdown: {
     fontSize: 13,
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: 4,
   },
 });

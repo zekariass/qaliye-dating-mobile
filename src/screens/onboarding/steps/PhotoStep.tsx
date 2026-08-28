@@ -16,6 +16,7 @@ import {
 
 import { deleteProfilePhoto, fetchProfilePhotos, registerProfilePhoto } from '@/api/profile/profileApi';
 import { ImageCropModal, type CropRegion } from '@/components/common/ImageCropModal';
+import PhotoSourceModal, { type PhotoSource } from '@/components/common/PhotoSourceModal';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
@@ -52,6 +53,11 @@ const SUCCESS_BORDER_DURATION = 3000;
 
 async function requestLibraryPermission(): Promise<boolean> {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  return status === 'granted';
+}
+
+async function requestCameraPermission(): Promise<boolean> {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
   return status === 'granted';
 }
 
@@ -135,6 +141,12 @@ export default function PhotoStep({ onComplete }: Props) {
     cardIdx?: number;
   } | null>(null);
   const [cropProcessing, setCropProcessing] = useState(false);
+
+  // Photo source modal state
+  const [sourceModal, setSourceModal] = useState<{
+    mode: 'primary' | 'card';
+    cardIdx?: number;
+  } | null>(null);
 
   // Upload queue management
   const uploadQueue = useRef<(() => Promise<void>)[]>([]);
@@ -292,43 +304,54 @@ export default function PhotoStep({ onComplete }: Props) {
   const pickPrimary = useCallback(async () => {
     if (primarySlot.status === 'uploading' || primarySlot.status === 'queued') return;
     setError(null);
-    if (!(await requestLibraryPermission())) {
-      setError('Photo library access is required.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 1,
-    });
-    if (result.canceled || result.assets.length === 0) return;
-    const asset = result.assets[0];
-    if (asset.width < 720 || asset.height < 900) {
-      setError('Image too small. Upload at least 720 × 900 px for your profile avatar.');
-      return;
-    }
-    setCropState({ asset, mode: 'primary' });
+    setSourceModal({ mode: 'primary' });
   }, [primarySlot.status]);
 
   const pickCard = useCallback(async (slotIdx: number) => {
     const slot = cardSlots[slotIdx];
     if (slot && (slot.status === 'uploading' || slot.status === 'queued')) return;
     setError(null);
-    if (!(await requestLibraryPermission())) {
-      setError('Photo library access is required.');
-      return;
+    setSourceModal({ mode: 'card', cardIdx: slotIdx });
+  }, [cardSlots]);
+
+  const handleSourceSelect = useCallback(async (source: PhotoSource) => {
+    if (!sourceModal) return;
+    const { mode, cardIdx } = sourceModal;
+    setSourceModal(null);
+
+    if (source === 'camera') {
+      if (!(await requestCameraPermission())) {
+        setError('Camera access is required to take photos.');
+        return;
+      }
+    } else {
+      if (!(await requestLibraryPermission())) {
+        setError('Photo library access is required.');
+        return;
+      }
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 1,
-    });
+
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+
     if (result.canceled || result.assets.length === 0) return;
     const asset = result.assets[0];
-    if (asset.width < 720 || asset.height < 960) {
-      setError('Image too small. Upload at least 720 × 960 px for card photos.');
-      return;
+
+    if (mode === 'primary') {
+      if (asset.width < 720 || asset.height < 900) {
+        setError('Image too small. Upload at least 720 × 900 px for your profile avatar.');
+        return;
+      }
+      setCropState({ asset, mode: 'primary' });
+    } else {
+      if (asset.width < 720 || asset.height < 960) {
+        setError('Image too small. Upload at least 720 × 960 px for card photos.');
+        return;
+      }
+      setCropState({ asset, mode: 'card', cardIdx });
     }
-    setCropState({ asset, mode: 'card', cardIdx: slotIdx });
-  }, [cardSlots]);
+  }, [sourceModal]);
 
   // ─── Crop confirm: process image, show preview, enqueue upload ──────────────
 
@@ -826,6 +849,13 @@ export default function PhotoStep({ onComplete }: Props) {
         onConfirm={handleCropConfirm}
         onCancel={() => setCropState(null)}
         processing={cropProcessing}
+      />
+
+      {/* ── Photo Source Selection Modal ──────────────────────────────────── */}
+      <PhotoSourceModal
+        visible={sourceModal !== null}
+        onSelect={handleSourceSelect}
+        onCancel={() => setSourceModal(null)}
       />
 
       {/* ── Upload Error Modal ──────────────────────────────────────────────── */}

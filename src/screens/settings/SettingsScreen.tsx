@@ -578,8 +578,10 @@ export default function SettingsScreen() {
         statusBarTranslucent
       >
         <View style={overlayStyles.backdrop}>
-          <View style={[overlayStyles.card, { backgroundColor: th.surface }]}>
-            <ActivityIndicator size="large" color={colors.danger} style={{ marginBottom: 20 }} />
+          <View style={[deleteStyles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+            <View style={deleteStyles.iconWrap}>
+              <ActivityIndicator size="large" color={colors.danger} />
+            </View>
             <Text style={[overlayStyles.title, { color: th.text }]}>
               {t('settings.deletingTitle', 'Deleting your account…')}
             </Text>
@@ -641,7 +643,7 @@ export default function SettingsScreen() {
         statusBarTranslucent
       >
         <View style={overlayStyles.backdrop}>
-          <View style={[overlayStyles.card, { backgroundColor: th.surface }]}>
+          <View style={[signOutStyles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
             <View style={signOutStyles.iconWrap}>
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
@@ -807,14 +809,56 @@ const overlayStyles = StyleSheet.create({
 });
 
 const signOutStyles = StyleSheet.create({
+  card: {
+    width: '100%',
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingVertical: 36,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 12,
+  },
   iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(138, 44, 255, 0.10)',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: colors.primaryLight,
+    backgroundColor: 'rgba(138, 44, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+});
+
+const deleteStyles = StyleSheet.create({
+  card: {
+    width: '100%',
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingVertical: 36,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 12,
+  },
+  iconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: '#FCA5A5',
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
   },
 });
 

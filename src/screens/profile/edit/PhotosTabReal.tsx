@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ImageCropModal, type CropRegion } from '@/components/common/ImageCropModal';
+import PhotoSourceModal, { type PhotoSource } from '@/components/common/PhotoSourceModal';
 import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import { supabase } from '@/lib/supabase';
@@ -59,23 +60,37 @@ export const PhotosTabReal = memo(function PhotosTabReal({
   const [cropAsset, setCropAsset] = useState<ImagePickerAsset | null>(null);
   const [cropIsPrimary, setCropIsPrimary] = useState(false);
   const [cropProcessing, setCropProcessing] = useState(false);
+  const [sourceModalOpen, setSourceModalOpen] = useState(false);
 
   const isBusy = isUploading || localLoading;
   const primaryPhoto = photos.find((p) => p.is_primary) ?? photos[0];
   const secondaryPhotos = photos.filter((p) => p.id !== primaryPhoto?.id);
   const canAdd = photos.length < MAX_PHOTOS;
 
-  const pickAndUpload = useCallback(async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      themedError('Permission required', 'Please allow photo library access to add photos.');
-      return;
+  const pickAndUpload = useCallback(() => {
+    setSourceModalOpen(true);
+  }, []);
+
+  const handleSourceSelect = useCallback(async (source: PhotoSource) => {
+    setSourceModalOpen(false);
+
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        themedError('Permission required', 'Camera access is required to take photos.');
+        return;
+      }
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        themedError('Permission required', 'Please allow photo library access to add photos.');
+        return;
+      }
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 1,
-    });
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
 
     if (result.canceled || !result.assets[0]) {
       console.warn('[pickAndUpload] Picker returned canceled or empty', { canceled: result.canceled, assetCount: result.assets?.length });
@@ -365,6 +380,12 @@ export const PhotosTabReal = memo(function PhotosTabReal({
         onConfirm={handleCropConfirm}
         onCancel={() => setCropAsset(null)}
         processing={cropProcessing}
+      />
+
+      <PhotoSourceModal
+        visible={sourceModalOpen}
+        onSelect={handleSourceSelect}
+        onCancel={() => setSourceModalOpen(false)}
       />
 
       {/* Action Sheet Modal */}

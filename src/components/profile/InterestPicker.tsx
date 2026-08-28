@@ -153,17 +153,10 @@ function InterestChip({
           styles.chipText,
           { color: isActive ? '#FFFFFF' : sem.textSecondary },
         ]}
+        numberOfLines={1}
       >
         {translateInterest(interest, t)}
       </Text>
-      {isActive && (
-        <Ionicons
-          name="checkmark-circle"
-          size={16}
-          color="#FFFFFF"
-          style={styles.chipCheck}
-        />
-      )}
     </AnimatedPressable>
   );
 }
@@ -311,17 +304,18 @@ const styles = StyleSheet.create({
   chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
     gap: 8,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1.5,
     gap: 5,
+    width: '31%',
   },
   chipEmoji: {
     fontSize: 14,
@@ -329,9 +323,6 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 13,
     fontWeight: '600',
-  },
-  chipCheck: {
-    marginLeft: 2,
   },
   toggleBtn: {
     flexDirection: 'row',

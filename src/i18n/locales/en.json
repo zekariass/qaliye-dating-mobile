@@ -2,6 +2,16 @@
   "app": {
     "name": "Qaliye"
   },
+  "photoSource": {
+    "title": "Add Photo",
+    "subtitle": "Choose how you want to add your photo",
+    "takePhoto": "Take Photo",
+    "takePhotoDesc": "Use the camera",
+    "chooseGallery": "Gallery",
+    "chooseGalleryDesc": "Pick from device",
+    "cameraPermission": "Camera access is required to take photos.",
+    "galleryPermission": "Please allow photo library access to add photos."
+  },
   "splash": {
     "tagline": "Where hearts connect",
     "loading": "Finding meaningful connections..."

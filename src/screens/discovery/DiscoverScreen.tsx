@@ -754,6 +754,12 @@ export default function DiscoverScreen() {
         if (restoredCard) {
           setRewindIncoming(effectiveDir);
           shownIdsRef.current.delete(restoredCard.user_id);
+          // Remove from swipedIds so the restored profile is visible in Browse Mode too
+          setSwipedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(restoredCard.user_id);
+            return next;
+          });
           setDisplayQueue((prev) => {
             // Avoid duplicates: remove any existing entry for this user before prepending
             const filtered = prev.filter((c) => c.user_id !== restoredCard.user_id);

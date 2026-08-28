@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { rs, useTabletScale } from '@/utils/responsive';
 
 const TOTAL_STARS = 12;
-const STAR_RADIUS = 16; // distance from button center to star center
+const STAR_RADIUS = 14; // distance from button center to star center
 
 interface Props {
   onRewind: () => void;
@@ -17,7 +17,7 @@ interface Props {
   disabled?: boolean;
 }
 
-const BTN = 48;
+const BTN = 40;
 
 export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLike, onSuperMessage, disabled }: Props) {
   const { colors: th } = useTheme();
@@ -35,7 +35,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Rewind profile"
         >
-          <Text style={[styles.icon, styles.rewindIcon, { fontSize: rs(28, scale) }]}>↺</Text>
+          <Text style={[styles.icon, styles.rewindIcon, { fontSize: rs(24, scale) }]}>↺</Text>
         </TouchableOpacity>
 
         {/* Like */}
@@ -46,7 +46,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Like profile"
         >
-          <Ionicons name="heart" size={rs(30, scale)} color="#FF2D55" />
+          <Ionicons name="heart" size={rs(25, scale)} color="#FF2D55" />
         </TouchableOpacity>
 
         {/* SuperLike */}
@@ -57,26 +57,21 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Super like profile"
         >
-          <Ionicons name="star" size={rs(26, scale)} color={colors.primary} />
-          {Array.from({ length: TOTAL_STARS }).map((_, i) => {
-            const angle = (i / TOTAL_STARS) * 2 * Math.PI - Math.PI / 2;
-            const x = Math.cos(angle) * STAR_RADIUS;
-            const y = Math.sin(angle) * STAR_RADIUS;
-            return (
-              <Ionicons
-                key={i}
-                name="star"
-                size={5}
-                color={colors.primary}
-                style={[
-                  styles.star,
-                  {
-                    transform: [{ translateX: x }, { translateY: y }],
-                  },
-                ]}
-              />
-            );
-          })}
+          <View style={styles.superLikeIcon}>
+            <Ionicons name="heart" size={rs(25, scale)} color="#FF2D55" />
+            <Ionicons
+              name="sparkles"
+              size={rs(10, scale)}
+              color="#FACC15"
+              style={styles.sparkleTopRight}
+            />
+            <Ionicons
+              name="sparkles"
+              size={rs(7, scale)}
+              color="#FACC15"
+              style={styles.sparkleBottomLeft}
+            />
+          </View>
         </TouchableOpacity>
 
         {/* Super Message */}
@@ -87,7 +82,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Send super message"
         >
-          <Ionicons name="chatbubble-ellipses" size={rs(30, scale)} color="#F59E0B" />
+          <Ionicons name="chatbubble-ellipses" size={rs(25, scale)} color="#F59E0B" />
         </TouchableOpacity>
 
         {/* Pass */}
@@ -98,7 +93,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Pass profile"
         >
-          <Text style={[styles.icon, styles.passIcon, { fontSize: rs(24, scale) }]}>✕</Text>
+          <Text style={[styles.icon, styles.passIcon, { fontSize: rs(20, scale) }]}>✕</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -107,12 +102,12 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
 
 const styles = StyleSheet.create({
   backdrop: {
-    padding: 10,
-    borderRadius: 25,
+    padding: 8,
+    borderRadius: 22,
     alignSelf: 'center',
   },
   container: {
-    gap: 14,
+    gap: 12,
     alignItems: 'center',
   },
   button: {
@@ -145,5 +140,19 @@ const styles = StyleSheet.create({
   },
   star: {
     position: 'absolute',
+  },
+  superLikeIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sparkleTopRight: {
+    position: 'absolute',
+    top: 2,
+    right: 1,
+  },
+  sparkleBottomLeft: {
+    position: 'absolute',
+    bottom: 3,
+    left: 2,
   },
 });

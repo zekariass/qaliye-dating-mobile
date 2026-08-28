@@ -1,20 +1,21 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import {
-    StyleSheet,
-    Text,
-    useWindowDimensions,
-    View,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useDerivedValue,
-    useSharedValue,
-    withTiming,
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -177,6 +178,18 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
     transform: [{ rotateZ: '20deg' }],
   }));
 
+  // Swipe-direction border: transparent → green (LIKE) or red (PASS), proportional to swipe progress
+  const borderStyle = useAnimatedStyle(() => {
+    const x = translateX.value;
+    const borderColor = interpolateColor(
+      x,
+      [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
+      ['#FF3B30', 'transparent', colors.primary],
+    );
+    const borderWidth = Math.max(0, Math.min(4, Math.abs(x) / SWIPE_THRESHOLD * 4));
+    return { borderColor, borderWidth };
+  });
+
   const locationText = (() => {
     const sameCountry = myCountry !== '' && card.country_name === myCountry;
     const place = sameCountry
@@ -191,7 +204,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View style={[styles.swipeWrap, animatedStyle]}>
-        <View style={[styles.imageCard, isTablet && { width: tabletCardW, alignSelf: 'center' as const }]}>
+        <Animated.View style={[styles.imageCard, isTablet && { width: tabletCardW, alignSelf: 'center' as const }, borderStyle]}>
           {/* Photo */}
           {safePhotos.length > 0 ? (
             <Image
@@ -215,24 +228,31 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
             style={styles.bottomGradient}
           />
 
-          {/* Photo progress dots — top edge */}
+          {/* Photo thumbnails — top edge */}
           {safePhotos.length > 1 && (
             <View style={styles.barsRow}>
-              {safePhotos.map((_, i) => (
+              {safePhotos.map((p, i) => (
                 <View
                   key={i}
                   style={[
-                    styles.bar,
-                    i === photoIndex ? styles.barActive : styles.barInactive,
+                    styles.thumb,
+                    i === photoIndex ? styles.thumbActive : styles.thumbInactive,
                   ]}
-                />
+                >
+                  <Image
+                    source={{ uri: p.image_url }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                </View>
               ))}
             </View>
           )}
 
           {/* Swipe stamps — Tinder-style icons */}
           <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]}>
-            <Ionicons name="heart" size={100} color="#FF2D55" />
+            <Ionicons name="heart" size={100} color={colors.primary} />
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.passStamp, passStampStyle]}>
             <Ionicons name="close" size={110} color="#FF3B30" />
@@ -263,20 +283,35 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
                 ? toTitleCase(card.relationship_intention)
                 : null;
               const religion = card.religion ? toTitleCase(card.religion) : null;
-              if (!intention && !religion) return null;
+              const occupation = card.occupation?.trim() ? card.occupation.trim() : null;
+              if (!intention && !religion && !occupation) return null;
               return (
                 <View style={styles.intentionChip}>
-                  <Ionicons name="heart" size={rs(13, scale)} color="#FF8FAB" />
                   {intention && (
-                    <Text style={[styles.intentionValue, { fontSize: rs(13, scale) }]}>
-                      {intention}
-                    </Text>
+                    <View style={styles.intentionSegment}>
+                      <Ionicons name="heart" size={rs(13, scale)} color="#FF8FAB" />
+                      <Text style={[styles.intentionValue, { fontSize: rs(13, scale) }]}>
+                        {intention}
+                      </Text>
+                    </View>
                   )}
                   {intention && religion && <View style={styles.intentionDivider} />}
                   {religion && (
-                    <Text style={[styles.intentionValue, { fontSize: rs(13, scale) }]}>
-                      {religion}
-                    </Text>
+                    <View style={styles.intentionSegment}>
+                      <MaterialCommunityIcons name="hands-pray" size={rs(13, scale)} color={colors.warning} />
+                      <Text style={[styles.intentionValue, { fontSize: rs(13, scale) }]}>
+                        {religion}
+                      </Text>
+                    </View>
+                  )}
+                  {(intention || religion) && occupation && <View style={styles.intentionDivider} />}
+                  {occupation && (
+                    <View style={styles.intentionSegment}>
+                      <Ionicons name="briefcase-outline" size={rs(13, scale)} color="#9CA3AF" />
+                      <Text style={[styles.intentionValue, { fontSize: rs(13, scale) }]}>
+                        {occupation}
+                      </Text>
+                    </View>
                   )}
                 </View>
               );
@@ -289,7 +324,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
               <VerifiedBadge pill dark />
             </View>
           )}
-        </View>
+        </Animated.View>
       </Animated.View>
     </GestureDetector>
   );
@@ -310,6 +345,8 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     overflow: 'hidden',
     backgroundColor: colors.backgroundLavender,
+    borderColor: 'transparent',
+    borderWidth: 0,
     shadowColor: '#000',
     shadowOpacity: 0.14,
     shadowRadius: 22,
@@ -335,16 +372,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
   },
-  bar: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  thumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  barActive: {
-    backgroundColor: colors.primary,
+  thumbActive: {
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
-  barInactive: {
-    backgroundColor: '#FFFFFF',
+  thumbInactive: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+    opacity: 0.6,
   },
   stamp: {
     position: 'absolute',
@@ -391,8 +432,8 @@ const styles = StyleSheet.create({
   },
   verifiedRow: {
     position: 'absolute',
-    bottom: 14,
-    right: 14,
+    top: 14,
+    left: 14,
     zIndex: 3,
   },
   age: {
@@ -426,6 +467,7 @@ const styles = StyleSheet.create({
   },
   intentionChip: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 6,
@@ -434,6 +476,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
+    maxWidth: '100%',
+  },
+  intentionSegment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   intentionLabel: {
     fontSize: 12,

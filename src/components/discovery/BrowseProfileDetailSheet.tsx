@@ -38,7 +38,7 @@ import { formatDistance } from '@/utils/formatDistance';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const HERO_H = Math.round(SCREEN_W * 1.1);
-const ACTION_BTN = 52;
+const ACTION_BTN = 44;
 const TOTAL_STARS = 12;
 const STAR_RADIUS = 16;
 
@@ -267,17 +267,24 @@ export default function BrowseProfileDetailSheet({
                 style={styles.heroOverlay}
               />
 
-              {/* Photo indicator dots — top right corner */}
+              {/* Photo thumbnails — top right corner */}
               {heroPhotos.length > 1 && (
                 <View style={styles.heroDotsWrap}>
-                  {heroPhotos.map((_, i) => (
+                  {heroPhotos.map((uri, i) => (
                     <View
                       key={i}
                       style={[
-                        styles.heroDot,
-                        i === heroPhotoIndex ? styles.heroDotActive : styles.heroDotInactive,
+                        styles.heroThumb,
+                        i === heroPhotoIndex ? styles.heroThumbActive : styles.heroThumbInactive,
                       ]}
-                    />
+                    >
+                      <Image
+                        source={{ uri }}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                      />
+                    </View>
                   ))}
                 </View>
               )}
@@ -365,7 +372,7 @@ export default function BrowseProfileDetailSheet({
               accessibilityLabel="Pass profile"
               accessibilityRole="button"
             >
-              <Ionicons name="close" size={34} color={colors.danger} />
+              <Ionicons name="close" size={28} color={colors.danger} />
             </TouchableOpacity>
 
             {/* Like */}
@@ -381,10 +388,10 @@ export default function BrowseProfileDetailSheet({
               accessibilityLabel="Like profile"
               accessibilityRole="button"
             >
-              <Ionicons name="heart" size={32} color={colors.heartPink} />
+              <Ionicons name="heart" size={28} color={colors.heartPink} />
             </TouchableOpacity>
 
-            {/* Super Like — star burst style matching swipe mode */}
+            {/* Super Like — sparkling heart matching swipe mode */}
             <TouchableOpacity
               style={[
                 styles.actionBtn,
@@ -397,24 +404,21 @@ export default function BrowseProfileDetailSheet({
               accessibilityLabel="Super like profile"
               accessibilityRole="button"
             >
-              <Ionicons name="star" size={26} color={colors.primary} />
-              {Array.from({ length: TOTAL_STARS }).map((_, i) => {
-                const angle = (i / TOTAL_STARS) * 2 * Math.PI - Math.PI / 2;
-                const x = Math.cos(angle) * STAR_RADIUS;
-                const y = Math.sin(angle) * STAR_RADIUS;
-                return (
-                  <Ionicons
-                    key={i}
-                    name="star"
-                    size={5}
-                    color={colors.primary}
-                    style={[
-                      styles.star,
-                      { transform: [{ translateX: x }, { translateY: y }] },
-                    ]}
-                  />
-                );
-              })}
+              <View style={styles.superLikeIcon}>
+                <Ionicons name="heart" size={24} color={colors.heartPink} />
+                <Ionicons
+                  name="sparkles"
+                  size={11}
+                  color="#FACC15"
+                  style={styles.sparkleTopRight}
+                />
+                <Ionicons
+                  name="sparkles"
+                  size={8}
+                  color="#FACC15"
+                  style={styles.sparkleBottomLeft}
+                />
+              </View>
             </TouchableOpacity>
 
             {/* Super Message */}
@@ -430,7 +434,7 @@ export default function BrowseProfileDetailSheet({
                 accessibilityLabel="Send super message"
                 accessibilityRole="button"
               >
-                <Ionicons name="chatbubble-ellipses" size={30} color="#F59E0B" />
+                <Ionicons name="chatbubble-ellipses" size={26} color="#F59E0B" />
               </TouchableOpacity>
             )}
           </Animated.View>
@@ -442,9 +446,9 @@ export default function BrowseProfileDetailSheet({
               pointerEvents="none"
             >
               <Ionicons
-                name={actionTaken === 'PASS' ? 'close' : actionTaken === 'SUPER_LIKE' ? 'star' : 'heart'}
+                name={actionTaken === 'PASS' ? 'close' : 'heart'}
                 size={22}
-                color={actionTaken === 'PASS' ? colors.danger : actionTaken === 'SUPER_LIKE' ? colors.primary : colors.heartPink}
+                color={actionTaken === 'PASS' ? colors.danger : colors.heartPink}
               />
               <Text style={[styles.confirmationText, { color: th.text }]}>
                 {actionTaken === 'LIKE'
@@ -515,25 +519,26 @@ const styles = StyleSheet.create({
   },
   heroDotsWrap: {
     position: 'absolute',
-    top: 60,
+    top: 56,
     right: 14,
     flexDirection: 'row',
-    gap: 4,
+    gap: 6,
     zIndex: 4,
   },
-  heroDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
+  heroThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  heroDotActive: {
-    backgroundColor: colors.primary,
-    borderWidth: 0,
-  },
-  heroDotInactive: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+  heroThumbActive: {
+    borderWidth: 2,
     borderColor: colors.primary,
+  },
+  heroThumbInactive: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+    opacity: 0.6,
   },
   heroVerified: {
     position: 'absolute',
@@ -642,11 +647,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   likeBtn: {
-    width: ACTION_BTN + 8,
-    height: ACTION_BTN + 8,
-    borderRadius: (ACTION_BTN + 8) / 2,
+    width: ACTION_BTN,
+    height: ACTION_BTN,
+    borderRadius: ACTION_BTN / 2,
   },
   star: {
     position: 'absolute',
+  },
+  superLikeIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sparkleTopRight: {
+    position: 'absolute',
+    top: 2,
+    right: 1,
+  },
+  sparkleBottomLeft: {
+    position: 'absolute',
+    bottom: 3,
+    left: 2,
   },
 });

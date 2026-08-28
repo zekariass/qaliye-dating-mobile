@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -37,9 +37,9 @@ import { formatDistance } from '@/utils/formatDistance';
 import { rs, useTabletScale } from '@/utils/responsive';
 
 const TABLET_BREAK = 500;
-const ACTION_BTN = 50;
+const ACTION_BTN = 42;
 const TOTAL_STARS = 12;
-const STAR_RADIUS = 16;
+const STAR_RADIUS = 14;
 
 interface BrowseItem {
   user_id: string;
@@ -51,6 +51,8 @@ interface BrowseItem {
   country_name: string;
   photos: string[];
   relationship_intention: string;
+  religion?: string;
+  occupation?: string;
   bio?: string;
   activity_status?: ActivityStatus;
 }
@@ -66,6 +68,8 @@ function mapCardToBrowseItem(card: CardDto): BrowseItem {
     country_name: card.country_name,
     photos: (card.photos ?? []).map((p) => p.image_url).filter(Boolean),
     relationship_intention: card.relationship_intention,
+    religion: card.religion,
+    occupation: card.occupation,
     bio: card.bio,
     activity_status: card.activity_status,
   };
@@ -287,22 +291,34 @@ function BrowseProfileCard({
               style={styles.photoOverlay}
             />
 
-            {/* Photo indicator dots — top right corner */}
+            {/* Photo thumbnails — top right corner */}
             {photos.length > 1 && (
               <View style={styles.photoDotsWrap}>
-                {photos.map((_, i) => (
+                {photos.map((uri, i) => (
                   <View
                     key={i}
                     style={[
-                      styles.photoDot,
-                      i === photoIndex ? styles.photoDotActive : styles.photoDotInactive,
+                      styles.thumb,
+                      i === photoIndex ? styles.thumbActive : styles.thumbInactive,
                     ]}
-                  />
+                  >
+                    <Image
+                      source={{ uri }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  </View>
                 ))}
               </View>
             )}
 
-            {/* Verified badge rendered inside cardInfo below */}
+            {/* Verified badge — top left corner */}
+            {item.is_verified && (
+              <View style={styles.verifiedBadgeWrap}>
+                <VerifiedBadge pill dark />
+              </View>
+            )}
           </View>
 
           {/* Action stamps — LIKE / PASS / SUPER LIKE */}
@@ -354,24 +370,70 @@ function BrowseProfileCard({
           </Text>
         ) : null}
 
-        {/* Intention chip + Verified — same row */}
-        {(item.relationship_intention || item.is_verified) && (
+        {/* Intention + Religion + Occupation chip */}
+        {(item.relationship_intention || item.religion || item.occupation) && (
           <View style={styles.intentionRow}>
             {item.relationship_intention ? (
-              <View style={[styles.intentionChip, { backgroundColor: iconBg }]}>
-                <Ionicons name="heart" size={rs(13, scale)} color="#FF8FAB" />
-                <Text style={[styles.intentionLabel, { color: textColor, opacity: 0.60, fontSize: rs(12, scale) }]}>
-                  Intention
-                </Text>
-                <View style={[styles.intentionDivider, { backgroundColor: borderColor }]} />
-                <Text style={[styles.intentionValue, { color: textColor, fontSize: rs(13, scale) }]} numberOfLines={1}>
-                  {formatIntention(item.relationship_intention)}
-                </Text>
+              <View style={[styles.intentionChip, { backgroundColor: 'rgba(255,255,255,0.13)' }]}>
+                <View style={styles.intentionSegment}>
+                  <Ionicons name="heart" size={rs(13, scale)} color="#FF8FAB" />
+                  <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                    {formatIntention(item.relationship_intention)}
+                  </Text>
+                </View>
+                {item.religion ? (
+                  <>
+                    <View style={[styles.intentionDivider, { backgroundColor: 'rgba(255,255,255,0.30)' }]} />
+                    <View style={styles.intentionSegment}>
+                      <MaterialCommunityIcons name="hands-pray" size={rs(13, scale)} color={colors.warning} />
+                      <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                        {formatIntention(item.religion)}
+                      </Text>
+                    </View>
+                  </>
+                ) : null}
+                {item.occupation ? (
+                  <>
+                    <View style={[styles.intentionDivider, { backgroundColor: 'rgba(255,255,255,0.30)' }]} />
+                    <View style={styles.intentionSegment}>
+                      <Ionicons name="briefcase-outline" size={rs(13, scale)} color="#FFFFFF" />
+                      <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                        {item.occupation}
+                      </Text>
+                    </View>
+                  </>
+                ) : null}
+              </View>
+            ) : item.religion ? (
+              <View style={[styles.intentionChip, { backgroundColor: 'rgba(255,255,255,0.13)' }]}>
+                <View style={styles.intentionSegment}>
+                  <MaterialCommunityIcons name="hands-pray" size={rs(13, scale)} color={colors.warning} />
+                  <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                    {formatIntention(item.religion)}
+                  </Text>
+                </View>
+                {item.occupation ? (
+                  <>
+                    <View style={[styles.intentionDivider, { backgroundColor: 'rgba(255,255,255,0.30)' }]} />
+                    <View style={styles.intentionSegment}>
+                      <Ionicons name="briefcase-outline" size={rs(13, scale)} color="#FFFFFF" />
+                      <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                        {item.occupation}
+                      </Text>
+                    </View>
+                  </>
+                ) : null}
+              </View>
+            ) : item.occupation ? (
+              <View style={[styles.intentionChip, { backgroundColor: 'rgba(255,255,255,0.13)' }]}>
+                <View style={styles.intentionSegment}>
+                  <Ionicons name="briefcase-outline" size={rs(13, scale)} color="#FFFFFF" />
+                  <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                    {item.occupation}
+                  </Text>
+                </View>
               </View>
             ) : null}
-            {item.is_verified && (
-              <VerifiedBadge pill dark />
-            )}
           </View>
         )}
       </View>
@@ -387,7 +449,7 @@ function BrowseProfileCard({
           accessibilityLabel="Pass profile"
           accessibilityRole="button"
         >
-          <Ionicons name="close" size={rs(30, scale)} color={colors.danger} />
+          <Ionicons name="close" size={rs(25, scale)} color={colors.danger} />
         </TouchableOpacity>
 
         {/* Like */}
@@ -399,10 +461,10 @@ function BrowseProfileCard({
           accessibilityLabel="Like profile"
           accessibilityRole="button"
         >
-          <Ionicons name="heart" size={rs(30, scale)} color={colors.heartPink} />
+          <Ionicons name="heart" size={rs(25, scale)} color={colors.heartPink} />
         </TouchableOpacity>
 
-        {/* Super Like — star burst style matching swipe mode */}
+        {/* Super Like — sparkling heart matching swipe mode */}
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2, opacity: canSuperLike ? 1 : 0.4 }]}
           onPress={handleSuperLike}
@@ -411,24 +473,21 @@ function BrowseProfileCard({
           accessibilityLabel="Super like profile"
           accessibilityRole="button"
         >
-          <Ionicons name="star" size={rs(26, scale)} color={colors.primary} />
-          {Array.from({ length: TOTAL_STARS }).map((_, i) => {
-            const angle = (i / TOTAL_STARS) * 2 * Math.PI - Math.PI / 2;
-            const x = Math.cos(angle) * STAR_RADIUS;
-            const y = Math.sin(angle) * STAR_RADIUS;
-            return (
-              <Ionicons
-                key={i}
-                name="star"
-                size={5}
-                color={colors.primary}
-                style={[
-                  styles.star,
-                  { transform: [{ translateX: x }, { translateY: y }] },
-                ]}
-              />
-            );
-          })}
+          <View style={styles.superLikeIcon}>
+            <Ionicons name="heart" size={rs(25, scale)} color={colors.heartPink} />
+            <Ionicons
+              name="sparkles"
+              size={rs(10, scale)}
+              color="#FACC15"
+              style={styles.sparkleTopRight}
+            />
+            <Ionicons
+              name="sparkles"
+              size={rs(7, scale)}
+              color="#FACC15"
+              style={styles.sparkleBottomLeft}
+            />
+          </View>
         </TouchableOpacity>
 
         {/* Super Message */}
@@ -440,7 +499,7 @@ function BrowseProfileCard({
           accessibilityLabel="Send super message"
           accessibilityRole="button"
         >
-          <Ionicons name="chatbubble-ellipses" size={rs(30, scale)} color="#F59E0B" />
+          <Ionicons name="chatbubble-ellipses" size={rs(25, scale)} color="#F59E0B" />
         </TouchableOpacity>
 
         {/* View profile — at the right end */}
@@ -452,7 +511,7 @@ function BrowseProfileCard({
           accessibilityLabel="View profile"
           accessibilityRole="button"
         >
-          <Ionicons name="information-circle-outline" size={30} color={colors.primary} />
+          <Ionicons name="information-circle-outline" size={25} color={colors.primary} />
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -861,19 +920,28 @@ const styles = StyleSheet.create({
     right: 10,
     flexDirection: 'row',
     gap: 4,
+    zIndex: 3,
+  },
+  verifiedBadgeWrap: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
     zIndex: 4,
   },
-  photoDot: {
-    width: 11,
-    height: 11,
-    borderRadius: 5.5,
+  thumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  photoDotActive: {
-    backgroundColor: colors.primary,
-    borderWidth: 0,
+  thumbActive: {
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
-  photoDotInactive: {
-    backgroundColor: '#FFFFFF',
+  thumbInactive: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+    opacity: 0.6,
   },
   cardInfo: {
     position: 'absolute',
@@ -940,6 +1008,20 @@ const styles = StyleSheet.create({
   star: {
     position: 'absolute',
   },
+  superLikeIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sparkleTopRight: {
+    position: 'absolute',
+    top: 2,
+    right: 1,
+  },
+  sparkleBottomLeft: {
+    position: 'absolute',
+    bottom: 3,
+    left: 2,
+  },
 
   // ── Info section (below photo) ──
   infoSection: {
@@ -960,6 +1042,7 @@ const styles = StyleSheet.create({
   },
   intentionChip: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 6,
     flexShrink: 1,
@@ -967,10 +1050,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
   },
-  intentionLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    letterSpacing: 0.2,
+  intentionSegment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   intentionDivider: {
     width: 1,
@@ -987,8 +1070,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderTopWidth: 1,
   },
   actionBtn: {
