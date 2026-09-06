@@ -29,7 +29,7 @@ export default function OrderStatusScreen() {
   const orderId = params.orderId ?? null;
   const checkoutUrl = params.checkoutUrl;
 
-  const { order, isLoading, refresh, isTerminal, isChapaOrder, verifyChapa } = useOrderStatus(orderId);
+  const { order, isLoading, refresh, isTerminal, isChapaOrder, isArifpayOrder, verifyChapa } = useOrderStatus(orderId);
   const { refreshEntitlements } = useEntitlements();
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const hasVerifiedRef = useRef(false);

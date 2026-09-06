@@ -5,9 +5,6 @@ import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { rs, useTabletScale } from '@/utils/responsive';
 
-const TOTAL_STARS = 12;
-const STAR_RADIUS = 14; // distance from button center to star center
-
 interface Props {
   onRewind: () => void;
   onPass: () => void;
@@ -57,21 +54,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Super like profile"
         >
-          <View style={styles.superLikeIcon}>
-            <Ionicons name="heart" size={rs(25, scale)} color="#FF2D55" />
-            <Ionicons
-              name="sparkles"
-              size={rs(10, scale)}
-              color="#FACC15"
-              style={styles.sparkleTopRight}
-            />
-            <Ionicons
-              name="sparkles"
-              size={rs(7, scale)}
-              color="#FACC15"
-              style={styles.sparkleBottomLeft}
-            />
-          </View>
+          <Ionicons name="diamond" size={rs(25, scale)} color="#00B4FC" />
         </TouchableOpacity>
 
         {/* Super Message */}
@@ -82,7 +65,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Send super message"
         >
-          <Ionicons name="chatbubble-ellipses" size={rs(25, scale)} color="#F59E0B" />
+          <Ionicons name="mail" size={rs(25, scale)} color="#F59E0B" />
         </TouchableOpacity>
 
         {/* Pass */}
@@ -138,21 +121,5 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 24,
   },
-  star: {
-    position: 'absolute',
-  },
-  superLikeIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sparkleTopRight: {
-    position: 'absolute',
-    top: 2,
-    right: 1,
-  },
-  sparkleBottomLeft: {
-    position: 'absolute',
-    bottom: 3,
-    left: 2,
-  },
+
 });

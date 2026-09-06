@@ -62,6 +62,7 @@ export function useOrderStatus(orderId: string | null) {
   const isTerminal = order ? ORDER_TERMINAL_STATUSES.includes(order.status) : false;
 
   const isChapaOrder = !!(order?.provider_checkout_url || order?.method_code === 'chapa' || order?.payment_method === 'CHAPA');
+  const isArifpayOrder = !!(order?.method_code === 'arifpay' || order?.payment_method === 'ARIFPAY');
 
   const refresh = useCallback(async () => {
     let result;
@@ -94,5 +95,5 @@ export function useOrderStatus(orderId: string | null) {
     }
   }, [orderId, qc, startPolling, query]);
 
-  return { ...query, order, isTerminal, isPolling, isChapaOrder, refresh, verifyChapa };
+  return { ...query, order, isTerminal, isPolling, isChapaOrder, isArifpayOrder, refresh, verifyChapa };
 }

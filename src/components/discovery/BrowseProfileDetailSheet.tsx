@@ -404,21 +404,7 @@ export default function BrowseProfileDetailSheet({
               accessibilityLabel="Super like profile"
               accessibilityRole="button"
             >
-              <View style={styles.superLikeIcon}>
-                <Ionicons name="heart" size={24} color={colors.heartPink} />
-                <Ionicons
-                  name="sparkles"
-                  size={11}
-                  color="#FACC15"
-                  style={styles.sparkleTopRight}
-                />
-                <Ionicons
-                  name="sparkles"
-                  size={8}
-                  color="#FACC15"
-                  style={styles.sparkleBottomLeft}
-                />
-              </View>
+              <Ionicons name="diamond" size={24} color="#00B4FC" />
             </TouchableOpacity>
 
             {/* Super Message */}
@@ -434,7 +420,7 @@ export default function BrowseProfileDetailSheet({
                 accessibilityLabel="Send super message"
                 accessibilityRole="button"
               >
-                <Ionicons name="chatbubble-ellipses" size={26} color="#F59E0B" />
+                <Ionicons name="mail" size={26} color="#F59E0B" />
               </TouchableOpacity>
             )}
           </Animated.View>
@@ -650,22 +636,5 @@ const styles = StyleSheet.create({
     width: ACTION_BTN,
     height: ACTION_BTN,
     borderRadius: ACTION_BTN / 2,
-  },
-  star: {
-    position: 'absolute',
-  },
-  superLikeIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sparkleTopRight: {
-    position: 'absolute',
-    top: 2,
-    right: 1,
-  },
-  sparkleBottomLeft: {
-    position: 'absolute',
-    bottom: 3,
-    left: 2,
   },
 });

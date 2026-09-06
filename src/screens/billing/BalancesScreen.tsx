@@ -265,7 +265,7 @@ export default function BalancesScreen() {
       <View style={styles.header}>
         <Pressable
           style={[styles.iconBtn, { backgroundColor: th.backgroundElement }]}
-          onPress={() => router.back()}
+          onPress={() => router.replace('/(app)/(tabs)/profile' as any)}
           accessibilityLabel="Go back"
           accessibilityRole="button"
         >

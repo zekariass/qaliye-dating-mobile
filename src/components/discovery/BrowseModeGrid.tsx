@@ -38,8 +38,6 @@ import { rs, useTabletScale } from '@/utils/responsive';
 
 const TABLET_BREAK = 500;
 const ACTION_BTN = 42;
-const TOTAL_STARS = 12;
-const STAR_RADIUS = 14;
 
 interface BrowseItem {
   user_id: string;
@@ -124,6 +122,8 @@ function BrowseProfileCard({
   textColor: string;
   isActing: boolean;
 }) {
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
   const { data: myProfile } = useCurrentProfile();
   const myCountry = myProfile?.address?.country_name ?? '';
   const { width: screenW } = useWindowDimensions();
@@ -374,19 +374,19 @@ function BrowseProfileCard({
         {(item.relationship_intention || item.religion || item.occupation) && (
           <View style={styles.intentionRow}>
             {item.relationship_intention ? (
-              <View style={[styles.intentionChip, { backgroundColor: 'rgba(255,255,255,0.13)' }]}>
+              <View style={[styles.intentionChip, { backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(0,0,0,0.07)' }]}>
                 <View style={styles.intentionSegment}>
                   <Ionicons name="heart" size={rs(13, scale)} color="#FF8FAB" />
-                  <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                  <Text style={[styles.intentionValue, { color: isDark ? '#FFFFFF' : th.text, fontSize: rs(13, scale) }]}>
                     {formatIntention(item.relationship_intention)}
                   </Text>
                 </View>
                 {item.religion ? (
                   <>
-                    <View style={[styles.intentionDivider, { backgroundColor: 'rgba(255,255,255,0.30)' }]} />
+                    <View style={[styles.intentionDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.15)' }]} />
                     <View style={styles.intentionSegment}>
                       <MaterialCommunityIcons name="hands-pray" size={rs(13, scale)} color={colors.warning} />
-                      <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                      <Text style={[styles.intentionValue, { color: isDark ? '#FFFFFF' : th.text, fontSize: rs(13, scale) }]}>
                         {formatIntention(item.religion)}
                       </Text>
                     </View>
@@ -394,10 +394,10 @@ function BrowseProfileCard({
                 ) : null}
                 {item.occupation ? (
                   <>
-                    <View style={[styles.intentionDivider, { backgroundColor: 'rgba(255,255,255,0.30)' }]} />
+                    <View style={[styles.intentionDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.15)' }]} />
                     <View style={styles.intentionSegment}>
-                      <Ionicons name="briefcase-outline" size={rs(13, scale)} color="#FFFFFF" />
-                      <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                      <Ionicons name="briefcase-outline" size={rs(13, scale)} color={isDark ? '#FFFFFF' : th.textSecondary} />
+                      <Text style={[styles.intentionValue, { color: isDark ? '#FFFFFF' : th.text, fontSize: rs(13, scale) }]}>
                         {item.occupation}
                       </Text>
                     </View>
@@ -405,19 +405,19 @@ function BrowseProfileCard({
                 ) : null}
               </View>
             ) : item.religion ? (
-              <View style={[styles.intentionChip, { backgroundColor: 'rgba(255,255,255,0.13)' }]}>
+              <View style={[styles.intentionChip, { backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(0,0,0,0.07)' }]}>
                 <View style={styles.intentionSegment}>
                   <MaterialCommunityIcons name="hands-pray" size={rs(13, scale)} color={colors.warning} />
-                  <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                  <Text style={[styles.intentionValue, { color: isDark ? '#FFFFFF' : th.text, fontSize: rs(13, scale) }]}>
                     {formatIntention(item.religion)}
                   </Text>
                 </View>
                 {item.occupation ? (
                   <>
-                    <View style={[styles.intentionDivider, { backgroundColor: 'rgba(255,255,255,0.30)' }]} />
+                    <View style={[styles.intentionDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.15)' }]} />
                     <View style={styles.intentionSegment}>
-                      <Ionicons name="briefcase-outline" size={rs(13, scale)} color="#FFFFFF" />
-                      <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                      <Ionicons name="briefcase-outline" size={rs(13, scale)} color={isDark ? '#FFFFFF' : th.textSecondary} />
+                      <Text style={[styles.intentionValue, { color: isDark ? '#FFFFFF' : th.text, fontSize: rs(13, scale) }]}>
                         {item.occupation}
                       </Text>
                     </View>
@@ -425,10 +425,10 @@ function BrowseProfileCard({
                 ) : null}
               </View>
             ) : item.occupation ? (
-              <View style={[styles.intentionChip, { backgroundColor: 'rgba(255,255,255,0.13)' }]}>
+              <View style={[styles.intentionChip, { backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(0,0,0,0.07)' }]}>
                 <View style={styles.intentionSegment}>
-                  <Ionicons name="briefcase-outline" size={rs(13, scale)} color="#FFFFFF" />
-                  <Text style={[styles.intentionValue, { color: '#FFFFFF', fontSize: rs(13, scale) }]}>
+                  <Ionicons name="briefcase-outline" size={rs(13, scale)} color={isDark ? '#FFFFFF' : th.textSecondary} />
+                  <Text style={[styles.intentionValue, { color: isDark ? '#FFFFFF' : th.text, fontSize: rs(13, scale) }]}>
                     {item.occupation}
                   </Text>
                 </View>
@@ -473,21 +473,7 @@ function BrowseProfileCard({
           accessibilityLabel="Super like profile"
           accessibilityRole="button"
         >
-          <View style={styles.superLikeIcon}>
-            <Ionicons name="heart" size={rs(25, scale)} color={colors.heartPink} />
-            <Ionicons
-              name="sparkles"
-              size={rs(10, scale)}
-              color="#FACC15"
-              style={styles.sparkleTopRight}
-            />
-            <Ionicons
-              name="sparkles"
-              size={rs(7, scale)}
-              color="#FACC15"
-              style={styles.sparkleBottomLeft}
-            />
-          </View>
+          <Ionicons name="diamond" size={rs(25, scale)} color="#00B4FC" />
         </TouchableOpacity>
 
         {/* Super Message */}
@@ -499,7 +485,7 @@ function BrowseProfileCard({
           accessibilityLabel="Send super message"
           accessibilityRole="button"
         >
-          <Ionicons name="chatbubble-ellipses" size={rs(25, scale)} color="#F59E0B" />
+          <Ionicons name="mail" size={rs(25, scale)} color="#F59E0B" />
         </TouchableOpacity>
 
         {/* View profile — at the right end */}
@@ -1005,23 +991,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
     letterSpacing: 1,
   },
-  star: {
-    position: 'absolute',
-  },
-  superLikeIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sparkleTopRight: {
-    position: 'absolute',
-    top: 2,
-    right: 1,
-  },
-  sparkleBottomLeft: {
-    position: 'absolute',
-    bottom: 3,
-    left: 2,
-  },
+
 
   // ── Info section (below photo) ──
   infoSection: {
