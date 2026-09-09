@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
     FlatList,
-    Image,
     Platform,
     StyleSheet,
     Text,
@@ -185,7 +185,8 @@ const MatchCard = React.memo(function MatchCard({
             <Image
               source={{ uri: item.primary_photo_url }}
               style={styles.cardImage}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="memory-disk"
             />
           ) : (
             <View style={[styles.cardImage, styles.photoPlaceholder]}>

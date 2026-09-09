@@ -1,15 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
+    AppState,
     FlatList,
     Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,6 +32,10 @@ import { useTheme } from '@/hooks/use-theme';
 import type { InboxItem } from '@/types/chat';
 import type { SuperMessageDto } from '@/types/superMessage';
 import type { SupportConversationStatus } from '@/types/support';
+
+// How often to poll support/staff conversations while this screen is active.
+const SUPPORT_POLL_INTERVAL =
+  Number(process.env.EXPO_PUBLIC_SUPPORT_POLL_INTERVAL_MS) || 30_000;
 
 // ---------------------------------------------------------------------------
 // Theme helper
@@ -282,6 +287,25 @@ export default function MessagesListScreen() {
     item: SuperMessageDto;
     direction: 'sent' | 'received';
   } | null>(null);
+
+  // ── Support polling: track focus + foreground so we only poll while visible ─
+  const [isFocused, setIsFocused] = useState(true);
+  const [isActive, setIsActive] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => setIsFocused(false);
+    }, []),
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      setIsActive(state === 'active');
+    });
+    return () => sub.remove();
+  }, []);
+
   const { getStatus } = useActivityStatuses(visibleIds);
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10, minimumViewTime: 0 });
@@ -353,24 +377,39 @@ export default function MessagesListScreen() {
   const { data: profile } = useCurrentProfile();
   const isStaff = profile?.role === 'ADMIN' || profile?.role === 'MODERATOR';
 
+  const supportPollInterval = isFocused && isActive ? SUPPORT_POLL_INTERVAL : (false as const);
+
   const {
     conversation: supportConversation,
     isLoading: supportLoading,
     isError: supportError,
     unreadCount: supportUnread,
     refetch: supportRefetch,
-  } = useSupportConversation();
+  } = useSupportConversation({ refetchInterval: supportPollInterval });
 
   const {
     conversations: staffConversations,
     isLoading: staffLoading,
     isError: staffError,
     refetch: staffRefetch,
-  } = useStaffConversations();
+  } = useStaffConversations(undefined, { refetchInterval: supportPollInterval });
+
+  // Refetch immediately whenever the screen comes into focus (catches any
+  // admin messages that arrived while the user was on another screen).
+  useFocusEffect(
+    useCallback(() => {
+      supportRefetch();
+      staffRefetch();
+    }, [supportRefetch, staffRefetch]),
+  );
 
   const staffUnreadCount = useMemo(
     () => staffConversations.reduce(
-      (sum, c) => sum + Math.max(0, c.next_public_sequence - 1 - c.staff_last_read_sequence),
+      (sum, c) =>
+        sum +
+        (c.unread_count !== undefined
+          ? Math.max(0, c.unread_count)
+          : Math.max(0, c.next_public_sequence - 1 - c.staff_last_read_sequence)),
       0,
     ),
     [staffConversations],

@@ -331,6 +331,7 @@ export async function createOrder(body: CreateOrderRequest): Promise<OrderRespon
       idempotency_key: body.idempotency_key,
       platform: body.platform,
       return_url: body.return_url,
+      customer_phone: body.customer_phone,
     },
     { headers: { 'Content-Type': 'application/json' } },
   );

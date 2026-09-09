@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PaymentMethodSheet } from '@/components/billing/PaymentMethodSheet';
+import { PhoneNumberSheet } from '@/components/billing/PhoneNumberSheet';
 import { PurchaseSuccessModal } from '@/components/billing/PurchaseSuccessModal';
 import { themedError, themedSuccess } from '@/components/common/ThemedAlert';
 import { colors, radius } from '@/constants/theme';
@@ -28,6 +29,7 @@ import { useTheme } from '@/hooks/use-theme';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
 import type { OfferDto, OfferPromotionDto, PaymentMethodDto } from '@/types/billing';
 import { extractApiError } from '@/utils/apiError';
+import { cachePaymentPhone } from '@/utils/paymentPhone';
 
 function packQuantity(productCode: string): number | null {
   const match = productCode.match(/(\d+)(?=\D*$)/);
@@ -110,6 +112,10 @@ export default function CreditsShopScreen() {
 
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [showMethodSheet, setShowMethodSheet] = useState(false);
+  const [showPhoneSheet, setShowPhoneSheet] = useState(false);
+  const [pendingMethod, setPendingMethod] = useState<PaymentMethodDto | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [phoneSubmitting, setPhoneSubmitting] = useState(false);
 
   const { entitlements, isLoading: loadingEntitlements } = useEntitlements();
   const { consumableOffers, isLoading: loadingOffers } = useOffers('CONSUMABLE');
@@ -217,7 +223,7 @@ export default function CreditsShopScreen() {
     });
   }, [purchase, t]);
 
-  const proceedWithMethod = useCallback((offerId: string, method: PaymentMethodDto) => {
+  const proceedWithMethod = useCallback((offerId: string, method: PaymentMethodDto, customerPhone?: string) => {
     const isRc = method.payment_channel === 'REVENUECAT_APPLE' || method.payment_channel === 'REVENUECAT_GOOGLE';
     if (isRc) {
       const rc = reconciledOffers.find((r) => r.backendOffer.id === offerId);
@@ -235,9 +241,14 @@ export default function CreditsShopScreen() {
     }
 
     createOrder(
-      { paymentOfferId: offerId, paymentMethodId: method.id },
+      { paymentOfferId: offerId, paymentMethodId: method.id, customerPhone },
       {
         onSuccess: (order) => {
+          setShowPhoneSheet(false);
+          setPhoneSubmitting(false);
+          setPhoneError(null);
+          setPendingMethod(null);
+          if (customerPhone) cachePaymentPhone(customerPhone);
           if (order.status === 'REJECTED' || order.status === 'EXPIRED' || order.status === 'CANCELLED') {
             themedError(
               t('billing.orderFailed', 'Order failed'),
@@ -257,10 +268,35 @@ export default function CreditsShopScreen() {
             } as any);
           }
         },
-        onError: (e) => themedError(t('billing.orderFailed', 'Order failed'), (e as Error).message),
+        onError: (e) => {
+          setPhoneSubmitting(false);
+          const detail = extractApiError(e);
+          if (detail.code === 'UNSUPPORTED_PHONE_COUNTRY_CODE' || detail.code === 'INVALID_PHONE_NUMBER') {
+            setPhoneError(detail.message);
+            return;
+          }
+          setShowPhoneSheet(false);
+          setPendingMethod(null);
+          setPhoneError(null);
+          themedError(t('billing.orderFailed', 'Order failed'), (e as Error).message);
+        },
       },
     );
   }, [createOrder, reconciledOffers, handleRcPurchase, router, t]);
+
+  const handleMethodConfirm = useCallback((method: PaymentMethodDto) => {
+    if (!selectedOfferId) return;
+    setShowMethodSheet(false);
+    const isChapa = method.method_code.toLowerCase().includes('chapa');
+    const isOnlinePayment = !isChapa && method.payment_channel === 'ONLINE_PAYMENT';
+    if (isOnlinePayment) {
+      setPendingMethod(method);
+      setPhoneError(null);
+      setShowPhoneSheet(true);
+      return;
+    }
+    proceedWithMethod(selectedOfferId, method);
+  }, [selectedOfferId, proceedWithMethod]);
 
   const handlePurchase = useCallback(() => {
     if (!selectedOfferId || !selectedPack) return;
@@ -273,14 +309,19 @@ export default function CreditsShopScreen() {
       }
       return;
     }
+    if (paymentMethods.length === 1) {
+      handleMethodConfirm(paymentMethods[0]);
+      return;
+    }
     setShowMethodSheet(true);
-  }, [selectedOfferId, selectedPack, isGlobalMarket, isLoadingRc, handleRcPurchase, t]);
+  }, [selectedOfferId, selectedPack, isGlobalMarket, isLoadingRc, handleRcPurchase, t, paymentMethods, handleMethodConfirm]);
 
-  const handleMethodConfirm = useCallback((method: PaymentMethodDto) => {
-    if (!selectedOfferId) return;
-    setShowMethodSheet(false);
-    proceedWithMethod(selectedOfferId, method);
-  }, [selectedOfferId, proceedWithMethod]);
+  const handlePhoneConfirm = useCallback((phone: string) => {
+    if (!selectedOfferId || !pendingMethod) return;
+    setPhoneSubmitting(true);
+    setPhoneError(null);
+    proceedWithMethod(selectedOfferId, pendingMethod, phone);
+  }, [selectedOfferId, pendingMethod, proceedWithMethod]);
 
   const isLoading = loadingEntitlements || loadingOffers || (isGlobalMarket && isLoadingRc);
   const noOffers = !isLoading && packs.length === 0;
@@ -569,6 +610,24 @@ export default function CreditsShopScreen() {
         visible={showMethodSheet}
         onConfirm={handleMethodConfirm}
         onDismiss={() => setShowMethodSheet(false)}
+        surfaceColor={th.surface}
+        borderColor={th.border}
+        textColor={th.text}
+        secondaryColor={th.textSecondary}
+        backgroundColor={th.background}
+      />
+
+      <PhoneNumberSheet
+        visible={showPhoneSheet}
+        onConfirm={handlePhoneConfirm}
+        onDismiss={() => {
+          setShowPhoneSheet(false);
+          setPendingMethod(null);
+          setPhoneError(null);
+          setPhoneSubmitting(false);
+        }}
+        isSubmitting={phoneSubmitting}
+        errorMessage={phoneError}
         surfaceColor={th.surface}
         borderColor={th.border}
         textColor={th.text}

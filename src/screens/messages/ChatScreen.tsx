@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    BackHandler,
     FlatList,
     InteractionManager,
     Keyboard,
@@ -30,6 +31,7 @@ import { MessageBubble } from '@/components/messages/MessageBubble';
 import { MessageComposer } from '@/components/messages/MessageComposer';
 import { NotificationPromptModal } from '@/components/notifications/NotificationPromptModal';
 import { colors } from '@/constants/theme';
+import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
 import { useChatMetadataPoller } from '@/hooks/activity/useChatMetadataPoller';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
@@ -430,79 +432,31 @@ export default function ChatScreen() {
 
   const listRef = useRef<FlatList<ChatListItem>>(null);
 
-  const handleSend = useCallback(
-    (text: string) => {
-      stopTyping();
-      send(text);
-      notifPrompt.onMessage();
-      setTimeout(() => {
-        listRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }, 50);
-    },
-    [send, stopTyping, notifPrompt],
-  );
-
-  const handleSendWithAttachments = useCallback(
-    async (text: string, files: ChatFileAttachment[], voiceDurationsMs?: (number | null)[]) => {
-      stopTyping();
-      const quotaError = await sendWithAttachments(text, files, undefined, voiceDurationsMs);
-      if (quotaError) {
-        const type = quotaError.actionType === 'VOICE_MESSAGE' ? 'voice' : 'image';
-        showQuotaUpsell(type, quotaError.message);
-      } else {
-        refreshEntitlements();
-      }
-      setSelectedFiles([]);
-      setTimeout(() => {
-        listRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }, 50);
-    },
-    [sendWithAttachments, stopTyping, refreshEntitlements],
-  );
-
-  const handleSendVoice = useCallback(
-    async (text: string) => {
-      const rec = voiceRecorder.recording;
-      if (!rec) return;
-      const file: ChatFileAttachment = {
-        uri: rec.uri,
-        name: rec.fileName,
-        type: rec.mimeType,
-        size: rec.fileSizeBytes || undefined,
-        durationMs: rec.durationMs,
-      };
-      stopTyping();
-      const quotaError = await sendWithAttachments(text, [file], undefined, [rec.durationMs]);
-      if (quotaError) {
-        const type = quotaError.actionType === 'VOICE_MESSAGE' ? 'voice' : 'image';
-        showQuotaUpsell(type, quotaError.message);
-      } else {
-        refreshEntitlements();
-      }
-      voiceRecorder.deleteRecording();
-      setSelectedFiles([]);
-      setTimeout(() => {
-        listRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }, 50);
-    },
-    [sendWithAttachments, stopTyping, voiceRecorder, refreshEntitlements],
-  );
-
   // ── Chat quota helpers ────────────────────────────────────────────────────
   const voiceQuotaStatus = getVoiceChatMsgsStatus(entitlements);
   const imageQuotaStatus = getImageChatMsgsStatus(entitlements);
 
   const showQuotaUpsell = useCallback(
-    (type: 'voice' | 'image', serverMessage?: string) => {
+    (type: 'voice' | 'image' | 'text', serverMessage?: string) => {
       const isVoice = type === 'voice';
+      const isText = type === 'text';
       const subscriptionEnabled = entitlements?.country_settings?.subscription_enabled ?? true;
-      const baseMessage = serverMessage ?? (isVoice
+      const fallbackMessage = isVoice
         ? "You've used all your available voice messages."
-        : "You've used all your available image messages.");
+        : isText
+        ? "You've used all your available messages for this conversation."
+        : "You've used all your available image messages.";
+      const baseMessage = serverMessage ?? fallbackMessage;
+      const title = isVoice
+        ? 'Voice Message Limit Reached'
+        : isText
+        ? 'Message Limit Reached'
+        : 'Image Message Limit Reached';
+      const icon = isVoice ? 'mic-outline' : isText ? 'chatbubble-outline' : 'image-outline';
       themedAlert({
-        title: isVoice ? 'Voice Message Limit Reached' : 'Image Message Limit Reached',
+        title,
         message: baseMessage,
-        icon: isVoice ? 'mic-outline' : 'image-outline',
+        icon,
         iconColor: colors.warning,
         buttons: [
           ...(subscriptionEnabled ? [{
@@ -523,10 +477,72 @@ export default function ChatScreen() {
   );
 
   const handleQuotaExceeded = useCallback(
-    (type: 'voice' | 'image') => {
+    (type: 'voice' | 'image' | 'text') => {
       showQuotaUpsell(type);
     },
     [showQuotaUpsell],
+  );
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      stopTyping();
+      const quotaError = await send(text);
+      if (quotaError) {
+        showQuotaUpsell('text', quotaError.message);
+      } else {
+        notifPrompt.onMessage();
+      }
+      setTimeout(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 50);
+    },
+    [send, stopTyping, notifPrompt, showQuotaUpsell],
+  );
+
+  const handleSendWithAttachments = useCallback(
+    async (text: string, files: ChatFileAttachment[], voiceDurationsMs?: (number | null)[]) => {
+      stopTyping();
+      const quotaError = await sendWithAttachments(text, files, undefined, voiceDurationsMs);
+      if (quotaError) {
+        const type = quotaError.actionType === 'VOICE_MESSAGE' ? 'voice' : quotaError.actionType === 'MESSAGE' ? 'text' : 'image';
+        showQuotaUpsell(type, quotaError.message);
+      } else {
+        refreshEntitlements();
+      }
+      setSelectedFiles([]);
+      setTimeout(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 50);
+    },
+    [sendWithAttachments, stopTyping, refreshEntitlements, showQuotaUpsell],
+  );
+
+  const handleSendVoice = useCallback(
+    async (text: string) => {
+      const rec = voiceRecorder.recording;
+      if (!rec) return;
+      const file: ChatFileAttachment = {
+        uri: rec.uri,
+        name: rec.fileName,
+        type: rec.mimeType,
+        size: rec.fileSizeBytes || undefined,
+        durationMs: rec.durationMs,
+      };
+      stopTyping();
+      const quotaError = await sendWithAttachments(text, [file], undefined, [rec.durationMs]);
+      if (quotaError) {
+        const type = quotaError.actionType === 'VOICE_MESSAGE' ? 'voice' : quotaError.actionType === 'MESSAGE' ? 'text' : 'image';
+        showQuotaUpsell(type, quotaError.message);
+      } else {
+        refreshEntitlements();
+      }
+      voiceRecorder.deleteRecording();
+      setSelectedFiles([]);
+      setTimeout(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 50);
+    },
+    [sendWithAttachments, stopTyping, voiceRecorder, refreshEntitlements, showQuotaUpsell],
   );
 
   const handlePickImage = useCallback(async () => {
@@ -589,9 +605,23 @@ export default function ChatScreen() {
   }, [hasMoreBefore, isLoadingOlder, loadOlderMessages]);
 
   const handleBack = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: [INBOX_QUERY_KEY] });
-    router.back();
-  }, [router, queryClient]);
+    // Always land on the messages list regardless of how this screen was
+    // reached (notification deep-link, matches tab, etc.).
+    // router.back() would return to whatever the previous stack entry was,
+    // which is not always the messages tab.
+    router.replace('/(app)/(tabs)/messages' as any);
+  }, [router]);
+
+  // Intercept the Android hardware back button so it uses handleBack too,
+  // rather than the Stack navigator's own goBack() which has the same
+  // "goes to previous route" problem as router.back().
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleBack();
+      return true; // prevent default Stack navigator back
+    });
+    return () => sub.remove();
+  }, [handleBack]);
 
   const handleProfilePress = useCallback(() => {
     const userId = thread?.participant.userId;
@@ -776,19 +806,31 @@ export default function ChatScreen() {
   const { activityStatus: polledActivityStatus } =
     useChatMetadataPoller(matchId, !isEnded && !!matchId);
 
-  const headerActivityStatus =
-    polledActivityStatus ?? thread?.participant?.activityStatus ?? null;
+  // Use the same live batch-status endpoint that the discovery screen uses.
+  // The chat-thread endpoint can return a stale activity_status, causing a
+  // mismatch where a user appears online in discovery but offline in chat.
+  const participantUserId = thread?.participant?.userId ?? null;
+  const participantUserIds = useMemo(
+    () => (participantUserId ? [participantUserId] : []),
+    [participantUserId],
+  );
+  const { getStatus } = useActivityStatuses(participantUserIds);
+
+  // Priority: live batch status > thread-endpoint polled status > initial thread value
+  const headerActivityStatus = participantUserId
+    ? (getStatus(participantUserId, polledActivityStatus ?? thread?.participant?.activityStatus ?? null) ?? null)
+    : (polledActivityStatus ?? thread?.participant?.activityStatus ?? null);
 
   return (
     <KeyboardAvoidingView
       style={[styles.screen, { backgroundColor: th.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior="padding"
     >
       {/* Fixed header */}
       <ChatHeader
         paddingTop={insets.top}
         displayName={thread?.participant.displayName ?? displayName}
-        avatarUrl={thread?.participant.avatarUrl ?? avatarUrl}
+        avatarUrl={avatarUrl ?? thread?.participant.avatarUrl ?? null}
         isVerified={thread?.participant.isVerified ?? isVerified}
         activityStatus={headerActivityStatus}
         onBack={handleBack}
@@ -858,6 +900,8 @@ export default function ChatScreen() {
         onSendVoice={handleSendVoice}
         voiceQuotaRemaining={voiceQuotaStatus.remaining}
         imageQuotaRemaining={imageQuotaStatus.remaining}
+        voiceCanUseCredits={voiceQuotaStatus.applyCreditAfterLimit}
+        imageCanUseCredits={imageQuotaStatus.applyCreditAfterLimit}
         onQuotaExceeded={handleQuotaExceeded}
       />
 

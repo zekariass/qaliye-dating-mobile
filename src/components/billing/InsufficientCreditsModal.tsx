@@ -56,6 +56,11 @@ export function InsufficientCreditsModal() {
   const visible     = useInsufficientCreditsStore((s) => s.visible);
   const actionCode  = useInsufficientCreditsStore((s) => s.actionCode);
   const retryConfig = useInsufficientCreditsStore((s) => s.retryConfig);
+  const storeMessage = useInsufficientCreditsStore((s) => s.message);
+  const storeIsLimitExceeded     = useInsufficientCreditsStore((s) => s.isLimitExceeded);
+  const storeApplyCreditAfterLimit = useInsufficientCreditsStore((s) => s.applyCreditAfterLimit);
+  const serverNeeded  = useInsufficientCreditsStore((s) => s.serverNeeded);
+  const serverBalance = useInsufficientCreditsStore((s) => s.serverBalance);
   const dismiss     = useInsufficientCreditsStore((s) => s.dismiss);
 
   const [isRetrying, setIsRetrying] = useState(false);
@@ -134,20 +139,51 @@ export function InsufficientCreditsModal() {
   // Buy Credits: only if credits are enabled
   // Both hidden when the issue is a limit being exceeded (credits can't help)
   const hasPremium = isPremiumPlan(entitlements?.plan);
-  const isLimitExceeded = summary.isLimitExceeded;
+
+  // When the store says this is a limit-exceeded error (429), trust that over
+  // the cached entitlements which may be stale (remaining > 0 in cache but the
+  // server just told us the limit is exhausted).
+  const isLimitExceeded = storeIsLimitExceeded
+    ? !storeApplyCreditAfterLimit  // 429 + apply_credit_after_limit → credits CAN help
+    : summary.isLimitExceeded;
+
   const showGoPremium  = !isLimitExceeded && subscriptionEnabled && !hasPremium;
   const showBuyCredits = !isLimitExceeded && creditsEnabled;
 
-  // ── Cost & balance (always shown) ─────────────────────────────────────────
-  // Primary: from getActionCostSummary (applies limit/remaining logic)
-  // Fallback: read actual_credit_cost directly from the costs map (using
-  // canonical action code so variants like LIKES → LIKE resolve correctly)
+  // ── Cost & balance ────────────────────────────────────────────────────────
+  // Server-provided needed/balance (from 402 error details) are authoritative.
+  // Fall back to client-side calculation only when the server didn't include them.
   const canonicalCode = normalizeActionCode(actionCode);
-  const directCost = canonicalCode
-    ? entitlements?.limits_and_costs?.[canonicalCode]?.actual_credit_cost ?? null
+  const actionEntry = canonicalCode
+    ? entitlements?.limits_and_costs?.[canonicalCode] ?? null
     : null;
-  const cost    = summary.cost ?? directCost;
-  const balance = summary.creditBalance;
+
+  let cost: number | null;
+  if (storeIsLimitExceeded && storeApplyCreditAfterLimit) {
+    // 429 limit exceeded + credits can buy more → actual_credit_cost
+    cost = actionEntry?.actual_credit_cost ?? null;
+  } else if (storeIsLimitExceeded && !storeApplyCreditAfterLimit) {
+    // 429 limit exceeded + credits can't help → cost is irrelevant (shows "Limit Exceeded")
+    cost = null;
+  } else if (serverNeeded !== null) {
+    // 402 with server-provided needed value — use it directly
+    cost = serverNeeded;
+  } else if (summary.cost !== null) {
+    // 402 without server details: trust getActionCostSummary which picks member vs actual
+    cost = summary.cost;
+  } else if (actionEntry) {
+    // Fallback when summary couldn't compute: pick the right cost based on
+    // whether the user still has free quota remaining.
+    const remaining = actionEntry.remaining ?? 0;
+    cost = remaining > 0
+      ? actionEntry.member_credit_cost
+      : actionEntry.actual_credit_cost;
+  } else {
+    cost = null;
+  }
+
+  // Balance: prefer server-provided value, fall back to cached entitlements
+  const balance = serverBalance !== null ? serverBalance : summary.creditBalance;
 
   if (!visible) return null;
 
@@ -192,18 +228,20 @@ export function InsufficientCreditsModal() {
                 <Text style={[styles.limitPeriod, { color: th.textSecondary }]}>
                   Period: {formatPeriodType(summary.periodType)}
                 </Text>
-                <Text style={[styles.limitTryAgain, { color: th.textMuted }]}>
-                  Try {formatTryAgainLabel(summary.periodType)}
-                </Text>
+                {summary.periodType !== 'LIFETIME' && (
+                  <Text style={[styles.limitTryAgain, { color: th.textMuted }]}>
+                    Try {formatTryAgainLabel(summary.periodType)}
+                  </Text>
+                )}
               </>
-            ) : (
+            ) : cost !== null ? (
               <>
                 {/* Cost line — label + value, large and bold */}
                 <Text style={[styles.costLabel, { color: th.textSecondary }]}>
                   You need:
                 </Text>
                 <Text style={styles.costValue}>
-                  {cost !== null ? cost.toLocaleString() : '—'} Credits
+                  {cost.toLocaleString()} Credits
                 </Text>
 
                 {/* Balance line — label + value, large and bold */}
@@ -214,6 +252,12 @@ export function InsufficientCreditsModal() {
                   {balance.toLocaleString()} Credits
                 </Text>
               </>
+            ) : (
+              /* Fallback: server didn't provide needed/balance and client-side
+                 lookup failed — show the server message only. */
+              <Text style={[styles.costLabel, { color: th.textSecondary, marginBottom: 8 }]}>
+                {storeMessage || "You don't have enough credits for this action."}
+              </Text>
             )}
           </View>
 

@@ -68,6 +68,7 @@ export async function sendMessage(
   const res = await apiClient.post<MessageDto>(
     `${BASE}/matches/${matchId}/messages`,
     payload,
+    { metadata: { actionCode: 'MESSAGE' } } as any,
   );
   return { data: res.data, status: res.status };
 }

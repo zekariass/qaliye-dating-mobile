@@ -323,7 +323,7 @@
 
 
 import { Ionicons } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
+
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -477,7 +477,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
   const { colors: th, mode } = useTheme();
   const router = useRouter();
   const userId = useCurrentUserId();
-  const qc = useQueryClient();
+
   const viewMode = useDiscoveryStore((s) => s.viewMode);
 
   // Keep inbox fresh so the unread badge is always up to date
@@ -540,11 +540,6 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
           const isCenter  = route.name === CENTER;
 
           const onPress = () => {
-            if (route.name === 'matches') {
-              qc.invalidateQueries({ queryKey: ['discovery', 'matches'] });
-            } else if (route.name === 'likes') {
-              qc.invalidateQueries({ queryKey: ['discovery', 'likes'] });
-            }
             if (isStandalone) {
               const routeMap: Record<string, string> = {
                 index:    '/(app)/(tabs)/',

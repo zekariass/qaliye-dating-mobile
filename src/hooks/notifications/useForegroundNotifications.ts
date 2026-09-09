@@ -40,10 +40,26 @@ export function useForegroundNotifications(options?: ForegroundNotificationOptio
             const title = notification.request.content.title ?? '';
             const body = notification.request.content.body ?? '';
             if (match_id) {
+              // Only use the push body as a preview when it looks like real
+              // message content. Generic server fallbacks ("You have a new
+              // message", empty strings) are skipped — the WebSocket-triggered
+              // server refetch will supply the correct preview within ms.
+              const isGenericBody =
+                !body ||
+                /new message/i.test(body) ||
+                /sent you a message/i.test(body);
               upsertInboxItem(queryClient, match_id, {
-                preview: body || title,
+                preview: isGenericBody ? undefined : body,
                 senderDisplayName: title || undefined,
                 createdAt: new Date().toISOString(),
+                // Never bump the unread count from a push notification.
+                // The WebSocket inbox.match.updated event triggers a full
+                // server refetch that carries the authoritative count.
+                // Without this flag, a push arriving after the refetch
+                // passes the createdAt dedup check (client "now" > server
+                // message timestamp) and increments an already-correct count,
+                // producing an off-by-one badge.
+                incrementUnread: false,
               });
             } else {
               queryClient.invalidateQueries({ queryKey: ['chat-inbox'] });

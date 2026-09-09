@@ -307,6 +307,9 @@ export type CreateOrderRequest = {
   // Chapa-specific: the deep-link the WebView should be redirected to after
   // payment so the app can intercept it and trigger verification automatically.
   return_url?: string;
+  // Phone number for online payment gateways (ArifPay, Chapa).
+  // Sent as-is (e.g. "0911234567"); backend normalizes to E.164 for the gateway.
+  customer_phone?: string;
 };
 
 export type VerifyPaymentRequest = {

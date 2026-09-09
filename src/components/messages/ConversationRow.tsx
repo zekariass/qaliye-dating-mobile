@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { memo } from 'react';
 import {
-    Image,
     Platform,
     StyleSheet,
     Text,
@@ -93,7 +93,8 @@ function Avatar({ uri, activityStatus }: AvatarProps) {
         <Image
           source={{ uri }}
           style={avatarStyles.image}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="memory-disk"
         />
       ) : (
         <View style={[avatarStyles.image, avatarStyles.placeholder]}>

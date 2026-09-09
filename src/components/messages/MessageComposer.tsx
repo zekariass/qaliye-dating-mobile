@@ -63,6 +63,9 @@ export interface MessageComposerProps {
   onSendVoice: (text: string) => void;
   voiceQuotaRemaining?: number | null;
   imageQuotaRemaining?: number | null;
+  /** When true, credits can buy more after free quota is exhausted — don't lock the button. */
+  voiceCanUseCredits?: boolean;
+  imageCanUseCredits?: boolean;
   onQuotaExceeded?: (type: 'voice' | 'image') => void;
 }
 
@@ -434,6 +437,8 @@ export function MessageComposer({
   onSendVoice,
   voiceQuotaRemaining,
   imageQuotaRemaining,
+  voiceCanUseCredits = false,
+  imageCanUseCredits = false,
   onQuotaExceeded,
 }: MessageComposerProps) {
   const { t } = useTranslation();
@@ -477,8 +482,14 @@ export function MessageComposer({
   const imageUnlimited = imageQuotaRemaining === null || imageQuotaRemaining === undefined;
   const imageExhausted = !imageUnlimited && imageQuotaRemaining === 0;
 
+  // When apply_credit_after_limit is true, the user can always pay credits to
+  // send more — never lock or hide the button.
+  // When it's false and the quota is exhausted, hide the button entirely.
+  const voiceHidden = voiceExhausted && !voiceCanUseCredits;
+  const imageHidden = imageExhausted && !imageCanUseCredits;
+
   const handleMicPress = () => {
-    if (voiceExhausted) {
+    if (voiceExhausted && !voiceCanUseCredits) {
       onQuotaExceeded?.('voice');
       return;
     }
@@ -486,7 +497,7 @@ export function MessageComposer({
   };
 
   const handleImagePress = () => {
-    if (imageExhausted) {
+    if (imageExhausted && !imageCanUseCredits) {
       onQuotaExceeded?.('image');
       return;
     }
@@ -535,17 +546,17 @@ export function MessageComposer({
           />
           <AttachmentPreviewStrip files={selectedFiles} onRemove={onRemoveFile} />
           <View style={styles.row}>
-            <TouchableOpacity
-              style={[styles.circleBtn, { borderColor: actionBorder, opacity: disabled || imageExhausted ? 0.4 : 1 }]}
-              onPress={handleImagePress}
-              disabled={disabled || imageExhausted}
-              accessibilityRole="button"
-              accessibilityLabel={t('chat.attachImage')}
-            >
-              {imageExhausted
-                ? <Ionicons name="lock-closed" size={18} color={colors.primary} />
-                : <Ionicons name="image-outline" size={20} color={colors.primary} />}
-            </TouchableOpacity>
+            {!imageHidden && (
+              <TouchableOpacity
+                style={[styles.circleBtn, { borderColor: actionBorder, opacity: disabled ? 0.4 : 1 }]}
+                onPress={handleImagePress}
+                disabled={disabled}
+                accessibilityRole="button"
+                accessibilityLabel={t('chat.attachImage')}
+              >
+                <Ionicons name="image-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
             <View
               style={[
                 styles.inputContainer,
@@ -593,24 +604,22 @@ export function MessageComposer({
         <>
           <AttachmentPreviewStrip files={selectedFiles} onRemove={onRemoveFile} />
           <View style={styles.row}>
-            {/* Image picker button */}
-            <TouchableOpacity
-              style={[styles.circleBtn, { borderColor: actionBorder, opacity: disabled || imageExhausted ? 0.4 : 1 }]}
-              onPress={handleImagePress}
-              disabled={disabled || isProcessingImages || imageExhausted}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={t('chat.attachImage')}
-            >
-              {isProcessingImages
-                ? <ActivityIndicator size="small" color={colors.primary} />
-                : imageExhausted
-                  ? <Ionicons name="lock-closed" size={18} color={colors.primary} />
+            {/* Image picker button — hidden when quota exhausted and credits can't help */}
+            {!imageHidden && (
+              <TouchableOpacity
+                style={[styles.circleBtn, { borderColor: actionBorder, opacity: disabled ? 0.4 : 1 }]}
+                onPress={handleImagePress}
+                disabled={disabled || isProcessingImages}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('chat.attachImage')}
+              >
+                {isProcessingImages
+                  ? <ActivityIndicator size="small" color={colors.primary} />
                   : <Ionicons name="image-outline" size={20} color={colors.primary} />}
-            </TouchableOpacity>
-            {!imageUnlimited && !imageExhausted && imageQuotaRemaining != null && (
-              <Text style={styles.quotaHint}>{imageQuotaRemaining} left</Text>
+              </TouchableOpacity>
             )}
+
 
             {/* Input row container */}
             <View
@@ -640,22 +649,20 @@ export function MessageComposer({
               />
             </View>
 
-            {/* Mic button */}
-            <TouchableOpacity
-              style={[styles.circleBtn, { borderColor: actionBorder, opacity: disabled || voiceExhausted ? 0.4 : 1 }]}
-              onPress={handleMicPress}
-              disabled={disabled || voiceExhausted}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={t('chat.recordVoiceMessage')}
-            >
-              {voiceExhausted
-                ? <Ionicons name="lock-closed" size={18} color={colors.primary} />
-                : <Ionicons name="mic-outline" size={20} color={colors.primary} />}
-            </TouchableOpacity>
-            {!voiceUnlimited && !voiceExhausted && voiceQuotaRemaining != null && (
-              <Text style={styles.quotaHint}>{voiceQuotaRemaining} left</Text>
+            {/* Mic button — hidden when quota exhausted and credits can't help */}
+            {!voiceHidden && (
+              <TouchableOpacity
+                style={[styles.circleBtn, { borderColor: actionBorder, opacity: disabled ? 0.4 : 1 }]}
+                onPress={handleMicPress}
+                disabled={disabled}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('chat.recordVoiceMessage')}
+              >
+                <Ionicons name="mic-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
             )}
+
 
             {/* Send button */}
             <TouchableOpacity

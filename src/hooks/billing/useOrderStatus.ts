@@ -95,5 +95,10 @@ export function useOrderStatus(orderId: string | null) {
     }
   }, [orderId, qc, startPolling, query]);
 
-  return { ...query, order, isTerminal, isPolling, isChapaOrder, isArifpayOrder, refresh, verifyChapa };
+  const stopPolling = useCallback(() => {
+    pollingUntilRef.current = 0;
+    setIsPolling(false);
+  }, []);
+
+  return { ...query, order, isTerminal, isPolling, isChapaOrder, isArifpayOrder, refresh, verifyChapa, stopPolling };
 }

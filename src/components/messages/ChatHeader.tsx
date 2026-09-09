@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { colors, fontSize, spacing } from '@/constants/theme';
@@ -77,7 +78,7 @@ export function ChatHeader({
       >
         {/* Avatar */}
         {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} resizeMode="cover" />
+          <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" cachePolicy="memory-disk" />
         ) : (
           <View
             style={[

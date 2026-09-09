@@ -38,6 +38,8 @@ export type LimitStatus = {
   isUnlimited: boolean;
   isExhausted: boolean;
   resetsAt?: string | null;
+  /** Whether credits can buy more after the free quota is exhausted. */
+  applyCreditAfterLimit: boolean;
 };
 
 /**
@@ -61,6 +63,7 @@ export function getLikesStatus(entitlements: EntitlementResponse | null): LimitS
     isUnlimited,
     isExhausted: !isUnlimited && remaining === 0,
     resetsAt: action?.resets_at,
+    applyCreditAfterLimit: action?.apply_credit_after_limit ?? false,
   };
 }
 
@@ -183,6 +186,7 @@ export function getVoiceChatMsgsStatus(entitlements: EntitlementResponse | null)
     isUnlimited,
     isExhausted: !isUnlimited && remaining === 0,
     resetsAt: action?.resets_at,
+    applyCreditAfterLimit: action?.apply_credit_after_limit ?? false,
   };
 }
 
@@ -201,6 +205,7 @@ export function getImageChatMsgsStatus(entitlements: EntitlementResponse | null)
     isUnlimited,
     isExhausted: !isUnlimited && remaining === 0,
     resetsAt: action?.resets_at,
+    applyCreditAfterLimit: action?.apply_credit_after_limit ?? false,
   };
 }
 
@@ -224,7 +229,7 @@ export type ActionType =
   | 'SEE_WHO_LIKED_YOU'
   | 'SUPER_MESSAGE';
 
-export type PeriodType = 'DAY' | 'MONTH' | 'BILLING_CYCLE';
+export type PeriodType = 'DAY' | 'MONTH' | 'BILLING_CYCLE' | 'LIFETIME';
 
 /** Maps a PeriodType to a human-readable adjective for use in messages. */
 export function periodTypeLabel(periodType: string | undefined | null): string {
@@ -233,6 +238,8 @@ export function periodTypeLabel(periodType: string | undefined | null): string {
       return 'monthly';
     case 'BILLING_CYCLE':
       return 'billing cycle';
+    case 'LIFETIME':
+      return 'lifetime';
     case 'DAY':
     default:
       return 'daily';
@@ -261,8 +268,9 @@ export function isInsufficientCreditsError(error: unknown): boolean {
   const status = (error as any)?.response?.status;
   const code: string = (error as any)?.response?.data?.error?.code ?? '';
   if (status === 402 && code.toLowerCase() === 'insufficient_credits') return true;
-  // 429 LIMIT_EXCEEDED is also handled by the global modal; treat it the same way
-  if (status === 429 && code === 'LIMIT_EXCEEDED') return true;
+  // Note: 429 LIMIT_EXCEEDED is handled by the apiClient interceptor, which tags
+  // the error with isInsufficientCredits=true when credits can help. LIFETIME
+  // limits are NOT tagged and should be handled by isLimitExceededError instead.
   return false;
 }
 
@@ -364,6 +372,7 @@ export function formatPeriodType(periodType: string | null | undefined): string 
     YEARLY: 'Yearly',
     BILLING_CYCLE: 'Billing Cycle',
     BILLINGCYCLE: 'Billing Cycle',
+    LIFETIME: 'Lifetime',
   };
   return map[periodType.toUpperCase()] ?? periodType;
 }

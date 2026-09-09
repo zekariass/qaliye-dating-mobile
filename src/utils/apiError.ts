@@ -90,6 +90,8 @@ export const API_ERROR_TITLES: Record<string, string> = {
   PROMOTION_NOT_ELIGIBLE: 'Not eligible',
   PROMOTION_CAPACITY_EXHAUSTED: 'Promotion unavailable',
   USER_HAS_ACTIVE_SUBSCRIPTION: 'Already subscribed',
+  UNSUPPORTED_PHONE_COUNTRY_CODE: 'Unsupported phone number',
+  INVALID_PHONE_NUMBER: 'Invalid phone number',
 };
 
 /**
@@ -131,6 +133,8 @@ export function getApiErrorMessage(detail: ApiErrorDetail): string {
     'UNSUPPORTED_AUDIO_TYPE',
     'VOICE_EXTENSION_DISALLOWED',
     'VOICE_FILE_TOO_LARGE',
+    'UNSUPPORTED_PHONE_COUNTRY_CODE',
+    'INVALID_PHONE_NUMBER',
   ]);
 
   if (SHOW_BACKEND_MESSAGE_CODES.has(detail.code)) {

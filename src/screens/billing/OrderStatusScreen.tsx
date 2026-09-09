@@ -29,7 +29,7 @@ export default function OrderStatusScreen() {
   const orderId = params.orderId ?? null;
   const checkoutUrl = params.checkoutUrl;
 
-  const { order, isLoading, refresh, isTerminal, isChapaOrder, isArifpayOrder, verifyChapa } = useOrderStatus(orderId);
+  const { order, isLoading, refresh, isTerminal, isChapaOrder, isArifpayOrder, verifyChapa, stopPolling } = useOrderStatus(orderId);
   const { refreshEntitlements } = useEntitlements();
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const hasVerifiedRef = useRef(false);
@@ -70,6 +70,11 @@ export default function OrderStatusScreen() {
   const handleDone = useCallback(() => {
     router.replace('/(app)/balances' as any);
   }, [router]);
+
+  const handleStopAndGoBack = useCallback(() => {
+    stopPolling();
+    router.replace('/(app)/balances' as any);
+  }, [stopPolling, router]);
 
   return (
     <View style={[styles.screen, { backgroundColor: th.background, paddingTop: top }]}>
@@ -174,6 +179,19 @@ export default function OrderStatusScreen() {
               </Pressable>
             )}
 
+            {!isTerminal && (
+              <Pressable
+                style={[styles.stopBtn, { borderColor: th.border }]}
+                onPress={handleStopAndGoBack}
+                accessibilityRole="button"
+              >
+                <Ionicons name="close-circle-outline" size={18} color={th.textSecondary} />
+                <Text style={[styles.stopBtnText, { color: th.textSecondary }]}>
+                  {t('billing.stopAndGoBack', 'Stop verifying and go back')}
+                </Text>
+              </Pressable>
+            )}
+
             {(order.status === 'REJECTED' || order.status === 'EXPIRED' || order.status === 'CANCELLED') && (
 
               <Pressable
@@ -273,6 +291,16 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   refreshText: { fontSize: 15, fontWeight: '600' },
+  stopBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingVertical: 14,
+  },
+  stopBtnText: { fontSize: 14, fontWeight: '600' },
   pollingContainer: {
     flexDirection: 'row',
     alignItems: 'center',

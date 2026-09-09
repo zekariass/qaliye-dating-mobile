@@ -40,13 +40,13 @@ export function useSendMessage(matchId: string, currentUserId: string) {
   const queryClient = useQueryClient();
 
   const send = useCallback(
-    async (body: string, existingClientMessageId?: string) => {
+    async (body: string, existingClientMessageId?: string): Promise<ChatQuotaError | null> => {
       const trimmed = body.trim();
-      if (!trimmed) return;
-      if (trimmed.length > 2000) return;
+      if (!trimmed) return null;
+      if (trimmed.length > 2000) return null;
 
       if (Date.now() < rateLimitedUntil.current) {
-        return;
+        return null;
       }
 
       const clientMessageId = existingClientMessageId ?? generateUUID();
@@ -111,10 +111,24 @@ export function useSendMessage(matchId: string, currentUserId: string) {
 
         useChatStore.getState().reconcileMessage(clientMessageId, reconciled);
         queryClient.invalidateQueries({ queryKey: ENTITLEMENTS_KEY });
+        return null;
       } catch (error: any) {
         const responseStatus = error?.response?.status;
         const errorCode =
           error?.response?.data?.code ?? error?.response?.data?.error ?? 'NETWORK_ERROR';
+        const errorMessage =
+          error?.response?.data?.error?.message ?? error?.response?.data?.message ?? '';
+
+        if (isInsufficientCreditsError(error)) {
+          useChatStore.getState().removeOptimisticMessage(clientMessageId);
+          return null;
+        }
+
+        if (isLimitExceededError(error)) {
+          useChatStore.getState().removeOptimisticMessage(clientMessageId);
+          const details = getLimitExceededDetails(error);
+          return { code: 'LIMIT_EXCEEDED', message: errorMessage, actionType: details?.details.action_type };
+        }
 
         if (responseStatus === 429) {
           const retryAfter = parseInt(
@@ -125,6 +139,7 @@ export function useSendMessage(matchId: string, currentUserId: string) {
         }
 
         useChatStore.getState().markMessageFailed(clientMessageId, errorCode);
+        return null;
       }
     },
     [matchId, currentUserId, queryClient],

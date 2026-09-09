@@ -2,6 +2,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 
 import { deactivateDevice } from '@/api/notifications/notificationsApi';
+import { ENTITLEMENTS_KEY } from '@/hooks/billing/useEntitlements';
 import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
 import { readInstallationId } from '@/services/notifications/installationId';
@@ -137,6 +138,8 @@ apiClient.interceptors.response.use(
       if (url.includes('/passes/revisit')) return 'RETURN_PASSED_PROFILE';
       // Messaging
       if (url.includes('/super-messages')) return 'SUPER_MESSAGE';
+      // Chat text messages (POST /matches/{id}/messages)
+      if (url.match(/\/matches\/[^/]+\/messages$/) && (config?.method ?? '').toLowerCase() === 'post') return 'MESSAGE';
       // Chat attachments: metadata.actionCode from useSendMessage is preferred;
       // fall back to VOICE_MESSAGE for audio, IMAGE_MESSAGE for images
       if (url.includes('/messages/attachments')) {
@@ -159,34 +162,66 @@ apiClient.interceptors.response.use(
       normalizedCode === 'insufficient_credits' &&
       !isRetryGuarded
     ) {
-      const message =
-        typeof rawError === 'object' && rawError !== null
-          ? (rawError as { message?: string }).message ?? "You don't have enough credits for this action."
-          : "You don't have enough credits for this action.";
+      const errObj = typeof rawError === 'object' && rawError !== null
+        ? rawError as { message?: string; details?: { needed?: number; balance?: number } }
+        : null;
+      const message = errObj?.message ?? "You don't have enough credits for this action.";
+      const rawAction = actionCodeFromConfig(error.config);
+      const actionCode = rawAction ? (normalizeActionCode(rawAction) ?? rawAction) : undefined;
+      // Look up apply_credit_after_limit from cached entitlements
+      const cachedEntitlements = queryClient.getQueryData<any>(ENTITLEMENTS_KEY);
+      const actionEntry = actionCode ? cachedEntitlements?.limits_and_costs?.[actionCode] : null;
+      const applyCreditAfterLimit = actionEntry?.apply_credit_after_limit ?? false;
+      // Server-provided needed/balance — the authoritative values for display
+      const serverNeeded = typeof errObj?.details?.needed === 'number' ? errObj.details.needed : null;
+      const serverBalance = typeof errObj?.details?.balance === 'number' ? errObj.details.balance : null;
       useInsufficientCreditsStore.getState().show({
-        actionCode: actionCodeFromConfig(error.config),
+        actionCode,
         message,
         retryConfig: error.config,
+        isLimitExceeded: false,
+        applyCreditAfterLimit,
+        serverNeeded,
+        serverBalance,
       });
       const tagged = new Error('insufficient_credits') as Error & { isInsufficientCredits: true };
       tagged.isInsufficientCredits = true;
       return Promise.reject(tagged);
     }
 
-    // 429 LIMIT_EXCEEDED: free-quota exhausted — show the same modal so the user can upgrade/buy credits
+    // 429 LIMIT_EXCEEDED: free-quota exhausted — show the same modal so the user can upgrade/buy credits.
+    // EXCEPT for LIFETIME limits, which never reset and cannot be extended with credits.
     if (status === 429 && normalizedCode === 'limit_exceeded' && !isRetryGuarded) {
       const errObj = typeof rawError === 'object' && rawError !== null
-        ? rawError as { message?: string; details?: { action_type?: string } }
+        ? rawError as { message?: string; details?: { action_type?: string; period_type?: string } }
         : null;
+      const periodType = errObj?.details?.period_type;
+
+      // LIFETIME limits are permanent per-recipient — credits cannot help.
+      // Let the error propagate so the caller can show a proper "limit reached" alert.
+      if (periodType === 'LIFETIME') {
+        return Promise.reject(error);
+      }
+
       // Prefer the action type from the response body; fall back to URL inference.
       // Normalize to canonical costs-map key (e.g. LIKES → LIKE)
       const rawActionCode = errObj?.details?.action_type ?? actionCodeFromConfig(error.config);
       const actionCode = normalizeActionCode(rawActionCode) ?? rawActionCode;
       const message = errObj?.message ?? 'You have reached your limit for this action.';
+
+      // Look up apply_credit_after_limit from cached entitlements so the modal
+      // can show the correct cost (actual_credit_cost vs member_credit_cost)
+      // even when the entitlements data is stale on first render.
+      const cachedEntitlements = queryClient.getQueryData<any>(ENTITLEMENTS_KEY);
+      const actionEntry = actionCode ? cachedEntitlements?.limits_and_costs?.[actionCode] : null;
+      const applyCreditAfterLimit = actionEntry?.apply_credit_after_limit ?? false;
+
       useInsufficientCreditsStore.getState().show({
         actionCode,
         message,
         retryConfig: error.config,
+        isLimitExceeded: true,
+        applyCreditAfterLimit,
       });
       const tagged = new Error('limit_exceeded') as Error & { isInsufficientCredits: true };
       tagged.isInsufficientCredits = true;

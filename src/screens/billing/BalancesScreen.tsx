@@ -36,30 +36,19 @@ function formatBoostTime(seconds: number): string {
 
 function formatPeriodSuffix(periodType: string | null | undefined): string {
   switch (periodType) {
-    case 'DAY':          return 'per day';
-    case 'MONTH':        return 'per month';
+    case 'DAY':           return 'per day';
+    case 'MONTH':         return 'per month';
     case 'BILLING_CYCLE': return 'per billing cycle';
-    case 'WEEK':         return 'per week';
-    case 'YEAR':         return 'per year';
-    default:             return '';
+    case 'WEEK':          return 'per week';
+    case 'YEAR':          return 'per year';
+    case 'LIFETIME':      return 'per recipient';
+    default:              return '';
   }
 }
 
-function formatResetTime(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  const h = date.getUTCHours();
-  const m = date.getUTCMinutes();
-  const s = date.getUTCSeconds();
-  if (h === 0 && m === 0 && s === 0) return 'Resets at midnight';
-  if (h === 23 && m === 59 && s === 59) {
-    const next = new Date(date);
-    next.setUTCDate(next.getUTCDate() + 1);
-    if (next.getUTCMonth() !== date.getUTCMonth()) return 'Resets at end of month';
-    return 'Resets at end of day';
-  }
-  return `Resets at ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
-}
+// Actions whose limit is per-recipient rather than per-period.
+// These show a static "Limit: N per recipient" line with no usage bar.
+const PER_RECIPIENT_ACTIONS = new Set(['MESSAGE', 'VOICE_MESSAGE', 'IMAGE_MESSAGE']);
 
 function pluralize(word: string, count: number): string {
   if (count === 1) return word.replace(/s$/, '');
@@ -68,40 +57,11 @@ function pluralize(word: string, count: number): string {
 
 function formatCostLine(label: string, action?: ActionLimitAndCost): string {
   if (!action) return 'Free';
-  const limitValue       = action.limit;
-  const actualCreditCost = action.actual_credit_cost ?? 0;
   const memberCreditCost = action.member_credit_cost ?? 0;
-
-  // ── Same cost in & out of quota — simple per-action cost ────────────────
-  if (memberCreditCost === actualCreditCost) {
-    if (memberCreditCost === 0) return 'Free';
-    const creditWord = memberCreditCost === 1 ? 'credit' : 'credits';
-    const actionNoun = pluralize(label.toLowerCase(), 1);
-    return `Cost: ${memberCreditCost} ${creditWord} for each ${actionNoun}`;
-  }
-
-  // ── Finite quota (limit != null) — two-tier pricing ─────────────────────
-  if (limitValue != null) {
-    const actionNoun  = pluralize(label.toLowerCase(), limitValue);
-    const firstPart   = memberCreditCost > 0
-      ? `First ${limitValue} ${actionNoun} at ${memberCreditCost} ${memberCreditCost === 1 ? 'credit' : 'credits'} each`
-      : `First ${limitValue} ${actionNoun} free`;
-
-    if (action.apply_credit_after_limit) {
-      // Credits can buy more after the free/quota allotment is used
-      const creditWord = actualCreditCost === 1 ? 'credit' : 'credits';
-      return `Cost: ${firstPart}, then ${actualCreditCost} ${creditWord} each`;
-    }
-    // No credits after limit — must wait for reset
-    return `Cost: ${firstPart}, then wait until reset`;
-  }
-
-  // ── Unlimited (limit == null) — per-action cost or free ─────────────────
-  if (memberCreditCost > 0) {
-    const creditWord = memberCreditCost === 1 ? 'credit' : 'credits';
-    return `Cost: ${memberCreditCost} ${creditWord} each`;
-  }
-  return 'Free';
+  if (memberCreditCost === 0) return 'Free';
+  const creditWord = memberCreditCost === 1 ? 'credit' : 'credits';
+  const actionNoun = pluralize(label.toLowerCase(), 1);
+  return `${memberCreditCost} ${creditWord} per ${actionNoun}`;
 }
 
 const QUOTA_META: Record<string, { label: string; icon: string; color: string }> = {
@@ -117,13 +77,13 @@ const QUOTA_META: Record<string, { label: string; icon: string; color: string }>
 };
 
 const QUOTA_ORDER = [
+  'MESSAGE',
+  'VOICE_MESSAGE',
+  'IMAGE_MESSAGE',
   'LIKE',
   'SUPER_LIKE',
   'REWIND',
   'BOOST',
-  'VOICE_MESSAGE',
-  'IMAGE_MESSAGE',
-  'MESSAGE',
   'SUPER_MESSAGE',
   'SEE_WHO_LIKED_YOU',
 ];
@@ -140,16 +100,14 @@ function QuotaRow({ actionCode, action, isLast }: {
   actionCode: string; action: ActionLimitAndCost; isLast: boolean;
 }) {
   const { colors: th } = useTheme();
-  const meta          = QUOTA_META[actionCode];
-  const isUnlimited   = action.limit === null;
-  const used          = action.used ?? 0;
-  const limit         = action.limit ?? 1;
-  const remaining     = action.remaining ?? 0;
-  const progress      = isUnlimited ? 0 : Math.min(used / limit, 1);
-  const periodSuffix  = formatPeriodSuffix(action.period_type);
-  const costLine      = formatCostLine(meta.label, action);
-  // Green when remaining > 0, red when exhausted
-  const barColor      = isUnlimited ? meta.color : (remaining > 0 ? colors.success : colors.danger);
+  const meta           = QUOTA_META[actionCode];
+  const isUnlimited    = action.limit === null;
+  const isPerRecipient = PER_RECIPIENT_ACTIONS.has(actionCode);
+  const limit          = action.limit ?? 0;
+  const periodSuffix   = formatPeriodSuffix(action.period_type);
+  const actionNoun     = pluralize(meta.label.toLowerCase(), 1);
+  const memberCost     = action.member_credit_cost ?? 0;
+  const actualCost     = action.actual_credit_cost ?? 0;
 
   return (
     <>
@@ -165,37 +123,23 @@ function QuotaRow({ actionCode, action, isLast }: {
             <>
               <Text style={[quotaRowStyles.unlimitedText, { color: colors.success }]}>Unlimited</Text>
               <Text style={[quotaRowStyles.subText, { color: th.textSecondary }]}>
-                {costLine}
+                {formatCostLine(meta.label, action)}
               </Text>
             </>
           ) : (
             <>
-              {/* used / limit per {period} */}
+              {/* Free: {limit} per {period} or per recipient */}
               <Text style={[quotaRowStyles.usage, { color: th.textSecondary }]}>
-                {used.toLocaleString()} / {limit.toLocaleString()}{periodSuffix ? ` ${periodSuffix}` : ''}
+                {memberCost === 0 ? 'Free: ' : `First ${limit.toLocaleString()} at ${memberCost} ${memberCost === 1 ? 'credit' : 'credits'} each `}
+                {limit.toLocaleString()}{isPerRecipient ? ' per recipient' : periodSuffix ? ` ${periodSuffix}` : ''}
               </Text>
 
-              {/* Progress bar + remaining text */}
-              <View style={quotaRowStyles.barRow}>
-                <View style={[quotaRowStyles.track, { backgroundColor: `${barColor}20` }]}>
-                  <View style={[quotaRowStyles.fill, { backgroundColor: barColor, width: `${Math.round(progress * 100)}%` }]} />
-                </View>
-                <Text style={[quotaRowStyles.remaining, { color: barColor }]}>
-                  {remaining > 0 ? `${remaining} left` : 'Wait until reset'}
-                </Text>
-              </View>
-
-              {/* Resets at {resets_at} */}
-              {action.resets_at && (
+              {/* Then: {cost} credits per {action} after free limit */}
+              {action.apply_credit_after_limit && actualCost > 0 && (
                 <Text style={[quotaRowStyles.subText, { color: th.textSecondary }]}>
-                  {formatResetTime(action.resets_at)}
+                  Then: {actualCost} {actualCost === 1 ? 'credit' : 'credits'} per {actionNoun} after free limit
                 </Text>
               )}
-
-              {/* Cost — always shown */}
-              <Text style={[quotaRowStyles.subText, { color: th.textSecondary }]}>
-                {costLine}
-              </Text>
             </>
           )}
         </View>
@@ -211,10 +155,6 @@ const quotaRowStyles = StyleSheet.create({
   info:          { flex: 1, gap: 5 },
   label:         { fontSize: 14, fontWeight: '700' },
   usage:         { fontSize: 12, fontWeight: '500' },
-  barRow:        { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  track:         { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
-  fill:          { height: 6, borderRadius: 3 },
-  remaining:     { fontSize: 11, fontWeight: '700' },
   unlimitedText: { fontSize: 13, fontWeight: '700' },
   subText:       { fontSize: 11, fontWeight: '500' },
   divider:       { height: 1, marginHorizontal: 16 },

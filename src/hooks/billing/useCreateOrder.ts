@@ -19,8 +19,8 @@ export function useCreateOrder() {
     setActiveOrder,
   } = useBillingStore();
 
-  const mutation = useMutation<OrderResponse, Error, { paymentOfferId: string; paymentMethodId: string }>({
-    mutationFn: async ({ paymentOfferId, paymentMethodId }) => {
+  const mutation = useMutation<OrderResponse, Error, { paymentOfferId: string; paymentMethodId: string; customerPhone?: string }>({
+    mutationFn: async ({ paymentOfferId, paymentMethodId, customerPhone }) => {
       if (inProgressRef.current) {
         throw new Error('Order creation already in progress');
       }
@@ -37,6 +37,7 @@ export function useCreateOrder() {
         payment_method_id: paymentMethodId,
         idempotency_key: key,
         platform,
+        customer_phone: customerPhone,
       };
 
       return createOrder(body);

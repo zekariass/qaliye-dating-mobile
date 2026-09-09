@@ -93,7 +93,11 @@ function ConversationRow({
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
 
-  const unreadCount = Math.max(0, item.next_public_sequence - 1 - item.staff_last_read_sequence);
+  // Prefer the backend-provided field; fall back to client computation when absent.
+  const unreadCount =
+    item.unread_count !== undefined
+      ? Math.max(0, item.unread_count)
+      : Math.max(0, item.next_public_sequence - 1 - item.staff_last_read_sequence);
   const statusColor = STATUS_COLORS[item.status];
 
   const displayName = item.user_display_name || `User ${item.user_id.slice(0, 8)}`;

@@ -1179,18 +1179,19 @@ export default function StaffSupportConversationScreen() {
     return () => sub.remove();
   }, [convRefetch, msgsRefetch]);
 
-  // Mark read after messages load — staff uses my_last_read_sequence
-  const highestSeq = useMemo(
-    () => (messages.length > 0 ? Math.max(...messages.map((m) => m.sequence_number)) : 0),
-    [messages],
-  );
-
+  // Mark all messages read when the screen is active and there are unread messages.
+  // Use nextPublicSequence - 1 (server's authoritative last-message index).
+  // personal unread_count is based on my_last_read_sequence.
   useEffect(() => {
-    if (!isFocused || !isActive || highestSeq <= 0 || !conversation) return;
-    if (highestSeq > conversation.my_last_read_sequence) {
-      markRead(highestSeq);
-    }
-  }, [isFocused, isActive, highestSeq, conversation, markRead]);
+    if (!isFocused || !isActive || !conversation) return;
+    const unread =
+      conversation.unread_count !== undefined
+        ? conversation.unread_count
+        : Math.max(0, conversation.next_public_sequence - 1 - conversation.my_last_read_sequence);
+    if (unread <= 0) return;
+    const seq = conversation.next_public_sequence - 1;
+    if (seq > 0) markRead(seq);
+  }, [isFocused, isActive, conversation, markRead]);
 
   const listData = useMemo(
     () => buildListData(messages, pendingMessages),

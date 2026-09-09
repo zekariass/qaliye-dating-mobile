@@ -1,8 +1,10 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 
 import { fetchInbox, type InboxFilter } from '@/api/chat/chatApi';
 import type { InboxItem, InboxItemDto } from '@/types/chat';
+import { smartMergeFirstPage } from '@/utils/smartQueryMerge';
 import type { QueryClient } from '@tanstack/react-query';
 
 // ---------------------------------------------------------------------------
@@ -46,10 +48,6 @@ function mapInboxItemDto(dto: InboxItemDto): InboxItem {
     lastMessageAt: dto.last_message_at,
   };
 }
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Standalone cache helpers (usable outside React component scope)
@@ -166,22 +164,46 @@ export function upsertInboxItem(
 // Hook
 // ---------------------------------------------------------------------------
 
+type InboxPage = { items: InboxItem[]; nextCursor: string | null };
+
 export function useInbox(filter: InboxFilter) {
   const queryClient = useQueryClient();
+  const qk = inboxQueryKey(filter);
 
   const query = useInfiniteQuery({
-    queryKey: inboxQueryKey(filter),
+    queryKey: qk,
     queryFn: async ({ pageParam }) => {
       const response = await fetchInbox(filter, 25, pageParam as string | undefined);
       return {
         items: response.items.map(mapInboxItemDto),
         nextCursor: response.next_cursor,
-      };
+      } satisfies InboxPage;
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    staleTime: 30_000,
+    // Never auto-refetch in the background — focus-fetch below handles
+    // freshness while preserving stable item references (no avatar blink).
+    staleTime: Infinity,
   });
+
+  // On every screen focus: fetch the first page and merge only new / changed
+  // conversations. Unchanged rows keep their JS reference → no re-render.
+  useFocusEffect(
+    useCallback(() => {
+      smartMergeFirstPage<InboxItem, InboxPage>({
+        queryClient,
+        queryKey: qk,
+        fetchFirstPage: async () => {
+          const response = await fetchInbox(filter, 25);
+          return {
+            items: response.items.map(mapInboxItemDto),
+            nextCursor: response.next_cursor,
+          };
+        },
+        getId: (item) => item.matchId,
+      });
+    }, [queryClient, filter]), // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const allItems: InboxItem[] =
     query.data?.pages.flatMap((page) => page.items) ?? [];

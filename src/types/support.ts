@@ -129,6 +129,11 @@ export interface StaffConversationSummaryDto {
   assigned_staff_user_id: string | null;
   next_public_sequence: number;
   staff_last_read_sequence: number;
+  /**
+   * Count of messages unread by any staff member since the last staff read.
+   * When present, prefer over the client-computed fallback.
+   */
+  unread_count?: number;
   waiting_since: string | null;
   last_public_message_at: string | null;
   last_public_message_sender_type: 'USER' | 'STAFF' | null;
@@ -147,6 +152,11 @@ export interface StaffConversationDetailDto {
   user_last_read_sequence: number;
   staff_last_read_sequence: number;
   my_last_read_sequence: number;
+  /**
+   * Personal unread count for the currently logged-in staff member,
+   * based on my_last_read_sequence. When present, prefer over client computation.
+   */
+  unread_count?: number;
   waiting_since: string | null;
   first_staff_response_at: string | null;
   last_activity_at: string | null;

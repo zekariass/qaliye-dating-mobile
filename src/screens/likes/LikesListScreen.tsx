@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
     FlatList,
-    Image,
     Platform,
     StyleSheet,
     Text,
@@ -273,7 +273,8 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
           <Image
             source={{ uri: item.primary_photo_url }}
             style={styles.cardImage}
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="memory-disk"
           />
         ) : (
           <View style={[styles.cardImage, styles.photoPlaceholder]}>
@@ -423,7 +424,8 @@ function BlurredLikeCard({ item, onPress, onReveal, isRevealing }: BlurredLikeCa
           <Image
             source={{ uri: item.primary_photo_url }}
             style={[styles.cardImage, { opacity: isDark ? 0.25 : 0.6 }]}
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="memory-disk"
             blurRadius={isDark ? 35 : 40}
           />
         ) : (
