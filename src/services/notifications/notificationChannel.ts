@@ -9,7 +9,7 @@ export async function setupAndroidNotificationChannel(): Promise<void> {
   if (!Expo) return;
 
   await Expo.setNotificationChannelAsync(QALIYE_CHANNEL_ID, {
-    name: 'Qaliye',
+    name: 'Qal Dating',
     description: 'Messages, matches, likes, and account notifications',
     importance: Expo.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],

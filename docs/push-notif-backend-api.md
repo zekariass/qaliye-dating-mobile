@@ -1,6 +1,6 @@
 # Push Notification API
 
-This document describes the push notification API endpoints for the Qaliye dating app backend. All endpoints require authentication via Supabase JWT.
+This document describes the push notification API endpoints for the Qal Dating dating app backend. All endpoints require authentication via Supabase JWT.
 
 ## Base URL
 
@@ -213,7 +213,7 @@ Retrieves a paginated list of notification campaigns.
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
       "campaignKey": "welcome_new_users",
-      "title": "Welcome to Qaliye!",
+      "title": "Welcome to Qal Dating!",
       "body": "Start discovering amazing people today.",
       "navigationPayload": { "screen": "home" },
       "audienceDefinition": { "daysSinceSignup": 1 },
@@ -443,7 +443,7 @@ Push notifications sent to devices follow the Expo push message format. The `dat
 ```json
 {
   "to": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]",
-  "title": "Qaliye",
+  "title": "Qal Dating",
   "body": "You have a new message",
   "data": {
     "notification_type": "CHAT_MESSAGE",
@@ -486,11 +486,11 @@ Push notifications sent to devices follow the Expo push message format. The `dat
 
 | Notification Type | Title | Body |
 |-------------------|-------|------|
-| `CHAT_MESSAGE` | `Qaliye` | `You have a new message` (or actual message text if `messagePreviewEnabled` is true) |
-| `MATCH_CREATED` | `Qaliye` | `It's a Match! 🎉` |
-| `LIKE_RECEIVED` | `Qaliye` | `Someone liked your profile!` |
-| `ACCOUNT_ALERT` | `Qaliye` | `Important account update` |
-| `MARKETING` | Campaign title or `Qaliye` | Campaign body or `Check out what's new` |
+| `CHAT_MESSAGE` | `Qal Dating` | `You have a new message` (or actual message text if `messagePreviewEnabled` is true) |
+| `MATCH_CREATED` | `Qal Dating` | `It's a Match! 🎉` |
+| `LIKE_RECEIVED` | `Qal Dating` | `Someone liked your profile!` |
+| `ACCOUNT_ALERT` | `Qal Dating` | `Important account update` |
+| `MARKETING` | Campaign title or `Qal Dating` | Campaign body or `Check out what's new` |
 
 ## Rate Limiting
 

@@ -1,4 +1,4 @@
-﻿# Qaliye — Profile & Edit Profile API Specification
+﻿# Qal Dating — Profile & Edit Profile API Specification
 
 **Version:** 1.0  
 **Date:** 2025-06-24  

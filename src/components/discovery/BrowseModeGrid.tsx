@@ -140,41 +140,53 @@ function BrowseProfileCard({
 
   const photos = item.photos;
   const [photoIndex, setPhotoIndex] = useState(0);
-  const photoSlideX = useSharedValue(0);
-  const slideDirRef = useRef<'next' | 'prev'>('next');
-  const skipSlideRef = useRef(true);
+  const photoIndexSV = useSharedValue(0);
+  const dragX = useSharedValue(0);
+  const SNAP_THRESHOLD = Math.max(60, CARD_W * 0.2);
 
   // Reset photo index when the item (user) changes
   useEffect(() => {
     setPhotoIndex(0);
-    skipSlideRef.current = true;
+    photoIndexSV.value = 0;
+    dragX.value = 0;
   }, [item.user_id]);
-
-  // Slide animation when photoIndex changes
-  useEffect(() => {
-    if (skipSlideRef.current) {
-      skipSlideRef.current = false;
-      photoSlideX.value = 0;
-      return;
-    }
-    const startOffset = slideDirRef.current === 'next' ? CARD_W : -CARD_W;
-    photoSlideX.value = startOffset;
-    photoSlideX.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
-  }, [photoIndex]);
-
-  const currentPhoto = photos.length > 0 ? photos[Math.min(photoIndex, photos.length - 1)] : null;
 
   const photoPanGesture = Gesture.Pan()
     .activeOffsetX([-20, 20])
     .failOffsetY([-15, 15])
-    .runOnJS(true)
+    .onUpdate((e) => {
+      const atStart = photoIndexSV.value <= 0;
+      const atEnd = photoIndexSV.value >= photos.length - 1;
+      const tx = e.translationX;
+      // Rubber-band resistance at the edges so the photo can't be dragged past the first/last
+      if ((tx > 0 && atStart) || (tx < 0 && atEnd)) {
+        dragX.value = tx * 0.35;
+      } else {
+        dragX.value = tx;
+      }
+    })
     .onEnd((e) => {
-      if (e.translationX < -30 && photoIndex < photos.length - 1) {
-        slideDirRef.current = 'next';
-        setPhotoIndex((i) => Math.min(i + 1, photos.length - 1));
-      } else if (e.translationX > 30 && photoIndex > 0) {
-        slideDirRef.current = 'prev';
-        setPhotoIndex((i) => Math.max(i - 1, 0));
+      const tx = e.translationX;
+      const velocity = e.velocityX;
+      const canNext = photoIndexSV.value < photos.length - 1;
+      const canPrev = photoIndexSV.value > 0;
+      const goNext = canNext && (tx < -SNAP_THRESHOLD || velocity < -500);
+      const goPrev = canPrev && (tx > SNAP_THRESHOLD || velocity > 500);
+
+      if (goNext) {
+        dragX.value = withTiming(-CARD_W, { duration: 220, easing: Easing.out(Easing.cubic) }, () => {
+          photoIndexSV.value = photoIndexSV.value + 1;
+          dragX.value = 0;
+          runOnJS(setPhotoIndex)(photoIndexSV.value);
+        });
+      } else if (goPrev) {
+        dragX.value = withTiming(CARD_W, { duration: 220, easing: Easing.out(Easing.cubic) }, () => {
+          photoIndexSV.value = photoIndexSV.value - 1;
+          dragX.value = 0;
+          runOnJS(setPhotoIndex)(photoIndexSV.value);
+        });
+      } else {
+        dragX.value = withTiming(0, { duration: 220, easing: Easing.out(Easing.cubic) });
       }
     });
 
@@ -240,8 +252,8 @@ function BrowseProfileCard({
     opacity: cardOpacity.value,
   }));
 
-  const photoSlideStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: photoSlideX.value }],
+  const trackStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -photoIndexSV.value * CARD_W + dragX.value }],
   }));
 
   const likeStampStyle = useAnimatedStyle(() => ({
@@ -268,17 +280,23 @@ function BrowseProfileCard({
           accessibilityRole="button"
         >
           <View style={[styles.photoWrap, { height: CARD_H }]}>
-            <Animated.View style={[styles.photo, photoSlideStyle]}>
-              {currentPhoto ? (
-                <Image
-                  source={{ uri: currentPhoto }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  transition={200}
-                  cachePolicy="memory-disk"
-                />
+            <Animated.View
+              style={[styles.photoTrack, { width: Math.max(1, photos.length) * CARD_W }, trackStyle]}
+            >
+              {photos.length > 0 ? (
+                photos.map((uri, i) => (
+                  <View key={i} style={[styles.photo, { width: CARD_W }]}>
+                    <Image
+                      source={{ uri }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      transition={200}
+                      cachePolicy="memory-disk"
+                    />
+                  </View>
+                ))
               ) : (
-                <View style={[StyleSheet.absoluteFill, styles.photoPlaceholder]}>
+                <View style={[styles.photo, { width: CARD_W }, styles.photoPlaceholder]}>
                   <Ionicons name="person" size={48} color={colors.primaryLight} />
                 </View>
               )}
@@ -884,8 +902,12 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
+  photoTrack: {
+    flex: 1,
+    flexDirection: 'row',
+    height: '100%',
+  },
   photo: {
-    width: '100%',
     height: '100%',
   },
   photoPlaceholder: {

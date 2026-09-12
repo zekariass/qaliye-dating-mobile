@@ -240,7 +240,7 @@ export default function AuthScreen() {
         <SafeAreaView edges={['top']} style={s.heroContent}>
           {/* Logo */}
           <View style={s.logoWrap}>
-            <Text style={s.logoText}>Qaliye</Text>
+            <Text style={s.logoText}>Qal Dating</Text>
           </View>
 
           {/* Tagline — replace first 'o' in each highlight with a pulsing heart */}

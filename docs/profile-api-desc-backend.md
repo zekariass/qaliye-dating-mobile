@@ -1,4 +1,4 @@
-# Qaliye — Profile API Frontend Integration Guide
+# Qal Dating — Profile API Frontend Integration Guide
 
 **Base URL:** `https://<host>/api/v1`  
 **Authentication:** Every request requires a Supabase JWT in the `Authorization` header.  

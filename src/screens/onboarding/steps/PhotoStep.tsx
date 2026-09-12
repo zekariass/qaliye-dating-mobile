@@ -1,17 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
+import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import { deleteProfilePhoto, fetchProfilePhotos, registerProfilePhoto } from '@/api/profile/profileApi';
@@ -106,6 +107,256 @@ function emptySlots(): CardSlot[] {
   return Array(MAX_CARDS).fill(null);
 }
 
+// ─── FrontCameraModal: live front-camera capture ─────────────────────────────
+
+interface FrontCameraModalProps {
+  visible: boolean;
+  onCapture: (asset: ImagePickerAsset) => void;
+  onClose: () => void;
+}
+
+function FrontCameraModal({ visible, onCapture, onClose }: FrontCameraModalProps) {
+  const { t } = useTranslation();
+  const { colors: th } = useTheme();
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [facing, setFacing] = useState<CameraType>('front');
+
+  // Reset readiness and default to the front (selfie) camera whenever the modal is (re)opened
+  useEffect(() => {
+    if (visible) {
+      setIsCameraReady(false);
+      setIsCapturing(false);
+      setFacing('front');
+    }
+  }, [visible]);
+
+  // Request permission once the modal becomes visible
+  useEffect(() => {
+    if (visible && permission && !permission.granted) {
+      requestPermission();
+    }
+  }, [visible, permission, requestPermission]);
+
+  const handleCapture = useCallback(async () => {
+    if (!cameraRef.current || !isCameraReady || isCapturing) return;
+    setIsCapturing(true);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
+      if (photo?.uri) {
+        onCapture({
+          uri: photo.uri,
+          width: photo.width,
+          height: photo.height,
+          type: 'image',
+        } as ImagePickerAsset);
+      }
+    } catch {
+      // ignore capture errors
+    } finally {
+      setIsCapturing(false);
+    }
+  }, [isCameraReady, isCapturing, onCapture]);
+
+  const handleFlipCamera = useCallback(() => {
+    setFacing((prev) => (prev === 'front' ? 'back' : 'front'));
+    setIsCameraReady(false);
+  }, []);
+
+  if (!visible) return null;
+
+  // Permission loading
+  if (!permission) {
+    return (
+      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+        <View style={camStyles.center}>
+          <ActivityIndicator color={colors.primary} size="large" />
+        </View>
+      </Modal>
+    );
+  }
+
+  // Permission denied
+  if (!permission.granted) {
+    return (
+      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+        <View style={camStyles.center}>
+          <Ionicons name="camera-outline" size={48} color={th.textMuted} />
+          <Text style={[camStyles.permissionText, { color: th.text }]}>
+            {t('onboarding.identity.cameraPermission', 'Camera access is required to take photos.')}
+          </Text>
+          <TouchableOpacity
+            style={[camStyles.grantBtn, { backgroundColor: colors.primary }]}
+            onPress={requestPermission}
+            activeOpacity={0.85}
+          >
+            <Text style={camStyles.grantBtnText}>
+              {t('onboarding.identity.grantPermission', 'Grant Camera Access')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[camStyles.closeBtn, { borderColor: th.border, borderWidth: 1 }]}
+            onPress={onClose}
+            activeOpacity={0.8}
+          >
+            <Text style={[camStyles.closeBtnText, { color: th.textSecondary }]}>
+              {t('common.cancel', 'Cancel')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    );
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={camStyles.container}>
+        <CameraView
+          ref={cameraRef}
+          style={camStyles.camera}
+          facing={facing}
+          mirror={facing === 'front'}
+          mode="picture"
+          animateShutter
+          onCameraReady={() => setIsCameraReady(true)}
+        />
+
+        {/* Capture button */}
+        <View style={camStyles.captureRow}>
+          <TouchableOpacity
+            style={[camStyles.captureBtn, (!isCameraReady || isCapturing) && { opacity: 0.4 }]}
+            onPress={handleCapture}
+            disabled={!isCameraReady || isCapturing}
+            activeOpacity={0.85}
+            accessibilityLabel="Capture photo"
+            accessibilityRole="button"
+          >
+            {isCapturing ? (
+              <ActivityIndicator color={colors.primary} size="small" />
+            ) : (
+              <View style={camStyles.captureInner} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Flip camera button — switches between front and rear */}
+        <TouchableOpacity
+          style={camStyles.flipCameraBtn}
+          onPress={handleFlipCamera}
+          activeOpacity={0.7}
+          accessibilityLabel="Flip camera"
+          accessibilityRole="button"
+        >
+          <Ionicons
+            name="camera-reverse-outline"
+            size={24}
+            color="#FFFFFF"
+          />
+        </TouchableOpacity>
+
+        {/* Close button */}
+        <TouchableOpacity
+          style={camStyles.closeCameraBtn}
+          onPress={onClose}
+          activeOpacity={0.7}
+          accessibilityLabel="Close camera"
+          accessibilityRole="button"
+        >
+          <Ionicons name="close" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+}
+
+const camStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  camera: {
+    flex: 1,
+  },
+  captureRow: {
+    position: 'absolute',
+    bottom: 36,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  captureBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  captureInner: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.primary,
+  },
+  closeCameraBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flipCameraBtn: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    paddingHorizontal: 30,
+  },
+  permissionText: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 21,
+  },
+  grantBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+  },
+  grantBtnText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  closeBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+  },
+  closeBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+});
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function PhotoStep({ onComplete }: Props) {
@@ -144,6 +395,12 @@ export default function PhotoStep({ onComplete }: Props) {
 
   // Photo source modal state
   const [sourceModal, setSourceModal] = useState<{
+    mode: 'primary' | 'card';
+    cardIdx?: number;
+  } | null>(null);
+
+  // Front-camera modal state (replaces launchCameraAsync for reliable selfie capture)
+  const [cameraModal, setCameraModal] = useState<{
     mode: 'primary' | 'card';
     cardIdx?: number;
   } | null>(null);
@@ -324,16 +581,20 @@ export default function PhotoStep({ onComplete }: Props) {
         setError('Camera access is required to take photos.');
         return;
       }
-    } else {
-      if (!(await requestLibraryPermission())) {
-        setError('Photo library access is required.');
-        return;
-      }
+      // Open the custom front-camera modal — expo-image-picker's cameraType
+      // option is unreliable (delegates to the system camera app which often
+      // ignores it on Android). expo-camera's CameraView with facing="front"
+      // reliably opens the selfie camera.
+      setCameraModal({ mode, cardIdx });
+      return;
     }
 
-    const result = source === 'camera'
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    if (!(await requestLibraryPermission())) {
+      setError('Photo library access is required.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
 
     if (result.canceled || result.assets.length === 0) return;
     const asset = result.assets[0];
@@ -352,6 +613,28 @@ export default function PhotoStep({ onComplete }: Props) {
       setCropState({ asset, mode: 'card', cardIdx });
     }
   }, [sourceModal]);
+
+  // ─── Front-camera capture handler ───────────────────────────────────────────
+
+  const handleCameraCapture = useCallback((asset: ImagePickerAsset) => {
+    const ctx = cameraModal;
+    setCameraModal(null);
+    if (!ctx) return;
+
+    if (ctx.mode === 'primary') {
+      if (asset.width < 720 || asset.height < 900) {
+        setError('Image too small. Upload at least 720 × 900 px for your profile avatar.');
+        return;
+      }
+      setCropState({ asset, mode: 'primary' });
+    } else {
+      if (asset.width < 720 || asset.height < 960) {
+        setError('Image too small. Upload at least 720 × 960 px for card photos.');
+        return;
+      }
+      setCropState({ asset, mode: 'card', cardIdx: ctx.cardIdx });
+    }
+  }, [cameraModal]);
 
   // ─── Crop confirm: process image, show preview, enqueue upload ──────────────
 
@@ -856,6 +1139,13 @@ export default function PhotoStep({ onComplete }: Props) {
         visible={sourceModal !== null}
         onSelect={handleSourceSelect}
         onCancel={() => setSourceModal(null)}
+      />
+
+      {/* ── Front Camera Modal (selfie capture) ───────────────────────────── */}
+      <FrontCameraModal
+        visible={cameraModal !== null}
+        onCapture={handleCameraCapture}
+        onClose={() => setCameraModal(null)}
       />
 
       {/* ── Upload Error Modal ──────────────────────────────────────────────── */}

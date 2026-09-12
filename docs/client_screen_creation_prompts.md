@@ -1,4 +1,4 @@
-# Qaliye — Client Screen Creation Prompts for AI Agent
+# Qal Dating — Client Screen Creation Prompts for AI Agent
 
 **Version:** 1.0
 **Audience:** AI coding agent (client)
@@ -112,7 +112,7 @@ Initialized once in `src/config/supabase.ts` with `expo-secure-store` adapter (a
 
 ### Visual Description
 
-Full-screen soft lavender-to-deep-purple radial gradient background. Center: interlocked double-heart logo (left half purple, right half pink, inner glowing pink heart). Below: large elegant "Qaliye" wordmark in deep purple. Dash-decorators flanking "Where hearts connect" italic subtitle. 6–8 floating 3D-glowing pink/purple hearts scattered at various sizes. Subtle sparkle star particles. Bottom center: three dots with small outline heart between them (pulsing loading indicator).
+Full-screen soft lavender-to-deep-purple radial gradient background. Center: interlocked double-heart logo (left half purple, right half pink, inner glowing pink heart). Below: large elegant "Qal Dating" wordmark in deep purple. Dash-decorators flanking "Where hearts connect" italic subtitle. 6–8 floating 3D-glowing pink/purple hearts scattered at various sizes. Subtle sparkle star particles. Bottom center: three dots with small outline heart between them (pulsing loading indicator).
 
 ### Animation Sequence
 
@@ -167,7 +167,7 @@ The visual shell is already implemented in `src/screens/auth/AuthScreen.tsx` and
 
 ### Visual Description (already built)
 
-Top ~43%: hero image background with "Qaliye" wordmark + pink heart, tagline "Where hearts from our heritage find home.", decorative heart-dash divider. Bottom ~57%: white card with rounded top. "Welcome" heading. **Login method toggle** (email ↔ phone) via social row switch. Email mode: email input + password input (with eye toggle). Phone mode: phone input with fixed `+251` country code prefix + OTP code input (2-step flow: enter phone → send code → enter code → verify). CTA button label morphs: "Log In" (email) / "Send code" (phone step 1) / "Log In" (phone step 2). "or continue with" divider. Social row: Google, Apple, Phone/Email switch button. Privacy trust note at bottom.
+Top ~43%: hero image background with "Qal Dating" wordmark + pink heart, tagline "Where hearts from our heritage find home.", decorative heart-dash divider. Bottom ~57%: white card with rounded top. "Welcome" heading. **Login method toggle** (email ↔ phone) via social row switch. Email mode: email input + password input (with eye toggle). Phone mode: phone input with fixed `+251` country code prefix + OTP code input (2-step flow: enter phone → send code → enter code → verify). CTA button label morphs: "Log In" (email) / "Send code" (phone step 1) / "Log In" (phone step 2). "or continue with" divider. Social row: Google, Apple, Phone/Email switch button. Privacy trust note at bottom.
 
 ### Auth Modes
 
@@ -369,7 +369,7 @@ Show errors inline:
 
 ### Visual Description
 
-Soft pink-to-lavender gradient background with floating decorative hearts. Top-left: Qaliye wordmark + pink heart. Step progress: numbered circles 1–5 with connecting lines — active step filled purple, completed steps show checkmark. Large heading "Complete your profile". Step subtitle. Scrollable card content area. Bottom: ghost "← Back" button (left) + purple gradient "Continue →" (right). Trust note at bottom.
+Soft pink-to-lavender gradient background with floating decorative hearts. Top-left: Qal Dating wordmark + pink heart. Step progress: numbered circles 1–5 with connecting lines — active step filled purple, completed steps show checkmark. Large heading "Complete your profile". Step subtitle. Scrollable card content area. Bottom: ghost "← Back" button (left) + purple gradient "Continue →" (right). Trust note at bottom.
 
 Steps from designs: **1 Basics** → **2 About You** → **3 Lifestyle** → **4 Preferences** → **5 Photos**.
 

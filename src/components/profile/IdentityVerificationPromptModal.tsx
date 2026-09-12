@@ -40,7 +40,7 @@ export function IdentityVerificationPromptModal({ visible, onVerifyNow, onDismis
           <Text style={[styles.title, { color: th.text }]}>Verify Your Identity</Text>
 
           <Text style={[styles.message, { color: th.textSecondary }]}>
-            Build trust and help keep Qaliye safe by verifying your identity.
+            Build trust and help keep Qal Dating safe by verifying your identity.
           </Text>
 
           {/* Primary CTA */}

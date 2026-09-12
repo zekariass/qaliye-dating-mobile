@@ -1,4 +1,4 @@
-# Qaliye — Discovery Screen: Spring Boot API Design Specification
+# Qal Dating — Discovery Screen: Spring Boot API Design Specification
 
 **Version:** 1.0  
 **Date:** 2025-06-20  

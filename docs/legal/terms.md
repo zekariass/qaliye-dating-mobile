@@ -1,13 +1,13 @@
-# QALIYE TERMS OF USE
+# QAL DATING TERMS OF USE
 
 **Effective date:** 27 July 2026
 **Last updated:** 27 July 2026
 
-These Terms of Use (“Terms”) govern your access to and use of the Qaliye mobile application, website at **[www.qaliye.com](http://www.qaliye.com)**, and any related features, content, products, subscriptions, and services that we provide together as the “Services.”
+These Terms of Use (“Terms”) govern your access to and use of the Qal Dating mobile application, website at **[www.qaliye.com](http://www.qaliye.com)**, and any related features, content, products, subscriptions, and services that we provide together as the “Services.”
 
-Qaliye is operated by **[YOUR FULL LEGAL NAME]**, a sole trader trading as **Qaliye**, with a business address at **[YOUR BUSINESS ADDRESS]**.
+Qal Dating is operated by **[YOUR FULL LEGAL NAME]**, a sole trader trading as **Qal Dating**, with a business address at **[YOUR BUSINESS ADDRESS]**.
 
-In these Terms, “Qaliye,” “we,” “us,” and “our” refer to **[YOUR FULL LEGAL NAME], trading as Qaliye**.
+In these Terms, “Qal Dating,” “we,” “us,” and “our” refer to **[YOUR FULL LEGAL NAME], trading as Qal Dating**.
 
 You can contact us at:
 
@@ -19,35 +19,35 @@ Please read these Terms carefully. By creating an account, accessing the Service
 
 Do not use the Services if you do not agree to these Terms.
 
-## 1. About Qaliye
+## 1. About Qal Dating
 
-Qaliye is a dating and relationship platform designed primarily for Habesha communities, including Ethiopian and Eritrean people and members of the global diaspora.
+Qal Dating is a dating and relationship platform designed primarily for Habesha communities, including Ethiopian and Eritrean people and members of the global diaspora.
 
 Our purpose is to help adults build genuine connections while fostering respect for Habesha culture, values, traditions, languages, and communities.
 
-Qaliye welcomes respectful participation. Our cultural focus does not permit discrimination, harassment, hate speech, hostility, or abusive treatment based on ethnicity, nationality, religion, language, gender, disability, or any other protected characteristic.
+Qal Dating welcomes respectful participation. Our cultural focus does not permit discrimination, harassment, hate speech, hostility, or abusive treatment based on ethnicity, nationality, religion, language, gender, disability, or any other protected characteristic.
 
-Qaliye does not guarantee that you will find a match, enter a relationship, marry, or achieve any particular outcome through the Services.
+Qal Dating does not guarantee that you will find a match, enter a relationship, marry, or achieve any particular outcome through the Services.
 
 ## 2. Eligibility
 
-You may create an account and use Qaliye only if:
+You may create an account and use Qal Dating only if:
 
 1. you are at least 18 years old;
 2. you have the legal capacity to enter into a binding agreement;
 3. you are not prohibited by applicable law from using the Services;
-4. you have not previously been permanently removed or banned from Qaliye, unless we have given you written permission to return;
+4. you have not previously been permanently removed or banned from Qal Dating, unless we have given you written permission to return;
 5. you are not required to register as a sex offender under any applicable law;
 6. you provide accurate and truthful information; and
 7. you agree to comply with these Terms and our Community Guidelines.
 
-Qaliye is strictly for adults. People under 18 are not permitted to create accounts, appear in dating profiles, or use the Services.
+Qal Dating is strictly for adults. People under 18 are not permitted to create accounts, appear in dating profiles, or use the Services.
 
 Where we reasonably suspect that a user may be under 18, we may use additional age-estimation or age-verification measures, including automated photo-based age estimation or requests for identification documents. We will notify you if we use such measures.
 
 If we reasonably believe that you are under 18, we may request information to confirm your age and may restrict or terminate your account.
 
-If you become aware of a person under 18 using Qaliye, report the account immediately through the in-app reporting feature or contact **[support@qaliye.com](mailto:support@qaliye.com)**.
+If you become aware of a person under 18 using Qal Dating, report the account immediately through the in-app reporting feature or contact **[support@qaliye.com](mailto:support@qaliye.com)**.
 
 ## 3. Creating and Managing Your Account
 
@@ -71,7 +71,7 @@ You must not:
 * create fake or misleading profiles;
 * create another account to avoid a restriction, suspension, or ban;
 * use automated tools, bots, scripts, or scraping technologies; or
-* falsely claim to be affiliated with Qaliye.
+* falsely claim to be affiliated with Qal Dating.
 
 We may use email, telephone, identity, photo, device, or other verification methods where reasonably necessary for safety, fraud prevention, or account integrity.
 
@@ -79,7 +79,7 @@ Verification does not guarantee that a user is truthful, safe, trustworthy, or f
 
 ## 4. Your Responsibilities
 
-You are responsible for your conduct on and outside Qaliye when interacting with people you meet through the Services.
+You are responsible for your conduct on and outside Qal Dating when interacting with people you meet through the Services.
 
 You agree to:
 
@@ -91,7 +91,7 @@ You agree to:
 * use the reporting and blocking tools when appropriate; and
 * follow our Community Guidelines.
 
-You must not use Qaliye to:
+You must not use Qal Dating to:
 
 * harass, threaten, intimidate, stalk, bully, or shame another person;
 * promote hatred or discrimination;
@@ -117,13 +117,13 @@ You must not use Qaliye to:
 
 Our Community Guidelines form part of these Terms.
 
-They explain the standards of behaviour and content expected from everyone using Qaliye. You must review and accept them before uploading content or interacting with other users.
+They explain the standards of behaviour and content expected from everyone using Qal Dating. You must review and accept them before uploading content or interacting with other users.
 
 We may take action where content or behaviour violates the Community Guidelines, even if the specific conduct is not separately listed in these Terms.
 
 ## 6. User Content
 
-“User Content” means content that you upload, create, send, publish, display, or otherwise make available through Qaliye, including:
+“User Content” means content that you upload, create, send, publish, display, or otherwise make available through Qal Dating, including:
 
 * profile photographs;
 * profile information and biographies;
@@ -137,11 +137,11 @@ We may take action where content or behaviour violates the Community Guidelines,
 
 You retain ownership of your User Content.
 
-You must have all rights and permissions necessary to upload and share that content. You must not upload content owned by someone else unless you have permission to use it through Qaliye.
+You must have all rights and permissions necessary to upload and share that content. You must not upload content owned by someone else unless you have permission to use it through Qal Dating.
 
-### 6.2 Licence granted to Qaliye
+### 6.2 Licence granted to Qal Dating
 
-By submitting User Content, you grant Qaliye a non-exclusive, worldwide, royalty-free, transferable and sublicensable licence to host, store, reproduce, process, adapt, display, distribute, and otherwise use the content only as reasonably necessary to:
+By submitting User Content, you grant Qal Dating a non-exclusive, worldwide, royalty-free, transferable and sublicensable licence to host, store, reproduce, process, adapt, display, distribute, and otherwise use the content only as reasonably necessary to:
 
 * operate and provide the Services;
 * display your profile and content to relevant users;
@@ -180,7 +180,7 @@ You may be asked to choose and upload a different photograph.
 
 Automated moderation systems are not always accurate. They may occasionally fail to identify prohibited content or incorrectly flag acceptable content.
 
-We may make the final decision about whether content is permitted on Qaliye. Where appropriate, you may request a review of a moderation decision by contacting **[support@qaliye.com](mailto:support@qaliye.com)**.
+We may make the final decision about whether content is permitted on Qal Dating. Where appropriate, you may request a review of a moderation decision by contacting **[support@qaliye.com](mailto:support@qaliye.com)**.
 
 Our use of moderation technology and third-party service providers is described further in our Privacy Policy.
 
@@ -188,7 +188,7 @@ You must not attempt to bypass, deceive, or interfere with our moderation system
 
 ## 8. Reporting and Blocking
 
-Qaliye provides in-app tools that allow users to report and block other users.
+Qal Dating provides in-app tools that allow users to report and block other users.
 
 You may report:
 
@@ -209,7 +209,7 @@ When you block another user, we may restrict that person’s ability to:
 * view or discover your profile;
 * like or match with you;
 * send messages to you; or
-* otherwise interact with you through Qaliye.
+* otherwise interact with you through Qal Dating.
 
 Blocking does not necessarily remove information already received or retained for safety, legal, or moderation purposes.
 
@@ -231,9 +231,9 @@ For privacy and safety reasons, we may not disclose the full details or outcome 
 
 ## 9. Safety and Interactions with Other Users
 
-Qaliye provides a platform that allows users to discover and communicate with each other. We do not control the actions, intentions, identity, statements, or conduct of every user.
+Qal Dating provides a platform that allows users to discover and communicate with each other. We do not control the actions, intentions, identity, statements, or conduct of every user.
 
-Unless we expressly state otherwise, Qaliye does not routinely conduct criminal-record, identity, immigration-status, employment, financial, or other background checks on all users.
+Unless we expressly state otherwise, Qal Dating does not routinely conduct criminal-record, identity, immigration-status, employment, financial, or other background checks on all users.
 
 Profile verification, where available, is limited and does not guarantee that a person:
 
@@ -248,7 +248,7 @@ You are responsible for deciding whether and how to interact with another user.
 You should:
 
 * avoid sending money or financial information;
-* keep early conversations within Qaliye where possible;
+* keep early conversations within Qal Dating where possible;
 * be cautious about sharing your address, workplace, telephone number, or identification documents;
 * meet for the first time in a public place;
 * tell a trusted person where you are going;
@@ -257,13 +257,13 @@ You should:
 * leave immediately if you feel unsafe; and
 * contact emergency services where there is an immediate threat.
 
-Qaliye is not responsible for supervising offline meetings or private interactions between users.
+Qal Dating is not responsible for supervising offline meetings or private interactions between users.
 
 Nothing in these Terms limits any responsibility that cannot legally be excluded.
 
 ## 10. Matches, Likes and Discovery
 
-Qaliye may provide features such as:
+Qal Dating may provide features such as:
 
 * Likes;
 * Super Likes;
@@ -294,7 +294,7 @@ Users may unmatch, withdraw an interaction, pass, block, or delete their account
 
 ## 11. Paid Services, Subscriptions and Virtual Items
 
-Qaliye may offer paid features, including subscriptions, premium access, Boosts, credits, or other digital benefits.
+Qal Dating may offer paid features, including subscriptions, premium access, Boosts, credits, or other digital benefits.
 
 The specific price, billing period, included benefits, renewal terms, and payment method will be displayed before you complete a purchase.
 
@@ -308,7 +308,7 @@ You are responsible for managing app-store subscriptions through the relevant ap
 
 ### 11.2 Other payment methods
 
-Where Qaliye offers web-based or local payment methods, the applicable price, payment instructions, duration, and renewal terms will be shown before purchase.
+Where Qal Dating offers web-based or local payment methods, the applicable price, payment instructions, duration, and renewal terms will be shown before purchase.
 
 ### 11.3 Automatic renewal
 
@@ -318,7 +318,7 @@ Unless cancelled before the renewal date, the subscription may renew for the sta
 
 ### 11.4 Cancelling a subscription
 
-Deleting your Qaliye account does not necessarily cancel a subscription purchased through Apple, Google, or another third-party payment provider.
+Deleting your Qal Dating account does not necessarily cancel a subscription purchased through Apple, Google, or another third-party payment provider.
 
 You must separately cancel the subscription through the provider that processed the purchase, unless we expressly tell you otherwise.
 
@@ -340,7 +340,7 @@ Nothing in these Terms removes or limits your mandatory statutory rights.
 Credits, Boosts, Super Likes, or other virtual benefits:
 
 * are digital features and not legal currency;
-* have no cash value outside Qaliye;
+* have no cash value outside Qal Dating;
 * may not be sold, transferred, or exchanged unless we expressly allow it;
 * may be subject to limits or expiry disclosed at purchase;
 * may be removed where obtained fraudulently or through payment reversal; and
@@ -365,7 +365,7 @@ You may lose access to a promotion if you cancel, change plans, violate these Te
 
 ## 13. Account Suspension and Termination
 
-You may stop using Qaliye at any time and may request account deletion through the available account settings or by contacting us.
+You may stop using Qal Dating at any time and may request account deletion through the available account settings or by contacting us.
 
 We may restrict, suspend, or terminate your account where we reasonably believe that:
 
@@ -375,7 +375,7 @@ We may restrict, suspend, or terminate your account where we reasonably believe 
 * you have engaged in fraud, harassment, abuse, or illegal activity;
 * your account is fake, misleading, compromised, or being misused;
 * you have attempted to bypass a previous restriction;
-* your activity threatens Qaliye, its users, or third parties;
+* your activity threatens Qal Dating, its users, or third parties;
 * suspension is required by law or a competent authority; or
 * action is reasonably necessary to investigate a serious report.
 
@@ -402,7 +402,7 @@ We may preserve, review, or disclose information where we reasonably believe thi
 * respond to an emergency involving danger, death, or serious injury;
 * report suspected child exploitation or other serious criminal activity;
 * prevent fraud, abuse, or threats;
-* protect the rights and safety of users, Qaliye, or the public; or
+* protect the rights and safety of users, Qal Dating, or the public; or
 * establish, exercise, or defend legal claims.
 
 Any handling of personal information is subject to our Privacy Policy and applicable law.
@@ -411,7 +411,7 @@ Any handling of personal information is subject to our Privacy Policy and applic
 
 Our [Privacy Policy](#) explains how we collect, use, store, share, and protect personal information.
 
-By using Qaliye, you acknowledge that your personal information will be handled as described in the Privacy Policy.
+By using Qal Dating, you acknowledge that your personal information will be handled as described in the Privacy Policy.
 
 The Privacy Policy is available through the app and at **[www.qaliye.com](http://www.qaliye.com)**.
 
@@ -419,7 +419,7 @@ The Privacy Policy should be read together with these Terms but does not form pa
 
 ## 16. Intellectual Property
 
-Except for User Content, Qaliye and its licensors own or control all rights in the Services, including:
+Except for User Content, Qal Dating and its licensors own or control all rights in the Services, including:
 
 * software;
 * source code and object code;
@@ -443,13 +443,13 @@ This licence does not permit you to:
 * create a competing database using our content;
 * scrape user profiles;
 * modify or distribute our software; or
-* use Qaliye’s intellectual property in a misleading or unauthorised way.
+* use Qal Dating’s intellectual property in a misleading or unauthorised way.
 
-“Qaliye,” its logo, and related branding may not be used without our prior written permission.
+“Qal Dating,” its logo, and related branding may not be used without our prior written permission.
 
 ## 17. Copyright and Other Rights Complaints
 
-If you believe content on Qaliye infringes your copyright, privacy, image rights, or other legal rights, contact **[support@qaliye.com](mailto:support@qaliye.com)**.
+If you believe content on Qal Dating infringes your copyright, privacy, image rights, or other legal rights, contact **[support@qaliye.com](mailto:support@qaliye.com)**.
 
 Include:
 
@@ -481,7 +481,7 @@ We are not responsible for third-party services that we do not control, but this
 
 ## 19. Online Safety Obligations
 
-Qaliye is a user-to-user service subject to the UK Online Safety Act 2023 and other applicable online-safety laws.
+Qal Dating is a user-to-user service subject to the UK Online Safety Act 2023 and other applicable online-safety laws.
 
 We are committed to:
 
@@ -499,7 +499,7 @@ Further information about our safety policies is available in our Community Guid
 
 ## 20. Service Availability and Changes
 
-We aim to provide a reliable service, but we cannot guarantee that Qaliye will always be:
+We aim to provide a reliable service, but we cannot guarantee that Qal Dating will always be:
 
 * available;
 * uninterrupted;
@@ -524,7 +524,7 @@ You are responsible for maintaining compatible devices, operating systems, inter
 
 ## 21. Disclaimers
 
-Qaliye is provided as a platform for adult users to connect.
+Qal Dating is provided as a platform for adult users to connect.
 
 To the extent permitted by law:
 
@@ -556,7 +556,7 @@ Subject to the above, we are not responsible for losses that:
 * result from unauthorised access caused by your failure to protect your account; or
 * relate to business, commercial, or professional use of a service intended for personal use.
 
-We are not responsible for loss of profit, business opportunity, business interruption, or commercial data where you use Qaliye for business purposes contrary to these Terms.
+We are not responsible for loss of profit, business opportunity, business interruption, or commercial data where you use Qal Dating for business purposes contrary to these Terms.
 
 Nothing in this section affects your statutory consumer rights.
 
@@ -564,12 +564,12 @@ Nothing in this section affects your statutory consumer rights.
 
 You may be responsible for reasonable losses, costs, claims, or expenses that arise directly from:
 
-* your unlawful use of Qaliye;
+* your unlawful use of Qal Dating;
 * your material breach of these Terms;
 * content you upload without the necessary rights; or
 * fraud or deliberate misuse committed through your account.
 
-You will not be responsible to the extent that the loss was caused by Qaliye’s own breach, negligence, or failure to take reasonable steps.
+You will not be responsible to the extent that the loss was caused by Qal Dating’s own breach, negligence, or failure to take reasonable steps.
 
 ## 24. Changes to These Terms
 
@@ -633,7 +633,7 @@ In the EU, you may submit a complaint through the European Online Dispute Resolu
 
 ### 27.1 Entire agreement
 
-These Terms, the Privacy Policy, the Community Guidelines, and any purchase-specific terms presented to you form the agreement governing your use of Qaliye.
+These Terms, the Privacy Policy, the Community Guidelines, and any purchase-specific terms presented to you form the agreement governing your use of Qal Dating.
 
 ### 27.2 Severability
 
@@ -651,7 +651,7 @@ We may transfer our rights or obligations as part of a business reorganisation, 
 
 ### 27.5 No partnership or agency
 
-These Terms do not create an employment, partnership, joint venture, fiduciary, franchise, or agency relationship between you and Qaliye.
+These Terms do not create an employment, partnership, joint venture, fiduciary, franchise, or agency relationship between you and Qal Dating.
 
 ### 27.6 Third-party rights
 
@@ -671,8 +671,8 @@ Unless applicable law requires otherwise, the English version will govern if the
 
 Questions, complaints, appeals, and legal notices relating to these Terms may be sent to:
 
-**Qaliye**
-Operated by **[YOUR FULL LEGAL NAME], trading as Qaliye**
+**Qal Dating**
+Operated by **[YOUR FULL LEGAL NAME], trading as Qal Dating**
 **Address:** [YOUR BUSINESS ADDRESS]
 **Email:** [support@qaliye.com](mailto:support@qaliye.com)
 **Website:** [www.qaliye.com](http://www.qaliye.com)

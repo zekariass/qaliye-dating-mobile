@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
-    Linking,
     Platform,
     Pressable,
     ScrollView,
@@ -31,6 +30,7 @@ import { useRevenueCatPurchase } from '@/hooks/billing/useRevenueCatPurchase';
 import { useRevenueCatReconcile } from '@/hooks/billing/useRevenueCatReconcile';
 import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useTheme } from '@/hooks/use-theme';
+import { useAppLink } from '@/hooks/useAppLink';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
 import type { ClaimablePromotionDto, PaymentMethodDto, SubscriptionProvider } from '@/types/billing';
 import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
@@ -68,6 +68,7 @@ export default function PremiumPaywallScreen() {
   const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
   const { colors: th } = useTheme();
+  const { openLink } = useAppLink();
 
   const { entitlements, isLoading: loadingEntitlements, refreshEntitlements } = useEntitlements();
 
@@ -640,7 +641,7 @@ export default function PremiumPaywallScreen() {
 
             <View style={styles.legalRow}>
               <Pressable
-                onPress={() => Linking.openURL('https://www.qaliye.com/en/privacy')}
+                onPress={() => openLink('privacy')}
                 accessibilityRole="link"
               >
                 <Text style={[styles.legalLink, { color: th.textSecondary }]}>
@@ -649,7 +650,7 @@ export default function PremiumPaywallScreen() {
               </Pressable>
               <Text style={[styles.legalDot, { color: th.textMuted }]}>•</Text>
               <Pressable
-                onPress={() => Linking.openURL('https://www.qaliye.com/en/terms')}
+                onPress={() => openLink('terms')}
                 accessibilityRole="link"
               >
                 <Text style={[styles.legalLink, { color: th.textSecondary }]}>

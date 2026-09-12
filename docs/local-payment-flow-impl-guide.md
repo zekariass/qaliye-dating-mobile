@@ -1,6 +1,6 @@
-# Qaliye Local Payments + Verify.et Backend Implementation Guide
+# Qal Dating Local Payments + Verify.et Backend Implementation Guide
 
-This guide refactors Qaliye local payments while keeping the existing RevenueCat Apple/Google implementation intact.
+This guide refactors Qal Dating local payments while keeping the existing RevenueCat Apple/Google implementation intact.
 
 The backend already has the main billing schema: `payment_offers`, `payment_methods`, `payment_orders`, `payment_proofs`, `payment_verification_attempts`, `payment_events`, `transactions`, `user_subscriptions`, and entitlement ledger/credit-lot tables. The implementation must reuse these tables and insert the same fulfillment records local payments need, similar to the existing RevenueCat webhook fulfillment path.
 
@@ -851,7 +851,7 @@ User selected CBE but submitted a Telebirr reference
 
 ```text
 User selected the wrong offer/amount
-→ Verify.et confirms payment to Qaliye
+→ Verify.et confirms payment to Qal Dating
 → settlement account matched
 → amount mismatch
 → order REVIEW_REQUIRED
@@ -861,7 +861,7 @@ User selected the wrong offer/amount
 Do not use `REVIEW_REQUIRED` for settlement mismatch.
 
 ```text
-Settlement mismatch means payment may not have gone to Qaliye.
+Settlement mismatch means payment may not have gone to Qal Dating.
 That should be MANUAL_REVIEW or REJECTED, not REVIEW_REQUIRED.
 ```
 

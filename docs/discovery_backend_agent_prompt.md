@@ -1,8 +1,8 @@
-# Backend Agent Implementation Prompt — Qaliye Discovery API
+# Backend Agent Implementation Prompt — Qal Dating Discovery API
 
 ## Your Task
 
-Implement the **Discovery feature** Spring Boot backend for the Qaliye dating app, exactly as specified in `docs/discovery_screen_api_design.md`. Read that file completely before writing a single line of code.
+Implement the **Discovery feature** Spring Boot backend for the Qal Dating dating app, exactly as specified in `docs/discovery_screen_api_design.md`. Read that file completely before writing a single line of code.
 
 ---
 

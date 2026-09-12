@@ -410,7 +410,7 @@ export function getActionName(actionCode: string | null | undefined): string {
     IMAGE_MESSAGE: 'Image Message',
     SEE_WHO_LIKED_YOU: 'Reveal Profile',
     RETURN_PASSED_PROFILE: 'Revisit Profile',
-    SUPER_MESSAGE: 'Super Message',
+    SUPER_MESSAGE: 'Before-Match Message',
     INCOGNITO_MODE: 'Incognito Mode',
     CHANGE_ADDRESS: 'Change Address',
   };

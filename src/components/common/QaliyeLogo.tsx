@@ -8,7 +8,7 @@ export default function QaliyeLogo() {
   const isDark = mode === 'dark';
 
   return (
-    <View style={styles.logo} accessibilityLabel="Qaliye" accessibilityRole="image">
+    <View style={styles.logo} accessibilityLabel="Qal Dating" accessibilityRole="image">
       <View style={styles.logoQWrap}>
         <Text style={[styles.logoQ, { color: isDark ? '#A78BFA' : colors.primary }]}>Q</Text>
         <View style={[styles.logoDot, { backgroundColor: isDark ? '#A78BFA' : colors.primary }]} />

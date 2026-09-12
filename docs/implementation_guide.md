@@ -1,4 +1,4 @@
-# Qaliye — Unified Architecture & Implementation Guide
+# Qal Dating — Unified Architecture & Implementation Guide
 
 **Version:** 2.1 — Spring Boot-mediated data access
 **Audience:** AI coding agents (client agent · backend agent) and human engineers
@@ -8,7 +8,7 @@
 
 ## 0. Purpose & How to Use This Document
 
-This is the single source of truth for building **Qaliye** — a culturally-aware dating app serving Ethiopian and Eritrean communities locally and in the diaspora.
+This is the single source of truth for building **Qal Dating** — a culturally-aware dating app serving Ethiopian and Eritrean communities locally and in the diaspora.
 
 The database schema in `schema.sql` is **complete and production-ready**. Do not alter it without a corresponding update to this document. This guide:
 
@@ -49,7 +49,7 @@ This model intentionally trades a small amount of extra backend traffic for a mu
 
 ```mermaid
 graph TB
-    subgraph Client["📱 Qaliye — React Native (Expo SDK 56)"]
+    subgraph Client["📱 Qal Dating — React Native (Expo SDK 56)"]
         A1[Supabase JS Client - Auth/session only]
         A2[Axios API Client - all app data + uploads]
         A3[Chat Realtime Hub - messages receive only]
@@ -1383,7 +1383,7 @@ Expo Push API request body:
 
 ```mermaid
 sequenceDiagram
-    participant App as Qaliye App
+    participant App as Qal Dating App
     participant API as Spring Boot
     participant DB as Supabase Postgres
 

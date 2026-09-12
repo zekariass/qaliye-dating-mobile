@@ -3,13 +3,13 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { getManualReviewStatus, requestManualReview, submitIdentityVerification } from '@/api/profile/profileApi';
@@ -640,7 +640,7 @@ export default function IdentityVerificationStep({
             )
           : t(
               'onboarding.identity.subtitleOptional',
-              'Take a selfie so we can confirm you are real. This helps keep Qaliye safe. This step is optional.',
+              'Take a selfie so we can confirm you are real. This helps keep Qal Dating safe. This step is optional.',
             )}
       </Text>
 

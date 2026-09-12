@@ -1,15 +1,15 @@
-# QALIYE COMMUNITY GUIDELINES
+# QAL DATING COMMUNITY GUIDELINES
 
 **Effective date:** [INSERT EFFECTIVE DATE]
 **Last updated:** [INSERT LAST-UPDATED DATE]
 
-## 1. Welcome to Qaliye
+## 1. Welcome to Qal Dating
 
-Qaliye is a dating and relationship platform designed primarily for Habesha communities, including Ethiopian and Eritrean people and members of the global diaspora.
+Qal Dating is a dating and relationship platform designed primarily for Habesha communities, including Ethiopian and Eritrean people and members of the global diaspora.
 
 Our goal is to help adults form genuine, respectful, and meaningful connections while respecting the cultures, traditions, values, languages, and diversity of our communities.
 
-Everyone using Qaliye must follow these Community Guidelines.
+Everyone using Qal Dating must follow these Community Guidelines.
 
 These Guidelines apply to:
 
@@ -18,18 +18,18 @@ These Guidelines apply to:
 * Likes, Super Likes, and matches;
 * text messages;
 * image messages;
-* interactions with Qaliye support;
+* interactions with Qal Dating support;
 * reports and appeals;
-* behaviour during meetings arranged through Qaliye; and
+* behaviour during meetings arranged through Qal Dating; and
 * any other activity connected with the Services.
 
-These Guidelines form part of the Qaliye [Terms of Use](#) and should be read alongside our [Privacy Policy](#).
+These Guidelines form part of the Qal Dating [Terms of Use](#) and should be read alongside our [Privacy Policy](#).
 
 By creating an account, uploading content, or interacting with another user, you agree to follow these Guidelines.
 
 ## 2. Adults Only
 
-Qaliye is strictly for people aged 18 and over.
+Qal Dating is strictly for people aged 18 and over.
 
 You must not:
 
@@ -38,18 +38,18 @@ You must not:
 * create or operate an account for a person under 18;
 * allow a person under 18 to use your account;
 * pretend to be an adult;
-* use Qaliye to contact or pursue a person you know or suspect is under 18; or
+* use Qal Dating to contact or pursue a person you know or suspect is under 18; or
 * upload content that sexually depicts, exploits, endangers, or targets a child.
 
 Profile photographs must clearly represent the adult account holder. Do not use a photograph of a child as your primary profile photograph.
 
 Any sexual content involving a person under 18 is strictly prohibited and may be reported to the relevant safeguarding or law-enforcement authorities.
 
-If you believe someone using Qaliye is under 18, report the account immediately through the in-app reporting feature or contact **[support@qaliye.com](mailto:support@qaliye.com)**.
+If you believe someone using Qal Dating is under 18, report the account immediately through the in-app reporting feature or contact **[support@qaliye.com](mailto:support@qaliye.com)**.
 
 ## 3. Treat Everyone With Respect
 
-Qaliye is a community of real people. Treat others with dignity, patience, and respect.
+Qal Dating is a community of real people. Treat others with dignity, patience, and respect.
 
 You must not:
 
@@ -68,7 +68,7 @@ Respect another person’s decision to say no, stop replying, unmatch, block, or
 
 ## 4. Respect Habesha Cultures and Traditions
 
-Qaliye celebrates Ethiopian and Eritrean cultures and the wider Habesha community.
+Qal Dating celebrates Ethiopian and Eritrean cultures and the wider Habesha community.
 
 Users may have different:
 
@@ -99,7 +99,7 @@ Respecting culture also means respecting individual choice, personal boundaries,
 
 ## 5. No Hate Speech or Discrimination
 
-Qaliye does not permit hatred, abuse, exclusion, or dehumanisation based on a person’s actual or perceived:
+Qal Dating does not permit hatred, abuse, exclusion, or dehumanisation based on a person’s actual or perceived:
 
 * race;
 * ethnicity;
@@ -124,11 +124,11 @@ You must not:
 * compare a protected group to animals, diseases, or criminals; or
 * target a user with degrading stereotypes.
 
-You may express lawful personal dating preferences through Qaliye’s available preference controls. You must not use those preferences as a reason to insult, shame, or harass other people.
+You may express lawful personal dating preferences through Qal Dating’s available preference controls. You must not use those preferences as a reason to insult, shame, or harass other people.
 
 ## 6. Be Genuine
 
-Qaliye is for authentic adult dating and relationship-building.
+Qal Dating is for authentic adult dating and relationship-building.
 
 You must:
 
@@ -142,7 +142,7 @@ You must not:
 
 * impersonate another person;
 * use another person’s photographs without permission;
-* pretend to be a celebrity, public figure, business, or Qaliye employee;
+* pretend to be a celebrity, public figure, business, or Qal Dating employee;
 * create a fictional or deceptive identity;
 * misrepresent your age, gender, relationship status, intentions, location, profession, or identity;
 * use heavily altered, stolen, AI-generated, or misleading photographs to deceive users;
@@ -189,7 +189,7 @@ Do not use a photograph of a child as your main profile photograph or upload pho
 
 ## 8. No Nudity, Pornography, or Explicit Sexual Content
 
-Qaliye is a dating platform, not an adult-content or pornography platform.
+Qal Dating is a dating platform, not an adult-content or pornography platform.
 
 You must not upload, send, request, promote, or distribute:
 
@@ -213,7 +213,7 @@ This restriction applies to:
 * image messages; and
 * links to content hosted elsewhere.
 
-Qaliye uses automated photo-moderation technology, including Amazon Rekognition, to check photographs for suspected nudity and sexual content.
+Qal Dating uses automated photo-moderation technology, including Amazon Rekognition, to check photographs for suspected nudity and sexual content.
 
 A photograph may be rejected, hidden, removed, or referred for additional review. You may be asked to upload a different photograph.
 
@@ -242,7 +242,7 @@ Past consent does not mean ongoing consent. A person may withdraw consent at any
 
 ## 10. No Sexual Services, Exploitation, or Compensated Dating
 
-Qaliye must not be used to advertise, request, provide, arrange, or promote:
+Qal Dating must not be used to advertise, request, provide, arrange, or promote:
 
 * prostitution;
 * escort services;
@@ -269,9 +269,9 @@ You must not:
 * appear unexpectedly at someone’s home, workplace, school, or regular location;
 * use location information to monitor someone;
 * make credible threats of self-harm to manipulate another user; or
-* use Qaliye to facilitate domestic abuse or coercive control.
+* use Qal Dating to facilitate domestic abuse or coercive control.
 
-Immediate threats should be reported to local emergency services. Qaliye’s reporting system is not an emergency service.
+Immediate threats should be reported to local emergency services. Qal Dating’s reporting system is not an emergency service.
 
 ## 12. No Violence or Dangerous Conduct
 
@@ -295,7 +295,7 @@ Content may be removed where it creates a credible safety risk, even when presen
 
 ## 13. No Scams or Financial Exploitation
 
-Never use Qaliye to deceive or financially exploit another person.
+Never use Qal Dating to deceive or financially exploit another person.
 
 You must not:
 
@@ -312,15 +312,15 @@ You must not:
 * perform payment fraud or chargeback abuse; or
 * manipulate a user into providing financial support.
 
-Do not send money to someone you have met only through Qaliye.
+Do not send money to someone you have met only through Qal Dating.
 
 Report suspected scams immediately.
 
 ## 14. No Spam, Advertising, or Unauthorised Commercial Use
 
-Qaliye is intended for personal dating and relationships.
+Qal Dating is intended for personal dating and relationships.
 
-Without written permission from Qaliye, you must not:
+Without written permission from Qal Dating, you must not:
 
 * advertise products or services;
 * promote a business, event, political campaign, social-media account, or commercial website;
@@ -331,7 +331,7 @@ Without written permission from Qaliye, you must not:
 * solicit donations;
 * buy or sell accounts;
 * sell access to users or profile information; or
-* use Qaliye primarily to gain followers or traffic on another platform.
+* use Qal Dating primarily to gain followers or traffic on another platform.
 
 Mentioning your genuine profession or business in your profile is generally acceptable when it is relevant personal information and is not used as advertising or solicitation.
 
@@ -360,10 +360,10 @@ without permission or another lawful reason.
 You must not:
 
 * threaten to expose someone;
-* encourage harassment outside Qaliye;
+* encourage harassment outside Qal Dating;
 * secretly record calls or meetings where prohibited;
 * post screenshots to shame or identify another user;
-* share information received through Qaliye for commercial purposes; or
+* share information received through Qal Dating for commercial purposes; or
 * attempt to discover information that another user has chosen not to share.
 
 Protect your own privacy as well. Avoid sharing sensitive personal or financial information with people you have not established trust with.
@@ -377,7 +377,7 @@ You must not:
 * use another person’s photographs without permission;
 * upload copyrighted images, audio, text, or artwork unlawfully;
 * copy another user’s profile;
-* misuse Qaliye’s name, logo, designs, or software;
+* misuse Qal Dating’s name, logo, designs, or software;
 * falsely claim ownership of another person’s work; or
 * distribute content in violation of copyright, trademark, privacy, or publicity rights.
 
@@ -385,7 +385,7 @@ Rights holders may contact **[support@qaliye.com](mailto:support@qaliye.com)** t
 
 ## 17. Do Not Misuse the Platform
 
-You must not interfere with the operation, safety, or integrity of Qaliye.
+You must not interfere with the operation, safety, or integrity of Qal Dating.
 
 Prohibited activity includes:
 
@@ -408,7 +408,7 @@ Report suspected security vulnerabilities privately to **[support@qaliye.com](ma
 
 ## 18. Offline Behaviour Matters
 
-These Guidelines may apply to behaviour outside Qaliye when it involves someone you met through Qaliye or creates a serious risk to the community.
+These Guidelines may apply to behaviour outside Qal Dating when it involves someone you met through Qal Dating or creates a serious risk to the community.
 
 We may take action based on credible information concerning:
 
@@ -423,16 +423,16 @@ We may take action based on credible information concerning:
 * repeated harassment; or
 * another serious safety concern.
 
-Qaliye does not investigate every personal disagreement or decide ordinary relationship disputes.
+Qal Dating does not investigate every personal disagreement or decide ordinary relationship disputes.
 
 We may act where off-platform conduct demonstrates that a user may pose a serious risk to others or has materially violated these Guidelines.
 
 ## 19. Dating Safety
 
-When meeting someone from Qaliye:
+When meeting someone from Qal Dating:
 
 * take time to get to know them;
-* keep early communication within Qaliye where practical;
+* keep early communication within Qal Dating where practical;
 * do not send money or financial information;
 * avoid sharing your home or workplace address too early;
 * meet for the first time in a populated public place;
@@ -446,7 +446,7 @@ When meeting someone from Qaliye:
 
 Verification, matching, or long conversations do not guarantee that someone is safe.
 
-Trust your judgement and use Qaliye’s block and report tools when necessary.
+Trust your judgement and use Qal Dating’s block and report tools when necessary.
 
 ## 20. Reporting a User or Content
 
@@ -476,7 +476,7 @@ For additional support, contact:
 
 For an immediate danger or suspected crime, contact your local emergency services or law-enforcement authority. Do not rely only on an in-app report during an emergency.
 
-Qaliye takes seriously its obligations under the UK Online Safety Act 2023 to address illegal content and protect users. You can report illegal content through the in-app reporting feature or by contacting **[support@qaliye.com](mailto:support@qaliye.com)**. Further information about our safety policies is available in our Transparency Report, where published.
+Qal Dating takes seriously its obligations under the UK Online Safety Act 2023 to address illegal content and protect users. You can report illegal content through the in-app reporting feature or by contacting **[support@qaliye.com](mailto:support@qaliye.com)**. Further information about our safety policies is available in our Transparency Report, where published.
 
 ## 21. Blocking a User
 
@@ -489,19 +489,19 @@ Blocking may prevent the blocked user from:
 * matching with you;
 * sending messages;
 * viewing your activity; or
-* otherwise interacting with you through Qaliye.
+* otherwise interacting with you through Qal Dating.
 
 You do not need to warn someone before blocking them.
 
 A blocked user must not create another account or use another person’s account to contact you.
 
-Blocking and reporting are separate actions. Blocking stops or limits contact, while reporting alerts Qaliye to a possible violation.
+Blocking and reporting are separate actions. Blocking stops or limits contact, while reporting alerts Qal Dating to a possible violation.
 
 Where appropriate, consider both blocking and reporting the user.
 
-## 22. How Qaliye Moderates Content
+## 22. How Qal Dating Moderates Content
 
-Qaliye uses moderation methods that may include:
+Qal Dating uses moderation methods that may include:
 
 * automated photo moderation;
 * Amazon Rekognition;
@@ -513,7 +513,7 @@ Qaliye uses moderation methods that may include:
 
 Automated moderation may not always be accurate. Acceptable content may occasionally be flagged, and prohibited content may occasionally avoid detection.
 
-Qaliye may review reported or relevant content when reasonably necessary to:
+Qal Dating may review reported or relevant content when reasonably necessary to:
 
 * investigate a report;
 * protect users;
@@ -538,7 +538,7 @@ The action taken will depend on factors including:
 * cooperation with an investigation; and
 * applicable legal requirements.
 
-Qaliye may:
+Qal Dating may:
 
 * provide guidance or a warning;
 * reject an uploaded photograph;
@@ -568,7 +568,7 @@ Examples include:
 * repeated ban evasion; or
 * conduct creating an immediate safety risk.
 
-Qaliye may take no action where available evidence does not establish a violation.
+Qal Dating may take no action where available evidence does not establish a violation.
 
 For privacy and safety reasons, we may not disclose all information considered during an investigation or the complete action taken against another user.
 
@@ -603,7 +603,7 @@ We may decline repeated appeals that provide no new information or contain threa
 
 We may update these Guidelines to reflect:
 
-* changes to Qaliye;
+* changes to Qal Dating;
 * new safety risks;
 * user feedback;
 * changes in law;
@@ -614,14 +614,14 @@ The updated version will show a revised “Last updated” date.
 
 Where changes are material, we may notify you through the app, website, email, or another appropriate method.
 
-Continued use of Qaliye after updated Guidelines take effect means that you must follow the updated rules.
+Continued use of Qal Dating after updated Guidelines take effect means that you must follow the updated rules.
 
 ## 26. Contact Us
 
 For questions, reports, appeals, or concerns relating to these Community Guidelines, contact:
 
-**Qaliye**
-Operated by **[YOUR FULL LEGAL NAME], trading as Qaliye**
+**Qal Dating**
+Operated by **[YOUR FULL LEGAL NAME], trading as Qal Dating**
 **Business address:** [YOUR BUSINESS ADDRESS]
 **Email:** [support@qaliye.com](mailto:support@qaliye.com)
 **Website:** [www.qaliye.com](http://www.qaliye.com)

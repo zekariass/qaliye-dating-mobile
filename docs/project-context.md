@@ -1,8 +1,8 @@
-# Qaliye Mobile App — AI Agent Project Context
+# Qal Dating Mobile App — AI Agent Project Context
 
 ## Project Overview
 
-Qaliye is a modern dating mobile app built with React Native Expo. The app helps users create meaningful romantic connections through discovery, likes, matches, messages, profile browsing, onboarding, and preference-based matching.
+Qal Dating is a modern dating mobile app built with React Native Expo. The app helps users create meaningful romantic connections through discovery, likes, matches, messages, profile browsing, onboarding, and preference-based matching.
 
 The design direction is romantic, premium, soft, modern, and culturally warm. The app should feel trustworthy, safe, elegant, and emotionally inviting from the first screen.
 
@@ -14,7 +14,7 @@ The app must be scalable, maintainable, multilingual, and suitable for productio
 
 ## App Name
 
-Qaliye
+Qal Dating
 
 ---
 
@@ -335,7 +335,7 @@ Do not create random folders outside this structure unless clearly justified.
 
 ## Internationalisation Requirements
 
-Qaliye must support four initial languages:
+Qal Dating must support four initial languages:
 
 * English: `en`
 * Amharic: `am`
@@ -367,7 +367,7 @@ Example key style:
 ```json
 {
   "app": {
-    "name": "Qaliye"
+    "name": "Qal Dating"
   },
   "auth": {
     "login": "Log In",
@@ -383,7 +383,7 @@ Example key style:
 
 ## Brand Theme
 
-Qaliye uses a romantic purple-pink visual identity with soft pastel backgrounds, glowing hearts, smooth curves, rounded cards, and premium spacing.
+Qal Dating uses a romantic purple-pink visual identity with soft pastel backgrounds, glowing hearts, smooth curves, rounded cards, and premium spacing.
 
 The theme should feel:
 
@@ -545,7 +545,7 @@ fontSize: {
 
 ## Border Radius
 
-Qaliye should use soft rounded shapes.
+Qal Dating should use soft rounded shapes.
 
 ```ts
 radius: {
@@ -611,7 +611,7 @@ It must be visually polished and animated.
 Design style:
 
 * Full-screen soft purple/pink gradient
-* Qaliye logo centered
+* Qal Dating logo centered
 * Heart-shaped brand mark
 * Floating hearts
 * Subtle sparkle particles
@@ -622,7 +622,7 @@ Design style:
 Splash text:
 
 ```txt
-Qaliye
+Qal Dating
 Where hearts connect
 ```
 
@@ -1125,13 +1125,13 @@ The AI agent should:
 2. Configure NativeWind usage.
 3. Set up i18n foundations for English, Amharic, Tigrinya, and Oromo.
 4. Create reusable animated heart components.
-5. Create the Qaliye splash screen using react-native-reanimated.
+5. Create the Qal Dating splash screen using react-native-reanimated.
 6. Implement bootstrap routing placeholder logic.
 7. Keep the splash screen visually aligned with the generated design:
 
    * Soft lavender-pink gradient
    * Large heart brand mark
-   * Qaliye wordmark
+   * Qal Dating wordmark
    * Tagline
    * Floating animated hearts
    * Sparkles or soft glowing particles

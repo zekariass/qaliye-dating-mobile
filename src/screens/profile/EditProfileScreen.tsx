@@ -212,7 +212,7 @@ export default function EditProfileScreen() {
           if (eighteenthBirthday > today) {
             themedAlert({
               title: 'Invalid Date of Birth',
-              message: 'You must be at least 18 years old to use Qaliye.',
+              message: 'You must be at least 18 years old to use Qal Dating.',
               icon: 'alert-circle',
               iconColor: '#EF4444',
               buttons: [{ text: 'OK', style: 'default' }],

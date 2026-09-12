@@ -1,44 +1,44 @@
-# QALIYE PRIVACY POLICY
+# QAL DATING PRIVACY POLICY
 
 **Effective date:** [INSERT EFFECTIVE DATE]
 **Last updated:** [INSERT LAST-UPDATED DATE]
 
 ## 1. Introduction
 
-Qaliye respects your privacy and is committed to protecting your personal information.
+Qal Dating respects your privacy and is committed to protecting your personal information.
 
 This Privacy Policy explains how we collect, use, store, share, and protect personal information when you use:
 
-* the Qaliye mobile application;
-* the Qaliye website at **[www.qaliye.com](http://www.qaliye.com)**;
+* the Qal Dating mobile application;
+* the Qal Dating website at **[www.qaliye.com](http://www.qaliye.com)**;
 * our customer-support services; and
-* any related Qaliye features, subscriptions, products, or services.
+* any related Qal Dating features, subscriptions, products, or services.
 
 Together, these are referred to as the "Services."
 
-Qaliye is a dating and relationship platform designed primarily for Habesha communities, including Ethiopian and Eritrean people and members of the global diaspora.
+Qal Dating is a dating and relationship platform designed primarily for Habesha communities, including Ethiopian and Eritrean people and members of the global diaspora.
 
-Qaliye is available only to people aged 18 or over.
+Qal Dating is available only to people aged 18 or over.
 
 This Privacy Policy should be read alongside our [Terms of Use](#) and [Community Guidelines](#), which are available on our website and within the application.
 
 ## 2. Who We Are
 
-Qaliye is operated by:
+Qal Dating is operated by:
 
-**[YOUR FULL LEGAL NAME]**, a sole trader trading as **Qaliye**
+**[YOUR FULL LEGAL NAME]**, a sole trader trading as **Qal Dating**
 
 **Business address:** [YOUR BUSINESS ADDRESS]
 **Email:** [support@qaliye.com](mailto:support@qaliye.com)
 **Website:** [www.qaliye.com](http://www.qaliye.com)
 
-For the purposes of UK data-protection law, **[YOUR FULL LEGAL NAME], trading as Qaliye**, is the controller of the personal information described in this Privacy Policy.
+For the purposes of UK data-protection law, **[YOUR FULL LEGAL NAME], trading as Qal Dating**, is the controller of the personal information described in this Privacy Policy.
 
 This means that we decide why and how your personal information is processed.
 
 We have not appointed a Data Protection Officer as we are not required to do so under data-protection law. Privacy queries are handled by the controller whose details are provided above.
 
-If you are located in the European Economic Area, this policy also complies with the EU General Data Protection Regulation (EU GDPR), and **[YOUR FULL LEGAL NAME], trading as Qaliye**, is the controller for those purposes. We have not appointed an EU representative under Article 27 of the EU GDPR at this time; all privacy queries should be directed to the contact details above.
+If you are located in the European Economic Area, this policy also complies with the EU General Data Protection Regulation (EU GDPR), and **[YOUR FULL LEGAL NAME], trading as Qal Dating**, is the controller for those purposes. We have not appointed an EU representative under Article 27 of the EU GDPR at this time; all privacy queries should be directed to the contact details above.
 
 Questions about this Privacy Policy or our handling of personal information should be sent to:
 
@@ -46,7 +46,7 @@ Questions about this Privacy Policy or our handling of personal information shou
 
 ## 3. Information We Collect
 
-The personal information we collect depends on how you use Qaliye and which features you choose to use.
+The personal information we collect depends on how you use Qal Dating and which features you choose to use.
 
 ### 3.1 Account and identity information
 
@@ -95,13 +95,13 @@ You may choose or be required to provide information for your dating profile, in
 * relocation preferences; and
 * other profile details you choose to provide.
 
-Some of this information may be visible to other Qaliye users.
+Some of this information may be visible to other Qal Dating users.
 
 Your profile visibility depends on your settings, account status, discovery preferences, blocks, matches, and the operation of the Services.
 
 ### 3.3 Special-category information
 
-Some information processed through Qaliye may be considered particularly sensitive under data-protection law.
+Some information processed through Qal Dating may be considered particularly sensitive under data-protection law.
 
 This may include information revealing or concerning:
 
@@ -123,7 +123,7 @@ Withdrawing consent does not make earlier processing unlawful. It may affect our
 
 ### 3.4 Photographs and media
 
-We collect content that you upload or send through Qaliye, including:
+We collect content that you upload or send through Qal Dating, including:
 
 * profile photographs;
 * photographs sent in conversations;
@@ -162,7 +162,7 @@ We do not use Amazon Rekognition to establish your identity unless we clearly no
 
 ### 3.6 Location information
 
-Qaliye uses location information to provide discovery, distance, and location-based dating features.
+Qal Dating uses location information to provide discovery, distance, and location-based dating features.
 
 We may collect:
 
@@ -185,7 +185,7 @@ Other users may be shown limited location information, such as your city, countr
 
 ### 3.7 Dating, discovery, and interaction information
 
-We process information about how you interact with Qaliye and other users, including:
+We process information about how you interact with Qal Dating and other users, including:
 
 * Likes;
 * Super Likes;
@@ -213,7 +213,7 @@ We use this information to operate discovery and matching features, avoid showin
 
 ### 3.8 Messages and communications
 
-When you communicate through Qaliye, we may process:
+When you communicate through Qal Dating, we may process:
 
 * text messages;
 * image messages;
@@ -225,7 +225,7 @@ When you communicate through Qaliye, we may process:
 * timestamps;
 * attachment information;
 * reports relating to messages; and
-* support conversations with the Qaliye team.
+* support conversations with the Qal Dating team.
 
 We do not routinely have people read every private conversation.
 
@@ -239,7 +239,7 @@ However, authorised personnel or service providers may access relevant messages 
 * troubleshoot a technical problem; or
 * comply with the law.
 
-A person you message may save, copy, screenshot, record, or share your communication outside Qaliye. We cannot fully control what another user does with content they receive.
+A person you message may save, copy, screenshot, record, or share your communication outside Qal Dating. We cannot fully control what another user does with content they receive.
 
 ### 3.9 Reports, blocks, and safety information
 
@@ -288,7 +288,7 @@ The provider processes payment information under its own privacy policy.
 
 ### 3.11 Device and technical information
 
-When you use Qaliye, we may automatically collect:
+When you use Qal Dating, we may automatically collect:
 
 * IP address;
 * device type;
@@ -325,7 +325,7 @@ If you enable notifications, we may collect:
 
 Push notifications may be delivered through services provided by Expo, Apple, Google, or other notification infrastructure providers.
 
-You can disable notifications through Qaliye's settings or your device settings.
+You can disable notifications through Qal Dating's settings or your device settings.
 
 ### 3.13 Customer support and feedback
 
@@ -339,7 +339,7 @@ When you contact us, we may collect:
 * correspondence;
 * complaint information;
 * technical details; and
-* feedback about Qaliye.
+* feedback about Qal Dating.
 
 ### 3.14 Marketing information
 
@@ -472,7 +472,7 @@ Where this involves special-category information, we also rely on your **explici
 
 ### 5.3 To display your profile to other users
 
-We use the information you choose to publish to make your profile available to eligible users according to your settings and Qaliye's discovery rules.
+We use the information you choose to publish to make your profile available to eligible users according to your settings and Qal Dating's discovery rules.
 
 **Lawful basis:** Performance of our contract with you.
 
@@ -505,7 +505,7 @@ We process reports, messages, profiles, device information, and safety records t
 * respond to emergencies; and
 * cooperate with authorities where legally required.
 
-**Lawful basis:** Our legitimate interests in keeping Qaliye safe, performance of our contract, compliance with legal obligations, protection of vital interests in emergencies, and establishment, exercise, or defence of legal claims where applicable.
+**Lawful basis:** Our legitimate interests in keeping Qal Dating safe, performance of our contract, compliance with legal obligations, protection of vital interests in emergencies, and establishment, exercise, or defence of legal claims where applicable.
 
 ### 5.6 To process payments and subscriptions
 
@@ -539,7 +539,7 @@ We may send:
 
 Where consent is legally required for a particular notification or marketing communication, we rely on consent.
 
-### 5.8 To improve and troubleshoot Qaliye
+### 5.8 To improve and troubleshoot Qal Dating
 
 We use technical, usage, crash, and interaction information to:
 
@@ -551,7 +551,7 @@ We use technical, usage, crash, and interaction information to:
 * develop new features; and
 * improve usability.
 
-**Lawful basis:** Our legitimate interests in maintaining and improving Qaliye.
+**Lawful basis:** Our legitimate interests in maintaining and improving Qal Dating.
 
 Where cookies or similar technologies require consent, we rely on consent.
 
@@ -566,7 +566,7 @@ We process account, device, transaction, location, and activity information to:
 * investigate security incidents; and
 * protect our infrastructure.
 
-**Lawful basis:** Our legitimate interests in protecting users, Qaliye, and our service providers, and compliance with legal obligations where applicable.
+**Lawful basis:** Our legitimate interests in protecting users, Qal Dating, and our service providers, and compliance with legal obligations where applicable.
 
 ### 5.10 To comply with legal obligations
 
@@ -597,7 +597,7 @@ We use account, content, moderation, and reporting information to comply with ou
 
 With any consent required by law, we may send information about:
 
-* new Qaliye features;
+* new Qal Dating features;
 * subscriptions;
 * promotions;
 * events;
@@ -610,7 +610,7 @@ You have an absolute right to object to direct marketing.
 
 ## 6. Required and Optional Information
 
-Certain information is required to create and operate a Qaliye account, such as:
+Certain information is required to create and operate a Qal Dating account, such as:
 
 * date of birth;
 * confirmation that you are at least 18;
@@ -626,7 +626,7 @@ Other information, such as religion, ethnicity, interests, occupation, or additi
 
 ## 7. Matching, Recommendations, and Profiling
 
-Qaliye uses automated systems to organise and recommend profiles.
+Qal Dating uses automated systems to organise and recommend profiles.
 
 These systems may consider:
 
@@ -670,7 +670,7 @@ We may take separate account action where there are repeated, serious, or delibe
 
 ## 9. Who Can See Your Information
 
-### 9.1 Other Qaliye users
+### 9.1 Other Qal Dating users
 
 Other users may see information made available through your profile, such as:
 
@@ -697,7 +697,7 @@ The information shown may depend on:
 * discovery preferences;
 * matching status;
 * subscription features; and
-* Qaliye's safety systems.
+* Qal Dating's safety systems.
 
 ### 9.2 Matched users
 
@@ -709,9 +709,9 @@ Users you match with may see additional information required for communication, 
 * delivery status; and
 * activity status where enabled.
 
-### 9.3 People outside Qaliye
+### 9.3 People outside Qal Dating
 
-Other users may copy, record, or share information outside Qaliye. Although this may violate our rules, we cannot guarantee that content visible to another person will remain within the application.
+Other users may copy, record, or share information outside Qal Dating. Although this may violate our rules, we cannot guarantee that content visible to another person will remain within the application.
 
 ## 10. How We Share Personal Information
 
@@ -721,7 +721,7 @@ We may share information as described below.
 
 ### 10.1 Service providers
 
-We use providers that help us operate Qaliye, including providers of:
+We use providers that help us operate Qal Dating, including providers of:
 
 * cloud infrastructure;
 * database and storage services;
@@ -772,7 +772,7 @@ where required by law or where reasonably necessary to prevent serious harm, inv
 
 ### 10.4 Business transfers
 
-If Qaliye is sold, reorganised, transferred, merged, or converted into another legal structure, personal information may be disclosed to professional advisers and a prospective or actual successor.
+If Qal Dating is sold, reorganised, transferred, merged, or converted into another legal structure, personal information may be disclosed to professional advisers and a prospective or actual successor.
 
 Any recipient must use the information consistently with applicable data-protection law.
 
@@ -782,7 +782,7 @@ We may share information where you ask us to do so or provide valid consent.
 
 ## 11. International Transfers
 
-Qaliye is operated from the United Kingdom, but some users and service providers may be located in other countries.
+Qal Dating is operated from the United Kingdom, but some users and service providers may be located in other countries.
 
 Your information may therefore be processed or accessed outside the United Kingdom, including in countries whose data-protection laws differ from UK law.
 
@@ -1060,7 +1060,7 @@ Where required by law, we will notify:
 
 ## 20. Children
 
-Qaliye is strictly for people aged 18 and over.
+Qal Dating is strictly for people aged 18 and over.
 
 We do not knowingly permit children to create accounts or use the dating Services.
 
@@ -1074,13 +1074,13 @@ If we reasonably believe that an account belongs to someone under 18, we may:
 * preserve evidence where necessary for safeguarding; and
 * delete the account and associated information.
 
-If you believe that a person under 18 is using Qaliye, report the account through the application or contact **[support@qaliye.com](mailto:support@qaliye.com)** immediately.
+If you believe that a person under 18 is using Qal Dating, report the account through the application or contact **[support@qaliye.com](mailto:support@qaliye.com)** immediately.
 
 ## 21. Third-Party Links and Services
 
-Qaliye may contain links to third-party websites, services, or applications.
+Qal Dating may contain links to third-party websites, services, or applications.
 
-We are not responsible for the privacy practices of third parties that operate independently from Qaliye.
+We are not responsible for the privacy practices of third parties that operate independently from Qal Dating.
 
 Review their privacy policies before providing them with personal information.
 
@@ -1094,7 +1094,7 @@ You can stop marketing emails by:
 * changing your account preferences; or
 * contacting [support@qaliye.com](mailto:support@qaliye.com).
 
-You can control promotional push notifications through your Qaliye or device settings.
+You can control promotional push notifications through your Qal Dating or device settings.
 
 Even if you opt out of marketing, we may continue sending necessary service messages, including:
 
@@ -1117,13 +1117,13 @@ Our website may use essential cookies required for:
 
 With consent where required, we may also use analytics or performance cookies.
 
-Further details, including the specific cookies used, their purposes, and how to change your choices, are provided in the **Qaliye Cookie Policy**, available at **[www.qaliye.com/cookie-policy](http://www.qaliye.com/cookie-policy)**.
+Further details, including the specific cookies used, their purposes, and how to change your choices, are provided in the **Qal Dating Cookie Policy**, available at **[www.qaliye.com/cookie-policy](http://www.qaliye.com/cookie-policy)**.
 
 ## 24. Changes to This Privacy Policy
 
 We may update this Privacy Policy to reflect:
 
-* changes to Qaliye;
+* changes to Qal Dating;
 * new features;
 * changes to service providers;
 * legal or regulatory requirements;
@@ -1152,8 +1152,8 @@ If a translated version conflicts with the English version, the English version 
 
 For questions, requests, or complaints about privacy, contact:
 
-**Qaliye**
-Operated by **[YOUR FULL LEGAL NAME], trading as Qaliye**
+**Qal Dating**
+Operated by **[YOUR FULL LEGAL NAME], trading as Qal Dating**
 **Business address:** [YOUR BUSINESS ADDRESS]
 **Email:** [support@qaliye.com](mailto:support@qaliye.com)
 **Website:** [www.qaliye.com](http://www.qaliye.com)

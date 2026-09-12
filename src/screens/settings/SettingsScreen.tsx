@@ -27,6 +27,7 @@ import { usePendingOrders } from '@/hooks/billing/useOrders';
 import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useSignOutWithDeactivation } from '@/hooks/notifications/useSignOutWithDeactivation';
 import { useTheme } from '@/hooks/use-theme';
+import { useAppLink } from '@/hooks/useAppLink';
 import { useRateUs } from '@/hooks/useRateUs';
 import { supabase } from '@/lib/supabase';
 import { useLanguageStore } from '@/stores/language-store';
@@ -61,6 +62,7 @@ export default function SettingsScreen() {
   const { requiresActionCount, pendingCount, refetch: refetchPending } = usePendingOrders(Platform.OS === 'android');
   const { restore, restoreResult, isRestoring } = useRevenueCatRestore();
   const { rateUs } = useRateUs();
+  const { shareApp } = useAppLink();
 
   useEffect(() => {
     if (restoreResult === 'success') {
@@ -141,7 +143,7 @@ export default function SettingsScreen() {
               title: t('settings.deleteAccountConfirmTitle', 'Are you absolutely sure?'),
               message: t(
                 'settings.deleteAccountConfirmBody',
-                'You are about to permanently delete your Qaliye account. This cannot be undone.',
+                'You are about to permanently delete your Qal Dating account. This cannot be undone.',
               ),
               icon: 'trash-outline',
               iconColor: colors.danger,
@@ -317,7 +319,7 @@ export default function SettingsScreen() {
                 {t('notifications.title', 'Notifications')}
               </Text>
               <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                {t('notifications.subtitle', 'Choose how Qaliye notifies you.')}
+                {t('notifications.subtitle', 'Choose how Qal Dating notifies you.')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
@@ -499,7 +501,49 @@ export default function SettingsScreen() {
                 {t('settings.rateUs', 'Rate Us')}
               </Text>
               <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                {t('settings.rateUsSub', 'Love Qaliye? Leave us a review')}
+                {t('settings.rateUsSub', 'Love Qal Dating? Leave us a review')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+          <Pressable
+            style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
+            onPress={shareApp}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.shareApp', 'Share App')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="share-social-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('settings.shareApp', 'Share App')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('settings.shareAppSub', 'Invite your friends to join')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+        </View>
+
+        {/* ── Help ── */}
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Pressable
+            style={styles.optionRow}
+            onPress={() => router.push('/(app)/help' as any)}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.help', 'Help')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('settings.help', 'Help')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('settings.helpSub', 'Get support and answers')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />

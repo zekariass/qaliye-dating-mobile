@@ -21,8 +21,10 @@ import { useFonts } from 'expo-font';
 import '@/global.css';
 import { useTheme } from '@/hooks/use-theme';
 import '@/i18n';
+import i18n from '@/i18n';
 import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
+import { useLanguageStore } from '@/stores/language-store';
 import { applyFontOverride } from '@/utils/fontOverride';
 
 applyFontOverride();
@@ -93,6 +95,18 @@ function RootLayout() {
   const { mode } = useTheme();
   const isDark = mode === 'dark';
   const splashBackground = '#2A0B4F';
+
+  // Sync the persisted language from the language store to i18n.
+  // On startup the store hydrates from AsyncStorage; once the saved
+  // language is available this effect applies it to i18n. Subsequent
+  // changes (e.g. from the Help screen language switcher) also flow
+  // through here.
+  const savedLanguage = useLanguageStore((s) => s.language);
+  useEffect(() => {
+    if (savedLanguage && i18n.language !== savedLanguage) {
+      i18n.changeLanguage(savedLanguage);
+    }
+  }, [savedLanguage]);
 
   if (!fontsLoaded) {
     return null;

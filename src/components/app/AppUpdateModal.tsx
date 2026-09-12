@@ -24,15 +24,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
-  BackHandler,
-  Linking,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    Alert,
+    BackHandler,
+    Linking,
+    Modal,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 
 import { colors, fontSize, radius, spacing } from '@/constants/theme';
@@ -116,7 +116,7 @@ export function AppUpdateModal() {
           t('appUpdate.storeErrorTitle', 'Could not open store'),
           t(
             'appUpdate.storeErrorBody',
-            'Please open the app store manually to update Qaliye.',
+            'Please open the app store manually to update Qal Dating.',
           ),
         );
       }
@@ -125,7 +125,7 @@ export function AppUpdateModal() {
         t('appUpdate.storeErrorTitle', 'Could not open store'),
         t(
           'appUpdate.storeErrorBody',
-          'Please open the app store manually to update Qaliye.',
+          'Please open the app store manually to update Qal Dating.',
         ),
       );
     }
@@ -174,11 +174,11 @@ export function AppUpdateModal() {
             {isMandatory
               ? t(
                   'appUpdate.mandatoryBody',
-                  'A new version of Qaliye is required to continue. Please update the app to get the latest improvements and continue using Qaliye.',
+                  'A new version of Qal Dating is required to continue. Please update the app to get the latest improvements and continue using Qal Dating.',
                 )
               : t(
                   'appUpdate.optionalBody',
-                  'A new version of Qaliye is available with improvements and bug fixes.',
+                  'A new version of Qal Dating is available with improvements and bug fixes.',
                 )}
           </Text>
 

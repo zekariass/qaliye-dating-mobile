@@ -1,4 +1,3 @@
-import * as Localization from 'expo-localization';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
@@ -7,10 +6,10 @@ import en from './locales/en.json';
 import om from './locales/om.json';
 import ti from './locales/ti.json';
 
-const deviceLanguage = Localization.getLocales()[0]?.languageCode ?? 'en';
-
-const supportedLanguages = ['en', 'am', 'ti', 'om'];
-const resolvedLanguage = supportedLanguages.includes(deviceLanguage) ? deviceLanguage : 'en';
+// Default to English. The saved language from the language store
+// (src/stores/language-store.ts) is applied on app startup from the
+// root layout, overriding this default once AsyncStorage hydrates.
+const DEFAULT_LANGUAGE = 'en';
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -19,7 +18,7 @@ i18n.use(initReactI18next).init({
     ti: { translation: ti },
     om: { translation: om },
   },
-  lng: resolvedLanguage,
+  lng: DEFAULT_LANGUAGE,
   fallbackLng: 'en',
   interpolation: {
     escapeValue: false,

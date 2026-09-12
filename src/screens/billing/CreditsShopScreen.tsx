@@ -8,7 +8,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,6 +26,7 @@ import { useRedeemPromotion } from '@/hooks/billing/useRedeemPromotion';
 import { useRevenueCatPurchase } from '@/hooks/billing/useRevenueCatPurchase';
 import { useRevenueCatReconcile } from '@/hooks/billing/useRevenueCatReconcile';
 import { useTheme } from '@/hooks/use-theme';
+import { useAppLink } from '@/hooks/useAppLink';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
 import type { OfferDto, OfferPromotionDto, PaymentMethodDto } from '@/types/billing';
 import { extractApiError } from '@/utils/apiError';
@@ -109,6 +110,7 @@ export default function CreditsShopScreen() {
   const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
   const { colors: th } = useTheme();
+  const { openLink } = useAppLink();
 
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [showMethodSheet, setShowMethodSheet] = useState(false);
@@ -196,15 +198,30 @@ export default function CreditsShopScreen() {
   const packs = useMemo<PackViewModel[]>(() => {
     if (isGlobalMarket) {
       if (reconciledOffers.length > 0) {
-        return reconciledOffers.map(({ backendOffer, rcPackage }) =>
+        const result = reconciledOffers.map(({ backendOffer, rcPackage }) =>
           buildPackViewModel(backendOffer, rcPackage),
         );
+        if (__DEV__) {
+          console.log('[CreditsShop] reconciled packs included_credits:',
+            result.map((p) => ({ code: p.offer.product_code, included_credits: p.offer.included_credits })));
+        }
+        return result;
       }
-      return localOffers
+      const local = localOffers
         .filter((o) => o.country_code === 'GLOBAL')
         .map((offer) => buildPackViewModel(offer, undefined));
+      if (__DEV__) {
+        console.log('[CreditsShop] local-global packs included_credits:',
+          local.map((p) => ({ code: p.offer.product_code, included_credits: p.offer.included_credits })));
+      }
+      return local;
     }
-    return localOffers.map((offer) => buildPackViewModel(offer, undefined));
+    const localPacks = localOffers.map((offer) => buildPackViewModel(offer, undefined));
+    if (__DEV__) {
+      console.log('[CreditsShop] local packs included_credits:',
+        localPacks.map((p) => ({ code: p.offer.product_code, included_credits: p.offer.included_credits })));
+    }
+    return localPacks;
   }, [isGlobalMarket, reconciledOffers, localOffers]);
 
   const bestValueId = useMemo(() => {
@@ -469,41 +486,54 @@ export default function CreditsShopScreen() {
                       </View>
                     )}
 
-                    <View style={[styles.packIconRing, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}25` }]}>
-                      <Ionicons name="diamond" size={22} color={colors.primary} />
-                    </View>
-
-                    <View style={styles.packBody}>
-                      <Text style={[styles.packName, { color: th.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
-                        {packDisplayName(pack.offer.product_code)}
-                      </Text>
-                      {isBestValue && (
-                        <View style={[styles.bestValueBadge, { backgroundColor: colors.primary }]}>
-                          <Text style={styles.bestValueText}>{t('billing.bestValue', 'Best value')}</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.packPriceCol}>
-                      {pack.promotion && (
-                        <View style={[styles.discountBadge, { backgroundColor: colors.success }]}>
-                          <Text style={styles.discountBadgeText} numberOfLines={1}>
-                            {pack.promotion.name}
-                          </Text>
-                        </View>
-                      )}
-                      {pack.originalPrice && (
-                        <Text style={[styles.originalPrice, { color: th.textSecondary }]}>{pack.originalPrice}</Text>
-                      )}
-                      <Text style={[styles.price, { color: isSelected ? colors.primary : th.text }]}>
-                        {pack.price}
-                      </Text>
-                      {pack.promotion?.ends_at && formatEndsAtLabel(pack.promotion.ends_at) ? (
-                        <Text style={[styles.endsAtLabel, { color: th.textSecondary }]}>
-                          {formatEndsAtLabel(pack.promotion.ends_at)}
+                    {pack.promotion && (
+                      <View style={[styles.promoNameBanner, { backgroundColor: colors.success }]}>
+                        <Ionicons name="pricetag-outline" size={12} color="#fff" />
+                        <Text style={styles.promoNameText} numberOfLines={1}>
+                          {pack.promotion.name}
                         </Text>
-                      ) : null}
+                        {pack.promotion.ends_at && formatEndsAtLabel(pack.promotion.ends_at) ? (
+                          <Text style={styles.promoNameEndsAt} numberOfLines={1}>
+                            {formatEndsAtLabel(pack.promotion.ends_at)}
+                          </Text>
+                        ) : null}
+                      </View>
+                    )}
+
+                    <View style={styles.packCardRow}>
+                      <View style={[styles.packIconRing, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}25` }]}>
+                        <Ionicons name="diamond" size={22} color={colors.primary} />
+                      </View>
+
+                      <View style={styles.packBody}>
+                        <Text style={[styles.packName, { color: th.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                          {packDisplayName(pack.offer.product_code)}
+                        </Text>
+                        {isBestValue && (
+                          <View style={[styles.bestValueBadge, { backgroundColor: colors.primary }]}>
+                            <Text style={styles.bestValueText}>{t('billing.bestValue', 'Best value')}</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.packPriceCol}>
+                        {pack.originalPrice && (
+                          <Text style={[styles.originalPrice, { color: th.textSecondary }]}>{pack.originalPrice}</Text>
+                        )}
+                        <Text style={[styles.price, { color: isSelected ? colors.primary : th.text }]}>
+                          {pack.price}
+                        </Text>
+                      </View>
                     </View>
+
+                    {pack.offer.included_credits ? (
+                      <View style={[styles.promoCreditsBadge, { backgroundColor: `${colors.success}18` }]}>
+                        <Ionicons name="gift-outline" size={12} color={colors.success} />
+                        <Text style={[styles.promoCreditsText, { color: colors.success }]} numberOfLines={1}>
+                          {t('billing.promoCredits', '+{{count}} promo credits', { count: pack.offer.included_credits })}
+                        </Text>
+                      </View>
+                    ) : null}
                   </Pressable>
                 );
               })}
@@ -548,6 +578,26 @@ export default function CreditsShopScreen() {
               <Ionicons name="chevron-forward" size={20} color={th.textSecondary} />
             </Pressable>
             )}
+
+            <View style={styles.legalRow}>
+              <Pressable
+                onPress={() => openLink('privacy')}
+                accessibilityRole="link"
+              >
+                <Text style={[styles.legalLink, { color: th.textSecondary }]}>
+                  {t('billing.privacyPolicy', 'Privacy')}
+                </Text>
+              </Pressable>
+              <Text style={[styles.legalDot, { color: th.textMuted }]}>•</Text>
+              <Pressable
+                onPress={() => openLink('terms')}
+                accessibilityRole="link"
+              >
+                <Text style={[styles.legalLink, { color: th.textSecondary }]}>
+                  {t('billing.terms', 'Terms')}
+                </Text>
+              </Pressable>
+            </View>
           </>
         )}
       </ScrollView>
@@ -568,6 +618,11 @@ export default function CreditsShopScreen() {
                     <Text style={[styles.bottomPackPrice, { color: colors.primary }]}>
                       {selectedPack.price}
                     </Text>
+                    {selectedPack.offer.included_credits ? (
+                      <Text style={[styles.bottomDiscount, { color: colors.success }]}>
+                        {t('billing.promoCredits', '+{{count}} promo credits', { count: selectedPack.offer.included_credits })}
+                      </Text>
+                    ) : null}
                     {selectedPack.promotion && selectedPack.originalPrice && (
                       <Text style={[styles.bottomDiscount, { color: colors.success }]}>
                         {t('billing.discount', 'Discount')}{': \u2212'}{formatMinorUnits(selectedPack.promotion.discount_amount_minor, selectedPack.offer.currency)}
@@ -744,9 +799,8 @@ const styles = StyleSheet.create({
   },
   packsList: { gap: 12 },
   packCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+    flexDirection: 'column',
+    gap: 10,
     borderRadius: radius.md,
     borderWidth: 2,
     padding: 16,
@@ -769,6 +823,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  packCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
   packIconRing: {
     width: 52,
     height: 52,
@@ -779,6 +838,19 @@ const styles = StyleSheet.create({
   },
   packBody: { flex: 1, gap: 4 },
   packName: { fontSize: 15, fontWeight: '800' },
+  promoCreditsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  promoCreditsText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
   bestValueBadge: {
     alignSelf: 'flex-start',
     borderRadius: 999,
@@ -791,17 +863,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   packPriceCol: { alignItems: 'flex-end', gap: 2 },
-  discountBadge: {
-    alignSelf: 'flex-end',
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    maxWidth: 120,
+  promoNameBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  discountBadgeText: {
+  promoNameText: {
+    flex: 1,
     color: '#fff',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
+  },
+  promoNameEndsAt: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 10,
+    fontWeight: '700',
   },
   originalPrice: {
     fontSize: 13,
@@ -809,12 +888,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   price: { fontSize: 20, fontWeight: '900' },
-  endsAtLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'right',
-    opacity: 0.75,
-  },
   processingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -904,5 +977,19 @@ const styles = StyleSheet.create({
   crossLinkSubtitle: {
     fontSize: 13,
     marginTop: 2,
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+  },
+  legalLink: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  legalDot: {
+    fontSize: 13,
   },
 });

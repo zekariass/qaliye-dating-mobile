@@ -450,7 +450,7 @@ export const DatePickerField = memo(function DatePickerField({
   const handleConfirm = () => {
     const d = Math.min(day, daysInMonth);
     if (!is18OrOlder(d, month, year)) {
-      setDateError('You must be at least 18 years old to use Qaliye.');
+      setDateError('You must be at least 18 years old to use Qal Dating.');
       return;
     }
     setDateError(null);

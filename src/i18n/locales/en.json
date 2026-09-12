@@ -1,6 +1,11 @@
 {
   "app": {
-    "name": "Qaliye"
+    "name": "Qal Dating"
+  },
+  "links": {
+    "errorTitle": "Unable to open link",
+    "errorBody": "Please try again later.",
+    "shareMessage": "Check out Qal Dating! {{url}}"
   },
   "photoSource": {
     "title": "Add Photo",
@@ -17,7 +22,7 @@
     "loading": "Finding meaningful connections..."
   },
   "auth": {
-    "brandName": "Qaliye",
+    "brandName": "Qal Dating",
     "brandTaglineLine1": "My Promise",
     "brandTaglineLine2": "",
     "brandTaglineHighlight1": "Promise",
@@ -236,7 +241,7 @@
       "youWillMeetWomen": "Women",
       "youWillMeetMen": "Men",
       "ageConfirmation": "You are {{age}} years old. Is that correct?",
-      "under18": "You are {{age}} years old. You must be at least 18 to use Qaliye.",
+      "under18": "You are {{age}} years old. You must be at least 18 to use Qal Dating.",
       "dob": "Date of birth",
       "dobDay": "Day",
       "dobMonth": "Month",
@@ -312,7 +317,7 @@
     "identity": {
       "title": "Verify Your Identity",
       "subtitleRequired": "Identity verification is required in your region. Take a selfie so we can confirm you are real.",
-      "subtitleOptional": "Take a selfie so we can confirm you are real. This helps keep Qaliye safe. This step is optional.",
+      "subtitleOptional": "Take a selfie so we can confirm you are real. This helps keep Qal Dating safe. This step is optional.",
       "noSelfie": "No selfie captured",
       "tapToCapture": "Tap below to take a selfie",
       "takeSelfie": "Take Selfie",
@@ -362,7 +367,7 @@
     "continue": "Continue",
     "preferences": {
       "title": "Who would you like to meet?",
-      "subtitle": "Qaliye connects men with women only.",
+      "subtitle": "Qal Dating connects men with women only.",
       "lockedLabel": "You'll meet",
       "lockedHint": "Based on your profile",
       "ageRange": "Age range",
@@ -387,7 +392,7 @@
       "currentlyPending": "Currently pending",
       "allSet": "You're all set!",
       "readySubtitle": "Your profile looks great. Start discovering people near you.",
-      "enterQaliye": "Enter Qaliye",
+      "enterQaliye": "Enter Qal Dating",
       "startDiscovering": "Start Matching",
       "highlightMatches": "Smart matches based on your preferences",
       "highlightNearby": "People near you or anywhere in the diaspora",
@@ -402,7 +407,7 @@
   },
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Choose how Qaliye notifies you.",
+    "subtitle": "Choose how Qal Dating notifies you.",
     "deviceEnabled": "Notifications enabled on this device",
     "deviceDisabled": "Notifications disabled in device settings",
     "deviceUndetermined": "Notification permission not yet requested",
@@ -425,7 +430,7 @@
     "previewTitle": "Message Previews",
     "previewBody": "Message previews may show message text in notification banners or on the lock screen. Are you sure you want to enable this?",
     "marketingConsentTitle": "Offers and Updates",
-    "marketingConsentBody": "Qaliye may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.",
+    "marketingConsentBody": "Qal Dating may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.",
     "agree": "I Agree",
     "errorTitle": "Update failed",
     "errorMessage": "Could not save your preference. Please try again.",
@@ -452,13 +457,15 @@
     "revisitErrorForbidden": "You can't use Discovery right now.",
     "revisitErrorGeneric": "Something went wrong. Please try again.",
     "rateUs": "Rate Us",
-    "rateUsSub": "Love Qaliye? Leave us a review",
+    "rateUsSub": "Love Qal Dating? Leave us a review",
+    "shareApp": "Share App",
+    "shareAppSub": "Invite your friends to join",
     "deleteAccount": "Delete Account",
     "deleteAccountSub": "Permanently delete your account and all data",
     "deleteAccountTitle": "Delete Account",
     "deleteAccountWarning": "This will permanently delete your account, profile, photos, matches, and messages. This action cannot be undone and your data cannot be recovered.",
     "deleteAccountConfirmTitle": "Are you absolutely sure?",
-    "deleteAccountConfirmBody": "You are about to permanently delete your Qaliye account. This cannot be undone.",
+    "deleteAccountConfirmBody": "You are about to permanently delete your Qal Dating account. This cannot be undone.",
     "deleteAccountBtn": "Delete My Account",
     "deleting": "Deleting account…",
     "deletingTitle": "Deleting your account…",
@@ -511,13 +518,13 @@
   },
   "appUpdate": {
     "mandatoryTitle": "Update Required",
-    "mandatoryBody": "A new version of Qaliye is required to continue. Please update the app to get the latest improvements and continue using Qaliye.",
+    "mandatoryBody": "A new version of Qal Dating is required to continue. Please update the app to get the latest improvements and continue using Qal Dating.",
     "optionalTitle": "Update Available",
-    "optionalBody": "A new version of Qaliye is available with improvements and bug fixes.",
+    "optionalBody": "A new version of Qal Dating is available with improvements and bug fixes.",
     "updateNow": "Update Now",
     "later": "Later",
     "storeErrorTitle": "Could not open store",
-    "storeErrorBody": "Please open the app store manually to update Qaliye."
+    "storeErrorBody": "Please open the app store manually to update Qal Dating."
   },
   "billing": {
     "settingsSection": "Subscription & Credits",
@@ -531,6 +538,7 @@
     "creditsShopTitle": "Credits Shop",
     "choosePack": "Choose a pack",
     "bestValue": "Best value",
+    "promoCredits": "+{{count}} promo credits",
     "selectPackHint": "Select a pack to continue",
     "buyNow": "Buy Now",
     "purchaseCredits": "Purchase credits",
@@ -667,7 +675,7 @@
     }
   },
   "support": {
-    "title": "Qaliye Support",
+    "title": "Qal Dating Support",
     "officialSupport": "Official",
     "statusIdle": "Contact our support team",
     "statusWaiting": "Waiting for support",
@@ -692,7 +700,7 @@
     "loadError": "Could not load support messages.",
     "conversationError": "Could not load conversation.",
     "retryLoad": "Retry",
-    "accessLabel": "Qaliye official support. Tap to open support conversation.",
+    "accessLabel": "Qal Dating official support. Tap to open support conversation.",
     "staffInboxTitle": "Support Conversations",
     "staffInboxSubtitle": "View user support conversations",
     "staffInboxAccess": "Support conversations. Tap to view all user support conversations.",
@@ -1033,7 +1041,7 @@
       "savePrefsError": "Failed to save preferences.",
       "saveLocationError": "Failed to save location.",
       "invalidDob": "Invalid Date of Birth",
-      "underage": "You must be at least 18 years old to use Qaliye.",
+      "underage": "You must be at least 18 years old to use Qal Dating.",
       "unsavedChanges": "Unsaved Changes",
       "unsavedChangesBody": "You have unsaved changes in this tab. What would you like to do?",
       "save": "Save",
@@ -1221,5 +1229,110 @@
     "home": "Home",
     "goToMessages": "Go to Messages",
     "goToTab": "Go to {{label}}"
+  },
+  "help": {
+    "title": "Help",
+    "subtitle": "Learn what each action does",
+    "language": "Language",
+    "languageSubtitle": "Choose your preferred language",
+    "actionsTitle": "Action Definitions",
+    "actionsSubtitle": "Tap to see what each action does",
+    "actions": {
+      "like": {
+        "title": "Like",
+        "description": "Expressing interest in a profile to create a potential match."
+      },
+      "super_like": {
+        "title": "Super Like",
+        "description": "Highlighting your profile to let someone know you are extremely interested before they swipe."
+      },
+      "boost": {
+        "title": "Boost",
+        "description": "Temporarily increasing your profile's visibility to get more views and matches."
+      },
+      "rewind": {
+        "title": "Rewind",
+        "description": "Reversing your last swipe or action to undo an accidental pass or like."
+      },
+      "super_message": {
+        "title": "Before-Match Message",
+        "description": "Sending a message to someone prior to matching to grab their attention."
+      },
+      "image_message": {
+        "title": "Image Message",
+        "description": "Sending a photo or picture within a chat conversation."
+      },
+      "voice_message": {
+        "title": "Voice Message",
+        "description": "Sending an audio recording instead of text in a chat."
+      },
+      "return_passed_profile": {
+        "title": "Return Passed Profile",
+        "description": "Re-reviewing or bringing back profiles you previously skipped or passed on."
+      },
+      "change_address": {
+        "title": "Change Address",
+        "description": "Updating your registered location after moving so you can match with people in your immediate proximity."
+      },
+      "see_who_liked_you": {
+        "title": "See Who Liked You",
+        "description": "Viewing a list of users who have already liked your profile before you swipe on them."
+      },
+      "message": {
+        "title": "Message",
+        "description": "Sending a standard text communication to a matched user."
+      },
+      "incognito_mode": {
+        "title": "Incognito Mode",
+        "description": "Browsing profiles privately so your account is only visible to people you like."
+      }
+    },
+    "creditsTitle": "Credits",
+    "creditsSubtitle": "Tap to learn about credits and how they work",
+    "creditsOverviewTitle": "Credits Overview",
+    "creditsOverview": "Credits are Qal Dating's virtual currency used to perform premium actions within the app. Premium subscribers generally pay lower credit rates per action compared to free accounts.",
+    "creditsHowTitle": "How It Works",
+    "creditsHow": "Each premium action costs a specific number of credits. When you use a premium feature, the required credits are automatically deducted from your balance.",
+    "creditsCheckBuyTitle": "Check Balance & Buy Credits",
+    "creditsCheckTitle": "Check Balance",
+    "creditsCheck": "View your current credit balance on the Balances page in your profile or in the Credits Shop.",
+    "creditsBuyTitle": "Buy Credits",
+    "creditsBuy": "Purchase additional credits anytime in the Credits Shop, accessible from your Profile or Settings.",
+    "faqTitle": "Frequently Asked Questions",
+    "faqSubtitle": "Tap to see answers to common questions",
+    "faq": {
+      "q1": "How do I create an account?",
+      "a1": "Download Qal Dating, open the app, and follow the onboarding steps. You'll need to provide your phone number for verification, add your photos, and complete your profile details.",
+      "q2": "How does matching work?",
+      "a2": "When you and another person both like each other's profiles, it creates a match. You can then start messaging each other. Super Liking someone increases your chances of being seen by them before they swipe.",
+      "q3": "Why can't I see who liked me?",
+      "a3": "Viewing who liked you is a Premium feature. You can upgrade to Premium or use credits to reveal individual profiles that liked you.",
+      "q4": "How do I edit my profile?",
+      "a4": "Go to your Profile tab, tap the edit icon, and update your photos, bio, name, age, and other details. Changes are saved automatically.",
+      "q5": "How do I change my location?",
+      "a5": "You can update your registered location from your profile settings. This helps you match with people in your immediate proximity after moving to a new area.",
+      "q6": "What is identity verification and is it required?",
+      "a6": "Identity verification confirms you are a real person by taking a selfie. In some regions it is required before you can start using the app. In others it is optional but recommended for trust and safety.",
+      "q7": "How do I block or report someone?",
+      "a7": "Open the user's profile or chat, tap the options menu, and select Block or Report. Blocked users cannot contact you or see your profile. You can manage blocked users in Settings.",
+      "q8": "How do I cancel my Premium subscription?",
+      "a8": "Subscriptions are managed through your device's app store (Google Play or App Store). Go to your store's subscription settings to cancel. Your Premium benefits continue until the end of your current billing period.",
+      "q9": "Why did my credits disappear?",
+      "a9": "Credits are consumed when you use premium actions like Super Like, Boost, Rewind, Before-Match Message, Voice Message, or Image Message. Each action has a specific credit cost that is automatically deducted. Check your Balances page to see your current credit balance.",
+      "q10": "How do I get more credits?",
+      "a10": "You can purchase credit packs in the Credits Shop, accessible from your Profile or Settings. Premium subscribers generally pay lower credit rates per action.",
+      "q11": "What is Incognito Mode?",
+      "a11": "Incognito Mode lets you browse profiles privately. Your account is only visible to people you like. This feature is available to Premium subscribers.",
+      "q12": "How do I reset my password?",
+      "a12": "On the login screen, tap \"Forgot Password\" and enter your phone number or email. You'll receive a link to reset your password.",
+      "q13": "How do I delete my account?",
+      "a13": "Go to Settings, scroll to Account, and select Delete Account. This permanently removes your profile, matches, and messages. This action cannot be undone.",
+      "q14": "Why am I not getting any matches?",
+      "a14": "Check your preferences by tapping the filter icon at the top-right of the discovery screen. Adjust your distance and age range to broaden your search. Also make sure your profile has clear photos and a complete bio. Using Boost can temporarily increase your visibility to more people in your area.",
+      "q15": "How do I contact support?",
+      "a15": "Go to your Messages and tap \"Qal Dating Support\" to start a conversation with our support team. You can also report issues directly from any user's profile or chat."
+    },
+    "supportLink": "Have a question? Chat with us",
+    "supportSubtitle": "We typically reply within 24 hours"
   }
 }

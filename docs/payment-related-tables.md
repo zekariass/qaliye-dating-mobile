@@ -1,6 +1,6 @@
 # Payment Related Tables
 
-This document describes every database table involved in the Qaliye payment, billing, subscription, entitlement, and boost system. Tables are grouped by functional area. Column definitions reflect the **final state** after all migrations (V1–V25) have been applied.
+This document describes every database table involved in the Qal Dating payment, billing, subscription, entitlement, and boost system. Tables are grouped by functional area. Column definitions reflect the **final state** after all migrations (V1–V25) have been applied.
 
 ---
 
@@ -353,7 +353,7 @@ Idempotency log for incoming webhook events from payment providers. Each event i
 
 ### `billing_customers`
 
-Maps internal Qaliye users to external billing provider customer accounts (e.g. RevenueCat app user IDs, Stripe customer IDs). This is needed when a provider's webhook references a customer ID that must be resolved to a Qaliye `app_users.id`.
+Maps internal Qal Dating users to external billing provider customer accounts (e.g. RevenueCat app user IDs, Stripe customer IDs). This is needed when a provider's webhook references a customer ID that must be resolved to a Qal Dating `app_users.id`.
 
 | Column | Type | Constraints |
 |---|---|---|
@@ -368,7 +368,7 @@ Maps internal Qaliye users to external billing provider customer accounts (e.g. 
 
 **Unique constraints:** `unique_billing_customer_provider_external (provider, external_customer_id)`, `unique_billing_customer_user_provider (user_id, provider)`.
 
-**Why needed:** When a user purchases via RevenueCat or Stripe, those providers create their own customer records. This mapping table allows webhook handlers to resolve external customer IDs back to Qaliye user IDs. The `original_external_customer_id` preserves the initial ID even if the provider reassigns it.
+**Why needed:** When a user purchases via RevenueCat or Stripe, those providers create their own customer records. This mapping table allows webhook handlers to resolve external customer IDs back to Qal Dating user IDs. The `original_external_customer_id` preserves the initial ID even if the provider reassigns it.
 
 ---
 

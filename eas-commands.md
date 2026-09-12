@@ -1,4 +1,4 @@
-Below is a practical **EAS command reference** for your Expo/React Native Qaliye project. Run these commands from the project directory containing `package.json`.
+Below is a practical **EAS command reference** for your Expo/React Native Qal Dating project. Run these commands from the project directory containing `package.json`.
 
 EAS CLI currently supports building, submitting, updating, deploying, credential management, and project management. ([Expo Documentation][1])
 
@@ -237,7 +237,7 @@ eas build:configure --platform ios
 
 # 6. Recommended `eas.json`
 
-For your Qaliye project, a useful starting configuration is:
+For your Qal Dating project, a useful starting configuration is:
 
 ```json
 {
@@ -1115,10 +1115,10 @@ For example:
 
 ```text
 Bundle ID: com.qaliye.app
-App Store Connect ID: a numeric value assigned to Qaliye
+App Store Connect ID: a numeric value assigned to Qal Dating
 ```
 
-Do not use Habesha Theory Test’s App Store ID for Qaliye.
+Do not use Habesha Theory Test’s App Store ID for Qal Dating.
 
 ---
 
@@ -1861,7 +1861,7 @@ eas build \
 
 # 46. The commands you will use most often
 
-For your Qaliye project, these are the commands worth remembering:
+For your Qal Dating project, these are the commands worth remembering:
 
 ```bash
 # Login and project information

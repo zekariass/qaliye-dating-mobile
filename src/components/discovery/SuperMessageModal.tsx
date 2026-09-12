@@ -102,7 +102,7 @@ export default function SuperMessageModal({
                 <View style={styles.titleRow}>
                   <Ionicons name="star" size={16} color="#F59E0B" style={{ marginRight: 4 }} />
                   <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#1A1A2E' }]}>
-                    Before Match Message
+                    Before-Match Message
                   </Text>
                 </View>
                 <Text style={[styles.targetName, { color: th.textSecondary }]} numberOfLines={1}>

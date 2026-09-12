@@ -1,13 +1,18 @@
 {
   "app": {
-    "name": "Qaliye"
+    "name": "Qal Dating"
+  },
+  "links": {
+    "errorTitle": "Unable to open link",
+    "errorBody": "Please try again later.",
+    "shareMessage": "Check out Qal Dating! {{url}}"
   },
   "splash": {
     "tagline": "Where hearts connect",
     "loading": "Finding meaningful connections..."
   },
   "auth": {
-    "brandName": "Qaliye",
+    "brandName": "Qal Dating",
     "brandTaglineLine1": "My Promise",
     "brandTaglineLine2": "",
     "brandTaglineHighlight1": "Promise",
@@ -226,7 +231,7 @@
       "youWillMeetWomen": "Women",
       "youWillMeetMen": "Men",
       "ageConfirmation": "You are {{age}} years old. Is that correct?",
-      "under18": "You are {{age}} years old. You must be at least 18 to use Qaliye.",
+      "under18": "You are {{age}} years old. You must be at least 18 to use Qal Dating.",
       "dob": "Date of birth",
       "dobDay": "Day",
       "dobMonth": "Month",
@@ -302,7 +307,7 @@
     "identity": {
       "title": "Verify Your Identity",
       "subtitleRequired": "Identity verification is required in your region. Take a selfie so we can confirm you are real.",
-      "subtitleOptional": "Take a selfie so we can confirm you are real. This helps keep Qaliye safe. This step is optional.",
+      "subtitleOptional": "Take a selfie so we can confirm you are real. This helps keep Qal Dating safe. This step is optional.",
       "noSelfie": "No selfie captured",
       "tapToCapture": "Tap below to take a selfie",
       "takeSelfie": "Take Selfie",
@@ -352,7 +357,7 @@
     "continue": "Continue",
     "preferences": {
       "title": "Who would you like to meet?",
-      "subtitle": "Qaliye connects men with women only.",
+      "subtitle": "Qal Dating connects men with women only.",
       "lockedLabel": "You'll meet",
       "lockedHint": "Based on your profile",
       "ageRange": "Age range",
@@ -377,7 +382,7 @@
       "currentlyPending": "Currently pending",
       "allSet": "You're all set!",
       "readySubtitle": "Your profile looks great. Start discovering people near you.",
-      "enterQaliye": "Enter Qaliye",
+      "enterQaliye": "Enter Qal Dating",
       "startDiscovering": "Start Matching",
       "highlightMatches": "Smart matches based on your preferences",
       "highlightNearby": "People near you or anywhere in the diaspora",
@@ -392,7 +397,7 @@
   },
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Choose how Qaliye notifies you.",
+    "subtitle": "Choose how Qal Dating notifies you.",
     "deviceEnabled": "Notifications enabled on this device",
     "deviceDisabled": "Notifications disabled in device settings",
     "deviceUndetermined": "Notification permission not yet requested",
@@ -415,7 +420,7 @@
     "previewTitle": "Message Previews",
     "previewBody": "Message previews may show message text in notification banners or on the lock screen. Are you sure you want to enable this?",
     "marketingConsentTitle": "Offers and Updates",
-    "marketingConsentBody": "Qaliye may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.",
+    "marketingConsentBody": "Qal Dating may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.",
     "agree": "I Agree",
     "errorTitle": "Update failed",
     "errorMessage": "Could not save your preference. Please try again.",
@@ -442,13 +447,15 @@
     "revisitErrorForbidden": "You can't use Discovery right now.",
     "revisitErrorGeneric": "Something went wrong. Please try again.",
     "rateUs": "Rate Us",
-    "rateUsSub": "Love Qaliye? Leave us a review",
+    "rateUsSub": "Love Qal Dating? Leave us a review",
+    "shareApp": "Share App",
+    "shareAppSub": "Invite your friends to join",
     "deleteAccount": "Delete Account",
     "deleteAccountSub": "Permanently delete your account and all data",
     "deleteAccountTitle": "Delete Account",
     "deleteAccountWarning": "This will permanently delete your account, profile, photos, matches, and messages. This action cannot be undone and your data cannot be recovered.",
     "deleteAccountConfirmTitle": "Are you absolutely sure?",
-    "deleteAccountConfirmBody": "You are about to permanently delete your Qaliye account. This cannot be undone.",
+    "deleteAccountConfirmBody": "You are about to permanently delete your Qal Dating account. This cannot be undone.",
     "deleteAccountBtn": "Delete My Account",
     "deleting": "Deleting account…",
     "deletingTitle": "Deleting your account…",
@@ -501,13 +508,13 @@
   },
   "appUpdate": {
     "mandatoryTitle": "Update Required",
-    "mandatoryBody": "A new version of Qaliye is required to continue. Please update the app to get the latest improvements and continue using Qaliye.",
+    "mandatoryBody": "A new version of Qal Dating is required to continue. Please update the app to get the latest improvements and continue using Qal Dating.",
     "optionalTitle": "Update Available",
-    "optionalBody": "A new version of Qaliye is available with improvements and bug fixes.",
+    "optionalBody": "A new version of Qal Dating is available with improvements and bug fixes.",
     "updateNow": "Update Now",
     "later": "Later",
     "storeErrorTitle": "Could not open store",
-    "storeErrorBody": "Please open the app store manually to update Qaliye."
+    "storeErrorBody": "Please open the app store manually to update Qal Dating."
   },
   "billing": {
     "settingsSection": "Subscription & Credits",
@@ -521,6 +528,7 @@
     "creditsShopTitle": "Credits Shop",
     "choosePack": "Choose a pack",
     "bestValue": "Best value",
+    "promoCredits": "+{{count}} promo credits",
     "selectPackHint": "Select a pack to continue",
     "buyNow": "Buy Now",
     "purchaseCredits": "Purchase credits",
@@ -657,7 +665,7 @@
     }
   },
   "support": {
-    "title": "Qaliye Support",
+    "title": "Qal Dating Support",
     "officialSupport": "Official",
     "statusIdle": "Contact our support team",
     "statusWaiting": "Waiting for support",
@@ -682,7 +690,7 @@
     "loadError": "Could not load support messages.",
     "conversationError": "Could not load conversation.",
     "retryLoad": "Retry",
-    "accessLabel": "Qaliye official support. Tap to open support conversation.",
+    "accessLabel": "Qal Dating official support. Tap to open support conversation.",
     "staffInboxTitle": "Support Conversations",
     "staffInboxSubtitle": "View user support conversations",
     "staffInboxAccess": "Support conversations. Tap to view all user support conversations.",
@@ -1023,7 +1031,7 @@
       "savePrefsError": "Failed to save preferences.",
       "saveLocationError": "Failed to save location.",
       "invalidDob": "Invalid Date of Birth",
-      "underage": "You must be at least 18 years old to use Qaliye.",
+      "underage": "You must be at least 18 years old to use Qal Dating.",
       "unsavedChanges": "Unsaved Changes",
       "unsavedChangesBody": "You have unsaved changes in this tab. What would you like to do?",
       "save": "Save",
@@ -1211,5 +1219,110 @@
     "home": "Home",
     "goToMessages": "Go to Messages",
     "goToTab": "Go to {{label}}"
+  },
+  "help": {
+    "title": "Gargaarsa",
+    "subtitle": "Hojiin hunda asitti maal akka hojjatu baradhaa",
+    "language": "Afaan",
+    "languageSubtitle": "Afaan barbaaddan fili",
+    "actionsTitle": "Hiika Hojii",
+    "actionsSubtitle": "Hojiin hunda maal akka hojjatu ilaaluuf cuqaali",
+    "actions": {
+      "like": {
+        "title": "Like",
+        "description": "Profile nama tokkoo irratti fedhii qabaachuu agarsiisuu."
+      },
+      "super_like": {
+        "title": "Super Like",
+        "description": "Utuu isaan swipe hin godhin dura fedhii baay'ee guddaa akka qabdu addatti agarsiisuu."
+      },
+      "boost": {
+        "title": "Boost",
+        "description": "Mul'ina profile keessanii yeroof dabaluun daawwattootaa fi match dabalataa argachuu."
+      },
+      "rewind": {
+        "title": "Rewind",
+        "description": "Dogoggoraan bira darbuu ykn jaallachuu deebisuuf sochii keessan isa dhumaa gara duubatti deebisuu."
+      },
+      "super_message": {
+        "title": "Before-Match Message",
+        "description": "Utuu wal-match hin godhin dura xiyyeeffannoo nama sanaa harkisuuf ergaa kallattiidhaan erguu."
+      },
+      "image_message": {
+        "title": "Image Message",
+        "description": "Haasaa (chat) keessatti fakkii ykn suuraa erguu."
+      },
+      "voice_message": {
+        "title": "Voice Message",
+        "description": "Barreeffama bakka sagalee waraabbame chat keessatti erguu."
+      },
+      "return_passed_profile": {
+        "title": "Return Passed Profile",
+        "description": "Profile-oota kanaan dura bira darbitan irra deebitanii ilaaluu fi deebisuu."
+      },
+      "change_address": {
+        "title": "Change Address",
+        "description": "Bakka dhihoo keessanitti namoota jiraniin wal-match gochuuf bakka jireenyaa keessan haareffachuu."
+      },
+      "see_who_liked_you": {
+        "title": "See Who Liked You",
+        "description": "Utuu isin profile isaanii swipe hin godhin dura tarree namoota profile keessan jaallatanii ilaaluu."
+      },
+      "message": {
+        "title": "Message",
+        "description": "Nama wajjin match gootaniif ergaa barreeffamaa idilee erguu."
+      },
+      "incognito_mode": {
+        "title": "Incognito Mode",
+        "description": "Profile icciitiidhaan ilaaluu; accountiin keessan namoota isin jaallattan qofaaf mul'ata."
+      }
+    },
+    "creditsTitle": "Kireeditii",
+    "creditsSubtitle": "Kireeditiin maal akka ta'e fi akkamitti akka hojjetu fagessatti cuqaali",
+    "creditsOverviewTitle": "Qabiyyee Kireeditii",
+    "creditsOverview": "Kireeditiin saantima varcuwaalii Qal Dating kan gochaalee Premium appicha keessatti raawwachuuf tajaajiluudha. Maamiltoonni Premium akkaawuntii bilisaa wajjin yoo madaalaman gocha tokkoof kireeditii gad-aanaa kaffalu.",
+    "creditsHowTitle": "Akkamitti Hojjetu",
+    "creditsHow": "Gochi Premium bifa addaa ta'e kamiyyuu kireeditii murtaa'aa gaafata. Tajaajila Premium yeroo fayyadamtan, kireeditiin barbaachisu balansii keessan irraa ofumaan hir'ifama.",
+    "creditsCheckBuyTitle": "Balansii Ilaalaa fi Kireeditii Bitadhaa",
+    "creditsCheckTitle": "Balansii Ilaalaa",
+    "creditsCheck": "Balansii kireeditii yeroo ammaa keessan fuula Balances pirofaayilii keessan keessatti argamu irratti yookaan Credits Shop keessatti ilaalaa.",
+    "creditsBuyTitle": "Kireeditii Bitadhaa",
+    "creditsBuy": "Pirofaayilii yookaan Settings keessan irraa gara Credits Shop deemachuudhaan yeroo kamiyyuu kireeditii dabalataa bitachuu dandeessu.",
+    "faqTitle": "Gaaffiilee Yeroo Baayyee Gaafataman",
+    "faqSubtitle": "Deebii gaaffilee walfakkaatan ilaaluuf cuqaali",
+    "faq": {
+      "q1": "Akkaawuntii akkamittan uumuu danda'a?",
+      "a1": "Qal Dating buufadhaa, appicha banaa, fi tarkaanfilee galmee hordofaa. Mirkaneessuuf lakkoofsa bilbilaa keessan galchuu, suuraawwan keessan itti dabaluu fi bal'ina pirofaayilii keessanii guutuu isin barbaachisa.",
+      "q2": "Match akkamitti hojjeta?",
+      "a2": "Isinii fi namni biraa yeroo pirofaayilii waliin jaallattan, Match uuma. Sana booda waliif ergaa ergachuu eegaluu dandeessu. Nama tokko Super Like gochuun osoo isaan Swipe hin goodhin dura isaanin argamuu keessaniif carraa keessan ni dabala.",
+      "q3": "Namoota na jaallatan maaliifan arguu hin danda'u?",
+      "a3": "Namoota isin jaallatan ilaaluun tajaajila Premium ti. Gara Premium guddifachuu yookaan pirofaayiloota dhuunfaa isin jaallatan arguu fi kireeditii fayyadamuu dandeessu.",
+      "q4": "Pirofaayilii koo akkamittan sirreessuu danda'a?",
+      "a4": "Gara tab Pirofaayilii keessanii deemaa, mallattoo sirreessu tuqaa, fi suuraawwan, seenaa gabaabaa (bio), maqaa, umrii, fi bal'ina biroo keessan haareessaa. Jijjiiramoonni ofumaan olkaa'amu.",
+      "q5": "Bakka jireenyaa koo akkamittan jijjiiruu danda'a?",
+      "a5": "Bakka itti galmooftan settings pirofaayilii keessan irraa haareessuu dandeessu. Kunis erga gara naannoo haaraa deemtanii booda namoota dhiyeenya keessan jiran wajjin Match uumuu isin gargaara.",
+      "q6": "Eenyummaa mirkaneessuun maali, dirqamaa?",
+      "a6": "Eenyummaa mirkaneessuun suuraa ofii (selfie) kaasuudhaan nama dhugaa ta'uu keessan mirkaneessa. Naannolee tokko tokko keessatti appicha fayyadamuu eegaluu keessan dura dirqama. Kan biroo keessatti immoo filannoodha garuu amanamummaa fi nageenyaaf ni gorfama.",
+      "q7": "Nama tokko akkamittan bilookii (block) yookaan rippoortii gochuu danda'a?",
+      "a7": "Pirofaayilii yookaan chaatii fayyadamaa sanaa banaa, baafii filannoo (options) tuqaa, sana booda Block yookaan Report filadhaa. Fayyadamtoonni bilookii ta'an isin qunnaduu yookaan pirofaayilii keessan arguu hin danda'an. Fayyadamtoota bilookii gootan Settings keessatti to'achuu dandeessu.",
+      "q8": "Galmee koo Premium akkamittan haquu danda'a?",
+      "a8": "Galmeewwan karaa app store meeshaa keessanii (Google Play yookaan App Store) to'atamu. Haquudhaaf gara settings galmee (subscription settings) store keessanii deemaa. Faayidaaleen Premium keessanii hanga yeroon kaffaltii keessan ammaa xumuramutti ni itti fufu.",
+      "q9": "Kireeditiin koo maaliif bade?",
+      "a9": "Kireeditiin kan hir'atu yeroo gochaalee Premium kanneen akka Super Like, Boost, Rewind, Before-Match Message, Voice Message, yookaan Image Message fayyadamtanidha. Gochi tokkoon tokkoon isaa gatii kireeditii ofumaan hir'ifamu mataa isaa qaba. Balansii kireeditii keessan ammaa arguuf fuula Balances keessan ilaalaa.",
+      "q10": "Kireeditii dabalataa akkamittan argachuu danda'a?",
+      "a10": "Pirofaayilii yookaan Settings keessan irraa gara Credits Shop deemachuudhaan paakeejii kireeditii bitachuu dandeessu. Maamiltoonni Premium yeroo baayyee gocha tokkoof kireeditii gad-aanaa kaffalu.",
+      "q11": "Incognito Mode maali?",
+      "a11": "Incognito Mode pirofaayiloota iccitii dhaan akka daawwattan isin taasisa. Akkaawuntiin keessan namoota isin jaallattan qofaaf mul'ata. Tajaajilli kun maamiltoota Premium qofaaf dhiyaata.",
+      "q12": "Jecha iccitii koo akkamittan irra deebi'ee qindeessuu (reset) danda'a?",
+      "a12": "Fuula seensaa irratti, \"Forgot Password\" tuqaa, sana booda lakkoofsa bilbilaa yookaan iimeeyilii keessan galchaa. Jecha iccitii keessan irra deebitanii qindeessuuf liinkii isinii ergama.",
+      "q13": "Akkaawuntii koo akkamittan balleessuu danda'a?",
+      "a13": "Gara Settings deemaa, gara Account gadi siqsaatii Delete Account filadhaa. Kunis pirofaayilii, Match fi ergaawwan keessan guutumaan guutuutti balleessa. Gochi kun duubatti deebifamuu hin danda'u.",
+      "q14": "Maaliifan Match tokkoyyuu argachuu dhabe?",
+      "a14": "Fuula Discovery gubbaa mirgaa irratti mallattoo Filter tuquudhaan filannoowwan keessan mirkaneeffadhaa. Barbaacha keessan bal'isuuf fageenya fi daangaa umrii keessanii sirreessaa. Akkasumas pirofaayiliin keessan suuraa ifa ta'ee fi seenaa (bio) guutuu qabaachuu isaa mirkaneeffadhaa. Boost fayyadamuun namoota naannoo keessan jiran baayyee biratti akka mul'attan yeroof isin gargaaruu danda'a.",
+      "q15": "Garee deeggarsaa (support) akkamittan qunnama?",
+      "a15": "Garee deeggarsaa keenya waliin haasaa eegaluuf gara Messages deemaa \"Qal Dating Support\" tuqaa. Akkasumas rakkoolee kallattiin pirofaayilii yookaan chaatii fayyadamaa kamiyyuu irraa rippoortii gochuu dandeessu."
+    },
+    "supportLink": "Gaaffii qabdu? Nu waliin haasawaa",
+    "supportSubtitle": "Yeroo baay'ee sa'aatii 24 keessatti deebifanna"
   }
 }

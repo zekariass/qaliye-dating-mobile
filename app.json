@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Qaliye",
+    "name": "Qal Dating",
     "slug": "qaliye-mobile",
     "scheme": [
       "qaliyedating",
       "qaliyemobile"
     ],
-    "version": "1.0.9",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
@@ -16,9 +16,9 @@
       "appStoreUrl": "https://apps.apple.com/app/id6794608729",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Qaliye needs access to your photos to let you add a profile photo.",
-        "NSLocationWhenInUseUsageDescription": "Qaliye uses your location to show you better matches nearby.",
-        "NSMicrophoneUsageDescription": "Qaliye needs access to your microphone to record voice messages in support chat."
+        "NSPhotoLibraryUsageDescription": "Qal Dating needs access to your photos to let you add a profile photo.",
+        "NSLocationWhenInUseUsageDescription": "Qal Dating uses your location to show you better matches nearby.",
+        "NSMicrophoneUsageDescription": "Qal Dating needs access to your microphone to record voice messages in support chat."
       }
     },
     "android": {
@@ -58,7 +58,7 @@
           "icon": "./assets/images/android-icon-monochrome.png",
           "color": "#8A2CFF",
           "defaultChannel": "qaliye-default",
-          "notificationPermission": "Qaliye sends notifications about matches, messages, and likes.",
+          "notificationPermission": "Qal Dating sends notifications about matches, messages, and likes.",
           "sounds": [
             "./assets/sounds/notification.mp3"
           ]
@@ -89,25 +89,25 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Qaliye needs access to your photos to let you add a profile photo."
+          "photosPermission": "Qal Dating needs access to your photos to let you add a profile photo."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Qaliye uses your location to show you better matches nearby."
+          "locationWhenInUsePermission": "Qal Dating uses your location to show you better matches nearby."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "Qaliye needs access to your microphone to record voice messages in support chat."
+          "microphonePermission": "Qal Dating needs access to your microphone to record voice messages in support chat."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Qaliye needs access to your camera to verify your identity with a selfie.",
+          "cameraPermission": "Qal Dating needs access to your camera to verify your identity with a selfie.",
           "recordAudioAndroid": false
         }
       ],

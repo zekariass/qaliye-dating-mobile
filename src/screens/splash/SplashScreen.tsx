@@ -286,7 +286,7 @@ export default function SplashScreen() {
       {/* Text + progress bar — anchored to bottom, well clear of the centered animation */}
       <View style={styles.bottom}>
         <Animated.View style={titleStyle}>
-          <AnimatedTitle text="Qaliye" color="#FFFFFF" />
+          <AnimatedTitle text="Qal Dating" color="#FFFFFF" />
         </Animated.View>
         <Animated.Text style={[styles.tagline, { color: 'rgba(255,255,255,0.85)' }, taglineStyle]}>
           Find your soulmate.

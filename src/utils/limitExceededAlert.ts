@@ -73,8 +73,8 @@ const ACTION_CONFIGS: Record<string, ActionConfig> = {
   SUPER_MESSAGE: {
     icon: 'star-outline',
     iconColor: colors.warning,
-    fallbackTitle: 'Super Message Limit Reached',
-    fallbackMessage: (p) => `You've used all your ${p} super messages.`,
+    fallbackTitle: 'Before-Match Message Limit Reached',
+    fallbackMessage: (p) => `You've used all your ${p} before-match messages.`,
   },
 };
 

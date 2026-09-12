@@ -74,7 +74,7 @@ export function useVoiceRecorder() {
       const message =
         Platform.OS === 'web'
           ? 'Voice recording is not supported on the web.'
-          : 'Voice recording requires the Qaliye development build (expo run) or the production app. Please install the latest build and try again.';
+          : 'Voice recording requires the Qal Dating development build (expo run) or the production app. Please install the latest build and try again.';
 
       const unavailableError: VoiceRecorderError = {
         code: 'RECORDING_UNAVAILABLE',

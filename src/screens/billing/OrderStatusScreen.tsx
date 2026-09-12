@@ -33,6 +33,7 @@ export default function OrderStatusScreen() {
   const { refreshEntitlements } = useEntitlements();
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const hasVerifiedRef = useRef(false);
+  const hasOpenedCheckout = useRef(false);
 
   useEffect(() => {
     if (order?.status === 'VERIFIED' || order?.status === 'FULFILLED') {
@@ -40,12 +41,14 @@ export default function OrderStatusScreen() {
     }
   }, [order?.status, refreshEntitlements]);
 
-  // Auto-open checkout modal when order has a checkout URL
+  // Auto-open checkout modal when order has a checkout URL (only once)
   useEffect(() => {
     if (!orderId) return;
+    if (hasOpenedCheckout.current) return;
     const url = checkoutUrl ?? order?.provider_checkout_url;
     if (!url) return;
     if (!order || (order.status !== 'AWAITING_PAYMENT' && order.status !== 'CREATED')) return;
+    hasOpenedCheckout.current = true;
     setShowCheckoutModal(true);
   }, [orderId, checkoutUrl, order?.provider_checkout_url, order?.status]);
 

@@ -366,7 +366,7 @@ interface AppTabBarProps {
 // Constants
 // ---------------------------------------------------------------------------
 const LABELS: Record<string, string> = {
-  index:    'Swipe',
+  index:    'Discover',
   matches:  'Matches',
   messages: 'Messages',
   likes:    'Likes',
@@ -646,9 +646,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
                   isFocused && { color: activeColor, fontWeight: '700' },
                 ]}
               >
-                {route.name === 'index'
-                  ? (viewMode === 'browse' ? 'Browse' : 'Swipe')
-                  : (LABELS[route.name] ?? '')}
+                {LABELS[route.name] ?? ''}
               </Text>
             </TouchableOpacity>
           );

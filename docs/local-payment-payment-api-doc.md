@@ -399,7 +399,7 @@ Returns full details of a single order. Only accessible by the order owner.
       "status": "VERIFIED",
       "productCode": "premium_monthly",
       "productType": "SUBSCRIPTION",
-      "displayName": "Qaliye Premium (1 Month)",
+      "displayName": "Qal Dating Premium (1 Month)",
       "expectedAmountMinorUnits": 49900,
       "expectedCurrency": "ETB",
       "displayPrice": "ETB 499.00",

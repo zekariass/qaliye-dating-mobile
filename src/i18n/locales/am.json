@@ -1,13 +1,18 @@
 {
   "app": {
-    "name": "Qaliye"
+    "name": "Qal Dating"
+  },
+  "links": {
+    "errorTitle": "Unable to open link",
+    "errorBody": "Please try again later.",
+    "shareMessage": "Check out Qal Dating! {{url}}"
   },
   "splash": {
     "tagline": "Where hearts connect",
     "loading": "Finding meaningful connections..."
   },
   "auth": {
-    "brandName": "Qaliye",
+    "brandName": "Qal Dating",
     "brandTaglineLine1": "My Promise",
     "brandTaglineLine2": "",
     "brandTaglineHighlight1": "Promise",
@@ -226,7 +231,7 @@
       "youWillMeetWomen": "Women",
       "youWillMeetMen": "Men",
       "ageConfirmation": "You are {{age}} years old. Is that correct?",
-      "under18": "You are {{age}} years old. You must be at least 18 to use Qaliye.",
+      "under18": "You are {{age}} years old. You must be at least 18 to use Qal Dating.",
       "dob": "Date of birth",
       "dobDay": "Day",
       "dobMonth": "Month",
@@ -302,7 +307,7 @@
     "identity": {
       "title": "Verify Your Identity",
       "subtitleRequired": "Identity verification is required in your region. Take a selfie so we can confirm you are real.",
-      "subtitleOptional": "Take a selfie so we can confirm you are real. This helps keep Qaliye safe. This step is optional.",
+      "subtitleOptional": "Take a selfie so we can confirm you are real. This helps keep Qal Dating safe. This step is optional.",
       "noSelfie": "No selfie captured",
       "tapToCapture": "Tap below to take a selfie",
       "takeSelfie": "Take Selfie",
@@ -352,7 +357,7 @@
     "continue": "Continue",
     "preferences": {
       "title": "Who would you like to meet?",
-      "subtitle": "Qaliye connects men with women only.",
+      "subtitle": "Qal Dating connects men with women only.",
       "lockedLabel": "You'll meet",
       "lockedHint": "Based on your profile",
       "ageRange": "Age range",
@@ -377,7 +382,7 @@
       "currentlyPending": "Currently pending",
       "allSet": "You're all set!",
       "readySubtitle": "Your profile looks great. Start discovering people near you.",
-      "enterQaliye": "Enter Qaliye",
+      "enterQaliye": "Enter Qal Dating",
       "startDiscovering": "Start Matching",
       "highlightMatches": "Smart matches based on your preferences",
       "highlightNearby": "People near you or anywhere in the diaspora",
@@ -392,7 +397,7 @@
   },
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Choose how Qaliye notifies you.",
+    "subtitle": "Choose how Qal Dating notifies you.",
     "deviceEnabled": "Notifications enabled on this device",
     "deviceDisabled": "Notifications disabled in device settings",
     "deviceUndetermined": "Notification permission not yet requested",
@@ -415,7 +420,7 @@
     "previewTitle": "Message Previews",
     "previewBody": "Message previews may show message text in notification banners or on the lock screen. Are you sure you want to enable this?",
     "marketingConsentTitle": "Offers and Updates",
-    "marketingConsentBody": "Qaliye may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.",
+    "marketingConsentBody": "Qal Dating may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.",
     "agree": "I Agree",
     "errorTitle": "Update failed",
     "errorMessage": "Could not save your preference. Please try again.",
@@ -442,13 +447,15 @@
     "revisitErrorForbidden": "You can't use Discovery right now.",
     "revisitErrorGeneric": "Something went wrong. Please try again.",
     "rateUs": "Rate Us",
-    "rateUsSub": "Love Qaliye? Leave us a review",
+    "rateUsSub": "Love Qal Dating? Leave us a review",
+    "shareApp": "Share App",
+    "shareAppSub": "Invite your friends to join",
     "deleteAccount": "Delete Account",
     "deleteAccountSub": "Permanently delete your account and all data",
     "deleteAccountTitle": "Delete Account",
     "deleteAccountWarning": "This will permanently delete your account, profile, photos, matches, and messages. This action cannot be undone and your data cannot be recovered.",
     "deleteAccountConfirmTitle": "Are you absolutely sure?",
-    "deleteAccountConfirmBody": "You are about to permanently delete your Qaliye account. This cannot be undone.",
+    "deleteAccountConfirmBody": "You are about to permanently delete your Qal Dating account. This cannot be undone.",
     "deleteAccountBtn": "Delete My Account",
     "deleting": "Deleting account…",
     "deletingTitle": "Deleting your account…",
@@ -501,13 +508,13 @@
   },
   "appUpdate": {
     "mandatoryTitle": "Update Required",
-    "mandatoryBody": "A new version of Qaliye is required to continue. Please update the app to get the latest improvements and continue using Qaliye.",
+    "mandatoryBody": "A new version of Qal Dating is required to continue. Please update the app to get the latest improvements and continue using Qal Dating.",
     "optionalTitle": "Update Available",
-    "optionalBody": "A new version of Qaliye is available with improvements and bug fixes.",
+    "optionalBody": "A new version of Qal Dating is available with improvements and bug fixes.",
     "updateNow": "Update Now",
     "later": "Later",
     "storeErrorTitle": "Could not open store",
-    "storeErrorBody": "Please open the app store manually to update Qaliye."
+    "storeErrorBody": "Please open the app store manually to update Qal Dating."
   },
   "billing": {
     "settingsSection": "Subscription & Credits",
@@ -521,6 +528,7 @@
     "creditsShopTitle": "Credits Shop",
     "choosePack": "Choose a pack",
     "bestValue": "Best value",
+    "promoCredits": "+{{count}} promo credits",
     "selectPackHint": "Select a pack to continue",
     "buyNow": "Buy Now",
     "purchaseCredits": "Purchase credits",
@@ -657,7 +665,7 @@
     }
   },
   "support": {
-    "title": "Qaliye Support",
+    "title": "Qal Dating Support",
     "officialSupport": "Official",
     "statusIdle": "Contact our support team",
     "statusWaiting": "Waiting for support",
@@ -682,7 +690,7 @@
     "loadError": "Could not load support messages.",
     "conversationError": "Could not load conversation.",
     "retryLoad": "Retry",
-    "accessLabel": "Qaliye official support. Tap to open support conversation.",
+    "accessLabel": "Qal Dating official support. Tap to open support conversation.",
     "staffInboxTitle": "Support Conversations",
     "staffInboxSubtitle": "View user support conversations",
     "staffInboxAccess": "Support conversations. Tap to view all user support conversations.",
@@ -1023,7 +1031,7 @@
       "savePrefsError": "Failed to save preferences.",
       "saveLocationError": "Failed to save location.",
       "invalidDob": "Invalid Date of Birth",
-      "underage": "You must be at least 18 years old to use Qaliye.",
+      "underage": "You must be at least 18 years old to use Qal Dating.",
       "unsavedChanges": "Unsaved Changes",
       "unsavedChangesBody": "You have unsaved changes in this tab. What would you like to do?",
       "save": "Save",
@@ -1211,5 +1219,110 @@
     "home": "Home",
     "goToMessages": "Go to Messages",
     "goToTab": "Go to {{label}}"
+  },
+  "help": {
+    "title": "እርዳታ",
+    "subtitle": "እያንዳንዱ ተግባር ምን እንደሚያደርግ ይወቁ",
+    "language": "ቋንቋ",
+    "languageSubtitle": "የሚመርጡትን ቋንቋ ይምረጡ",
+    "actionsTitle": "የተግባሮች ትርጉም",
+    "actionsSubtitle": "እያንዳንዱ ተግባር ምን እንደሚያደርግ ለማየት ይጫኑ",
+    "actions": {
+      "like": {
+        "title": "Like",
+        "description": "ለአንድ ሰው ፕሮፋይል ፍላጎት እንዳለዎት ማሳወቅ።"
+      },
+      "super_like": {
+        "title": "Super Like",
+        "description": "ለአንድ ሰው በጣም ከፍተኛ ፍላጎት እንዳለዎት በልዩ ሁኔታ ማሳወቅ።"
+      },
+      "boost": {
+        "title": "Boost",
+        "description": "ፕሮፋይልዎ በብዙ ሰዎች እንዲታይ ለተወሰነ ጊዜ ታዋቂነቱን ማሳደግ።"
+      },
+      "rewind": {
+        "title": "Rewind",
+        "description": "በስህተት ያለፉትን ወይም የወደዱትን ፕሮፋይል ወደ ኋላ ለመመለስ የሚያስችል ተግባር።"
+      },
+      "super_message": {
+        "title": "Before-Match Message",
+        "description": "ከሰውዬው ጋር ሳይጣመሩ (Match ሳይሆኑ) በፊት ቀጥታ መልእክት መላክ።"
+      },
+      "image_message": {
+        "title": "Image Message",
+        "description": "በውይይት ውስጥ ምስል ወይም ፎቶ መላክ።"
+      },
+      "voice_message": {
+        "title": "Voice Message",
+        "description": "ከጽሁፍ ይልቅ የተቀዳ የድምፅ መልእክት መላክ።"
+      },
+      "return_passed_profile": {
+        "title": "Return Passed Profile",
+        "description": "ቀደም ብስህተት ወይም ሆን ብለው ያለፉትን ፕሮፋይል እንደገና ማየት እና መመለስ።"
+      },
+      "change_address": {
+        "title": "Change Address",
+        "description": "ወደ አዲስ ቦታ በሚዛወሩበት ጊዜ በአቅራቢያዎ ካሉ ሰዎች ጋር ለመጣመር የመኖሪያ አድራሻዎን ማዘመን።"
+      },
+      "see_who_liked_you": {
+        "title": "See Who Liked You",
+        "description": "እርስዎ ሳይወዷቸው በፊት የእርስዎን ፕሮፋይል የወደዱትን ሰዎች ዝርዝር ማየት።"
+      },
+      "message": {
+        "title": "Message",
+        "description": "ከተጣመሩት ሰው ጋር መደበኛ የጽሁፍ መልእክት መለዋወጥ።"
+      },
+      "incognito_mode": {
+        "title": "Incognito Mode",
+        "description": "ፕሮፋይልዎን በምስጢር ማሰስ፤ ፕሮፋይልዎ የሚታየው እርስዎ ለወደዷቸው ሰዎች ብቻ ነው።"
+      }
+    },
+    "creditsTitle": "ክሬዲቶች",
+    "creditsSubtitle": "ክሬዲቶች ምን እንደሆኑ እና እንዴት እንደሚሰሩ ለመረዳት ይጫኑ",
+    "creditsOverviewTitle": "የክሬዲቶች አጠቃላይ ገጽታ",
+    "creditsOverview": "ክሬዲቶች በመተግበሪያው ውስጥ Premium ተግባራትን ለማከናወን የሚያገልግሉ የ Qal Dating ምናባዊ ገንዘብ ናቸው። Premium ተመዝጋቢዎች ከነጻ መለያዎች ጋር ሲነፃፀሩ ለእያንዳንዱ ተግባር አነስተኛ የክሬዲት መጠን ይከፍላሉ።",
+    "creditsHowTitle": "እንዴት እንደሚሰሩ",
+    "creditsHow": "እያንዳንዱ Premium ተግባር የተወሰነ የክሬዲት መጠን ይጠይቃል። Premium አገልግሎትን ሲጠቀሙ፣ የሚፈለገው ክሬዲት ከሂሳብዎ ላይ ይቀነሳል።",
+    "creditsCheckBuyTitle": "ቀሪ ሂሳብ ማየት እና ክሬዲት መግዛት",
+    "creditsCheckTitle": "ቀሪ ሂሳብ ማየት",
+    "creditsCheck": "አሁን ያለዎትን የክሬዲት መጠን በፕሮፋይልዎ ውስጥ ባለው Balances ገጽ ወይም በ Credits Shop ውስጥ ማየት ይችላሉ።",
+    "creditsBuyTitle": "ክሬዲት መግዛት",
+    "creditsBuy": "በፕሮፋይልዎ ወይም በ Settings በኩል ወደ Credits Shop በመግባት በማንኛውም ጊዜ ተጨማሪ ክሬዲት መግዛት ይችላሉ።",
+    "faqTitle": "ተደጋግመው የሚነሱ ጥያቄዎች",
+    "faqSubtitle": "ለተደጋጋሚ ጥያቄዎች መልሾችን ለማየት ይጫኑ",
+    "faq": {
+      "q1": "አካውንት እንዴት መፍጠር እችላለሁ?",
+      "a1": "Qal Datingን ያውርዱ፣ መተግበሪያውን ይክፈቱ እና የመመዝገቢያ ደረጃዎችን ይከተሉ። ለማረጋገጫ የስልክ ቁጥርዎን ማስገባት፣ ፎቶዎችዎን ማከል እና የፕሮፋይል ዝርዝሮችዎን ማሟላት ያስፈልግዎታል።",
+      "q2": "Match እንዴት ይሰራል?",
+      "a2": "እርስዎ እና ሌላ ሰው እርስ በእርስ ፕሮፋይሎቻችሁን ስትወደዱ፣ Match ይፈጥራል። ከዚያም እርስ በእርስ መልእክት መላላክ መጀመር ይችላሉ። አንድን ሰው Super Like ማድረግ እነሱ ከ Swipe ከማድረጋቸው በፊት በእነሱ ዘንድ የመታየት እድልዎን ይጨምራል።",
+      "q3": "ለምን ማን እንደወደደኝ ማየት አልችልም?",
+      "a3": "እርስዎን ማን እንደወደደዎት ማየት የ Premium አገልግሎት ነው። ወደ Premium ማሳደግ ወይም እርስዎን የወደዱትን እያንዳንዱን ፕሮፋይሎች ለማየት ክሬዲቶችን መጠቀም ይችላሉ።",
+      "q4": "ፕሮፋይሌን እንዴት ማስተካከል እችላለሁ?",
+      "a4": "ወደ Profile ትር ይሂዱ፣ የማስተካከያ ምልክቱን ይጫኑ እና ፎቶዎችዎን፣ ባዮዎን፣ ስምዎን፣ ዕድሜዎን እና ሌሎች ዝርዝሮችን ያዘምኑ። ለውጦች በራስ-ሰር ይቀመጣሉ።",
+      "q5": "አድራሻዬን እንዴት መቀየር እችላለሁ?",
+      "a5": "የተመዘገበበትን አድራሻ ከፕሮፋይልዎ ቅንብሮች (settings) ማዘመን ይችላሉ። ይህ ወደ አዲስ አድራሻ ከተዘዋወሩ በኋላ በአቅራቢያዎ ካሉ ሰዎች ጋር ለ Match ለመፍጠር ይረዳዎታል።",
+      "q6": "የማንነት ማረጋገጫ ምንድን ነው እና ግዴታ ነው?",
+      "a6": "የማንነት ማረጋገጫ የራስዎን ፎቶ (selfie) በማንሳት እውነተኛ ሰው መሆንዎን ያረጋግጣል። በአንዳንድ ክልሎች መተግበሪያውን መጠቀም ከመጀመርዎ በፊት ግዴታ ነው። በሌሎች ዘንድ አማራጭ ነው ነገር ግን ለእምነት እና ደህንነት ሲባል ይመከራል።",
+      "q7": "አንድን ሰው እንዴት ብሎክ ማድረግ ወይም ሪፖርት ማድረግ እችላለሁ?",
+      "a7": "የተጠቃሚውን ፕሮፋይል ወይም ቻት ይክፈቱ፣ የአማራጮች (options) ምናሌን ይጫኑ እና Block ወይም Report የሚለውን ይምረጡ። ብሎክ የተደረጉ ተጠቃሚዎች እርስዎን ማግኘትም ሆነ ፕሮፋይልዎን ማየት አይችሉም። ብሎክ ያደረጓቸውን ተጠቃሚዎች በ Settings ውስጥ ማስተዳደር ይችላሉ።",
+      "q8": "የ Premium ምዝገባዬን እንዴት መሰረዝ እችላለሁ?",
+      "a8": "ምዝገባዎች የሚተዳደሩት በመሳሪያዎ መተግበሪያ መደብር (Google Play ወይም App Store) በኩል ነው። ለመሰረዝ ወደ መደብርዎ የምዝገባ ቅንብሮች (subscription settings) ይሂዱ። የ Premium ጥቅማጥቅሞችዎ አሁን ያለው የክፍያ ጊዜዎ እስኪያበቃ ድረስ ይቀጥላሉ።",
+      "q9": "ክሬዲቶቼ ለምን ጠፉ?",
+      "a9": "ክሬዲቶች የሚቀነሱት እንደ Super Like፣ Boost፣ Rewind፣ Before-Match Message፣ Voice Message ወይም Image Message ያሉ Premium ተግባራትን ሲጠቀሙ ነው። እያንዳንዱ ተግባር በራስ-ሰር የሚቀነስ የራሱ የሆነ የክሬዲት ክፍያ አለው። አሁን ያለዎትን የክሬዲት መጠን ለማየት የ Balances ገጽዎን ያረጋግጡ።",
+      "q10": "ተጨማሪ ክሬዲቶችን እንዴት ማግኘት እችላለሁ?",
+      "a10": "በፕሮፋይልዎ ወይም በ Settings በኩል ወደ Credits Shop በመግባት የክሬዲት ፓኬጆችን መግዛት ይችላሉ። Premium ተመዝጋቢዎች በአብዛኛው ለእያንዳንዱ ተግባር አነስተኛ የክሬዲት መጠን ይከፍላሉ።",
+      "q11": "Incognito Mode ምንድን ነው?",
+      "a11": "Incognito Mode ፕሮፋይሎችን በግል ለመቃኘት ያስችልዎታል። አካውንትዎ የሚታየው እርስዎ ለወደዷቸው ሰዎች ብቻ ነው። ይህ አገልግሎት ለ Premium ተመዝጋቢዎች ብቻ የሚገኝ ነው።",
+      "q12": "የይለፍ ቃሌን እንዴት ዳግም ማስጀመር (reset) እችላለሁ?",
+      "a12": "በመግቢያ ገጹ ላይ \"Forgot Password\" የሚለውን ይጫኑ እና የስልክ ቁጥርዎን ወይም ኢሜልዎን ያስገቡ። የይለፍ ቃልዎን ዳግም ለማስጀመር የሚያስችል ሊንክ ይደርስዎታል።",
+      "q13": "አካውንቴን እንዴት ማጥፋት እችላለሁ?",
+      "a13": "ወደ Settings ይሂዱ፣ ወደ Account ያንሸራትቱ እና Delete Account የሚለውን ይምረጡ። ይህ ፕሮፋይልዎን፣ Match-ዎችዎን እና መልእክቶችዎን በቋሚነት ያስወግዳል። ይህን ተግባር ወደኋላ መመለስ አይቻልም።",
+      "q14": "ለምንድነው ምንም Match-ዎች የማላገኘው?",
+      "a14": "በግኝት (Discovery) ገጹ ላይኛው ቀኝ ጥግ ላይ ያለውን የማጣሪያ (Filter) ምልክት በመጫን ምርጫዎችዎን ያረጋግጡ። ፍለጋዎን ለማስፋት የርቀት እና የዕድሜ ክልልዎን ያስተካክሉ። በተጨማሪም ፕሮፋይልዎ ግልጽ ፎቶዎች እና የተሟላ ባዮ እንዳለው ያረጋግጡ። Boost መጠቀም በአድራሻዎ ላሉ ተጨማሪ ሰዎች የመታየት እድልዎን ለጊዜው ሊጨምር ይችላል።",
+      "q15": "የድጋፍ ቡድኑን (support) እንዴት ማግኘት እችላለሁ?",
+      "a15": "ከድጋፍ ቡድናችን ጋር ውይይት ለመጀመር ወደ Messages ይሂዱ እና \"Qal Dating Support\" የሚለውን ይጫኑ። እንዲሁም ከማንኛውም ተጠቃሚ ፕሮፋይል ወይም ቻት ላይ ሆነው ችግሮችን በቀጥታ ሪፖርት ማድረግ ይችላሉ።"
+    },
+    "supportLink": "ጥያቄ አለዎት? ከእኛ ጋር ይውያዩ",
+    "supportSubtitle": "በተለምዶ በ24 ሰዓታት ውስጥ እንመልሳለን"
   }
 }

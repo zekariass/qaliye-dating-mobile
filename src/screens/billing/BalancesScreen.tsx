@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
     ActivityIndicator,
+    Modal,
     Platform,
     Pressable,
     ScrollView,
@@ -72,7 +74,7 @@ const QUOTA_META: Record<string, { label: string; icon: string; color: string }>
   VOICE_MESSAGE:     { label: 'Voice Messages',    icon: 'mic-outline',        color: colors.verifiedBlue },
   IMAGE_MESSAGE:     { label: 'Image Messages',    icon: 'image-outline',      color: colors.primary      },
   MESSAGE:           { label: 'Messages',          icon: 'chatbubble-outline', color: colors.primary      },
-  SUPER_MESSAGE:     { label: 'Super Messages',    icon: 'sparkles-outline',   color: colors.warning      },
+  SUPER_MESSAGE:     { label: 'Before-Match Messages',    icon: 'sparkles-outline',   color: colors.warning      },
   SEE_WHO_LIKED_YOU: { label: 'See Who Liked You', icon: 'eye-outline',        color: colors.primary      },
 };
 
@@ -88,6 +90,46 @@ const QUOTA_ORDER = [
   'SEE_WHO_LIKED_YOU',
 ];
 
+// English action definitions (same content as the Help screen).
+const ACTION_DEFINITIONS: Record<string, { title: string; description: string }> = {
+  LIKE: {
+    title: 'Like',
+    description: "Expressing interest in a profile to create a potential match.",
+  },
+  SUPER_LIKE: {
+    title: 'Super Like',
+    description: "Highlighting your profile to let someone know you are extremely interested before they swipe.",
+  },
+  REWIND: {
+    title: 'Rewind',
+    description: "Reversing your last swipe or action to undo an accidental pass or like.",
+  },
+  BOOST: {
+    title: 'Boost',
+    description: "Temporarily increasing your profile's visibility to get more views and matches.",
+  },
+  VOICE_MESSAGE: {
+    title: 'Voice Message',
+    description: "Sending an audio recording instead of text in a chat.",
+  },
+  IMAGE_MESSAGE: {
+    title: 'Image Message',
+    description: "Sending a photo or picture within a chat conversation.",
+  },
+  MESSAGE: {
+    title: 'Message',
+    description: "Sending a standard text communication to a matched user.",
+  },
+  SUPER_MESSAGE: {
+    title: 'Before-Match Message',
+    description: "Sending a message to someone prior to matching to grab their attention.",
+  },
+  SEE_WHO_LIKED_YOU: {
+    title: 'See Who Liked You',
+    description: "Viewing a list of users who have already liked your profile before you swipe on them.",
+  },
+};
+
 const cardShadow = Platform.select({
   ios:     { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 3 } },
   android: { elevation: 2 },
@@ -96,8 +138,9 @@ const cardShadow = Platform.select({
 
 // ─── QuotaRow ─────────────────────────────────────────────────────────────────
 
-function QuotaRow({ actionCode, action, isLast }: {
+function QuotaRow({ actionCode, action, isLast, onInfo }: {
   actionCode: string; action: ActionLimitAndCost; isLast: boolean;
+  onInfo: (code: string) => void;
 }) {
   const { colors: th } = useTheme();
   const meta           = QUOTA_META[actionCode];
@@ -108,6 +151,7 @@ function QuotaRow({ actionCode, action, isLast }: {
   const actionNoun     = pluralize(meta.label.toLowerCase(), 1);
   const memberCost     = action.member_credit_cost ?? 0;
   const actualCost     = action.actual_credit_cost ?? 0;
+  const hasDefinition  = actionCode in ACTION_DEFINITIONS;
 
   return (
     <>
@@ -116,8 +160,21 @@ function QuotaRow({ actionCode, action, isLast }: {
           <Ionicons name={meta.icon as any} size={16} color={meta.color} />
         </View>
         <View style={quotaRowStyles.info}>
-          {/* Label */}
-          <Text style={[quotaRowStyles.label, { color: th.text }]}>{meta.label}</Text>
+          {/* Label + help button */}
+          <View style={quotaRowStyles.labelRow}>
+            <Text style={[quotaRowStyles.label, { color: th.text }]}>{meta.label}</Text>
+            {hasDefinition && (
+              <Pressable
+                onPress={() => onInfo(actionCode)}
+                accessibilityLabel={`What is ${meta.label}?`}
+                accessibilityRole="button"
+              >
+                <View style={[quotaRowStyles.helpBtn, { borderColor: th.textSecondary }]}>
+                  <Text style={[quotaRowStyles.helpBtnText, { color: th.textSecondary }]}>?</Text>
+                </View>
+              </Pressable>
+            )}
+          </View>
 
           {isUnlimited ? (
             <>
@@ -130,8 +187,9 @@ function QuotaRow({ actionCode, action, isLast }: {
             <>
               {/* Free: {limit} per {period} or per recipient */}
               <Text style={[quotaRowStyles.usage, { color: th.textSecondary }]}>
-                {memberCost === 0 ? 'Free: ' : `First ${limit.toLocaleString()} at ${memberCost} ${memberCost === 1 ? 'credit' : 'credits'} each `}
-                {limit.toLocaleString()}{isPerRecipient ? ' per recipient' : periodSuffix ? ` ${periodSuffix}` : ''}
+                {memberCost === 0
+                  ? `Free: ${limit.toLocaleString()}${isPerRecipient ? ' per recipient' : periodSuffix ? ` ${periodSuffix}` : ''}`
+                  : `${limit.toLocaleString()}${isPerRecipient ? ' per recipient' : periodSuffix ? ` ${periodSuffix}` : ''} · ${memberCost} ${memberCost === 1 ? 'credit' : 'credits'} each`}
               </Text>
 
               {/* Then: {cost} credits per {action} after free limit */}
@@ -153,7 +211,10 @@ const quotaRowStyles = StyleSheet.create({
   row:           { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 },
   iconWrap:      { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   info:          { flex: 1, gap: 5 },
+  labelRow:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
   label:         { fontSize: 14, fontWeight: '700' },
+  helpBtn:       { width: 18, height: 18, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  helpBtnText:   { fontSize: 11, fontWeight: '700', lineHeight: 13 },
   usage:         { fontSize: 12, fontWeight: '500' },
   unlimitedText: { fontSize: 13, fontWeight: '700' },
   subText:       { fontSize: 11, fontWeight: '500' },
@@ -167,6 +228,9 @@ export default function BalancesScreen() {
   const { colors: th }  = useTheme();
   const { entitlements, isLoading, isRefetching, refreshEntitlements } = useEntitlements();
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
+  const [infoAction, setInfoAction] = useState<string | null>(null);
+
+  const infoDefinition = infoAction ? ACTION_DEFINITIONS[infoAction] : null;
 
   if (isLoading || !entitlements) {
     return (
@@ -391,6 +455,7 @@ export default function BalancesScreen() {
                   actionCode={code}
                   action={action}
                   isLast={idx === quotaEntries.length - 1}
+                  onInfo={setInfoAction}
                 />
               ))}
             </View>
@@ -419,9 +484,71 @@ export default function BalancesScreen() {
         )}
 
       </ScrollView>
+
+      {/* ── Action definition modal ─────────────────────────────────────────── */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={infoDefinition !== null}
+        onRequestClose={() => setInfoAction(null)}
+      >
+        <Pressable style={infoModalStyles.overlay} onPress={() => setInfoAction(null)}>
+          <View style={[infoModalStyles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+            <View style={infoModalStyles.header}>
+              <Text style={[infoModalStyles.title, { color: th.text }]}>
+                {infoDefinition?.title ?? ''}
+              </Text>
+              <Pressable
+                onPress={() => setInfoAction(null)}
+                accessibilityLabel="Close"
+                accessibilityRole="button"
+              >
+                <Ionicons name="close" size={20} color={th.textSecondary} />
+              </Pressable>
+            </View>
+            <Text style={[infoModalStyles.description, { color: th.textSecondary }]}>
+              {infoDefinition?.description ?? ''}
+            </Text>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
+
+// ─── Info modal styles ────────────────────────────────────────────────────────
+
+const infoModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: 18,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '800',
+    flex: 1,
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+});
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 

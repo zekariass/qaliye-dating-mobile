@@ -1,4 +1,4 @@
-# Qaliye Backend — Step-by-Step AI Agent Prompts
+# Qal Dating Backend — Step-by-Step AI Agent Prompts
 
 > **How to use:** Give each step to the backend AI agent in order, one at a time. Always attach `docs/schema.sql` and `docs/implementation_guide.md` as context for every step. Do not skip steps — each step assumes the previous one is complete and compiling.
 
@@ -1067,7 +1067,7 @@ Add Lombok `@Getter @Setter @NoArgsConstructor` on every entity class to avoid w
 
 **Prompt:**
 
-Implement Spring Security for the Qaliye backend. This is a **stateless** OAuth2 Resource Server. Supabase issues JWTs; the backend validates them using the Supabase project's JWKS endpoint.
+Implement Spring Security for the Qal Dating backend. This is a **stateless** OAuth2 Resource Server. Supabase issues JWTs; the backend validates them using the Supabase project's JWKS endpoint.
 
 **`config/SecurityConfig.java`:**
 

@@ -1,13 +1,18 @@
 {
   "app": {
-    "name": "Qaliye"
+    "name": "Qal Dating"
+  },
+  "links": {
+    "errorTitle": "Unable to open link",
+    "errorBody": "Please try again later.",
+    "shareMessage": "Check out Qal Dating! {{url}}"
   },
   "splash": {
     "tagline": "Where hearts connect",
     "loading": "Finding meaningful connections..."
   },
   "auth": {
-    "brandName": "Qaliye",
+    "brandName": "Qal Dating",
     "brandTaglineLine1": "My Promise",
     "brandTaglineLine2": "",
     "brandTaglineHighlight1": "Promise",
@@ -226,7 +231,7 @@
       "youWillMeetWomen": "Women",
       "youWillMeetMen": "Men",
       "ageConfirmation": "You are {{age}} years old. Is that correct?",
-      "under18": "You are {{age}} years old. You must be at least 18 to use Qaliye.",
+      "under18": "You are {{age}} years old. You must be at least 18 to use Qal Dating.",
       "dob": "Date of birth",
       "dobDay": "Day",
       "dobMonth": "Month",
@@ -302,7 +307,7 @@
     "identity": {
       "title": "Verify Your Identity",
       "subtitleRequired": "Identity verification is required in your region. Take a selfie so we can confirm you are real.",
-      "subtitleOptional": "Take a selfie so we can confirm you are real. This helps keep Qaliye safe. This step is optional.",
+      "subtitleOptional": "Take a selfie so we can confirm you are real. This helps keep Qal Dating safe. This step is optional.",
       "noSelfie": "No selfie captured",
       "tapToCapture": "Tap below to take a selfie",
       "takeSelfie": "Take Selfie",
@@ -352,7 +357,7 @@
     "continue": "Continue",
     "preferences": {
       "title": "Who would you like to meet?",
-      "subtitle": "Qaliye connects men with women only.",
+      "subtitle": "Qal Dating connects men with women only.",
       "lockedLabel": "You'll meet",
       "lockedHint": "Based on your profile",
       "ageRange": "Age range",
@@ -377,7 +382,7 @@
       "currentlyPending": "Currently pending",
       "allSet": "You're all set!",
       "readySubtitle": "Your profile looks great. Start discovering people near you.",
-      "enterQaliye": "Enter Qaliye",
+      "enterQaliye": "Enter Qal Dating",
       "startDiscovering": "Start Matching",
       "highlightMatches": "Smart matches based on your preferences",
       "highlightNearby": "People near you or anywhere in the diaspora",
@@ -392,7 +397,7 @@
   },
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Choose how Qaliye notifies you.",
+    "subtitle": "Choose how Qal Dating notifies you.",
     "deviceEnabled": "Notifications enabled on this device",
     "deviceDisabled": "Notifications disabled in device settings",
     "deviceUndetermined": "Notification permission not yet requested",
@@ -415,7 +420,7 @@
     "previewTitle": "Message Previews",
     "previewBody": "Message previews may show message text in notification banners or on the lock screen. Are you sure you want to enable this?",
     "marketingConsentTitle": "Offers and Updates",
-    "marketingConsentBody": "Qaliye may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.",
+    "marketingConsentBody": "Qal Dating may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.",
     "agree": "I Agree",
     "errorTitle": "Update failed",
     "errorMessage": "Could not save your preference. Please try again.",
@@ -442,13 +447,15 @@
     "revisitErrorForbidden": "You can't use Discovery right now.",
     "revisitErrorGeneric": "Something went wrong. Please try again.",
     "rateUs": "Rate Us",
-    "rateUsSub": "Love Qaliye? Leave us a review",
+    "rateUsSub": "Love Qal Dating? Leave us a review",
+    "shareApp": "Share App",
+    "shareAppSub": "Invite your friends to join",
     "deleteAccount": "Delete Account",
     "deleteAccountSub": "Permanently delete your account and all data",
     "deleteAccountTitle": "Delete Account",
     "deleteAccountWarning": "This will permanently delete your account, profile, photos, matches, and messages. This action cannot be undone and your data cannot be recovered.",
     "deleteAccountConfirmTitle": "Are you absolutely sure?",
-    "deleteAccountConfirmBody": "You are about to permanently delete your Qaliye account. This cannot be undone.",
+    "deleteAccountConfirmBody": "You are about to permanently delete your Qal Dating account. This cannot be undone.",
     "deleteAccountBtn": "Delete My Account",
     "deleting": "Deleting account…",
     "deletingTitle": "Deleting your account…",
@@ -501,13 +508,13 @@
   },
   "appUpdate": {
     "mandatoryTitle": "Update Required",
-    "mandatoryBody": "A new version of Qaliye is required to continue. Please update the app to get the latest improvements and continue using Qaliye.",
+    "mandatoryBody": "A new version of Qal Dating is required to continue. Please update the app to get the latest improvements and continue using Qal Dating.",
     "optionalTitle": "Update Available",
-    "optionalBody": "A new version of Qaliye is available with improvements and bug fixes.",
+    "optionalBody": "A new version of Qal Dating is available with improvements and bug fixes.",
     "updateNow": "Update Now",
     "later": "Later",
     "storeErrorTitle": "Could not open store",
-    "storeErrorBody": "Please open the app store manually to update Qaliye."
+    "storeErrorBody": "Please open the app store manually to update Qal Dating."
   },
   "billing": {
     "settingsSection": "Subscription & Credits",
@@ -521,6 +528,7 @@
     "creditsShopTitle": "Credits Shop",
     "choosePack": "Choose a pack",
     "bestValue": "Best value",
+    "promoCredits": "+{{count}} promo credits",
     "selectPackHint": "Select a pack to continue",
     "buyNow": "Buy Now",
     "purchaseCredits": "Purchase credits",
@@ -657,7 +665,7 @@
     }
   },
   "support": {
-    "title": "Qaliye Support",
+    "title": "Qal Dating Support",
     "officialSupport": "Official",
     "statusIdle": "Contact our support team",
     "statusWaiting": "Waiting for support",
@@ -682,7 +690,7 @@
     "loadError": "Could not load support messages.",
     "conversationError": "Could not load conversation.",
     "retryLoad": "Retry",
-    "accessLabel": "Qaliye official support. Tap to open support conversation.",
+    "accessLabel": "Qal Dating official support. Tap to open support conversation.",
     "staffInboxTitle": "Support Conversations",
     "staffInboxSubtitle": "View user support conversations",
     "staffInboxAccess": "Support conversations. Tap to view all user support conversations.",
@@ -1023,7 +1031,7 @@
       "savePrefsError": "Failed to save preferences.",
       "saveLocationError": "Failed to save location.",
       "invalidDob": "Invalid Date of Birth",
-      "underage": "You must be at least 18 years old to use Qaliye.",
+      "underage": "You must be at least 18 years old to use Qal Dating.",
       "unsavedChanges": "Unsaved Changes",
       "unsavedChangesBody": "You have unsaved changes in this tab. What would you like to do?",
       "save": "Save",
@@ -1211,5 +1219,110 @@
     "home": "Home",
     "goToMessages": "Go to Messages",
     "goToTab": "Go to {{label}}"
+  },
+  "help": {
+    "title": "ሓገዝ",
+    "subtitle": "ነፃ ናይ ነፃ ተግባር እንታይ ከም ገብቱ ምምሃር",
+    "language": "ቋንቋ",
+    "languageSubtitle": "ዝመርጡዎ ቋንቋ ምረጹ",
+    "actionsTitle": "ትርጉም ናይ ተግባራት",
+    "actionsSubtitle": "ነፃ ተግባር እንታይ ከም ገብቱ ንምራእ ጠውቕ",
+    "actions": {
+      "like": {
+        "title": "Like",
+        "description": "አብ ናይ ሓደ ሰብ ፕሮፋይል ተገዳስነት ከም ዘሎካ ምግላጽ።"
+      },
+      "super_like": {
+        "title": "Super Like",
+        "description": "ንሓደ ሰብ ብጣዕሚ ዓቢ ተገዳስነት ከም ዘሎካ ብፍሉይ መንገዲ ምግላጽ።"
+      },
+      "boost": {
+        "title": "Boost",
+        "description": "ፕሮፋይልካ ብብዙሓት ሰባት ብዝያዳ ምእንቲ ክርአ ንተወሰነ እዋን ምዕባይ።"
+      },
+      "rewind": {
+        "title": "Rewind",
+        "description": "ብስሕተት ዝሓለፍካዮ ወይ ዝፈተውካዮ ፕሮፋይል ናብ ድሕሪት ምምላስ።"
+      },
+      "super_message": {
+        "title": "Before-Match Message",
+        "description": "ምስቲ ሰብ ምትእስሳር (Match) ከይገበርካ ብቐጥታ መልእኽቲ ምልኣኽ።"
+      },
+      "image_message": {
+        "title": "Image Message",
+        "description": "አብ ናይ ቻት ዕልል ስእሊ ምልኣኽ።"
+      },
+      "voice_message": {
+        "title": "Voice Message",
+        "description": "ካብ ጽሑፍ ንላዕሊ ዝተቐደሐ ናይ ድምጺ መልእኽቲ ምልኣኽ።"
+      },
+      "return_passed_profile": {
+        "title": "Return Passed Profile",
+        "description": "አቐዲምካ ዘሕለፍካዮ ፕሮፋይል ብድገም ምራኣይን ምምላስን።"
+      },
+      "change_address": {
+        "title": "Change Address",
+        "description": "ናብ ሓድሽ ቦታ እንተተቐይርካ አብ ከባቢኻ ምስ ዘለው ሰባት ምእንቲ ክትተኣሳሰር ናይ መደበሪ አድራሻኻ ምሕዳስ።"
+      },
+      "see_who_liked_you": {
+        "title": "See Who Liked You",
+        "description": "ንስኻ ገና ከይፈተውካዮም ንፕሮፋይልካ ዝፈተውዎ ሰባት ዝርዝር ምራኣይ።"
+      },
+      "message": {
+        "title": "Message",
+        "description": "ምስ ዝተኣሳሰርካዮ ሰብ መደበኛ ናይ ጽሑፍ መልእኽቲ ምልኣኽ።"
+      },
+      "incognito_mode": {
+        "title": "Incognito Mode",
+        "description": "ፕሮፋይልካ ብምስጢር ምራኣይ፤ ናትካ ፕሮፋይል ንስኻ ንዝፈተውካዮም ሰባት ጥራሕ ይርአ።"
+      }
+    },
+    "creditsTitle": "ክሬዲት",
+    "creditsSubtitle": "ክሬዲት እንታይ ከም እዩን ከመይ ከም ውሕልዉ ንምርዳዕ ጠውቕ",
+    "creditsOverviewTitle": "ናይ ክሬዲት ሓፈሻዊ ገጽታ",
+    "creditsOverview": "ክሬዲት ኣብ ውሽጢ እቲ ኣፕሊኬሽን Premium ንጥፈታት ንምስራሕ ዘገልግል ናይ Qal Dating ቨርቹዋል ገንዘብ እዩ። Premium ተመዝገብቲ ምስ ነጻ ሕሳባት እንተታሓሒዞም ብሓደ ንጥፈት ዝተሓተ መጠን ክሬዲት ይከፍሉ።",
+    "creditsHowTitle": "ከመይ ከም ዝሰርሕ",
+    "creditsHow": "ነፍሲ ወከፍ Premium ንጥፈት ዝተወሰነ መጠን ክሬዲት ይሓትት። Premium ኣገልግሎት ኣብ ዝጥቀሙሉ እዋን፣ እቲ ዘድሊ ክሬዲት ካብ ሕሳብኩም ብኣውቶማቲክ ይጉደል።",
+    "creditsCheckBuyTitle": "ባላንስ ምርኣይን ክሬዲት ምዕዳግን",
+    "creditsCheckTitle": "ባላንስ ምርኣይ",
+    "creditsCheck": "እዋናዊ መጠን ክሬዲትካ ኣብ ፕሮፋይልካ ኣብ ዘሎ Balances ገጽ ወይ ኣብ Credits Shop ርአ።",
+    "creditsBuyTitle": "ክሬዲት ምዕዳግ",
+    "creditsBuy": "ካብ ፕሮፋይልካ ወይ Settings ብምእታው ኣብ Credits Shop ኣብ ዝኾነ እዋን ተወሳኺ ክሬዲት ምዕዳግ ትኽእል።",
+    "faqTitle": "ብተደጋጋሚ ዝሕተቱ ሕቶታት",
+    "faqSubtitle": "ንሕቶታት ዝተደጋገሙ መልስታት ምርኣይ ጠውቕ",
+    "faq": {
+      "q1": "አካውንት ከመይ ገይረ ክኸፍት ይኽእል?",
+      "a1": "Qal Dating ኣውርድ፣ ነቲ ኣፕሊኬሽን ክፈቶ፣ ከምኡ'ውን ናይ ምምዝጋብ ደረጃታት ስዓብ። ንመረጋገጺ ቁጽሪ ስልኪኻ ክትህብ፣ ስእልታትካ ክትውስኽን ዝርዝር ፕሮፋይልካ ክተማልእን ክድልየካ እዩ።",
+      "q2": "Match ከመይ ይሰርሕ?",
+      "a2": "ንስኻን ካልእ ሰብን ንሓድሕድኩም ፕሮፋይልኩም ምስ ትፈትዉ፣ Match ይፈጥር። ድሕሪኡ ንሓድሕድኩም መልእኽቲ ምልውዋጥ ክትጅምሩ ትኽእሉ። ንሓደ ሰብ Super Like ምግባር ንሳቶም ቅድሚ ምድራዞም (Swipe) ብኣታቶም ናይ ምርኣይ ዕድልካ የዕብዮ።",
+      "q3": "መን ከም ዝፈተወኒ ስለምንታይ ክርኢ ዘይክእል?",
+      "a3": "መን ከም ዝፈተወካ ምርኣይ ናይ Premium ኣገልግሎት እዩ። ናብ Premium ከተዕብዮ ወይ ድማ ዝፈተውካ ውልቃዊ ፕሮፋይላት ንምርኣይ ክሬዲት ክትጥቀም ትኽእል።",
+      "q4": "ፕሮፋይለይ ከመይ ገይረ ከዐሪ ይኽእል?",
+      "a4": "ናብ Profile ዝብል ጠውቕ፣ ነቲ ናይ ምዕራይ ምልክት ጠውቕ፣ ከምኡ'ውን ስእልታትካ፣ ባዮኻ፣ ስምካ፣ ዕድመኻን ካልእ ዝርዝራትን ኣሐድስ። ዝተገብሩ ለውጥታት ብኣውቶማቲክ ይዕቀቡ።",
+      "q5": "ኣድራሻይ ከመይ ገይረ ክቕይር ይኽእል?",
+      "a5": "ነቲ እተመዝገበሉ ኣድራሻ ካብ ፕሮፋይልካ settings (ቅንብራት) ከተሐድሶ ትኽእል። እዚ ናብ ሓዱሽ ቦታ ምስ ተንቀሳቐስካ ኣብ ጥቓኻ ምስ ዘለዉ ሰባት ንኽትዛመድ ይሕግዘካ።",
+      "q6": "መንነት ምረጋገጽ እንታይ እዩ፣ ግዴታ ድዩ?",
+      "a6": "መንነት ምረጋገጽ ናይ ገዛእ ርእስኻ ስእሊ (selfie) ብምልዓል ናይ ሓቂ ሰብ ምዃንካ የረጋግጽ። ኣብ ገለ ዞባታት ነቲ ኣፕሊኬሽን ምጥቃምካ ቅድሚ ምጅማርካ ግዴታ እዩ። ኣብ ካልኦት ግና ኣማራጺ እዩ ግን ንእምነትን ድሕነትን ተመራጺ እዩ።",
+      "q7": "ንሓደ ሰብ ከመይ ገይረ ብሎክ (block) ወይ ሪፖርት ይገብር?",
+      "a7": "ናይቲ ተጠቃሚ ፕሮፋይል ወይ ቻት ክፈት፣ ነቲ ናይ ኣማራጺታት (options) ዝርዝር ጠውቕ፣ ካብኡ Block ወይ Report ዝብል ምረጽ። ብሎክ ዝተገብሩ ተጠቀምቲ ክረኽቡኻ ወይ ፕሮፋይልካ ክርእዩ ኣይክእሉን እዮም። ብሎክ ዝገበርካዮም ተጠቀምቲ ኣብ Settings ከተመሓድሮም ትኽእል ኢኻ።",
+      "q8": "ናይ Premium ምዝገባይ ከመይ ገይረ ክስርዞ ይኽእል?",
+      "a8": "ምዝገባታት ብመንገዲ ናይ መሳርሒኻ ኣፕሊኬሽን ድኳን (Google Play ወይ App Store) እዩ ዝመሓደር። ንምስራዝ ናብ ናይቲ ድኳንካ ምዝገባ ቅንብራት (subscription settings) ኪድ። ናይ Premium ረብሓታትካ እቲ ሕጂ ዘሎ ናይ ክፍሊት ግዜኻ ክሳብ ዝውዳእ ክቕጽል እዩ።",
+      "q9": "ክሬዲተይ ስለምንታይ ጠፊኡ?",
+      "a9": "ክሬዲታት ዝውድኡ ከም Super Like፣ Boost፣ Rewind፣ Before-Match Message፣ Voice Message ወይ Image Message ዝኣመሰሉ Premium ተግባራት ክትጥቀም ከለካ እዩ። ነፍሲ ወከፍ ተግባር ብኣውቶማቲክ ዝጉደል ናይ ገዛእ ርእሱ ክፍሊት ክሬዲት ኣለዎ። እዋናዊ መጠን ክሬዲትካ ንምርኣይ ኣብ Balances ዝብል ገጽካ ተወከስ።",
+      "q10": "ተወሳኺ ክሬዲት ከመይ ገይረ ክረክብ ይኽእል?",
+      "a10": "ካብ ፕሮፋይልካ ወይ Settings ብምእታው ኣብ Credits Shop ናይ ክሬዲት ጥቕላላት (packs) ክትዕድግ ትኽእል ኢኻ። Premium ተመዝገብቲ ብሓፈሻ ንሓደ ተግባር ዝተሓተ መጠን ክሬዲት ይከፍሉ።",
+      "q11": "Incognito Mode እንታይ እዩ?",
+      "a11": "Incognito Mode ንፕሮፋይላት ብብሕቲ ንኽትርእዮም የኽእለካ። ኣካውንትካ ዝረአ ንስኻ ንዝፈቶኻዮም ሰባት ጥራይ እዩ። እዚ ኣገልግሎት ን Premium ተመዝገብቲ ጥራይ ዝርከብ እዩ።",
+      "q12": "ፓስዎርደይ (password) ከመይ ገይረ ዳግማይ ክሰርዖ ይኽእል?",
+      "a12": "ኣብ ናይ መእተዊ ገጽ \"Forgot Password\" ዝብል ጠውቕ እሞ ቁጽሪ ስልኪኻ ወይ ኢመይልካ ኣእቱ። ፓስዎርድካ ዳግማይ ንምስራዕ ዘኽእል ሊንክ ክመጸካ እዩ።",
+      "q13": "ኣካውንተይ ከመይ ገይረ ክድምስሶ ይኽእል?",
+      "a13": "ናብ Settings ኪድ፣ ናብ Account ውረድ፣ ካብኡ Delete Account ዝብል ምረጽ። እዚ ንፕሮፋይልካ፣ Match-ታትካን መልእኽትታትካን ብቀዋምነት የልግሶም። እዚ ተግባር እዚ ንድሕሪት ክምለስ ኣይክእልን እዩ።",
+      "q14": "ስለምንታይ ዝኾነ Match ክረክብ ዘይክኣልኩ?",
+      "a14": "ኣብ ላዕለዋይ የማናይ ኩርናዕ ናይቲ ናይ Discovery ገጽ ዘሎ ምልክት Filter ብምጥዋቕ ምርጫታትካ ኣረጋግጽ። ኣድማስ ምድላይካ ንምስፋሕ ርሕቀትካን ክልል ዕድመኻን ኣተዓራሪ። ብተወሳኺ ፕሮፋይልካ ንጹር ስእልታትን ምሉእ ባዮን ከም ዘለዎ ኣረጋግጽ። Boost ምጥቃም ኣብ ከባቢኻ ንዘለዉ ዝያዳ ሰባት ናይ ምርኣይ ዕድልካ ብግዝያዊነት ከዕብዮ ይኽእል።",
+      "q15": "ናይ ሓገዝ ጉጅለ (support) ከመይ ገይረ ክረክብ ይኽእል?",
+      "a15": "ምስ ናይ ሓገዝ ጉጅለና ዕላል ንምጅማር ናብ Messages ኪድ እሞ \"Qal Dating Support\" ዝብል ጠውቕ። ከምኡ'ውን ካብ ናይ ዝኾነ ተጠቃሚ ፕሮፋይል ወይ ቻት ብቐጥታ ጸገማት ሪፖርት ክትገብር ትኽእል ኢኻ።"
+    },
+    "supportLink": "ሕቶ ኣለካ? ምስና ተወያይዩ",
+    "supportSubtitle": "ብተደጋጋሚ ኣብ 24 ሰዓታት ክንመልስ ኢና"
   }
 }

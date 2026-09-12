@@ -1,15 +1,15 @@
-# QALIYE DATING SAFETY TIPS
+# QAL DATING SAFETY TIPS
 
 **Effective date:** [INSERT EFFECTIVE DATE]
 **Last updated:** [INSERT LAST-UPDATED DATE]
 
 ## 1. Your Safety Comes First
 
-Qaliye is designed to help adults in Ethiopian, Eritrean, and wider Habesha communities form genuine and meaningful connections.
+Qal Dating is designed to help adults in Ethiopian, Eritrean, and wider Habesha communities form genuine and meaningful connections.
 
 These safety tips are provided for general guidance and do not guarantee your safety. They should be read alongside our [Terms of Use](#), [Privacy Policy](#), and [Community Guidelines](#).
 
-Most people use dating apps with good intentions, but meeting someone new always requires care. Take your time, protect your personal information, respect your instincts, and use Qaliye’s reporting and blocking tools whenever necessary.
+Most people use dating apps with good intentions, but meeting someone new always requires care. Take your time, protect your personal information, respect your instincts, and use Qal Dating’s reporting and blocking tools whenever necessary.
 
 No Like, match, message, cultural connection, family connection, or shared background guarantees that someone is safe or trustworthy.
 
@@ -19,7 +19,7 @@ Do not feel pressured to move quickly.
 
 Before meeting someone in person:
 
-* spend time talking through Qaliye;
+* spend time talking through Qal Dating;
 * ask reasonable questions about their life and intentions;
 * look for consistency in what they tell you;
 * consider having a voice or video call;
@@ -29,7 +29,7 @@ Before meeting someone in person:
 Be cautious if someone:
 
 * declares strong feelings immediately;
-* pressures you to leave Qaliye quickly;
+* pressures you to leave Qal Dating quickly;
 * avoids reasonable questions;
 * repeatedly refuses voice or video calls;
 * gives inconsistent information;
@@ -38,9 +38,9 @@ Be cautious if someone:
 
 You are never required to continue a conversation or relationship.
 
-## 3. Keep Early Conversations on Qaliye
+## 3. Keep Early Conversations on Qal Dating
 
-Keeping early communication within Qaliye may make it easier to report inappropriate behaviour and provide relevant information during a safety investigation.
+Keeping early communication within Qal Dating may make it easier to report inappropriate behaviour and provide relevant information during a safety investigation.
 
 Be cautious if someone immediately asks you to move to:
 
@@ -53,7 +53,7 @@ Be cautious if someone immediately asks you to move to:
 
 Moving to another platform is not automatically unsafe, but do not do so until you feel comfortable.
 
-Once communication leaves Qaliye, our ability to review or respond to harmful behaviour may be limited.
+Once communication leaves Qal Dating, our ability to review or respond to harmful behaviour may be limited.
 
 ## 4. Protect Your Personal Information
 
@@ -96,7 +96,7 @@ Review photographs before uploading them. A photograph may unintentionally revea
 
 ## 5. Never Send Money
 
-Never send money or provide financial information to someone you have met through Qaliye, especially someone you have not met in person.
+Never send money or provide financial information to someone you have met through Qal Dating, especially someone you have not met in person.
 
 Be suspicious of requests involving:
 
@@ -162,7 +162,7 @@ You may:
 * check that their appearance matches their photographs;
 * ask normal questions about their profile;
 * look for major inconsistencies; and
-* use Qaliye’s verification information where available.
+* use Qal Dating’s verification information where available.
 
 Verification can reduce some risks, but it does not guarantee that a person is safe, truthful, or suitable for you.
 
@@ -178,7 +178,7 @@ Once content has been sent, the recipient may:
 * record it;
 * save it;
 * copy it; or
-* share it outside Qaliye.
+* share it outside Qal Dating.
 
 Never send intimate content under pressure.
 
@@ -196,7 +196,7 @@ If someone threatens to share your private or intimate content:
 
 Threatening to share intimate content is abusive and may be unlawful.
 
-Qaliye prohibits nudity, pornography, unsolicited sexual content, and non-consensual intimate content.
+Qal Dating prohibits nudity, pornography, unsolicited sexual content, and non-consensual intimate content.
 
 ## 9. Respect Consent and Boundaries
 
@@ -258,7 +258,7 @@ You may cancel or leave a meeting at any time.
 Before meeting someone, tell a trusted friend or family member:
 
 * the person’s name;
-* their Qaliye profile information;
+* their Qal Dating profile information;
 * where you are meeting;
 * the date and time;
 * when you expect to return; and
@@ -344,7 +344,7 @@ Your safety is more important than being polite.
 
 ## 15. Cultural and Family Considerations
 
-Qaliye respects the importance that culture, religion, tradition, and family may have in Habesha relationships.
+Qal Dating respects the importance that culture, religion, tradition, and family may have in Habesha relationships.
 
 However, no cultural or family expectation justifies:
 
@@ -399,7 +399,7 @@ Seek independent legal advice before making significant immigration, financial, 
 
 ## 17. Protect Children and Family Members
 
-Qaliye is for adults aged 18 and over.
+Qal Dating is for adults aged 18 and over.
 
 Do not:
 
@@ -434,7 +434,7 @@ Do not rely only on another person’s statements about their health.
 
 Never remove or interfere with contraception or protection without the other person’s knowledge and consent.
 
-Qaliye does not provide medical advice.
+Qal Dating does not provide medical advice.
 
 ## 19. If Someone Harasses or Threatens You
 
@@ -442,7 +442,7 @@ When safe to do so:
 
 1. stop communicating;
 2. save relevant evidence;
-3. use Qaliye’s Block feature;
+3. use Qal Dating’s Block feature;
 4. submit an in-app report;
 5. tell a trusted person;
 6. review your privacy and location settings; and
@@ -460,11 +460,11 @@ Evidence may include:
 
 Do not put yourself at additional risk to collect evidence.
 
-## 20. Blocking and Reporting on Qaliye
+## 20. Blocking and Reporting on Qal Dating
 
 Use **Block** when you do not want another person to contact or interact with you.
 
-Use **Report** when you believe someone has violated Qaliye’s Community Guidelines.
+Use **Report** when you believe someone has violated Qal Dating’s Community Guidelines.
 
 You can report concerns such as:
 
@@ -487,11 +487,11 @@ Blocking and reporting are separate actions. Where appropriate, use both.
 
 You do not need to inform someone before blocking or reporting them.
 
-Qaliye may review relevant account information, profile content, and messages where reasonably necessary to investigate a report.
+Qal Dating may review relevant account information, profile content, and messages where reasonably necessary to investigate a report.
 
 ## 21. If You Are in Immediate Danger
 
-Qaliye is not an emergency service.
+Qal Dating is not an emergency service.
 
 If you or another person is in immediate danger:
 
@@ -503,9 +503,9 @@ If you or another person is in immediate danger:
 
 In the United Kingdom, call **999** or **112** in an emergency.
 
-Do not wait for Qaliye support to respond before contacting emergency services.
+Do not wait for Qal Dating support to respond before contacting emergency services.
 
-## 22. Contact Qaliye
+## 22. Contact Qal Dating
 
 For non-emergency safety concerns, reports, or questions, use the reporting tools inside the application or contact:
 

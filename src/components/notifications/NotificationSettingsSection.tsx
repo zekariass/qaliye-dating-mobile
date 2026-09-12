@@ -140,7 +140,7 @@ export function NotificationSettingsSection() {
         title: t('notifications.marketingConsentTitle', 'Offers and Updates'),
         message: t(
           'notifications.marketingConsentBody',
-          'Qaliye may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.',
+          'Qal Dating may send you promotions, premium offers, feature updates, and occasional re-engagement messages. You can turn this off at any time.',
         ),
         icon: 'megaphone-outline',
         iconColor: colors.primary,
@@ -180,7 +180,7 @@ export function NotificationSettingsSection() {
         {t('notifications.title', 'Notifications')}
       </Text>
       <Text style={[styles.sectionSubtitle, { color: th.textSecondary }]}>
-        {t('notifications.subtitle', 'Choose how Qaliye notifies you.')}
+        {t('notifications.subtitle', 'Choose how Qal Dating notifies you.')}
       </Text>
 
       {/* Device permission status row */}
@@ -305,10 +305,10 @@ export function NotificationSettingsSection() {
           <View style={[styles.divider, { borderColor: th.border }]} />
 
           <PreferenceRow
-            label={t('notifications.superMessage', 'Before Match Messages')}
+            label={t('notifications.superMessage', 'Before-Match Messages')}
             sublabel={t(
               'notifications.superMessageSub',
-              'Notify me when I receive a message before match',
+              'Notify me when I receive a before-match message',
             )}
             value={prefs.superMessageEnabled}
             onValueChange={(v) => update({ superMessageEnabled: v })}
