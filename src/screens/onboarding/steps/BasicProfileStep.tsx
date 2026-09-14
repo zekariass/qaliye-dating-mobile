@@ -8,6 +8,7 @@ import {
     Animated,
     Dimensions,
     Easing,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,7 +16,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
@@ -196,6 +197,15 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
   const dobValue = watch('date_of_birth');
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Scroll nav button into view when keyboard opens (step 0 has autoFocus TextInput)
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => sub.remove();
+  }, []);
 
   // Prefill form from backend when step was already completed
   useEffect(() => {
@@ -353,12 +363,14 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.flex}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         scrollEnabled
       >
+        <View style={styles.scrollContent}>
         <Animated.View
           style={{
             opacity: fadeAnim,
@@ -851,50 +863,51 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
             <Text style={styles.errorText}>{errors.root.message}</Text>
           </View>
         )}
-      </ScrollView>
-
-      {/* Sticky bottom navigation */}
-      <View style={[styles.stickyNav, { paddingBottom: insets.bottom + spacing.sm }]}>
-        <View style={styles.navRow}>
-          {subStep > 0 && (
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={handleBack}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={20} color={th.text} />
-              <Text style={[styles.backBtnText, { color: th.text }]}>{t('common.back')}</Text>
-            </TouchableOpacity>
-          )}
-
-          {!isLastStep ? (
-            <TouchableOpacity
-              style={[styles.nextBtn, { marginLeft: subStep > 0 ? spacing.sm : 0 }]}
-              onPress={handleNext}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.nextBtnText}>{t('onboarding.basicProfile.continue')}</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={[styles.nextBtn, { marginLeft: subStep > 0 ? spacing.sm : 0 }, isSubmitting && styles.btnDisabled]}
-              onPress={handleSubmitPress}
-              disabled={isSubmitting}
-              activeOpacity={0.85}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <>
-                  <Text style={styles.nextBtnText}>{saveLabel}</Text>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                </>
-              )}
-            </TouchableOpacity>
-          )}
         </View>
-      </View>
+
+        {/* Bottom navigation — inside ScrollView so keyboard never covers it */}
+        <View style={[styles.stickyNav, { paddingBottom: insets.bottom + spacing.sm }]}>
+          <View style={styles.navRow}>
+            {subStep > 0 && (
+              <TouchableOpacity
+                style={styles.backBtn}
+                onPress={handleBack}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-back" size={20} color={th.text} />
+                <Text style={[styles.backBtnText, { color: th.text }]}>{t('common.back')}</Text>
+              </TouchableOpacity>
+            )}
+
+            {!isLastStep ? (
+              <TouchableOpacity
+                style={[styles.nextBtn, { marginLeft: subStep > 0 ? spacing.sm : 0 }]}
+                onPress={handleNext}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.nextBtnText}>{t('onboarding.basicProfile.continue')}</Text>
+                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.nextBtn, { marginLeft: subStep > 0 ? spacing.sm : 0 }, isSubmitting && styles.btnDisabled]}
+                onPress={handleSubmitPress}
+                disabled={isSubmitting}
+                activeOpacity={0.85}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Text style={styles.nextBtnText}>{saveLabel}</Text>
+                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -913,8 +926,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: {
+    flexGrow: 1,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+  },
+  // flex:1 wrapper inside ScrollView so the nav stays at the bottom when content is short
+  scrollContent: {
+    flex: 1,
   },
 
   // Progress dots
@@ -1079,9 +1096,8 @@ const styles = StyleSheet.create({
   },
   errorText: { color: '#FF6B6B', fontSize: 14, flex: 1 },
 
-  // Navigation
+  // Navigation (moved inside ScrollView — paddingHorizontal comes from scroll contentContainerStyle)
   stickyNav: {
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
   },
   navRow: {
