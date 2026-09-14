@@ -206,6 +206,29 @@ export default function SettingsScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: safeBottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Notifications ── */}
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Pressable
+            style={styles.optionRow}
+            onPress={() => setNotifSheetVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('notifications.title', 'Notifications')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('notifications.title', 'Notifications')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('notifications.subtitle', 'Choose how Qal Dating notifies you.')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+        </View>
+
         {/* ── Subscription & Credits ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
           <Text style={[styles.sectionTitle, { color: th.text }]}>
@@ -303,29 +326,6 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        {/* ── Notifications ── */}
-        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
-          <Pressable
-            style={styles.optionRow}
-            onPress={() => setNotifSheetVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel={t('notifications.title', 'Notifications')}
-          >
-            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="notifications-outline" size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.optionLabel, { color: th.text }]}>
-                {t('notifications.title', 'Notifications')}
-              </Text>
-              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                {t('notifications.subtitle', 'Choose how Qal Dating notifies you.')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
-          </Pressable>
-        </View>
-
         {/* ── Discovery ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
           <Text style={[styles.sectionTitle, { color: th.text }]}>
@@ -336,14 +336,14 @@ export default function SettingsScreen() {
             style={styles.optionRow}
             onPress={() => setRevisitSheetVisible(true)}
             accessibilityRole="button"
-            accessibilityLabel={t('settings.revisitPassedProfiles', 'Review passed profiles')}
+            accessibilityLabel={t('settings.revisitPassedProfiles', 'Return Passed Matches')}
           >
             <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="refresh-outline" size={18} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.optionLabel, { color: th.text }]}>
-                {t('settings.revisitPassedProfiles', 'Review passed profiles')}
+                {t('settings.revisitPassedProfiles', 'Return Passed Matches')}
               </Text>
               <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
                 {t(

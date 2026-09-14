@@ -197,14 +197,19 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
   const dobValue = watch('date_of_birth');
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // Scroll nav button into view when keyboard opens (step 0 has autoFocus TextInput)
+  // Track keyboard height so we can add equivalent paddingBottom to the scroll
+  // content. This lets the user scroll the Continue button above the keyboard
+  // without any forced auto-scroll — the screen is simply scrollable.
   useEffect(() => {
-    const sub = Keyboard.addListener('keyboardDidShow', () => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
+    const onShow = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
     });
-    return () => sub.remove();
+    const onHide = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => { onShow.remove(); onHide.remove(); };
   }, []);
 
   // Prefill form from backend when step was already completed
@@ -363,9 +368,8 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
       </View>
 
       <ScrollView
-        ref={scrollViewRef}
         style={styles.flex}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, keyboardHeight > 0 && { paddingBottom: keyboardHeight }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         scrollEnabled

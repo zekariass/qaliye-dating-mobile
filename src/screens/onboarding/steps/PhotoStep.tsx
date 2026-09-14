@@ -916,7 +916,9 @@ export default function PhotoStep({ onComplete }: Props) {
             styles.primarySlot,
             {
               backgroundColor: th.backgroundElement,
-              borderColor: getSlotBorderColor(primarySlot.status, hasPrimary),
+              borderColor: !hasPrimary && primarySlot.status === 'idle'
+                ? th.border
+                : getSlotBorderColor(primarySlot.status, hasPrimary),
             },
           ]}
         >

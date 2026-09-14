@@ -286,7 +286,8 @@
       "noResults": "No cities found. Try a different spelling.",
       "gpsError": "Could not get location. Please try manually.",
       "or": "or",
-      "selectCityError": "Please select a city first."
+      "selectCityError": "Please select a city first.",
+      "allowLocationPermission": "Allow Location Permission"
     },
     "photo": {
       "title": "Your Photos",
@@ -428,7 +429,7 @@
   },
   "settings": {
     "discovery": "Discovery",
-    "revisitPassedProfiles": "Review passed profiles",
+    "revisitPassedProfiles": "Return Passed Matches",
     "revisitPassedProfilesSub": "Bring back profiles you previously passed that are still eligible.",
     "revisitSheetTitle": "Review passed profiles",
     "revisitSheetSubtitle": "Choose how many recent profiles you want to reconsider. Only profiles that are still eligible will return to Discovery.",
@@ -1226,7 +1227,7 @@
     "language": "ቋንቋ",
     "languageSubtitle": "የሚመርጡትን ቋንቋ ይምረጡ",
     "actionsTitle": "የተግባሮች ትርጉም",
-    "actionsSubtitle": "እያንዳንዱ ተግባር ምን እንደሚያደርግ ለማየት ይጫኑ",
+    "actionsSubtitle": "እያንዳንዱ ተግባር ምን እንደሚያደርግ ለማየት ይህንን ይጫኑ",
     "actions": {
       "like": {
         "title": "Like",
@@ -1238,11 +1239,11 @@
       },
       "boost": {
         "title": "Boost",
-        "description": "ፕሮፋይልዎ በብዙ ሰዎች እንዲታይ ለተወሰነ ጊዜ ታዋቂነቱን ማሳደግ።"
+        "description": "ፕሮፋይልዎ በብዙ ሰዎች በቅድሚያነት እንዲታይ ያደርገዋል።"
       },
       "rewind": {
         "title": "Rewind",
-        "description": "በስህተት ያለፉትን ወይም የወደዱትን ፕሮፋይል ወደ ኋላ ለመመለስ የሚያስችል ተግባር።"
+        "description": "በስህተት ያለፉትን ወይም የወደዱትን ሰው ወደ ኋላ ለመመለስ የሚያስችል ተግባር።"
       },
       "super_message": {
         "title": "Before-Match Message",
@@ -1258,11 +1259,11 @@
       },
       "return_passed_profile": {
         "title": "Return Passed Profile",
-        "description": "ቀደም ብስህተት ወይም ሆን ብለው ያለፉትን ፕሮፋይል እንደገና ማየት እና መመለስ።"
+        "description": "ቀደም ብስህተት ወይም ሆን ብለው ያለፏቸውን ሰዎች እንደገና ለማየት መመለስ።"
       },
       "change_address": {
         "title": "Change Address",
-        "description": "ወደ አዲስ ቦታ በሚዛወሩበት ጊዜ በአቅራቢያዎ ካሉ ሰዎች ጋር ለመጣመር የመኖሪያ አድራሻዎን ማዘመን።"
+        "description": "ወደ አዲስ ቦታ በሚዛወሩበት ጊዜ በአቅራቢያዎ ካሉ ሰዎች ጋር ለመጣመር የመኖሪያ አድራሻዎን መቀየር።"
       },
       "see_who_liked_you": {
         "title": "See Who Liked You",

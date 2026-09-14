@@ -4,14 +4,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
+    AppState,
     KeyboardAvoidingView,
+    Linking,
     Platform,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -47,6 +49,8 @@ export default function LocationStep({ onComplete, isCompleted }: Props) {
   const [selectedPlace, setSelectedPlace] = useState<LocationSearchItem | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // true when location permission was denied — shows "Open Settings" button in choice mode
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   // Load saved location on mount when step is already completed
   useEffect(() => {
@@ -62,6 +66,23 @@ export default function LocationStep({ onComplete, isCompleted }: Props) {
         setMode('choice');
       })
       .finally(() => setIsLoadingSaved(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount only
+
+  // Check permission on mount and whenever the app returns to the foreground
+  // (e.g. user granted permission in Settings and came back).
+  useEffect(() => {
+    if (isCompleted) return;
+    const checkPermission = () => {
+      Location.getForegroundPermissionsAsync().then(({ status }) => {
+        setPermissionDenied(status === 'denied');
+      });
+    };
+    checkPermission();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') checkPermission();
+    });
+    return () => sub.remove();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount only
 
@@ -89,8 +110,8 @@ export default function LocationStep({ onComplete, isCompleted }: Props) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setError('Location permission denied. Please search for your city manually.');
-        setMode('manual');
+        setPermissionDenied(true);
+        setMode('choice');
         setIsSubmitting(false);
         return;
       }
@@ -244,14 +265,25 @@ export default function LocationStep({ onComplete, isCompleted }: Props) {
 
         {mode === 'choice' && (
           <>
-            <TouchableOpacity
-              style={[styles.gpsBtn, { backgroundColor: colors.primary }]}
-              onPress={handleGps}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="locate" size={20} color="#FFFFFF" />
-              <Text style={styles.gpsBtnText}>{t('onboarding.location.useCurrentLocation')}</Text>
-            </TouchableOpacity>
+            {permissionDenied ? (
+              <TouchableOpacity
+                style={[styles.gpsBtn, { backgroundColor: colors.primary }]}
+                onPress={() => Linking.openSettings()}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.gpsBtnText}>{t('onboarding.location.allowLocationPermission')}</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.gpsBtn, { backgroundColor: colors.primary }]}
+                onPress={handleGps}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="locate" size={20} color="#FFFFFF" />
+                <Text style={styles.gpsBtnText}>{t('onboarding.location.useCurrentLocation')}</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={styles.dividerRow}>
               <View style={[styles.divider, { backgroundColor: th.border }]} />

@@ -286,7 +286,8 @@
       "noResults": "No cities found. Try a different spelling.",
       "gpsError": "Could not get location. Please try manually.",
       "or": "or",
-      "selectCityError": "Please select a city first."
+      "selectCityError": "Please select a city first.",
+      "allowLocationPermission": "Allow Location Permission"
     },
     "photo": {
       "title": "Your Photos",
@@ -428,7 +429,7 @@
   },
   "settings": {
     "discovery": "Discovery",
-    "revisitPassedProfiles": "Review passed profiles",
+    "revisitPassedProfiles": "Return Passed Matches",
     "revisitPassedProfilesSub": "Bring back profiles you previously passed that are still eligible.",
     "revisitSheetTitle": "Review passed profiles",
     "revisitSheetSubtitle": "Choose how many recent profiles you want to reconsider. Only profiles that are still eligible will return to Discovery.",
