@@ -6,7 +6,7 @@ import { CardDto } from '@/components/discovery/ProfileCard';
 import { getCountryName } from '@/constants/countries';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getDiscoveryInterests, translateInterest } from '@/utils/interests';
+import { getDiscoveryInterests, getInterestEmoji, translateInterest } from '@/utils/interests';
 
 function formatLabel(value: string): string {
   return value
@@ -130,7 +130,9 @@ function SectionGroup({
                 <View style={styles.chipWrap}>
                   {visibleInterests.map((interest) => (
                     <View key={interest} style={[styles.chip, { backgroundColor: iconBg, borderColor: borderCol }]}>
-                      <Text style={[styles.chipText, { color: textCol }]}>{translateInterest(interest, t)}</Text>
+                      <Text style={[styles.chipText, { color: textCol }]}>
+                        {getInterestEmoji(interest)} {translateInterest(interest, t)}
+                      </Text>
                     </View>
                   ))}
                   {remainingInterests > 0 && (

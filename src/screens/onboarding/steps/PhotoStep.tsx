@@ -893,6 +893,13 @@ export default function PhotoStep({ onComplete }: Props) {
         {t('onboarding.photo.subtitle')}
       </Text>
 
+      <View style={[styles.reviewNote, { backgroundColor: th.surface, borderColor: th.border }]}>
+        <Ionicons name="shield-checkmark-outline" size={15} color="#D97706" />
+        <Text style={[styles.reviewNoteText, { color: '#D97706' }]}>
+          {t('onboarding.photo.reviewNote')}
+        </Text>
+      </View>
+
       {/* ── Primary Avatar ─────────────────────────────────────────────────── */}
       <View style={styles.sectionRow}>
         <Text style={[styles.sectionLabel, { color: th.textMuted, marginBottom: 0, marginTop: 0 }]}>{t('onboarding.photo.profileAvatar')}</Text>
@@ -1001,12 +1008,6 @@ export default function PhotoStep({ onComplete }: Props) {
       <Text style={[styles.cardHint, { color: th.textSecondary }]}>
         {t('onboarding.photo.cardHint')}
       </Text>
-      {!hasMinCards && (
-        <View style={styles.cardRequiredHint}>
-          <Ionicons name="information-circle-outline" size={14} color="#F59E0B" />
-          <Text style={styles.cardRequiredHintText}>At least 2 card photos are required to continue.</Text>
-        </View>
-      )}
 
       <View style={[styles.cardGrid, { gap: GAP }]}>
         {cardSlots.map((slot, i) => {
@@ -1035,7 +1036,7 @@ export default function PhotoStep({ onComplete }: Props) {
                     height: cardHeight,
                     backgroundColor: th.surface,
                     borderColor: i < 2 && !hasMinCards && !slotUri
-                      ? '#F59E0B'
+                      ? '#D97706'
                       : getSlotBorderColor(slot?.status ?? 'idle', !!slotUri),
                     borderWidth: i < 2 && !hasMinCards && !slotUri ? 1 : 1.5,
                   },
@@ -1076,7 +1077,7 @@ export default function PhotoStep({ onComplete }: Props) {
                   </>
                 ) : (
                   <View style={styles.slotEmpty}>
-                    <Ionicons name="add" size={26} color={i < 2 && !hasMinCards ? '#F59E0B' : th.textMuted} />
+                    <Ionicons name="add" size={26} color={i < 2 && !hasMinCards ? '#D97706' : th.textMuted} />
                     {i < 2 && !hasMinCards && (
                       <Text style={styles.slotRequiredLabel}>Required</Text>
                     )}
@@ -1119,12 +1120,6 @@ export default function PhotoStep({ onComplete }: Props) {
         </Text>
       </TouchableOpacity>
 
-      <View style={[styles.reviewNote, { backgroundColor: th.surface, borderColor: th.border }]}>
-        <Ionicons name="shield-checkmark-outline" size={15} color={colors.primary} />
-        <Text style={[styles.reviewNoteText, { color: th.textSecondary }]}>
-          {t('onboarding.photo.reviewNote')}
-        </Text>
-      </View>
       <ImageCropModal
         visible={cropState !== null}
         imageUri={cropState?.asset.uri ?? ''}
@@ -1329,21 +1324,7 @@ const styles = StyleSheet.create({
   fill: { width: '100%', height: '100%', resizeMode: 'cover' },
   slotEmpty: { alignItems: 'center', gap: 4 },
   slotEmptyText: { fontSize: 10, fontWeight: '600' },
-  slotRequiredLabel: { fontSize: 9, fontWeight: '700', color: '#F59E0B', letterSpacing: 0.3 },
-
-  cardRequiredHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginBottom: spacing.sm,
-    backgroundColor: 'rgba(245,158,11,0.08)',
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.22)',
-  },
-  cardRequiredHintText: { fontSize: 12, color: '#D97706', fontWeight: '500', flex: 1 },
+  slotRequiredLabel: { fontSize: 9, fontWeight: '700', color: '#D97706', letterSpacing: 0.3 },
 
   // Upload overlay
   uploadOverlay: {
@@ -1444,7 +1425,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     padding: spacing.md,
-    marginTop: spacing.md,
+    marginBottom: spacing.md,
   },
   reviewNoteText: { fontSize: 12, flex: 1, lineHeight: 18 },
 

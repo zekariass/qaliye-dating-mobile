@@ -73,6 +73,9 @@ export default function BrowseProfileDetailSheet({
   const [actionTaken, setActionTaken] = useState<'LIKE' | 'PASS' | 'SUPER_LIKE' | null>(null);
   const confirmOpacity = useState(new Animated.Value(0))[0];
   const buttonsOpacity = useState(new Animated.Value(1))[0];
+  const burstScale = useState(new Animated.Value(0))[0];
+  const burstOpacityLike = useState(new Animated.Value(0))[0];
+  const burstOpacitySuper = useState(new Animated.Value(0))[0];
 
   // ── Hero photo navigation state ──
   const heroPhotos = (card?.photos ?? []).map((p) => p.image_url).filter(Boolean);
@@ -131,6 +134,9 @@ export default function BrowseProfileDetailSheet({
       setActionTaken(null);
       confirmOpacity.setValue(0);
       buttonsOpacity.setValue(1);
+      burstScale.setValue(0);
+      burstOpacityLike.setValue(0);
+      burstOpacitySuper.setValue(0);
     }
   }, [visible]);
 
@@ -180,12 +186,37 @@ export default function BrowseProfileDetailSheet({
     }).start();
   }, [buttonsOpacity, confirmOpacity]);
 
+  // Big animated 🌹/💍 over the hero photo for ~1s, then the action fires.
+  // Both overlays stay mounted; only the animated values drive visibility.
+  const playBurst = useCallback(
+    (type: 'like' | 'super', fire: () => void) => {
+      const op = type === 'super' ? burstOpacitySuper : burstOpacityLike;
+      burstScale.setValue(0);
+      op.setValue(0);
+      Animated.sequence([
+        Animated.parallel([
+          Animated.spring(burstScale, { toValue: 1, friction: 5, tension: 260, useNativeDriver: true }),
+          Animated.timing(op, { toValue: 1, duration: 150, useNativeDriver: true }),
+        ]),
+        Animated.delay(750),
+        Animated.parallel([
+          Animated.timing(burstScale, { toValue: 1.45, duration: 300, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(op, { toValue: 0, duration: 350, useNativeDriver: true }),
+        ]),
+      ]).start();
+      setTimeout(fire, 1050);
+    },
+    [burstScale, burstOpacityLike, burstOpacitySuper],
+  );
+
   const handleLike = useCallback(() => {
     if (!card || actionTaken) return;
     setActionTaken('LIKE');
-    animateToConfirmation();
-    onLike(card.user_id);
-  }, [card, onLike, actionTaken, animateToConfirmation]);
+    playBurst('like', () => {
+      animateToConfirmation();
+      onLike(card.user_id);
+    });
+  }, [card, onLike, actionTaken, animateToConfirmation, playBurst]);
 
   const handlePass = useCallback(() => {
     if (!card || actionTaken) return;
@@ -197,9 +228,11 @@ export default function BrowseProfileDetailSheet({
   const handleSuperLike = useCallback(() => {
     if (!card || actionTaken) return;
     setActionTaken('SUPER_LIKE');
-    animateToConfirmation();
-    onSuperLike(card.user_id);
-  }, [card, onSuperLike, actionTaken, animateToConfirmation]);
+    playBurst('super', () => {
+      animateToConfirmation();
+      onSuperLike(card.user_id);
+    });
+  }, [card, onSuperLike, actionTaken, animateToConfirmation, playBurst]);
 
   const handleSuperMessage = useCallback(() => {
     if (!card || actionTaken) return;
@@ -296,6 +329,20 @@ export default function BrowseProfileDetailSheet({
                 </View>
               )}
 
+              {/* Like / super-like burst — big icon centered on the photo */}
+              <Animated.View
+                style={[styles.burstWrap, { opacity: burstOpacityLike, transform: [{ scale: burstScale }, { rotate: '-10deg' }] }]}
+                pointerEvents="none"
+              >
+                <Text style={styles.burstEmojiText}>🌹</Text>
+              </Animated.View>
+              <Animated.View
+                style={[styles.burstWrap, { opacity: burstOpacitySuper, transform: [{ scale: burstScale }, { rotate: '-10deg' }] }]}
+                pointerEvents="none"
+              >
+                <Text style={styles.burstEmojiText}>💍</Text>
+              </Animated.View>
+
             {/* Name + age + location */}
             <View style={styles.heroInfo}>
               <Text style={styles.heroName} numberOfLines={1}>
@@ -388,7 +435,7 @@ export default function BrowseProfileDetailSheet({
               accessibilityLabel="Like profile"
               accessibilityRole="button"
             >
-              <Ionicons name="heart" size={28} color={colors.heartPink} />
+              <Text style={{ fontSize: 25, transform: [{ rotate: '15deg' }] }}>🌹</Text>
             </TouchableOpacity>
 
             {/* Super Like — sparkling heart matching swipe mode */}
@@ -404,7 +451,7 @@ export default function BrowseProfileDetailSheet({
               accessibilityLabel="Super like profile"
               accessibilityRole="button"
             >
-              <Ionicons name="diamond" size={24} color="#00B4FC" />
+              <Text style={{ fontSize: 22 }}>💍</Text>
             </TouchableOpacity>
 
             {/* Super Message */}
@@ -420,7 +467,7 @@ export default function BrowseProfileDetailSheet({
                 accessibilityLabel="Send super message"
                 accessibilityRole="button"
               >
-                <Ionicons name="mail" size={26} color="#F59E0B" />
+                <Text style={{ fontSize: 23 }}>💌</Text>
               </TouchableOpacity>
             )}
           </Animated.View>
@@ -531,6 +578,22 @@ const styles = StyleSheet.create({
     top: 60,
     right: 14,
     zIndex: 3,
+  },
+  burstWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+  },
+  burstEmojiText: {
+    fontSize: 110,
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 14,
   },
   heroInfo: {
     position: 'absolute',

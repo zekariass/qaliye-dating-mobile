@@ -1,83 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
-import { INTEREST_OPTIONS } from '@/screens/profile/mockEditProfile';
+import { INTEREST_CATEGORIES } from '@/screens/profile/mockEditProfile';
 import {
-    INTERESTS_INITIAL_PREVIEW_COUNT,
     MAX_INTERESTS,
     canSelectMore,
+    getInterestEmoji,
     translateInterest,
 } from '@/utils/interests';
-
-// ─── Interest → emoji mapping ────────────────────────────────────────────────
-
-const INTEREST_EMOJI: Record<string, string> = {
-  'Travel': '✈️',
-  'Reading': '📚',
-  'Cooking': '🍳',
-  'Baking': '🧁',
-  'Fitness': '💪',
-  'Running': '🏃',
-  'Cycling': '🚴',
-  'Swimming': '🏊',
-  'Yoga': '🧘',
-  'Meditation': '🧠',
-  'Sports': '⚽',
-  'Football': '⚽',
-  'Basketball': '🏀',
-  'Tennis': '🎾',
-  'Hiking': '🥾',
-  'Camping': '⛺',
-  'Nature': '🌿',
-  'Gardening': '🌱',
-  'Music': '🎵',
-  'Concerts': '🎤',
-  'Singing': '🎙️',
-  'Dancing': '💃',
-  'Movies': '🎬',
-  'TV Shows': '📺',
-  'Theatre': '🎭',
-  'Comedy': '😄',
-  'Podcasts': '🎧',
-  'Gaming': '🎮',
-  'Art': '🎨',
-  'Photography': '📷',
-  'Writing': '✍️',
-  'Poetry': '📝',
-  'Design': '🖌️',
-  'Fashion': '👗',
-  'Crafts': '🧶',
-  'DIY': '🔨',
-  'Coffee': '☕',
-  'Tea': '🍵',
-  'Food': '🍽️',
-  'Restaurants': '🍴',
-  'Brunch': '🥐',
-  'Tech': '💻',
-  'Science': '🔬',
-  'History': '📜',
-  'Languages': '🌍',
-  'Business': '💼',
-  'Entrepreneurship': '🚀',
-  'Volunteering': '🤝',
-  'Animals': '🐾',
-  'Pets': '🐕',
-  'Sustainability': '♻️',
-  'Spirituality': '🕊️',
-  'Family': '👨‍👩‍👧',
-  'Nightlife': '🌃',
-  'Festivals': '🎉',
-  'Board Games': '🎲',
-  'Shopping': '🛍️',
-  'Cars': '🚗',
-};
-
-function getInterestEmoji(interest: string): string {
-  return INTEREST_EMOJI[interest] ?? '✨';
-}
 
 // ─── Animated chip ────────────────────────────────────────────────────────────
 
@@ -153,7 +86,6 @@ function InterestChip({
           styles.chipText,
           { color: isActive ? '#FFFFFF' : sem.textSecondary },
         ]}
-        numberOfLines={1}
       >
         {translateInterest(interest, t)}
       </Text>
@@ -168,7 +100,6 @@ type InterestPickerProps = {
   onToggle: (val: string) => void;
   sem: SemanticTheme;
   max?: number;
-  initialPreviewCount?: number;
 };
 
 export const InterestPicker = memo(function InterestPicker({
@@ -176,10 +107,8 @@ export const InterestPicker = memo(function InterestPicker({
   onToggle,
   sem,
   max = MAX_INTERESTS,
-  initialPreviewCount = INTERESTS_INITIAL_PREVIEW_COUNT,
 }: InterestPickerProps) {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
 
   const handleToggle = useCallback(
     (opt: string) => {
@@ -190,12 +119,6 @@ export const InterestPicker = memo(function InterestPicker({
     [selected, onToggle, max],
   );
 
-  const visibleOptions = useMemo(
-    () => (expanded ? INTEREST_OPTIONS : INTEREST_OPTIONS.slice(0, initialPreviewCount)),
-    [expanded, initialPreviewCount],
-  );
-
-  const hasMore = INTEREST_OPTIONS.length > initialPreviewCount;
   const maxReached = selected.length >= max;
   const progressPercent = Math.min(100, (selected.length / max) * 100);
 
@@ -226,42 +149,30 @@ export const InterestPicker = memo(function InterestPicker({
         />
       </View>
 
-      {/* Chips */}
-      <View style={styles.chipWrap}>
-        {visibleOptions.map((opt) => {
-          const isActive = selected.includes(opt);
-          const disabled = !isActive && maxReached;
-          return (
-            <InterestChip
-              key={opt}
-              interest={opt}
-              isActive={isActive}
-              disabled={disabled}
-              sem={sem}
-              onPress={() => handleToggle(opt)}
-            />
-          );
-        })}
-      </View>
-
-      {/* Expand / Collapse */}
-      {hasMore && (
-        <Pressable
-          onPress={() => setExpanded((v) => !v)}
-          style={styles.toggleBtn}
-          accessibilityRole="button"
-          accessibilityLabel={expanded ? 'Show less' : 'See more'}
-        >
-          <Text style={[styles.toggleText, { color: sem.accent }]}>
-            {expanded ? t('interests.showLess') : t('interests.seeMore')}
+      {/* Categories */}
+      {INTEREST_CATEGORIES.map((category) => (
+        <View key={category.key} style={styles.categorySection}>
+          <Text style={[styles.categoryTitle, { color: sem.textPrimary }]}>
+            {t(`interests.categories.${category.key}`, { defaultValue: category.title })}
           </Text>
-          <Ionicons
-            name={expanded ? 'chevron-up-outline' : 'chevron-down-outline'}
-            size={14}
-            color={sem.accent}
-          />
-        </Pressable>
-      )}
+          <View style={styles.chipWrap}>
+            {category.items.map((opt) => {
+              const isActive = selected.includes(opt);
+              const disabled = !isActive && maxReached;
+              return (
+                <InterestChip
+                  key={opt}
+                  interest={opt}
+                  isActive={isActive}
+                  disabled={disabled}
+                  sem={sem}
+                  onPress={() => handleToggle(opt)}
+                />
+              );
+            })}
+          </View>
+        </View>
+      ))}
     </View>
   );
 });
@@ -310,12 +221,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: 999,
     borderWidth: 1.5,
-    gap: 5,
-    width: '31%',
+    gap: 6,
+    maxWidth: '100%',
   },
   chipEmoji: {
     fontSize: 14,
@@ -323,17 +235,14 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 13,
     fontWeight: '600',
+    flexShrink: 1,
   },
-  toggleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    marginTop: 14,
-    paddingVertical: 6,
+  categorySection: {
+    marginTop: 18,
   },
-  toggleText: {
-    fontSize: 14,
+  categoryTitle: {
+    fontSize: 15,
     fontWeight: '700',
+    marginBottom: 10,
   },
 });

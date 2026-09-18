@@ -29,6 +29,7 @@ import { useAuthError } from '@/hooks/auth/useAuthError';
 import { useEmailAuth } from '@/hooks/auth/useEmailAuth';
 import { useSocialAuth } from '@/hooks/auth/useSocialAuth';
 import { useTheme } from '@/hooks/use-theme';
+import { useAppLink } from '@/hooks/useAppLink';
 
 // ─── Floating heart particle ──────────────────────────────────────────────────
 
@@ -123,6 +124,7 @@ export default function AuthScreen() {
 
   const { login, signup } = useEmailAuth();
   const { google, apple } = useSocialAuth();
+  const { openLink } = useAppLink();
   const getErrorKey = useAuthError();
 
   const line1 = t('auth.brandTaglineLine1');
@@ -544,6 +546,20 @@ export default function AuthScreen() {
               </View>
             </View>
 
+            <View style={s.legalRow}>
+              <TouchableOpacity onPress={() => openLink('privacy')} accessibilityRole="link">
+                <Text style={[s.legalLink, { color: isDark ? '#9B85C4' : colors.primary }]}>
+                  {t('auth.privacyPolicy', 'Privacy Policy')}
+                </Text>
+              </TouchableOpacity>
+              <Text style={[s.legalDot, { color: isDark ? '#6B5490' : '#B09DD8' }]}>•</Text>
+              <TouchableOpacity onPress={() => openLink('terms')} accessibilityRole="link">
+                <Text style={[s.legalLink, { color: isDark ? '#9B85C4' : colors.primary }]}>
+                  {t('auth.termsOfService', 'Terms of Service')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <Text style={[s.versionText, { color: isDark ? '#4A3868' : '#C4B5E0' }]}>
               v{Constants.expoConfig?.version ?? '1.0.0'}
             </Text>
@@ -842,6 +858,20 @@ const s = StyleSheet.create({
   privacyText: {
     fontSize: 11,
     lineHeight: 17,
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: spacing.sm,
+  },
+  legalLink: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  legalDot: {
+    fontSize: 12,
   },
   versionText: {
     fontSize: 11,

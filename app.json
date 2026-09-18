@@ -6,7 +6,7 @@
       "qaliyedating",
       "qaliyemobile"
     ],
-    "version": "1.1.0",
+    "version": "1.1.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
@@ -37,8 +37,6 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.CAMERA"
       ]
     },
@@ -101,7 +99,8 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Qal Dating needs access to your microphone to record voice messages in support chat."
+          "microphonePermission": "Qal Dating needs access to your microphone to record voice messages in support chat.",
+          "enableBackgroundPlayback": false
         }
       ],
       [
@@ -121,7 +120,16 @@
           "organization": "habesha-drive"
         }
       ],
-      "expo-image"
+      "expo-image",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

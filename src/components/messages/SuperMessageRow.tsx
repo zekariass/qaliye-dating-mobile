@@ -59,9 +59,9 @@ function SuperMessageRowInner({ item, direction, isLast, onPress }: SuperMessage
             <Ionicons name="person" size={24} color={colors.primary} />
           </View>
         )}
-        {/* Star badge */}
+        {/* Super message badge */}
         <View style={styles.starBadge}>
-          <Ionicons name="star" size={12} color="#FFFFFF" />
+          <Text style={styles.starBadgeEmoji}>💌</Text>
         </View>
         {isUnread && (
           <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
@@ -153,6 +153,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#FFFFFF',
+  },
+  starBadgeEmoji: {
+    fontSize: 10,
+    includeFontPadding: false,
   },
   unreadDot: {
     position: 'absolute',

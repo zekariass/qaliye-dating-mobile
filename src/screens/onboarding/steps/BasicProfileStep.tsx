@@ -117,10 +117,18 @@ const schema = z
       ['MARRIAGE', 'SERIOUS_RELATIONSHIP', 'LONG_TERM', 'FRIENDSHIP', 'NOT_SURE_YET'] as const,
       { error: 'Please select what you are looking for.' },
     ),
-    religion: z.string().optional(),
-    smoking_detail: z.string().optional(),
-    drinking_detail: z.string().optional(),
-    activity_level: z.string().optional(),
+    religion: z
+      .string({ error: 'Please select your religion.' })
+      .min(1, 'Please select your religion.'),
+    smoking_detail: z
+      .string({ error: 'Please select whether you smoke.' })
+      .min(1, 'Please select whether you smoke.'),
+    drinking_detail: z
+      .string({ error: 'Please select whether you drink.' })
+      .min(1, 'Please select whether you drink.'),
+    activity_level: z
+      .string({ error: 'Please select your activity level.' })
+      .min(1, 'Please select your activity level.'),
     education_level: z.string().optional(),
     occupation: z.string().max(100, 'Must be 100 characters or less.').optional(),
   })
@@ -138,7 +146,6 @@ const INTENTIONS: { labelKey: string; value: RelationshipIntention; icon: string
   { labelKey: 'onboarding.basicProfile.lookingForMarriage', value: 'MARRIAGE', icon: '💍' },
   { labelKey: 'onboarding.basicProfile.lookingForRelationship', value: 'SERIOUS_RELATIONSHIP', icon: '❤️' },
   { labelKey: 'onboarding.basicProfile.lookingForLongTerm', value: 'LONG_TERM', icon: '🌱' },
-  { labelKey: 'onboarding.basicProfile.lookingForFriendship', value: 'FRIENDSHIP', icon: '🤝' },
   { labelKey: 'onboarding.basicProfile.lookingForNotSure', value: 'NOT_SURE_YET', icon: '🤔' },
 ];
 
@@ -168,6 +175,16 @@ const LIFESTYLE_COLORS = {
 
 const TOTAL_STEPS = 8;
 
+// Sub-step index → form fields that must validate before advancing
+const FIELDS_TO_VALIDATE: Partial<Record<number, (keyof FormValues)[]>> = {
+  0: ['display_name'],
+  1: ['gender'],
+  2: ['date_of_birth'],
+  3: ['relationship_intention'],
+  5: ['religion'],
+  6: ['smoking_detail', 'drinking_detail', 'activity_level'],
+};
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
@@ -180,13 +197,14 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
     control,
     handleSubmit,
     setError,
+    clearErrors,
     reset,
     trigger,
     watch,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { display_name: '', date_of_birth: '' },
+    defaultValues: { display_name: '', date_of_birth: '', religion: '' },
     mode: 'onSubmit',
     reValidateMode: 'onChange',
   });
@@ -283,13 +301,12 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
   };
 
   const handleNext = async () => {
-    const fieldToValidate: (keyof FormValues)[] = ['display_name', 'gender', 'date_of_birth', 'relationship_intention'];
-    if (subStep < fieldToValidate.length) {
-      const valid = await trigger(fieldToValidate[subStep]);
-      if (valid && subStep < TOTAL_STEPS - 1) {
-        goToStep(subStep + 1);
-      }
-    } else if (subStep < TOTAL_STEPS - 1) {
+    const fields = FIELDS_TO_VALIDATE[subStep];
+    if (fields) {
+      const valid = await trigger(fields);
+      if (!valid) return;
+    }
+    if (subStep < TOTAL_STEPS - 1) {
       goToStep(subStep + 1);
     }
   };
@@ -507,6 +524,14 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
               />
               {errors.date_of_birth && <FieldError message={errors.date_of_birth.message} />}
 
+              {/* Note: DOB/age is permanent */}
+              <View style={[styles.ageBox, { backgroundColor: th.surface, borderColor: th.border }]}>
+                <Ionicons name="information-circle-outline" size={18} color="#FCD34D" />
+                <Text style={[styles.ageBoxText, { color: '#FCD34D' }]}>
+                  {t('onboarding.basicProfile.dobNote')}
+                </Text>
+              </View>
+
               {/* Age display */}
               {dobValue && !errors.date_of_birth && (() => {
                 const age = calculateAge(dobValue);
@@ -627,7 +652,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                             styles.religionCard,
                             {
                               backgroundColor: sel ? colors.primary : th.surface,
-                              borderColor: sel ? colors.primary : th.border,
+                              borderColor: errors.religion ? '#FF6B6B' : sel ? colors.primary : th.border,
                             },
                           ]}
                           onPress={() => onChange(opt)}
@@ -658,6 +683,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                   </View>
                 )}
               />
+              {errors.religion && <FieldError message={errors.religion.message} />}
             </View>
           )}
 
@@ -679,7 +705,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                   control={control}
                   name="smoking_detail"
                   render={({ field: { onChange, value } }) => (
-                    <View style={[styles.lifestyleSection, { backgroundColor: th.surface, borderColor: `${LIFESTYLE_COLORS.smoking}40` }]}>
+                    <View style={[styles.lifestyleSection, { backgroundColor: th.surface, borderColor: errors.smoking_detail ? '#FF6B6B' : `${LIFESTYLE_COLORS.smoking}40` }]}>
                       <View style={styles.lifestyleFieldHeader}>
                         <View style={[styles.lifestyleHeaderIcon, { backgroundColor: `${LIFESTYLE_COLORS.smoking}20` }]}>
                           <Ionicons name="ban-outline" size={16} color={LIFESTYLE_COLORS.smoking} />
@@ -700,10 +726,15 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                                   backgroundColor: sel ? LIFESTYLE_COLORS.smoking : th.backgroundElement,
                                   borderColor: sel ? LIFESTYLE_COLORS.smoking : `${LIFESTYLE_COLORS.smoking}30`,
                                 },
+                                sel && styles.chipSelectedShadow,
+                                sel && { shadowColor: LIFESTYLE_COLORS.smoking },
                               ]}
-                              onPress={() => onChange(sel ? '' : opt)}
+                              onPress={() => { onChange(sel ? '' : opt); clearErrors('smoking_detail'); }}
                               activeOpacity={0.8}
                             >
+                              {sel && (
+                                <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={styles.chipCheckIcon} />
+                              )}
                               <Text style={[styles.chipText, { color: sel ? '#FFFFFF' : th.text }]}>
                                 {opt}
                               </Text>
@@ -711,6 +742,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                           );
                         })}
                       </View>
+                      {errors.smoking_detail && <FieldError message={errors.smoking_detail.message} />}
                     </View>
                   )}
                 />
@@ -720,7 +752,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                   control={control}
                   name="drinking_detail"
                   render={({ field: { onChange, value } }) => (
-                    <View style={[styles.lifestyleSection, { backgroundColor: th.surface, borderColor: `${LIFESTYLE_COLORS.drinking}40` }]}>
+                    <View style={[styles.lifestyleSection, { backgroundColor: th.surface, borderColor: errors.drinking_detail ? '#FF6B6B' : `${LIFESTYLE_COLORS.drinking}40` }]}>
                       <View style={styles.lifestyleFieldHeader}>
                         <View style={[styles.lifestyleHeaderIcon, { backgroundColor: `${LIFESTYLE_COLORS.drinking}20` }]}>
                           <Ionicons name="wine-outline" size={16} color={LIFESTYLE_COLORS.drinking} />
@@ -741,10 +773,15 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                                   backgroundColor: sel ? LIFESTYLE_COLORS.drinking : th.backgroundElement,
                                   borderColor: sel ? LIFESTYLE_COLORS.drinking : `${LIFESTYLE_COLORS.drinking}30`,
                                 },
+                                sel && styles.chipSelectedShadow,
+                                sel && { shadowColor: LIFESTYLE_COLORS.drinking },
                               ]}
-                              onPress={() => onChange(sel ? '' : opt)}
+                              onPress={() => { onChange(sel ? '' : opt); clearErrors('drinking_detail'); }}
                               activeOpacity={0.8}
                             >
+                              {sel && (
+                                <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={styles.chipCheckIcon} />
+                              )}
                               <Text style={[styles.chipText, { color: sel ? '#FFFFFF' : th.text }]}>
                                 {opt}
                               </Text>
@@ -752,6 +789,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                           );
                         })}
                       </View>
+                      {errors.drinking_detail && <FieldError message={errors.drinking_detail.message} />}
                     </View>
                   )}
                 />
@@ -761,7 +799,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                   control={control}
                   name="activity_level"
                   render={({ field: { onChange, value } }) => (
-                    <View style={[styles.lifestyleSection, { backgroundColor: th.surface, borderColor: `${LIFESTYLE_COLORS.fitness}40` }]}>
+                    <View style={[styles.lifestyleSection, { backgroundColor: th.surface, borderColor: errors.activity_level ? '#FF6B6B' : `${LIFESTYLE_COLORS.fitness}40` }]}>
                       <View style={styles.lifestyleFieldHeader}>
                         <View style={[styles.lifestyleHeaderIcon, { backgroundColor: `${LIFESTYLE_COLORS.fitness}20` }]}>
                           <Ionicons name="fitness-outline" size={16} color={LIFESTYLE_COLORS.fitness} />
@@ -783,8 +821,10 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                                   backgroundColor: sel ? LIFESTYLE_COLORS.fitness : th.backgroundElement,
                                   borderColor: sel ? LIFESTYLE_COLORS.fitness : `${LIFESTYLE_COLORS.fitness}30`,
                                 },
+                                sel && styles.chipSelectedShadow,
+                                sel && { shadowColor: LIFESTYLE_COLORS.fitness },
                               ]}
-                              onPress={() => onChange(sel ? '' : opt)}
+                              onPress={() => { onChange(sel ? '' : opt); clearErrors('activity_level'); }}
                               activeOpacity={0.8}
                             >
                               <Ionicons
@@ -799,10 +839,14 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                               >
                                 {opt}
                               </Text>
+                              {sel && (
+                                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                              )}
                             </TouchableOpacity>
                           );
                         })}
                       </View>
+                      {errors.activity_level && <FieldError message={errors.activity_level.message} />}
                     </View>
                   )}
                 />
@@ -1162,35 +1206,53 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1.5,
     padding: spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   lifestyleFieldHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   lifestyleHeaderIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   lifestyleFieldLabel: {
     fontSize: 16,
     fontWeight: '700',
+    flex: 1,
   },
   // Chips (smoking, drinking)
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   chip: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: radius.full,
     borderWidth: 1.5,
+  },
+  chipSelectedShadow: {
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  chipCheckIcon: {
+    marginRight: 6,
   },
   chipText: {
     fontSize: 14,
@@ -1198,7 +1260,7 @@ const styles = StyleSheet.create({
   },
   // Fitness cards
   fitnessList: {
-    gap: 8,
+    gap: 10,
     width: '100%',
   },
   fitnessCard: {

@@ -21,6 +21,7 @@ import GradientButton from '@/components/ui/GradientButton';
 import { colors, fontSize, gradients, radius, spacing } from '@/constants/theme';
 import { usePhoneOtp } from '@/hooks/auth/usePhoneOtp';
 import { useTheme } from '@/hooks/use-theme';
+import { useAppLink } from '@/hooks/useAppLink';
 import { formatEthiopianPhoneDisplay, normalizeEthiopianPhone } from '@/utils/phone';
 
 function PhoneIcon({ color }: { color: string }) {
@@ -35,6 +36,7 @@ export default function PhoneInputScreen() {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const { sendCode } = usePhoneOtp();
+  const { openLink } = useAppLink();
 
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -266,6 +268,20 @@ export default function PhoneInputScreen() {
                 <Ionicons name="shield-checkmark-outline" size={14} color={colors.primary} />
                 <Text style={[styles.privacyText, { color: th.textMuted }]}>{t('auth.privacyLine1')}</Text>
               </View>
+
+              <View style={styles.legalRow}>
+                <TouchableOpacity onPress={() => openLink('privacy')} accessibilityRole="link">
+                  <Text style={[styles.legalLink, { color: colors.primary }]}>
+                    {t('auth.privacyPolicy', 'Privacy Policy')}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={[styles.legalDot, { color: th.textMuted }]}>•</Text>
+                <TouchableOpacity onPress={() => openLink('terms')} accessibilityRole="link">
+                  <Text style={[styles.legalLink, { color: colors.primary }]}>
+                    {t('auth.termsOfService', 'Terms of Service')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -447,5 +463,19 @@ const styles = StyleSheet.create({
   privacyText: {
     fontSize: fontSize.xs,
     flexShrink: 1,
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: spacing.sm,
+  },
+  legalLink: {
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+  },
+  legalDot: {
+    fontSize: fontSize.xs,
   },
 });

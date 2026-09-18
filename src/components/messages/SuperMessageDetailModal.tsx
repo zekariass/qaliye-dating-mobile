@@ -177,7 +177,7 @@ export default function SuperMessageDetailModal({
               )}
               <View style={styles.targetText}>
                 <View style={styles.titleRow}>
-                  <Ionicons name="star" size={15} color="#F59E0B" style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 14, marginRight: 4 }}>💌</Text>
                   <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#1A1A2E' }]}>
                     Before-Match Message
                   </Text>

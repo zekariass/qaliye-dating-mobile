@@ -62,7 +62,7 @@ export default function SettingsScreen() {
   const { requiresActionCount, pendingCount, refetch: refetchPending } = usePendingOrders(Platform.OS === 'android');
   const { restore, restoreResult, isRestoring } = useRevenueCatRestore();
   const { rateUs } = useRateUs();
-  const { shareApp } = useAppLink();
+  const { shareApp, openLink } = useAppLink();
 
   useEffect(() => {
     if (restoreResult === 'success') {
@@ -544,6 +544,45 @@ export default function SettingsScreen() {
               </Text>
               <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
                 {t('settings.helpSub', 'Get support and answers')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+        </View>
+
+        {/* ── Legal ── */}
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Text style={[styles.sectionTitle, { color: th.text }]}>
+            {t('settings.legal', 'Legal')}
+          </Text>
+          <Pressable
+            style={styles.optionRow}
+            onPress={() => openLink('privacy')}
+            accessibilityRole="link"
+            accessibilityLabel={t('settings.privacyPolicy', 'Privacy Policy')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="document-lock-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('settings.privacyPolicy', 'Privacy Policy')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+          </Pressable>
+          <Pressable
+            style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
+            onPress={() => openLink('terms')}
+            accessibilityRole="link"
+            accessibilityLabel={t('settings.termsOfService', 'Terms of Service')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('settings.termsOfService', 'Terms of Service')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />

@@ -100,7 +100,7 @@ export default function SuperMessageModal({
               )}
               <View style={styles.targetText}>
                 <View style={styles.titleRow}>
-                  <Ionicons name="star" size={16} color="#F59E0B" style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 15, marginRight: 4 }}>💌</Text>
                   <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#1A1A2E' }]}>
                     Before-Match Message
                   </Text>
@@ -177,7 +177,7 @@ export default function SuperMessageModal({
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <Ionicons name="star" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 15, marginRight: 6 }}>💌</Text>
                   <Text style={styles.sendText}>Send</Text>
                 </>
               )}

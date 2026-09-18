@@ -3,19 +3,19 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
+    StyleSheet,
+    Text,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Easing,
-  interpolateColor,
-  useAnimatedStyle,
-  useDerivedValue,
-  useSharedValue,
-  withTiming,
+    Easing,
+    interpolateColor,
+    useAnimatedStyle,
+    useDerivedValue,
+    useSharedValue,
+    withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -252,7 +252,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
 
           {/* Swipe stamps — Tinder-style icons */}
           <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]}>
-            <Ionicons name="heart" size={100} color={colors.primary} />
+            <Text style={{ fontSize: 90 }}>🌹</Text>
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.passStamp, passStampStyle]}>
             <Ionicons name="close" size={110} color="#FF3B30" />

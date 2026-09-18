@@ -3,22 +3,25 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-    Easing,
-    runOnJS,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withSpring,
+  withTiming
 } from 'react-native-reanimated';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
@@ -135,6 +138,9 @@ function BrowseProfileCard({
   const translateX = useSharedValue(0);
   const cardOpacity = useSharedValue(1);
   const stampOpacity = useSharedValue(0);
+  const burstScale = useSharedValue(0);
+  const burstOpacity = useSharedValue(0);
+  const burstIsSuper = useSharedValue(0);
   const [animating, setAnimating] = useState(false);
   const actionType = useSharedValue<'none' | 'pass' | 'like' | 'super_like'>('none');
 
@@ -212,10 +218,25 @@ function BrowseProfileCard({
       setAnimating(true);
       actionType.value = action;
 
-      // Show stamp first
-      stampOpacity.value = withTiming(1, { duration: 250 });
+      // Like / super-like: show a big centered 🌹/💍 burst for ~1s first.
+      const showBurst = action !== 'pass';
+      const hold = showBurst ? 850 : 0;
 
-      // After stamp is visible, slide card off screen
+      if (showBurst) {
+        burstIsSuper.value = action === 'super_like' ? 1 : 0;
+        burstScale.value = 0;
+        burstScale.value = withSequence(
+          withSpring(1, { damping: 9, stiffness: 300, mass: 0.7 }),
+          withDelay(750, withTiming(1.45, { duration: 300, easing: Easing.out(Easing.cubic) })),
+        );
+        burstOpacity.value = withSequence(
+          withTiming(1, { duration: 150 }),
+          withDelay(850, withTiming(0, { duration: 350 })),
+        );
+      }
+
+      // Show stamp, then slide card off screen
+      stampOpacity.value = withDelay(hold, withTiming(1, { duration: 250 }));
       const targetX = action === 'pass' ? -screenW - 60 : screenW + 60;
       setTimeout(() => {
         translateX.value = withTiming(targetX, {
@@ -223,15 +244,15 @@ function BrowseProfileCard({
           easing: Easing.out(Easing.cubic),
         });
         cardOpacity.value = withTiming(0, { duration: 600 });
-      }, 250);
+      }, hold + 250);
 
       // After animation completes, call the action callback
       setTimeout(() => {
         runOnJS(setAnimating)(false);
         fn();
-      }, 250 + 620);
+      }, hold + 250 + 620);
     },
-    [animating, stampOpacity, translateX, cardOpacity, actionType],
+    [animating, stampOpacity, translateX, cardOpacity, actionType, burstScale, burstOpacity, burstIsSuper, screenW],
   );
 
   const handlePass = useCallback(() => {
@@ -269,6 +290,15 @@ function BrowseProfileCard({
   const superLikeStampStyle = useAnimatedStyle(() => ({
     opacity: actionType.value === 'super_like' ? stampOpacity.value : 0,
     transform: [{ rotateZ: '-15deg' }],
+  }));
+
+  const likeBurstStyle = useAnimatedStyle(() => ({
+    opacity: burstIsSuper.value === 0 ? burstOpacity.value : 0,
+    transform: [{ scale: burstScale.value }, { rotateZ: '-10deg' }],
+  }));
+  const superBurstStyle = useAnimatedStyle(() => ({
+    opacity: burstIsSuper.value === 1 ? burstOpacity.value : 0,
+    transform: [{ scale: burstScale.value }, { rotateZ: '-10deg' }],
   }));
 
   return (
@@ -341,13 +371,21 @@ function BrowseProfileCard({
 
           {/* Action stamps — LIKE / PASS / SUPER LIKE */}
           <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]} pointerEvents="none">
-            <Ionicons name="heart" size={100} color="#FF2D55" />
+            <Text style={{ fontSize: 90 }}>🌹</Text>
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.passStamp, passStampStyle]} pointerEvents="none">
             <Ionicons name="close" size={110} color="#FF3B30" />
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.superLikeStamp, superLikeStampStyle]} pointerEvents="none">
-            <Text style={styles.superLikeStampText}>SUPER LIKE</Text>
+            <Text style={styles.superLikeStampText}>💍 SUPER LIKE</Text>
+          </Animated.View>
+
+          {/* Like / super-like burst — big icon centered on the photo */}
+          <Animated.View style={[styles.burstWrap, likeBurstStyle]} pointerEvents="none">
+            <Text style={styles.burstEmoji}>🌹</Text>
+          </Animated.View>
+          <Animated.View style={[styles.burstWrap, superBurstStyle]} pointerEvents="none">
+            <Text style={styles.burstEmoji}>💍</Text>
           </Animated.View>
 
           {/* Name + age + location — bottom of photo */}
@@ -479,7 +517,7 @@ function BrowseProfileCard({
           accessibilityLabel="Like profile"
           accessibilityRole="button"
         >
-          <Ionicons name="heart" size={rs(25, scale)} color={colors.heartPink} />
+          <Text style={{ fontSize: rs(22, scale), transform: [{ rotate: '15deg' }] }}>🌹</Text>
         </TouchableOpacity>
 
         {/* Super Like — sparkling heart matching swipe mode */}
@@ -491,7 +529,7 @@ function BrowseProfileCard({
           accessibilityLabel="Super like profile"
           accessibilityRole="button"
         >
-          <Ionicons name="diamond" size={rs(25, scale)} color="#00B4FC" />
+          <Text style={{ fontSize: rs(22, scale) }}>💍</Text>
         </TouchableOpacity>
 
         {/* Super Message */}
@@ -503,7 +541,7 @@ function BrowseProfileCard({
           accessibilityLabel="Send super message"
           accessibilityRole="button"
         >
-          <Ionicons name="mail" size={rs(25, scale)} color="#F59E0B" />
+          <Text style={{ fontSize: rs(22, scale) }}>💌</Text>
         </TouchableOpacity>
 
         {/* View profile — at the right end */}
@@ -829,7 +867,7 @@ export default function BrowseModeGrid({
         <View style={styles.rewindOverlay} pointerEvents="none">
           <View style={[styles.rewindSpinnerWrap, { backgroundColor: isDark ? th.backgroundElement : th.surface }]}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Getting them back…</Text>
+            <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Getting it back…</Text>
           </View>
         </View>
       )}
@@ -1012,6 +1050,22 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: colors.primary,
     letterSpacing: 1,
+  },
+  burstWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 6,
+  },
+  burstEmoji: {
+    fontSize: 110,
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 14,
   },
 
 

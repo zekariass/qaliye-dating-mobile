@@ -220,6 +220,12 @@ export default function LocationStep({ onComplete, isCompleted }: Props) {
         <Text style={[styles.subtitle, { color: th.textSecondary }]}>
           {t('onboarding.location.subtitle')}
         </Text>
+        <View style={[styles.privacyNote, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Ionicons name="lock-closed-outline" size={14} color="#D97706" />
+          <Text style={[styles.privacyNoteText, { color: '#D97706' }]}>
+            {t('onboarding.location.privacyNote')}
+          </Text>
+        </View>
 
         {/* ── Saved location mode ────────────────────────────────────────── */}
         {mode === 'saved' && savedLocation != null && (
@@ -396,7 +402,19 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 15 },
 
   title: { fontSize: 26, fontWeight: '800', marginBottom: 6, letterSpacing: -0.4, marginTop: spacing.xs },
-  subtitle: { fontSize: 15, marginBottom: spacing.xl, lineHeight: 22 },
+  subtitle: { fontSize: 15, marginBottom: spacing.sm, lineHeight: 22 },
+
+  privacyNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 10,
+    marginBottom: spacing.xl,
+  },
+  privacyNoteText: { flex: 1, fontSize: 12.5, lineHeight: 17 },
 
   gpsBtn: {
     borderRadius: 14,

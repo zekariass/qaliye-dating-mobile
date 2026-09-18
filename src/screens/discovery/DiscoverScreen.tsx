@@ -3,24 +3,24 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    AppState,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  AppState,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withRepeat,
-    withSequence,
-    withTiming,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -58,12 +58,12 @@ import { useDiscoveryStore } from '@/stores/discovery-store';
 import { usePromotionStore } from '@/stores/promotion-store';
 import type { EligiblePromotionDto } from '@/types/billing';
 import {
-    canRewind as checkCanRewind,
-    canSuperLike as checkCanSuperLike,
-    getBoostStatus,
-    getQuotaErrorType,
-    isInsufficientCreditsError,
-    isLimitExceededError,
+  canRewind as checkCanRewind,
+  canSuperLike as checkCanSuperLike,
+  getBoostStatus,
+  getQuotaErrorType,
+  isInsufficientCreditsError,
+  isLimitExceededError,
 } from '@/utils/entitlements';
 import { showActionErrorAlert } from '@/utils/limitExceededAlert';
 import { getActionOverlayRight } from '@/utils/responsive';
@@ -931,6 +931,7 @@ export default function DiscoverScreen() {
                 fontSize: 28,
                 fontWeight: '700',
                 color: checkCanRewind(entitlements) ? '#F97316' : th.textSecondary,
+                transform: [{ rotate: '-90deg' }],
               }}
             >
               ↺
@@ -1103,7 +1104,7 @@ export default function DiscoverScreen() {
               <View style={styles.rewindOverlay} pointerEvents="none">
                 <View style={[styles.rewindSpinnerWrap, { backgroundColor: isDark ? th.backgroundElement : th.surface }]}>
                   <ActivityIndicator size="large" color={colors.primary} />
-                  <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Getting them back…</Text>
+                  <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Getting it back…</Text>
                 </View>
               </View>
             )}
@@ -1223,6 +1224,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
+
 
   // ── Header ──────────────────────────────────────────────────────────────
   header: {

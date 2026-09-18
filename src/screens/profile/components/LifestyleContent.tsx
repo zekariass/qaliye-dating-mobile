@@ -4,7 +4,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { sanitizeInterests, translateInterest } from '@/utils/interests';
+import { getInterestEmoji, sanitizeInterests, translateInterest } from '@/utils/interests';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -88,7 +88,9 @@ export default function LifestyleContent({ profile }: LifestyleContentProps) {
                 <View style={styles.chipWrap}>
                   {interests.map((interest) => (
                     <View key={interest} style={[styles.chip, { backgroundColor: iconBg, borderColor: borderCol }]}>
-                      <Text style={[styles.chipText, { color: textCol }]}>{translateInterest(interest, t)}</Text>
+                      <Text style={[styles.chipText, { color: textCol }]}>
+                        {getInterestEmoji(interest)} {translateInterest(interest, t)}
+                      </Text>
                     </View>
                   ))}
                 </View>

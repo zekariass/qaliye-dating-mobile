@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -32,7 +31,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Rewind profile"
         >
-          <Text style={[styles.icon, styles.rewindIcon, { fontSize: rs(24, scale) }]}>↺</Text>
+          <Text style={[styles.icon, styles.rewindIcon, { fontSize: rs(24, scale), transform: [{ rotate: '-90deg' }] }]}>↺</Text>
         </TouchableOpacity>
 
         {/* Like */}
@@ -43,7 +42,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Like profile"
         >
-          <Ionicons name="heart" size={rs(25, scale)} color="#FF2D55" />
+          <Text style={[styles.emojiIcon, { fontSize: rs(22, scale), transform: [{ rotate: '15deg' }] }]}>🌹</Text>
         </TouchableOpacity>
 
         {/* SuperLike */}
@@ -54,7 +53,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Super like profile"
         >
-          <Ionicons name="diamond" size={rs(25, scale)} color="#00B4FC" />
+          <Text style={[styles.emojiIcon, { fontSize: rs(22, scale) }]}>💍</Text>
         </TouchableOpacity>
 
         {/* Super Message */}
@@ -65,7 +64,7 @@ export default function CardActionButtons({ onRewind, onPass, onLike, onSuperLik
           activeOpacity={0.75}
           accessibilityLabel="Send super message"
         >
-          <Ionicons name="mail" size={rs(25, scale)} color="#F59E0B" />
+          <Text style={[styles.emojiIcon, { fontSize: rs(22, scale) }]}>💌</Text>
         </TouchableOpacity>
 
         {/* Pass */}
@@ -112,6 +111,10 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 24,
     fontWeight: '700',
+  },
+  emojiIcon: {
+    includeFontPadding: false,
+    textAlign: 'center',
   },
   rewindIcon: {
     color: '#F97316',

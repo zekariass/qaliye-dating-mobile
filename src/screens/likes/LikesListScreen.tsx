@@ -282,12 +282,12 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
           </View>
         )}
 
-        {/* Super-like star badge */}
-        {item.action_type === 'SUPERLIKE' && (
-          <View style={[styles.superBadge, { backgroundColor: purple }]}>
-            <Ionicons name="star" size={12} color="#FFF" />
-          </View>
-        )}
+        {/* Like type badge — 🌹 like, 💍 super like */}
+        <View style={[styles.superBadge, { backgroundColor: '#FFFFFF' }]}>
+          <Text style={styles.superBadgeEmoji}>
+            {item.action_type === 'SUPERLIKE' ? '💍' : '🌹'}
+          </Text>
+        </View>
 
         {/* Heart (like-back) button — received likes only */}
         {isReceived && (
@@ -368,7 +368,7 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
         <View style={styles.chipRow}>
           {item.action_type === 'SUPERLIKE' && (
             <View style={[styles.chip, { backgroundColor: chipBg }]}>
-              <Ionicons name="star" size={11} color={purple} />
+              <Text style={{ fontSize: 11 }}>💍</Text>
               <Text style={[styles.chipText, { color: purple }]} numberOfLines={2}>
                 Super Liked
               </Text>
@@ -433,6 +433,13 @@ function BlurredLikeCard({ item, onPress, onReveal, isRevealing }: BlurredLikeCa
             <Ionicons name="person" size={36} color="#999" />
           </View>
         )}
+
+        {/* Like type badge — 🌹 like, 💍 super like */}
+        <View style={[styles.superBadge, { backgroundColor: '#FFFFFF' }]}>
+          <Text style={styles.superBadgeEmoji}>
+            {item.action_type === 'SUPERLIKE' ? '💍' : '🌹'}
+          </Text>
+        </View>
 
         <View style={[blurStyles.overlay, { backgroundColor: isDark ? 'rgba(13,7,18,0.55)' : 'rgba(0,0,0,0.25)' }]}>
           <TouchableOpacity
@@ -1286,6 +1293,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems:   'center',
     justifyContent: 'center',
+  },
+  superBadgeEmoji: {
+    fontSize: 11,
+    includeFontPadding: false,
   },
 
   footerLoader: {
