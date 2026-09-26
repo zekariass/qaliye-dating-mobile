@@ -9,7 +9,10 @@ import {
     validatePayload,
 } from '@/services/notifications/payloadValidator';
 import { useNotificationsStore } from '@/stores/notifications-store';
-import type { ForegroundBannerState } from '@/types/notifications';
+import {
+    BLIND_DATE_ALERT_CODES,
+    type ForegroundBannerState,
+} from '@/types/notifications';
 
 type ForegroundNotificationOptions = {
   currentMatchId?: string | null;
@@ -91,6 +94,12 @@ export function useForegroundNotifications(options?: ForegroundNotificationOptio
         case 'ACCOUNT_ALERT':
           queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
           queryClient.invalidateQueries({ queryKey: ['me'] });
+          // Blind Date lifecycle alerts ride on ACCOUNT_ALERT — refresh the
+          // blind-date screens so the new state is there when the user taps through.
+          if (payload?.alert_code && BLIND_DATE_ALERT_CODES.has(payload.alert_code)) {
+            queryClient.invalidateQueries({ queryKey: ['blindDate'] });
+            queryClient.invalidateQueries({ queryKey: ['matches'] });
+          }
           showBanner(notification, payload);
           break;
 

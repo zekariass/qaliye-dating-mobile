@@ -148,6 +148,9 @@ apiClient.interceptors.response.use(
       }
       // Boosts
       if (url.includes('/boosts/activate')) return 'BOOST';
+      // Blind Date
+      if (url.match(/\/blind-date\/sessions\/[^/]+\/join/)) return 'BLIND_DATE_PARTICIPATE';
+      if (url.match(/\/blind-date\/sessions$/) && (config?.method ?? '').toLowerCase() === 'post') return 'BLIND_DATE_SESSION_CREATE';
       // Profile actions
       if (url.includes('/profile/location')) return 'CHANGE_ADDRESS';
       if (url.includes('/profile/me/discovery-settings')) return 'INCOGNITO_MODE';

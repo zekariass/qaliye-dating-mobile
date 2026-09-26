@@ -3,6 +3,8 @@ import type {
     DiscoveryCountsDto,
     DiscoveryFeedResponse,
     DiscoveryPreferencesDto,
+    LikeActionVariantDto,
+    LikeActionsResponse,
     LikeDirection,
     LikesPageResponse,
     MatchesPageResponse,
@@ -17,6 +19,11 @@ import type {
 
 const BASE = '/api/v1/discovery';
 
+// Default LIKE variant used when a call site doesn't (yet) let the user pick
+// a specific variant — keeps older call sites (browse mode, like-back, etc.)
+// working now that `action_variant_code` is required server-side.
+export const DEFAULT_LIKE_VARIANT_CODE = 'HEART';
+
 export async function fetchDiscoveryProfiles(
   cursor?: string,
 ): Promise<DiscoveryFeedResponse> {
@@ -26,13 +33,44 @@ export async function fetchDiscoveryProfiles(
   return res.data;
 }
 
+// Tolerates both snake_case and camelCase payloads — the backend has shipped
+// like-action fields as sortOrder/resetsAt/periodType in some builds.
+// Quota fields stay `undefined` when absent so callers can distinguish
+// "backend didn't send limits" from an explicit `limit: null` (unlimited)
+// and fall back to the entitlements limits_and_costs map.
+function normalizeLikeAction(raw: Record<string, unknown>): LikeActionVariantDto {
+  const resetsAt = raw.resets_at ?? raw.resetsAt;
+  const periodType = raw.period_type ?? raw.periodType;
+  return {
+    code: (raw.code ?? '') as string,
+    name: (raw.name ?? '') as string,
+    description: (raw.description ?? null) as string | null,
+    icon: (raw.icon ?? null) as string | null,
+    credits: (raw.credits ?? 0) as number,
+    sort_order: (raw.sort_order ?? raw.sortOrder ?? 0) as number,
+    limit: raw.limit === undefined ? undefined : (raw.limit as number | null),
+    used: raw.used === undefined ? undefined : (raw.used as number),
+    remaining: raw.remaining === undefined ? undefined : (raw.remaining as number | null),
+    resets_at: resetsAt === undefined ? undefined : (resetsAt as string | null),
+    period_type: periodType === undefined ? undefined : (periodType as LikeActionVariantDto['period_type']),
+    blocked: raw.blocked === undefined ? undefined : (raw.blocked as boolean),
+  };
+}
+
+export async function fetchLikeActions(): Promise<LikeActionsResponse> {
+  const res = await apiClient.get<{ actions?: Record<string, unknown>[] }>(`${BASE}/like-actions`);
+  return { actions: (res.data?.actions ?? []).map(normalizeLikeAction) };
+}
+
 export async function likeProfile(
   targetUserId: string,
   clientActionId: string,
+  actionVariantCode: string = DEFAULT_LIKE_VARIANT_CODE,
 ): Promise<SwipeActionResponse> {
   const res = await apiClient.post<SwipeActionResponse>(`${BASE}/actions/like`, {
     target_user_id: targetUserId,
     client_action_id: clientActionId,
+    action_variant_code: actionVariantCode,
   });
   return res.data;
 }

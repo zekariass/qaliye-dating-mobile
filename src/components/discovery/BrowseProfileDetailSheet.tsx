@@ -27,6 +27,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
+import LikeVariantButtons, {
+    FALLBACK_VARIANT,
+    VariantIcon,
+} from '@/components/discovery/LikeVariantButtons';
 import MorePhotosSection from '@/components/discovery/MorePhotosSection';
 import { CardDto } from '@/components/discovery/ProfileCard';
 import ProfileDetailsSection from '@/components/discovery/ProfileDetailsSection';
@@ -34,11 +38,11 @@ import { colors } from '@/constants/theme';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useTheme } from '@/hooks/use-theme';
+import type { LikeActionVariantDto } from '@/types/discovery';
 import { formatDistance } from '@/utils/formatDistance';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const HERO_H = Math.round(SCREEN_W * 1.1);
-const ACTION_BTN = 44;
 const TOTAL_STARS = 12;
 const STAR_RADIUS = 16;
 
@@ -46,11 +50,9 @@ interface Props {
   visible: boolean;
   card: CardDto | null;
   onClose: () => void;
-  onLike: (userId: string) => void;
-  onPass: (userId: string) => void;
-  onSuperLike: (userId: string) => void;
-  onSuperMessage?: (userId: string) => void;
-  canSuperLike: boolean;
+  /** Sends a LIKE with the chosen variant code — same variants as the swipe rail. */
+  onLikeVariant: (userId: string, variantCode: string) => void;
+  likeVariants: LikeActionVariantDto[];
   isActing: boolean;
 }
 
@@ -58,11 +60,8 @@ export default function BrowseProfileDetailSheet({
   visible,
   card,
   onClose,
-  onLike,
-  onPass,
-  onSuperLike,
-  onSuperMessage,
-  canSuperLike,
+  onLikeVariant,
+  likeVariants,
   isActing,
 }: Props) {
   const { colors: th, mode } = useTheme();
@@ -70,7 +69,8 @@ export default function BrowseProfileDetailSheet({
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
   const { t } = useTranslation();
 
-  const [actionTaken, setActionTaken] = useState<'LIKE' | 'PASS' | 'SUPER_LIKE' | null>(null);
+  const [actionTaken, setActionTaken] = useState<'LIKE' | null>(null);
+  const [burstVariant, setBurstVariant] = useState<LikeActionVariantDto | null>(null);
   const confirmOpacity = useState(new Animated.Value(0))[0];
   const buttonsOpacity = useState(new Animated.Value(1))[0];
   const burstScale = useState(new Animated.Value(0))[0];
@@ -132,6 +132,7 @@ export default function BrowseProfileDetailSheet({
   useEffect(() => {
     if (visible) {
       setActionTaken(null);
+      setBurstVariant(null);
       confirmOpacity.setValue(0);
       buttonsOpacity.setValue(1);
       burstScale.setValue(0);
@@ -209,35 +210,19 @@ export default function BrowseProfileDetailSheet({
     [burstScale, burstOpacityLike, burstOpacitySuper],
   );
 
-  const handleLike = useCallback(() => {
-    if (!card || actionTaken) return;
-    setActionTaken('LIKE');
-    playBurst('like', () => {
-      animateToConfirmation();
-      onLike(card.user_id);
-    });
-  }, [card, onLike, actionTaken, animateToConfirmation, playBurst]);
-
-  const handlePass = useCallback(() => {
-    if (!card || actionTaken) return;
-    setActionTaken('PASS');
-    animateToConfirmation();
-    onPass(card.user_id);
-  }, [card, onPass, actionTaken, animateToConfirmation]);
-
-  const handleSuperLike = useCallback(() => {
-    if (!card || actionTaken) return;
-    setActionTaken('SUPER_LIKE');
-    playBurst('super', () => {
-      animateToConfirmation();
-      onSuperLike(card.user_id);
-    });
-  }, [card, onSuperLike, actionTaken, animateToConfirmation, playBurst]);
-
-  const handleSuperMessage = useCallback(() => {
-    if (!card || actionTaken) return;
-    onSuperMessage?.(card.user_id);
-  }, [card, onSuperMessage, actionTaken]);
+  const handleLikeVariant = useCallback(
+    (variantCode: string) => {
+      if (!card || actionTaken) return;
+      const list = likeVariants.length > 0 ? likeVariants : [FALLBACK_VARIANT];
+      setBurstVariant(list.find((v) => v.code === variantCode) ?? FALLBACK_VARIANT);
+      setActionTaken('LIKE');
+      playBurst('like', () => {
+        animateToConfirmation();
+        onLikeVariant(card.user_id, variantCode);
+      });
+    },
+    [card, onLikeVariant, actionTaken, animateToConfirmation, playBurst, likeVariants],
+  );
 
   if (!card) return null;
 
@@ -334,7 +319,11 @@ export default function BrowseProfileDetailSheet({
                 style={[styles.burstWrap, { opacity: burstOpacityLike, transform: [{ scale: burstScale }, { rotate: '-10deg' }] }]}
                 pointerEvents="none"
               >
-                <Text style={styles.burstEmojiText}>🌹</Text>
+                {burstVariant ? (
+                  <VariantIcon variant={burstVariant} size={110} color={colors.heartPink} />
+                ) : (
+                  <Text style={styles.burstEmojiText}>🌹</Text>
+                )}
               </Animated.View>
               <Animated.View
                 style={[styles.burstWrap, { opacity: burstOpacitySuper, transform: [{ scale: burstScale }, { rotate: '-10deg' }] }]}
@@ -407,69 +396,13 @@ export default function BrowseProfileDetailSheet({
             style={[styles.actionRow, { opacity: buttonsOpacity }, actionTaken ? { position: 'absolute', opacity: 0 } : null]}
             pointerEvents={actionTaken ? 'none' : 'auto'}
           >
-            {/* Pass */}
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                { backgroundColor: isDark ? th.backgroundSelected : '#F3EEFF' },
-              ]}
-              onPress={handlePass}
+            {/* Like variants — same buttons as swipe/browse cards */}
+            <LikeVariantButtons
+              variants={likeVariants}
+              onSelect={handleLikeVariant}
               disabled={isActing || !!actionTaken}
-              activeOpacity={0.7}
-              accessibilityLabel="Pass profile"
-              accessibilityRole="button"
-            >
-              <Ionicons name="close" size={28} color={colors.danger} />
-            </TouchableOpacity>
-
-            {/* Like */}
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                styles.likeBtn,
-                { backgroundColor: isDark ? th.backgroundSelected : '#FFE8F3' },
-              ]}
-              onPress={handleLike}
-              disabled={isActing || !!actionTaken}
-              activeOpacity={0.7}
-              accessibilityLabel="Like profile"
-              accessibilityRole="button"
-            >
-              <Text style={{ fontSize: 25, transform: [{ rotate: '15deg' }] }}>🌹</Text>
-            </TouchableOpacity>
-
-            {/* Super Like — sparkling heart matching swipe mode */}
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                { backgroundColor: isDark ? th.backgroundSelected : '#F3EEFF' },
-                !canSuperLike && styles.actionBtnDisabled,
-              ]}
-              onPress={handleSuperLike}
-              disabled={!canSuperLike || isActing || !!actionTaken}
-              activeOpacity={0.7}
-              accessibilityLabel="Super like profile"
-              accessibilityRole="button"
-            >
-              <Text style={{ fontSize: 22 }}>💍</Text>
-            </TouchableOpacity>
-
-            {/* Super Message */}
-            {onSuperMessage && (
-              <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  { backgroundColor: isDark ? th.backgroundSelected : '#FFF8E8' },
-                ]}
-                onPress={handleSuperMessage}
-                disabled={isActing || !!actionTaken}
-                activeOpacity={0.7}
-                accessibilityLabel="Send super message"
-                accessibilityRole="button"
-              >
-                <Text style={{ fontSize: 23 }}>💌</Text>
-              </TouchableOpacity>
-            )}
+              horizontal
+            />
           </Animated.View>
 
           {/* Confirmation message */}
@@ -478,17 +411,9 @@ export default function BrowseProfileDetailSheet({
               style={[styles.confirmationWrap, { opacity: confirmOpacity }]}
               pointerEvents="none"
             >
-              <Ionicons
-                name={actionTaken === 'PASS' ? 'close' : 'heart'}
-                size={22}
-                color={actionTaken === 'PASS' ? colors.danger : colors.heartPink}
-              />
+              <Ionicons name="heart" size={22} color={colors.heartPink} />
               <Text style={[styles.confirmationText, { color: th.text }]}>
-                {actionTaken === 'LIKE'
-                  ? `You liked ${card.display_name}`
-                  : actionTaken === 'PASS'
-                  ? `You passed on ${card.display_name}`
-                  : `You Super Liked ${card.display_name}`}
+                You liked {card.display_name}
               </Text>
             </Animated.View>
           )}
@@ -566,7 +491,7 @@ const styles = StyleSheet.create({
   },
   heroThumbActive: {
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: '#FFFFFF',
   },
   heroThumbInactive: {
     borderWidth: 1.5,
@@ -661,21 +586,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -4 },
     elevation: 10,
   },
-  actionBtn: {
-    width: ACTION_BTN,
-    height: ACTION_BTN,
-    borderRadius: ACTION_BTN / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-  },
-  actionBtnDisabled: {
-    opacity: 0.4,
-  },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -694,10 +604,5 @@ const styles = StyleSheet.create({
   confirmationText: {
     fontSize: 17,
     fontWeight: '700',
-  },
-  likeBtn: {
-    width: ACTION_BTN,
-    height: ACTION_BTN,
-    borderRadius: ACTION_BTN / 2,
   },
 });

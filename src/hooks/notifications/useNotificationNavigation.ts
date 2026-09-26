@@ -4,6 +4,8 @@ import { Platform } from 'react-native';
 
 import type * as NotificationsType from 'expo-notifications';
 
+import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
+import { navigateBlindDateAlert } from '@/services/notifications/blindDateNavigation';
 import { navigateMarketingIntent } from '@/services/notifications/marketingNavigation';
 import { Expo } from '@/services/notifications/notificationsModule';
 import {
@@ -25,6 +27,7 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
   const loadLastHandledNotificationId = useNotificationsStore((s) => s.loadLastHandledNotificationId);
   const pendingNavIntent = useNotificationsStore((s) => s.pendingNavIntent);
   const setPendingNavIntent = useNotificationsStore((s) => s.setPendingNavIntent);
+  const myUserId = useCurrentProfile().data?.user_id;
   const processedOnce = useRef(false);
   const [persistedIdLoaded, setPersistedIdLoaded] = useState(false);
 
@@ -56,7 +59,16 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
           router.push('/(app)/(tabs)/likes' as any);
           break;
         case 'ACCOUNT_ALERT':
-          router.push('/(app)/settings' as any);
+          if (intent.screen === 'blind-date') {
+            void navigateBlindDateAlert({
+              router,
+              alertCode: intent.alert_code,
+              sessionId: intent.session_id,
+              userId: myUserId,
+            });
+          } else {
+            router.push('/(app)/settings' as any);
+          }
           break;
         case 'MARKETING':
           navigateMarketingIntent(
@@ -70,7 +82,7 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
           break;
       }
     },
-    [hasSession, router, setPendingNavIntent],
+    [hasSession, router, setPendingNavIntent, myUserId],
   );
 
   const handleResponse = useCallback(

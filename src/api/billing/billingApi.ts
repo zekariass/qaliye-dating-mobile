@@ -2,6 +2,7 @@ import { apiClient } from '../apiClient';
 
 import type {
     ActionLimitAndCost,
+    ActionVariantLimitAndCost,
     BillingIntervalUnit,
     BillingPlatform,
     BoostActivationRequest,
@@ -47,7 +48,27 @@ function normalizeCountrySettings(raw: Record<string, unknown>): CountrySettings
   };
 }
 
+function normalizeActionVariantLimitAndCost(raw: Record<string, unknown>): ActionVariantLimitAndCost {
+  return {
+    used: (raw.used ?? 0) as number,
+    limit: (raw.limit ?? raw.limit_value ?? raw.limitValue ?? null) as number | null,
+    remaining: (raw.remaining ?? null) as number | null,
+    resets_at: (raw.resets_at ?? raw.resetsAt ?? null) as string | null,
+    member_credit_cost: (raw.member_credit_cost ?? raw.memberCreditCost ?? 0) as number,
+    actual_credit_cost: (raw.actual_credit_cost ?? raw.actualCreditCost ?? 0) as number,
+    period_type: (raw.period_type ?? raw.periodType ?? '') as string,
+    apply_credit_after_limit: (raw.apply_credit_after_limit ?? raw.applyCreditAfterLimit ?? false) as boolean,
+  };
+}
+
 function normalizeActionLimitAndCost(raw: Record<string, unknown>): ActionLimitAndCost {
+  const variantsRaw = raw.variants as Record<string, Record<string, unknown>> | null | undefined;
+  const variants: Record<string, ActionVariantLimitAndCost> = {};
+  if (variantsRaw && typeof variantsRaw === 'object') {
+    for (const [code, val] of Object.entries(variantsRaw)) {
+      if (val && typeof val === 'object') variants[code] = normalizeActionVariantLimitAndCost(val);
+    }
+  }
   return {
     used: (raw.used ?? 0) as number,
     limit: (raw.limit ?? raw.limit_value ?? null) as number | null,
@@ -57,6 +78,9 @@ function normalizeActionLimitAndCost(raw: Record<string, unknown>): ActionLimitA
     actual_credit_cost: (raw.actual_credit_cost ?? raw.actualCreditCost ?? 0) as number,
     period_type: (raw.period_type ?? raw.periodType ?? '') as string,
     apply_credit_after_limit: (raw.apply_credit_after_limit ?? raw.applyCreditAfterLimit ?? false) as boolean,
+    variant_pricing_enabled: (raw.variant_pricing_enabled ?? raw.variantPricingEnabled ?? false) as boolean,
+    variant_limits_enabled: (raw.variant_limits_enabled ?? raw.variantLimitsEnabled ?? false) as boolean,
+    variants: Object.keys(variants).length > 0 ? variants : null,
   };
 }
 

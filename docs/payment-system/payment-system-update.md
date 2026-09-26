@@ -1189,6 +1189,13 @@ GET /api/v1/discovery/likes?direction=RECEIVED&page=0&size=20
       "isVerified": true,
       "primaryPhotoUrl": "https://...blurred-or-signed-url...",
       "actionType": "LIKE",
+      "actionVariantCode": "ROSE",
+      "actionVariant": {
+        "code": "ROSE",
+        "name": "Rose",
+        "description": "Send a rose",
+        "icon": "https://cdn.qal.app/actions/rose.webp"
+      },
       "likedAt": "2026-08-15T10:00:00Z",
       "distanceKm": 5,
       "city": "Addis Ababa",
@@ -1208,6 +1215,13 @@ GET /api/v1/discovery/likes?direction=RECEIVED&page=0&size=20
 ```
 
 Use `actionId` from each item to call `POST /api/v1/discovery/actions/{actionId}/reveal`.
+
+> **Note:** `actionVariantCode`/`actionVariant` are `null` for plain likes
+> (or likes created before the variant feature existed). When present,
+> `actionVariant` mirrors the slim variant summary already used in
+> `SwipeActionResponse.action_variant` (`code`/`name`/`description`/`icon`
+> — no `credits`/`sort_order`). The client uses this to show the specific
+> like type (e.g. "Rose") on the Likes list instead of just Like/Super Like.
 
 ### GET `/api/v1/discovery/matches`
 

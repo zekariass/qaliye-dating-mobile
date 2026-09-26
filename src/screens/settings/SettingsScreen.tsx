@@ -25,6 +25,8 @@ import { useDeleteAccount } from '@/hooks/auth/useDeleteAccount';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { usePendingOrders } from '@/hooks/billing/useOrders';
 import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
+import { useBlindDateConfiguration } from '@/hooks/blindDate/useBlindDateConfiguration';
+import { useQuestionSetMutations } from '@/hooks/blindDate/useQuestionSet';
 import { useSignOutWithDeactivation } from '@/hooks/notifications/useSignOutWithDeactivation';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppLink } from '@/hooks/useAppLink';
@@ -49,6 +51,8 @@ export default function SettingsScreen() {
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
   const { showActivityStatus, update: updateVisibility, isUpdating: isUpdatingVisibility } = useActivityVisibility();
+  const { configuration: bdConfig, isLoading: bdConfigLoading } = useBlindDateConfiguration();
+  const { patchConfig: patchBdConfig } = useQuestionSetMutations();
   const { signOut, isSigningOut } = useSignOutWithDeactivation();
   const { confirmDelete, deleteStatus } = useDeleteAccount();
   const [revisitSheetVisible, setRevisitSheetVisible] = useState(false);
@@ -356,6 +360,48 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
+        {/* ── Blind Date ── */}
+        <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+          <Text style={[styles.sectionTitle, { color: th.text }]}>
+            {t('settings.blindDate', 'Blind Date')}
+          </Text>
+          <View style={styles.optionRow}>
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="heart-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: th.text }]}>
+                {t('settings.blindDateEnabled', 'Blind Date enabled')}
+              </Text>
+              <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                {t('settings.blindDateEnabledSub', 'Join and host anonymous Blind Date sessions')}
+              </Text>
+            </View>
+            {bdConfigLoading && !bdConfig ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Switch
+                value={bdConfig?.enabled ?? false}
+                onValueChange={(v) =>
+                  patchBdConfig.mutate(
+                    { enabled: v },
+                    {
+                      onError: (e) =>
+                        themedError(
+                          t('settings.blindDateToggleError', 'Could not update Blind Date'),
+                          extractApiError(e).message,
+                        ),
+                    },
+                  )
+                }
+                disabled={patchBdConfig.isPending}
+                trackColor={{ false: th.border, true: colors.primary + 'AA' }}
+                thumbColor={bdConfig?.enabled ? colors.primary : th.textMuted}
+              />
+            )}
+          </View>
+        </View>
+
         <ReviewPassedProfilesSheet
           visible={revisitSheetVisible}
           onClose={() => setRevisitSheetVisible(false)}
@@ -478,7 +524,7 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.optionLabel, { color: th.text }]}>Blocked Users</Text>
               <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                Manage users you've blocked
+                Manage users you&apos;ve blocked
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />

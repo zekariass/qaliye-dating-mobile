@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 
 import ProfileCard, { CardDto, ProfileCardHandle } from './ProfileCard';
 
@@ -15,6 +17,14 @@ interface Props {
   cards:            CardDto[];
   onSwipe:          (direction: SwipeDirection, card: CardDto) => void;
   animateTopCardIn?: SwipeDirection | false;
+  topActions?:      ReactNode;
+  topRightActions?: ReactNode;
+  /**
+   * Shared vertical scroll offset of the containing ScrollView (if any).
+   * The top card's fixed action buttons counter-translate by this amount so
+   * they stay pinned on screen while the card scrolls beneath them.
+   */
+  scrollY?:         SharedValue<number>;
 }
 
 // ── Layout constants ─────────────────────────────────────────────────────────
@@ -24,7 +34,7 @@ const MAX_VISIBLE = 2; // keep next card ready underneath for seamless swipe
 // ── Component ────────────────────────────────────────────────────────────────
 
 const CardStack = forwardRef<CardStackHandle, Props>(
-  function CardStack({ cards, onSwipe, animateTopCardIn = false }, ref) {
+  function CardStack({ cards, onSwipe, animateTopCardIn = false, topActions, topRightActions, scrollY }, ref) {
     const topCardRef = useRef<ProfileCardHandle>(null);
 
     useImperativeHandle(ref, () => ({
@@ -66,6 +76,9 @@ const CardStack = forwardRef<CardStackHandle, Props>(
                 isTop={isTop}
                 onSwipe={(dir) => onSwipe(dir, card)}
                 animateIn={isTop ? animateTopCardIn : false}
+                actions={isTop ? topActions : undefined}
+                rightActions={isTop ? topRightActions : undefined}
+                scrollY={scrollY}
               />
             </View>
           );

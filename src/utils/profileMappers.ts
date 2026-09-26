@@ -74,7 +74,7 @@ export const EDUCATION_API_TO_LABEL: Record<string, string> = {
   OTHER: 'Other',
 };
 
-const RELATIONSHIP_API_TO_LABEL: Record<string, string> = {
+export const RELATIONSHIP_API_TO_LABEL: Record<string, string> = {
   MARRIAGE: 'Marriage',
   SERIOUS_RELATIONSHIP: 'Serious relationship',
   LONG_TERM: 'Long-term relationship',
@@ -112,7 +112,7 @@ export const ACTIVITY_API_TO_LABEL: Record<string, string> = {
   PREFER_NOT_TO_SAY: 'Prefer not to say',
 };
 
-const GENDER_API_TO_LABEL: Record<string, string> = {
+export const GENDER_API_TO_LABEL: Record<string, string> = {
   MALE: 'Male',
   FEMALE: 'Female',
 };

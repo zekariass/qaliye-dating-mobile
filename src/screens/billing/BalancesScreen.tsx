@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
     ActivityIndicator,
     Modal,
@@ -14,11 +15,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius } from '@/constants/theme';
+import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
+import { useLikeActions } from '@/hooks/discovery/useLikeActions';
 import { useTheme } from '@/hooks/use-theme';
-import type { ActionLimitAndCost } from '@/types/billing';
+import type { ActionLimitAndCost, ActionVariantLimitAndCost } from '@/types/billing';
 import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
+import type { LikeActionVariantDto } from '@/types/discovery';
+import { likeVariantResetHint } from '@/utils/likeVariants';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,11 +40,11 @@ function formatBoostTime(seconds: number): string {
   return h > 0 ? `${h}h ${m % 60}m remaining` : `${m}m remaining`;
 }
 
-function formatPeriodSuffix(periodType: string | null | undefined): string {
+function formatPeriodLabel(periodType: string | null | undefined): string {
   switch (periodType) {
     case 'DAY':           return 'per day';
     case 'MONTH':         return 'per month';
-    case 'BILLING_CYCLE': return 'per billing cycle';
+    case 'BILLING_CYCLE': return 'per cycle';
     case 'WEEK':          return 'per week';
     case 'YEAR':          return 'per year';
     case 'LIFETIME':      return 'per recipient';
@@ -48,86 +52,36 @@ function formatPeriodSuffix(periodType: string | null | undefined): string {
   }
 }
 
-// Actions whose limit is per-recipient rather than per-period.
-// These show a static "Limit: N per recipient" line with no usage bar.
 const PER_RECIPIENT_ACTIONS = new Set(['MESSAGE', 'VOICE_MESSAGE', 'IMAGE_MESSAGE']);
 
-function pluralize(word: string, count: number): string {
-  if (count === 1) return word.replace(/s$/, '');
-  return word;
-}
-
-function formatCostLine(label: string, action?: ActionLimitAndCost): string {
-  if (!action) return 'Free';
-  const memberCreditCost = action.member_credit_cost ?? 0;
-  if (memberCreditCost === 0) return 'Free';
-  const creditWord = memberCreditCost === 1 ? 'credit' : 'credits';
-  const actionNoun = pluralize(label.toLowerCase(), 1);
-  return `${memberCreditCost} ${creditWord} per ${actionNoun}`;
-}
-
 const QUOTA_META: Record<string, { label: string; icon: string; color: string }> = {
-  LIKE:              { label: 'Likes',            icon: 'heart-outline',      color: colors.secondary    },
-  SUPER_LIKE:        { label: 'Super Likes',       icon: 'star-outline',       color: colors.warning      },
-  REWIND:            { label: 'Rewinds',           icon: 'refresh-outline',    color: colors.primary      },
-  BOOST:             { label: 'Boosts',            icon: 'rocket-outline',     color: '#FF6B35'           },
-  VOICE_MESSAGE:     { label: 'Voice Messages',    icon: 'mic-outline',        color: colors.verifiedBlue },
-  IMAGE_MESSAGE:     { label: 'Image Messages',    icon: 'image-outline',      color: colors.primary      },
-  MESSAGE:           { label: 'Messages',          icon: 'chatbubble-outline', color: colors.primary      },
-  SUPER_MESSAGE:     { label: 'Before-Match Messages',    icon: 'sparkles-outline',   color: colors.warning      },
-  SEE_WHO_LIKED_YOU: { label: 'See Who Liked You', icon: 'eye-outline',        color: colors.primary      },
+  LIKE:              { label: 'Likes',                  icon: 'heart-outline',      color: colors.secondary    },
+  SUPER_LIKE:        { label: 'Super Likes',             icon: 'star-outline',       color: colors.warning      },
+  REWIND:            { label: 'Rewinds',                 icon: 'refresh-outline',    color: colors.primary      },
+  BOOST:             { label: 'Boosts',                  icon: 'rocket-outline',     color: '#FF6B35'           },
+  VOICE_MESSAGE:     { label: 'Voice Messages',          icon: 'mic-outline',        color: colors.verifiedBlue },
+  IMAGE_MESSAGE:     { label: 'Image Messages',          icon: 'image-outline',      color: colors.primary      },
+  MESSAGE:           { label: 'Messages',                icon: 'chatbubble-outline', color: colors.primary      },
+  SUPER_MESSAGE:     { label: 'Before-Match Messages',   icon: 'sparkles-outline',   color: colors.warning      },
+  SEE_WHO_LIKED_YOU: { label: 'See Who Liked You',       icon: 'eye-outline',        color: colors.primary      },
 };
 
 const QUOTA_ORDER = [
-  'MESSAGE',
-  'VOICE_MESSAGE',
-  'IMAGE_MESSAGE',
-  'LIKE',
-  'SUPER_LIKE',
-  'REWIND',
-  'BOOST',
-  'SUPER_MESSAGE',
-  'SEE_WHO_LIKED_YOU',
+  'MESSAGE', 'VOICE_MESSAGE', 'IMAGE_MESSAGE',
+  'LIKE', 'SUPER_LIKE',
+  'REWIND', 'BOOST', 'SUPER_MESSAGE', 'SEE_WHO_LIKED_YOU',
 ];
 
-// English action definitions (same content as the Help screen).
 const ACTION_DEFINITIONS: Record<string, { title: string; description: string }> = {
-  LIKE: {
-    title: 'Like',
-    description: "Expressing interest in a profile to create a potential match.",
-  },
-  SUPER_LIKE: {
-    title: 'Super Like',
-    description: "Highlighting your profile to let someone know you are extremely interested before they swipe.",
-  },
-  REWIND: {
-    title: 'Rewind',
-    description: "Reversing your last swipe or action to undo an accidental pass or like.",
-  },
-  BOOST: {
-    title: 'Boost',
-    description: "Temporarily increasing your profile's visibility to get more views and matches.",
-  },
-  VOICE_MESSAGE: {
-    title: 'Voice Message',
-    description: "Sending an audio recording instead of text in a chat.",
-  },
-  IMAGE_MESSAGE: {
-    title: 'Image Message',
-    description: "Sending a photo or picture within a chat conversation.",
-  },
-  MESSAGE: {
-    title: 'Message',
-    description: "Sending a standard text communication to a matched user.",
-  },
-  SUPER_MESSAGE: {
-    title: 'Before-Match Message',
-    description: "Sending a message to someone prior to matching to grab their attention.",
-  },
-  SEE_WHO_LIKED_YOU: {
-    title: 'See Who Liked You',
-    description: "Viewing a list of users who have already liked your profile before you swipe on them.",
-  },
+  LIKE:              { title: 'Like',                   description: 'Expressing interest in a profile to create a potential match.' },
+  SUPER_LIKE:        { title: 'Super Like',              description: 'Highlighting your profile to let someone know you are extremely interested before they swipe.' },
+  REWIND:            { title: 'Rewind',                  description: 'Reversing your last swipe or action to undo an accidental pass or like.' },
+  BOOST:             { title: 'Boost',                   description: "Temporarily increasing your profile's visibility to get more views and matches." },
+  VOICE_MESSAGE:     { title: 'Voice Message',           description: 'Sending an audio recording instead of text in a chat.' },
+  IMAGE_MESSAGE:     { title: 'Image Message',           description: 'Sending a photo or picture within a chat conversation.' },
+  MESSAGE:           { title: 'Message',                 description: 'Sending a standard text communication to a matched user.' },
+  SUPER_MESSAGE:     { title: 'Before-Match Message',    description: 'Sending a message to someone prior to matching to grab their attention.' },
+  SEE_WHO_LIKED_YOU: { title: 'See Who Liked You',       description: 'Viewing a list of users who have already liked your profile before you swipe on them.' },
 };
 
 const cardShadow = Platform.select({
@@ -136,101 +90,282 @@ const cardShadow = Platform.select({
   default: {},
 });
 
+// ─── VariantIcon ──────────────────────────────────────────────────────────────
+// Inline here to avoid importing from LikeVariantButtons (avoids circular deps)
+function VariantIconImg({ variant, size }: { variant: LikeActionVariantDto; size: number }) {
+  const [failed, setFailed] = useState(false);
+  if (!variant.icon || failed) {
+    return <Ionicons name="heart" size={size} color={colors.secondary} />;
+  }
+  return (
+    <Image
+      source={{ uri: variant.icon }}
+      style={{ width: size, height: size }}
+      contentFit="contain"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+// ─── UsageBar ─────────────────────────────────────────────────────────────────
+function UsageBar({ used, limit, color }: { used: number; limit: number; color: string }) {
+  const { colors: th } = useTheme();
+  const pct = limit > 0 ? Math.min(used / limit, 1) : 0;
+  const isNearLimit = pct >= 0.8;
+  const barColor = isNearLimit ? colors.warning : color;
+  return (
+    <View style={[usageBarStyles.track, { backgroundColor: th.border }]}>
+      <View style={[usageBarStyles.fill, { width: `${Math.round(pct * 100)}%`, backgroundColor: barColor }]} />
+    </View>
+  );
+}
+const usageBarStyles = StyleSheet.create({
+  track: { height: 4, borderRadius: 2, overflow: 'hidden', flex: 1 },
+  fill:  { height: 4, borderRadius: 2 },
+});
+
 // ─── QuotaRow ─────────────────────────────────────────────────────────────────
 
-function QuotaRow({ actionCode, action, isLast, onInfo }: {
-  actionCode: string; action: ActionLimitAndCost; isLast: boolean;
-  onInfo: (code: string) => void;
+type ActionDefinition = { title: string; description: string };
+
+/**
+ * A single row in the Usage section. Shows:
+ *  - icon + label
+ *  - pill chips: limit/period, credit cost
+ *  - usage bar + "X / Y used" for periodic limits
+ *  - note line (reset hint when blocked, remaining count otherwise)
+ */
+function QuotaRow({
+  label, icon, accentColor,
+  limit, used, remaining, periodType, memberCreditCost, actualCreditCost,
+  applyCreditsAfterLimit, isPerRecipient,
+  blocked, note, definition, isLast,
+  onInfo,
+}: {
+  label: string;
+  icon: ReactNode;
+  accentColor: string;
+  limit: number | null;
+  used: number;
+  remaining: number | null;
+  periodType: string;
+  memberCreditCost: number;
+  actualCreditCost: number;
+  applyCreditsAfterLimit: boolean;
+  isPerRecipient: boolean;
+  blocked?: boolean;
+  note?: { text: string; color?: string } | null;
+  definition?: ActionDefinition | null;
+  isLast: boolean;
+  onInfo: (def: ActionDefinition) => void;
 }) {
   const { colors: th } = useTheme();
-  const meta           = QUOTA_META[actionCode];
-  const isUnlimited    = action.limit === null;
-  const isPerRecipient = PER_RECIPIENT_ACTIONS.has(actionCode);
-  const limit          = action.limit ?? 0;
-  const periodSuffix   = formatPeriodSuffix(action.period_type);
-  const actionNoun     = pluralize(meta.label.toLowerCase(), 1);
-  const memberCost     = action.member_credit_cost ?? 0;
-  const actualCost     = action.actual_credit_cost ?? 0;
-  const hasDefinition  = actionCode in ACTION_DEFINITIONS;
+  const isUnlimited = limit === null;
+  const periodLabel = formatPeriodLabel(periodType);
+  const showBar = !isUnlimited && !isPerRecipient && limit != null && limit > 0;
+  const usedDisplay = used ?? 0;
 
   return (
     <>
-      <View style={quotaRowStyles.row}>
-        <View style={[quotaRowStyles.iconWrap, { backgroundColor: `${meta.color}15` }]}>
-          <Ionicons name={meta.icon as any} size={16} color={meta.color} />
+      <View style={qStyles.row}>
+        {/* Icon */}
+        <View style={[qStyles.iconWrap, { backgroundColor: `${accentColor}15` }]}>
+          {icon}
         </View>
-        <View style={quotaRowStyles.info}>
-          {/* Label + help button */}
-          <View style={quotaRowStyles.labelRow}>
-            <Text style={[quotaRowStyles.label, { color: th.text }]}>{meta.label}</Text>
-            {hasDefinition && (
-              <Pressable
-                onPress={() => onInfo(actionCode)}
-                accessibilityLabel={`What is ${meta.label}?`}
-                accessibilityRole="button"
-              >
-                <View style={[quotaRowStyles.helpBtn, { borderColor: th.textSecondary }]}>
-                  <Text style={[quotaRowStyles.helpBtnText, { color: th.textSecondary }]}>?</Text>
+
+        {/* Body */}
+        <View style={qStyles.body}>
+          {/* Label row */}
+          <View style={qStyles.labelRow}>
+            <Text style={[qStyles.label, { color: th.text }]}>{label}</Text>
+            {definition && (
+              <Pressable onPress={() => onInfo(definition)} hitSlop={8} accessibilityRole="button">
+                <View style={[qStyles.helpDot, { borderColor: th.border }]}>
+                  <Text style={[qStyles.helpDotText, { color: th.textMuted }]}>?</Text>
                 </View>
               </Pressable>
             )}
           </View>
 
-          {isUnlimited ? (
-            <>
-              <Text style={[quotaRowStyles.unlimitedText, { color: colors.success }]}>Unlimited</Text>
-              <Text style={[quotaRowStyles.subText, { color: th.textSecondary }]}>
-                {formatCostLine(meta.label, action)}
-              </Text>
-            </>
-          ) : (
-            <>
-              {/* Free: {limit} per {period} or per recipient */}
-              <Text style={[quotaRowStyles.usage, { color: th.textSecondary }]}>
-                {memberCost === 0
-                  ? `Free: ${limit.toLocaleString()}${isPerRecipient ? ' per recipient' : periodSuffix ? ` ${periodSuffix}` : ''}`
-                  : `${limit.toLocaleString()}${isPerRecipient ? ' per recipient' : periodSuffix ? ` ${periodSuffix}` : ''} · ${memberCost} ${memberCost === 1 ? 'credit' : 'credits'} each`}
-              </Text>
-
-              {/* Then: {cost} credits per {action} after free limit */}
-              {action.apply_credit_after_limit && actualCost > 0 && (
-                <Text style={[quotaRowStyles.subText, { color: th.textSecondary }]}>
-                  Then: {actualCost} {actualCost === 1 ? 'credit' : 'credits'} per {actionNoun} after free limit
+          {/* Chips row: limit + cost */}
+          <View style={qStyles.chipsRow}>
+            {isUnlimited ? (
+              <View style={[qStyles.chip, { backgroundColor: `${colors.success}14`, borderColor: `${colors.success}30` }]}>
+                <Ionicons name="infinite-outline" size={11} color={colors.success} />
+                <Text style={[qStyles.chipText, { color: colors.success }]}>Unlimited</Text>
+              </View>
+            ) : (
+              <View style={[qStyles.chip, { backgroundColor: `${accentColor}12`, borderColor: `${accentColor}28` }]}>
+                <Text style={[qStyles.chipText, { color: accentColor }]}>
+                  {limit?.toLocaleString()}{periodLabel ? ` ${periodLabel}` : ''}
                 </Text>
-              )}
-            </>
+              </View>
+            )}
+            {memberCreditCost > 0 && (
+              <View style={[qStyles.chip, { backgroundColor: `${colors.primary}10`, borderColor: `${colors.primary}25` }]}>
+                <Ionicons name="diamond" size={10} color={colors.primary} />
+                <Text style={[qStyles.chipText, { color: colors.primary }]}>
+                  {memberCreditCost} {memberCreditCost === 1 ? 'credit' : 'credits'} each
+                </Text>
+              </View>
+            )}
+            {!isUnlimited && applyCreditsAfterLimit && actualCreditCost > 0 && memberCreditCost === 0 && (
+              <View style={[qStyles.chip, { backgroundColor: `${colors.primary}10`, borderColor: `${colors.primary}25` }]}>
+                <Ionicons name="diamond" size={10} color={colors.primary} />
+                <Text style={[qStyles.chipText, { color: colors.primary }]}>
+                  {actualCreditCost} cr after limit
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Usage bar + counter */}
+          {showBar && (
+            <View style={qStyles.barRow}>
+              <UsageBar used={usedDisplay} limit={limit!} color={accentColor} />
+              <Text style={[qStyles.barLabel, { color: th.textMuted }]}>
+                {usedDisplay} / {limit!.toLocaleString()}
+              </Text>
+            </View>
+          )}
+
+          {/* Note line (reset hint or remaining) */}
+          {note && (
+            <Text style={[qStyles.note, { color: note.color ?? th.textMuted }]}>
+              {blocked && <Ionicons name="lock-closed-outline" size={10} color={note.color ?? th.textMuted} />}
+              {blocked ? '  ' : ''}{note.text}
+            </Text>
           )}
         </View>
       </View>
-      {!isLast && <View style={[quotaRowStyles.divider, { backgroundColor: th.border }]} />}
+      {!isLast && <View style={[qStyles.divider, { backgroundColor: th.border }]} />}
     </>
   );
 }
 
-const quotaRowStyles = StyleSheet.create({
-  row:           { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 },
-  iconWrap:      { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  info:          { flex: 1, gap: 5 },
-  labelRow:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  label:         { fontSize: 14, fontWeight: '700' },
-  helpBtn:       { width: 18, height: 18, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  helpBtnText:   { fontSize: 11, fontWeight: '700', lineHeight: 13 },
-  usage:         { fontSize: 12, fontWeight: '500' },
-  unlimitedText: { fontSize: 13, fontWeight: '700' },
-  subText:       { fontSize: 11, fontWeight: '500' },
-  divider:       { height: 1, marginHorizontal: 16 },
+const qStyles = StyleSheet.create({
+  row:       { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
+  iconWrap:  { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 },
+  body:      { flex: 1, gap: 6 },
+  labelRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  label:     { fontSize: 14, fontWeight: '700', flex: 1 },
+  helpDot:   { width: 17, height: 17, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  helpDotText: { fontSize: 10, fontWeight: '700', lineHeight: 12 },
+  chipsRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 999, borderWidth: 1,
+  },
+  chipText:  { fontSize: 11, fontWeight: '600' },
+  barRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  barLabel:  { fontSize: 11, fontWeight: '600', minWidth: 52, textAlign: 'right' },
+  note:      { fontSize: 12, fontWeight: '500' },
+  divider:   { height: 1, marginHorizontal: 16 },
 });
+
+// ─── ActionQuotaRow ───────────────────────────────────────────────────────────
+
+function ActionQuotaRow({ actionCode, action, isLast, onInfo }: {
+  actionCode: string; action: ActionLimitAndCost; isLast: boolean;
+  onInfo: (def: ActionDefinition) => void;
+}) {
+  const meta = QUOTA_META[actionCode];
+  const isPerRecipient = PER_RECIPIENT_ACTIONS.has(actionCode);
+  return (
+    <QuotaRow
+      label={meta.label}
+      icon={<Ionicons name={meta.icon as any} size={17} color={meta.color} />}
+      accentColor={meta.color}
+      limit={action.limit}
+      used={action.used}
+      remaining={action.remaining}
+      periodType={action.period_type ?? ''}
+      memberCreditCost={action.member_credit_cost ?? 0}
+      actualCreditCost={action.actual_credit_cost ?? 0}
+      applyCreditsAfterLimit={action.apply_credit_after_limit}
+      isPerRecipient={isPerRecipient}
+      definition={ACTION_DEFINITIONS[actionCode] ?? null}
+      isLast={isLast}
+      onInfo={onInfo}
+    />
+  );
+}
+
+// ─── LikeVariantQuotaRow ──────────────────────────────────────────────────────
+
+/**
+ * Quota row for a single LIKE variant (Rose, Fire, …) — remote variant icon.
+ *
+ * Limit/usage fields are merged from two sources:
+ *  1. `GET /discovery/like-actions` per-variant fields (limit, used,
+ *     remaining, resets_at, period_type, blocked) — authoritative when the
+ *     backend ships them. `undefined` = field absent → fall back.
+ *  2. `limits_and_costs.LIKE.variants[code]` from the entitlements payload —
+ *     used when the like-actions fields aren't present.
+ */
+function LikeVariantQuotaRow({ variant, quota, isLast, onInfo }: {
+  variant: LikeActionVariantDto;
+  quota?: ActionVariantLimitAndCost | null;
+  isLast: boolean;
+  onInfo: (def: ActionDefinition) => void;
+}) {
+  const limit       = variant.limit !== undefined ? variant.limit : (quota?.limit ?? null);
+  const used        = variant.used ?? quota?.used ?? 0;
+  const remaining   = variant.remaining !== undefined ? variant.remaining : (quota?.remaining ?? null);
+  const resetsAt    = variant.resets_at !== undefined ? variant.resets_at : (quota?.resets_at ?? null);
+  const periodType  = variant.period_type !== undefined ? (variant.period_type ?? '') : (quota?.period_type ?? '');
+  const memberCost  = variant.credits > 0 ? variant.credits : (quota?.member_credit_cost ?? 0);
+  const actualCost  = quota?.actual_credit_cost ?? memberCost;
+  // Credits can still be charged after the free limit is exhausted.
+  const applyAfter  = remaining === 0
+    && (quota?.apply_credit_after_limit ?? (variant.blocked === false || memberCost > 0));
+  const blocked     = variant.blocked === true
+    || (remaining === 0 && limit != null && !applyAfter);
+
+  const remainingSuffix = (
+    { DAY: 'today', WEEK: 'this week', MONTH: 'this month', BILLING_CYCLE: 'this cycle', YEAR: 'this year' } as Record<string, string>
+  )[periodType];
+
+  const note = blocked
+    ? { text: likeVariantResetHint({ ...variant, period_type: periodType || null, resets_at: resetsAt }), color: colors.warning }
+    : remaining != null
+      ? { text: `${remaining} left${remainingSuffix ? ` ${remainingSuffix}` : ''}` }
+      : null;
+
+  return (
+    <QuotaRow
+      label={variant.name || 'Like'}
+      icon={<VariantIconImg variant={variant} size={20} />}
+      accentColor={colors.secondary}
+      limit={limit}
+      used={used}
+      remaining={remaining}
+      periodType={periodType}
+      memberCreditCost={memberCost}
+      actualCreditCost={actualCost}
+      applyCreditsAfterLimit={applyAfter}
+      isPerRecipient={false}
+      blocked={blocked}
+      note={note}
+      definition={variant.description
+        ? { title: variant.name || 'Like', description: variant.description }
+        : null}
+      isLast={isLast}
+      onInfo={onInfo}
+    />
+  );
+}
 
 // ─── BalancesScreen ───────────────────────────────────────────────────────────
 
 export default function BalancesScreen() {
-  const router  = useRouter();
-  const { colors: th }  = useTheme();
+  const router = useRouter();
+  const { colors: th } = useTheme();
   const { entitlements, isLoading, isRefetching, refreshEntitlements } = useEntitlements();
+  const { variants: likeVariants } = useLikeActions();
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
-  const [infoAction, setInfoAction] = useState<string | null>(null);
-
-  const infoDefinition = infoAction ? ACTION_DEFINITIONS[infoAction] : null;
+  const [infoDefinition, setInfoDefinition] = useState<ActionDefinition | null>(null);
 
   if (isLoading || !entitlements) {
     return (
@@ -241,32 +376,52 @@ export default function BalancesScreen() {
   }
 
   const { plan, subscription, credits, limits_and_costs, active_boost } = entitlements;
-  const isPremium         = isPremiumPlan(plan);
-  const isFreePremium     = isFreePremiumPlan(plan);
-  const planLabel         = isFreePremium ? 'Free Premium' : isPremium ? 'Premium' : 'Free';
-  const planIcon          = isFreePremium ? 'gift-outline' : isPremium ? 'diamond-outline' : 'person-circle-outline';
-  const planColor         = isFreePremium ? colors.warning : isPremium ? colors.primary : th.textSecondary;
-  const creditsEnabled    = entitlements.country_settings?.credits_enabled ?? true;
+  const isPremium           = isPremiumPlan(plan);
+  const isFreePremium       = isFreePremiumPlan(plan);
+  const planLabel           = isFreePremium ? 'Free Premium' : isPremium ? 'Premium' : 'Free';
+  const planIcon            = isFreePremium ? 'gift-outline' : isPremium ? 'diamond-outline' : 'person-circle-outline';
+  const planColor           = isFreePremium ? colors.warning : isPremium ? colors.primary : th.textSecondary;
+  const creditsEnabled      = entitlements.country_settings?.credits_enabled ?? true;
   const subscriptionEnabled = entitlements.country_settings?.subscription_enabled ?? true;
 
-  // Boost progress: fraction of total duration still remaining
   const boostTotalSeconds = (entitlements.boost_duration_minutes ?? 30) * 60;
   const boostProgress = active_boost && boostTotalSeconds > 0
     ? Math.min(active_boost.remaining_seconds / boostTotalSeconds, 1)
     : 0;
 
-  // Render the 6 known actions in canonical order, pulling each from the
-  // merged `limits_and_costs` map. Unknown actions from the API are ignored.
   const lacMap = limits_and_costs ?? {};
-  const quotaEntries: [string, ActionLimitAndCost][] = QUOTA_ORDER
-    .filter((code) => code in QUOTA_META && lacMap[code])
-    .map((code) => [code, lacMap[code]] as [string, ActionLimitAndCost]);
+  const showLikeVariants = likeVariants.length > 0;
+  const likeEntry = lacMap.LIKE;
+  const likeVariantQuotas = likeEntry?.variants ?? {};
+
+  type QuotaItem =
+    | { kind: 'action'; code: string; action: ActionLimitAndCost }
+    | { kind: 'variant'; variant: LikeActionVariantDto; quota: ActionVariantLimitAndCost | null };
+
+  const quotaItems: QuotaItem[] = [];
+  for (const code of QUOTA_ORDER) {
+    if (code === 'LIKE' && showLikeVariants) {
+      for (const v of likeVariants) {
+        quotaItems.push({
+          kind: 'variant',
+          variant: v,
+          // Per-variant quota from entitlements; fall back to the parent LIKE
+          // entry so limits still render when no per-variant entry exists.
+          quota: likeVariantQuotas[v.code] ?? likeEntry ?? null,
+        });
+      }
+      continue;
+    }
+    if (code === 'SUPER_LIKE' && showLikeVariants) continue;
+    if (!(code in QUOTA_META) || !lacMap[code]) continue;
+    quotaItems.push({ kind: 'action', code, action: lacMap[code] });
+  }
 
   return (
-    <View style={[styles.screen, { backgroundColor: th.background, paddingTop: safeTop }]}>
+    <View style={[styles.screen, { backgroundColor: th.backgroundElement, paddingTop: safeTop }]}>
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <View style={styles.header}>
+      {/* ── Header ── */}
+      <View style={[styles.header, { backgroundColor: th.surface, borderBottomColor: th.border }]}>
         <Pressable
           style={[styles.iconBtn, { backgroundColor: th.backgroundElement }]}
           onPress={() => router.replace('/(app)/(tabs)/profile' as any)}
@@ -292,18 +447,18 @@ export default function BalancesScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: safeBottom + 32 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: safeBottom + 40 }]}
         showsVerticalScrollIndicator={false}
         bounces
       >
 
-        {/* ── Plan Card ──────────────────────────────────────────────────────── */}
+        {/* ── Plan Card ── */}
         {isPremium ? (
           <LinearGradient
             colors={
               isFreePremium
-                ? [`${colors.warning}22`, `${colors.warning}0A`, `${th.background}00`]
-                : [`${colors.primary}1C`, `${colors.primaryLight}0E`, `${th.background}00`]
+                ? [`${colors.warning}22`, `${colors.warning}0A`, `${th.backgroundElement}00`]
+                : [`${colors.primary}1C`, `${colors.primaryLight}0E`, `${th.backgroundElement}00`]
             }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -362,7 +517,7 @@ export default function BalancesScreen() {
           </View>
         ) : null}
 
-        {/* ── Active Boost ───────────────────────────────────────────────────── */}
+        {/* ── Active Boost ── */}
         {active_boost && active_boost.remaining_seconds > 0 && (
           <LinearGradient
             colors={['#FF6B3522', '#FF6B350A']}
@@ -391,12 +546,14 @@ export default function BalancesScreen() {
           </LinearGradient>
         )}
 
-        {/* ── Credits ────────────────────────────────────────────────────────── */}
+        {/* ── Credits ── */}
         {creditsEnabled && (
-          <View style={styles.section}>
-            <View style={styles.sectionLabel}>
-              <Ionicons name="wallet-outline" size={15} color={colors.primary} />
-              <Text style={[styles.sectionLabelText, { color: th.text }]}>Credits</Text>
+          <View style={styles.block}>
+            <View style={styles.blockHeader}>
+              <View style={[styles.blockIconBadge, { backgroundColor: colors.primary + '18' }]}>
+                <Ionicons name="diamond-outline" size={13} color={colors.primary} />
+              </View>
+              <Text style={[styles.blockTitle, { color: colors.primary }]}>Credits</Text>
             </View>
             <LinearGradient
               colors={[`${colors.primary}16`, `${colors.primaryLight}0A`]}
@@ -404,65 +561,65 @@ export default function BalancesScreen() {
               end={{ x: 1, y: 1 }}
               style={[styles.creditCard, { borderColor: `${colors.primary}28` }, cardShadow]}
             >
-              {/* Balance hero */}
-              <View style={styles.creditBalanceRow}>
+              <View style={styles.creditRow}>
                 <View style={[styles.creditIconRing, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}28` }]}>
-                  <Ionicons name="diamond" size={28} color={colors.primary} />
+                  <Ionicons name="diamond" size={26} color={colors.primary} />
                 </View>
-                <View>
+                <View style={styles.creditTextCol}>
                   <Text style={[styles.creditValue, { color: colors.primary }]}>
                     {credits.credit_balance.toLocaleString()}
                   </Text>
-                  <Text style={[styles.creditValueLabel, { color: th.textSecondary }]}>
-                    Available Credits
-                  </Text>
+                  <Text style={[styles.creditLabel, { color: th.textSecondary }]}>Available credits</Text>
                 </View>
+                <Pressable
+                  style={[styles.buyPill, { backgroundColor: colors.primary }]}
+                  onPress={() => router.push('/(app)/credits-shop' as any)}
+                  accessibilityLabel="Buy credits"
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="add" size={14} color="#fff" />
+                  <Text style={styles.buyPillText}>Buy</Text>
+                </Pressable>
               </View>
-
             </LinearGradient>
-
-            {/* Buy Credits — full-width centered CTA below the card */}
-            <Pressable
-              style={({ pressed }) => [styles.buyBtnWrap, { opacity: pressed ? 0.88 : 1 }]}
-              onPress={() => router.push('/(app)/credits-shop' as any)}
-              accessibilityLabel="Buy credits"
-              accessibilityRole="button"
-            >
-              <LinearGradient
-                colors={['#A020F0', '#6D35FF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.buyBtnGradient}
-              >
-                <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                <Text style={styles.buyBtnText}>Buy Credits</Text>
-              </LinearGradient>
-            </Pressable>
           </View>
         )}
 
-        {/* ── Usage / Quotas ─────────────────────────────────────────────────── */}
-        {quotaEntries.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionLabel}>
-              <Ionicons name="stats-chart-outline" size={15} color={colors.primary} />
-              <Text style={[styles.sectionLabelText, { color: th.text }]}>Usage</Text>
+        {/* ── Usage / Quotas ── */}
+        {quotaItems.length > 0 && (
+          <View style={styles.block}>
+            <View style={styles.blockHeader}>
+              <View style={[styles.blockIconBadge, { backgroundColor: colors.primary + '18' }]}>
+                <Ionicons name="stats-chart-outline" size={13} color={colors.primary} />
+              </View>
+              <Text style={[styles.blockTitle, { color: colors.primary }]}>Usage & Limits</Text>
             </View>
             <View style={[styles.listCard, { backgroundColor: th.surface, borderColor: th.border }, cardShadow]}>
-              {quotaEntries.map(([code, action], idx) => (
-                <QuotaRow
-                  key={code}
-                  actionCode={code}
-                  action={action}
-                  isLast={idx === quotaEntries.length - 1}
-                  onInfo={setInfoAction}
-                />
-              ))}
+              {quotaItems.map((item, idx) => {
+                const isLast = idx === quotaItems.length - 1;
+                return item.kind === 'variant' ? (
+                  <LikeVariantQuotaRow
+                    key={`like-variant-${item.variant.code}`}
+                    variant={item.variant}
+                    quota={item.quota}
+                    isLast={isLast}
+                    onInfo={setInfoDefinition}
+                  />
+                ) : (
+                  <ActionQuotaRow
+                    key={item.code}
+                    actionCode={item.code}
+                    action={item.action}
+                    isLast={isLast}
+                    onInfo={setInfoDefinition}
+                  />
+                );
+              })}
             </View>
           </View>
         )}
 
-        {/* ── Upgrade CTA (free users only) ─────────────────────────────────── */}
+        {/* ── Upgrade CTA ── */}
         {!isPremium && subscriptionEnabled && (
           <Pressable
             style={({ pressed }) => [styles.ctaBtn, { opacity: pressed ? 0.88 : 1 }]}
@@ -485,24 +642,20 @@ export default function BalancesScreen() {
 
       </ScrollView>
 
-      {/* ── Action definition modal ─────────────────────────────────────────── */}
+      {/* ── Action definition modal ── */}
       <Modal
         transparent
         animationType="fade"
         visible={infoDefinition !== null}
-        onRequestClose={() => setInfoAction(null)}
+        onRequestClose={() => setInfoDefinition(null)}
       >
-        <Pressable style={infoModalStyles.overlay} onPress={() => setInfoAction(null)}>
+        <Pressable style={infoModalStyles.overlay} onPress={() => setInfoDefinition(null)}>
           <View style={[infoModalStyles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
             <View style={infoModalStyles.header}>
               <Text style={[infoModalStyles.title, { color: th.text }]}>
                 {infoDefinition?.title ?? ''}
               </Text>
-              <Pressable
-                onPress={() => setInfoAction(null)}
-                accessibilityLabel="Close"
-                accessibilityRole="button"
-              >
+              <Pressable onPress={() => setInfoDefinition(null)} accessibilityLabel="Close" accessibilityRole="button">
                 <Ionicons name="close" size={20} color={th.textSecondary} />
               </Pressable>
             </View>
@@ -520,34 +673,16 @@ export default function BalancesScreen() {
 
 const infoModalStyles = StyleSheet.create({
   overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center', justifyContent: 'center', padding: 24,
   },
-  card: {
-    width: '100%',
-    maxWidth: 360,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    padding: 18,
-  },
+  card: { width: '100%', maxWidth: 360, borderRadius: radius.lg, borderWidth: 1, padding: 20 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: 12,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: '800',
-    flex: 1,
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
+  title:       { fontSize: 16, fontWeight: '800', flex: 1 },
+  description: { fontSize: 14, lineHeight: 21 },
 });
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -558,27 +693,33 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md, paddingVertical: 12,
+    borderBottomWidth: 1,
   },
   iconBtn: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: { fontSize: 18, fontWeight: '800' },
+  headerTitle: { fontSize: fontSize.lg, fontWeight: '800' },
 
   // Scroll
   scroll:        { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 8, gap: 14 },
+  scrollContent: { paddingHorizontal: spacing.md, paddingTop: spacing.md, gap: 20 },
+
+  // Section block
+  block:       { gap: spacing.sm },
+  blockHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 2 },
+  blockIconBadge: {
+    width: 22, height: 22, borderRadius: 7,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  blockTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.7 },
 
   // Plan card (premium)
-  planCard: {
-    borderRadius: radius.lg, borderWidth: 1, padding: 18,
-  },
-  planRow:     { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  planCard: { borderRadius: radius.lg, borderWidth: 1, padding: 18 },
+  planRow:      { flexDirection: 'row', alignItems: 'center', gap: 14 },
   planIconRing: {
     width: 52, height: 52, borderRadius: 26,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1,
@@ -589,7 +730,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999,
   },
-  planBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  planBadgeText:  { color: '#fff', fontSize: 12, fontWeight: '800' },
   activeChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 3,
@@ -605,70 +746,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     borderRadius: radius.lg, borderWidth: 1, padding: 16,
   },
-  freePlanLeft:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  freePlanTitle: { fontSize: 15, fontWeight: '800' },
-  freePlanSub:   { fontSize: 12, fontWeight: '500', marginTop: 1 },
-  upgradePill: {
+  freePlanLeft:    { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  freePlanTitle:   { fontSize: 15, fontWeight: '800' },
+  freePlanSub:     { fontSize: 12, fontWeight: '500', marginTop: 1 },
+  upgradePill:     {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999,
   },
   upgradePillText: { color: '#fff', fontSize: 13, fontWeight: '800' },
 
-  // Active boost
-  boostCard: {
-    borderRadius: radius.lg, borderWidth: 1, padding: 16, gap: 12,
-  },
-  boostHeaderRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-  },
-  boostTrack: {
-    height: 6, borderRadius: 3, overflow: 'hidden',
-  },
-  boostFill: {
-    height: 6, borderRadius: 3, backgroundColor: '#FF6B35',
-  },
-  boostIconRing: {
+  // Boost card
+  boostCard:      { borderRadius: radius.lg, borderWidth: 1, padding: 16, gap: 12 },
+  boostHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  boostIconRing:  {
     width: 46, height: 46, borderRadius: 23,
     alignItems: 'center', justifyContent: 'center',
   },
-  boostTextWrap: { flex: 1 },
-  boostTitle:    { fontSize: 14, fontWeight: '800' },
-  boostTimer:    { fontSize: 13, fontWeight: '600', marginTop: 2 },
+  boostTextWrap:  { flex: 1 },
+  boostTitle:     { fontSize: 14, fontWeight: '800' },
+  boostTimer:     { fontSize: 13, fontWeight: '600', marginTop: 2 },
+  boostTrack:     { height: 6, borderRadius: 3, overflow: 'hidden' },
+  boostFill:      { height: 6, borderRadius: 3, backgroundColor: '#FF6B35' },
   liveBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: 999, borderWidth: 1,
   },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF6B35' },
+  liveDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF6B35' },
   liveText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5, color: '#FF6B35' },
 
-  // Section labels
-  section:         { gap: 8 },
-  sectionLabel:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sectionLabelText: { fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
-
   // Credits card
-  creditCard:       { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
-  creditBalanceRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 20 },
+  creditCard:    { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
+  creditRow:     { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18 },
   creditIconRing: {
-    width: 60, height: 60, borderRadius: 30,
+    width: 52, height: 52, borderRadius: 26,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  creditValue:      { fontSize: 38, fontWeight: '900', lineHeight: 42 },
-  creditValueLabel: { fontSize: 13, fontWeight: '500', marginTop: 2 },
-  buyBtnWrap: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    marginTop: 10,
+  creditTextCol: { flex: 1 },
+  creditValue:   { fontSize: 34, fontWeight: '900', lineHeight: 38 },
+  creditLabel:   { fontSize: 13, fontWeight: '500', marginTop: 2 },
+  buyPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999,
   },
-  buyBtnGradient: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 15,
-  },
-  buyBtnText: { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
+  buyPillText: { color: '#fff', fontSize: 13, fontWeight: '800' },
 
-  // Shared list card (used by quota)
-  listCard:      { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
+  // Quota list card
+  listCard: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
 
   // Upgrade CTA
   ctaBtn:      { borderRadius: radius.lg, overflow: 'hidden' },

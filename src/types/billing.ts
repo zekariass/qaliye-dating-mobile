@@ -143,6 +143,25 @@ export type ActionLimitAndCost = {
   actual_credit_cost: number;
   period_type: string;
   apply_credit_after_limit: boolean;
+  // Variant-aware fields — currently only populated for the LIKE action.
+  variant_pricing_enabled?: boolean;
+  variant_limits_enabled?: boolean;
+  variants?: Record<string, ActionVariantLimitAndCost> | null;
+};
+
+/**
+ * Effective per-variant limit + cost entry (e.g. per LIKE variant such as
+ * HEART, ROSE, …), nested under `ActionLimitAndCost.variants`.
+ */
+export type ActionVariantLimitAndCost = {
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  resets_at: string | null;
+  member_credit_cost: number;
+  actual_credit_cost: number;
+  period_type: string;
+  apply_credit_after_limit: boolean;
 };
 
 /**

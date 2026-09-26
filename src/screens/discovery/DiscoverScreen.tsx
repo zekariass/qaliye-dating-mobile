@@ -1,33 +1,35 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  AppState,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    AppState,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming
+    Easing,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withRepeat,
+    withSequence,
+    withTiming
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DEFAULT_LIKE_VARIANT_CODE } from '@/api/discovery/discoveryApi';
 import { PromotionAlert } from '@/components/billing/PromotionAlert';
 import { themedAlert, themedAlertDismiss } from '@/components/common/ThemedAlert';
+import ActionRail from '@/components/discovery/ActionRail';
 import BrowseModeGrid from '@/components/discovery/BrowseModeGrid';
-import CardActionButtons from '@/components/discovery/CardActionButtons';
 import CardStack, { CardStackHandle } from '@/components/discovery/CardStack';
 import MatchCelebrationOverlay from '@/components/discovery/MatchCelebrationOverlay';
 import MorePhotosSection from '@/components/discovery/MorePhotosSection';
@@ -35,6 +37,7 @@ import { CardDto } from '@/components/discovery/ProfileCard';
 import ProfileDetailsSection from '@/components/discovery/ProfileDetailsSection';
 import { BANNER_H, PromotionBanner } from '@/components/discovery/PromotionBanner';
 import SuperMessageModal, { type SuperMessageTarget } from '@/components/discovery/SuperMessageModal';
+import TopLeftActionButtons from '@/components/discovery/TopLeftActionButtons';
 import { SwipeIcon } from '@/components/layout/AppTabBar';
 import { NotificationPromptModal } from '@/components/notifications/NotificationPromptModal';
 import { IdentityVerificationPromptModal } from '@/components/profile/IdentityVerificationPromptModal';
@@ -45,6 +48,7 @@ import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { usePromotionBanner } from '@/hooks/billing/usePromotionBanner';
 import { mapProfileToCard, useDiscoveryProfiles } from '@/hooks/discovery/useDiscoveryProfiles';
+import { useLikeActions } from '@/hooks/discovery/useLikeActions';
 import { useRewind } from '@/hooks/discovery/useRewind';
 import { useSendSuperMessage } from '@/hooks/discovery/useSendSuperMessage';
 import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
@@ -58,15 +62,13 @@ import { useDiscoveryStore } from '@/stores/discovery-store';
 import { usePromotionStore } from '@/stores/promotion-store';
 import type { EligiblePromotionDto } from '@/types/billing';
 import {
-  canRewind as checkCanRewind,
-  canSuperLike as checkCanSuperLike,
-  getBoostStatus,
-  getQuotaErrorType,
-  isInsufficientCreditsError,
-  isLimitExceededError,
+    canRewind as checkCanRewind,
+    getBoostStatus,
+    getQuotaErrorType,
+    isInsufficientCreditsError,
+    isLimitExceededError
 } from '@/utils/entitlements';
 import { showActionErrorAlert } from '@/utils/limitExceededAlert';
-import { getActionOverlayRight } from '@/utils/responsive';
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -207,17 +209,28 @@ type BoostControlProps = {
   boostStatus: ReturnType<typeof getBoostStatus>;
   isActivating: boolean;
   onActivate: () => void;
+  /** Tap on the active badge → show the boost-active modal. */
+  onShowStatus: () => void;
   themeColors: ReturnType<typeof useTheme>['colors'];
   isDark: boolean;
 };
 
-function BoostControl({ boostStatus, isActivating, onActivate, themeColors, isDark }: BoostControlProps) {
+function BoostControl({ boostStatus, isActivating, onActivate, onShowStatus, themeColors, isDark }: BoostControlProps) {
   if (boostStatus.isActive) {
+    // Icon-only badge — a labelled pill here overflows the header row and
+    // clips off the left edge on narrower screens. Tappable: opens the
+    // boost-active status modal.
     return (
-      <View style={boostStyles.boostedBadge}>
-        <Ionicons name="rocket" size={14} color="#FFF" />
-        <Text style={boostStyles.boostedText}>Boost Active</Text>
-      </View>
+      <TouchableOpacity
+        onPress={onShowStatus}
+        activeOpacity={0.8}
+        style={boostStyles.boostedBadge}
+        accessibilityRole="button"
+        accessibilityLabel="Boost active"
+        accessibilityHint="Shows your active boost details"
+      >
+        <Ionicons name="rocket" size={20} color="#FFF" />
+      </TouchableOpacity>
     );
   }
 
@@ -247,25 +260,20 @@ function BoostControl({ boostStatus, isActivating, onActivate, themeColors, isDa
 }
 
 const boostStyles = StyleSheet.create({
+  // Same 42×42 footprint as boostBtn so the header layout stays identical
+  // whether boost is active or not.
   boostedBadge: {
-    flexDirection: 'row',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
-    gap: 5,
+    justifyContent: 'center',
     backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 18,
     shadowColor: colors.primary,
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
-  },
-  boostedText: {
-    color: '#FFF',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.3,
   },
   boostBtn: {
     width: 42,
@@ -293,9 +301,14 @@ export default function DiscoverScreen() {
 
   const cardStackRef        = useRef<CardStackHandle>(null);
   const scrollRef            = useRef<ScrollView>(null);
-  const scrollY              = useRef(0);
+  // Scroll offset as a shared value — the card's action buttons counter-
+  // translate by this so they stay pinned on screen while the card scrolls.
+  const scrollY              = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => { scrollY.value = e.contentOffset.y; },
+  });
   const isRewindingRef        = useRef(false);
-  const pendingSuperLikeRef   = useRef(false);
+  const pendingLikeVariantRef = useRef<string>(DEFAULT_LIKE_VARIANT_CODE);
   const shownIdsRef           = useRef<Set<string>>(new Set());
   const lastSwipedCardRef     = useRef<CardDto | null>(null);
   const lastSwipedDirRef      = useRef<'LIKE' | 'PASS'>('LIKE');
@@ -334,6 +347,7 @@ export default function DiscoverScreen() {
   } = useDiscoveryProfiles();
 
   const { mutate: swipe } = useSwipeAction();
+  const { variants: likeVariants } = useLikeActions();
   const sendSuperMessage = useSendSuperMessage();
   const { onMatch: onReviewMatch } = useReviewPrompt();
   const notifPrompt = useNotificationPrompt();
@@ -559,6 +573,18 @@ export default function DiscoverScreen() {
     });
   }, [activateBoost, boostStatus, refreshEntitlements]);
 
+  // Tapping the active boost badge → status modal with remaining time.
+  const handleBoostStatusPress = useCallback(() => {
+    const mins = Math.max(1, Math.ceil(boostStatus.remainingSeconds / 60));
+    themedAlert({
+      title: 'Boost Active',
+      message: `Your profile is being shown to more people right now. About ${mins} minute${mins === 1 ? '' : 's'} remaining.`,
+      icon: 'rocket',
+      iconColor: colors.primary,
+      buttons: [{ text: 'OK' }],
+    });
+  }, [boostStatus]);
+
   // ── Queue management ───────────────────────────────────────────────────────
 
   // Reset queue on background refetch completion (preference change) or backend cursor reset.
@@ -651,24 +677,28 @@ export default function DiscoverScreen() {
   const scrollToTop = useCallback(
     () =>
       new Promise<void>((resolve) => {
-        if (scrollY.current <= 2) { resolve(); return; }
+        if (scrollY.value <= 2) { resolve(); return; }
         scrollRef.current?.scrollTo({ y: 0, animated: true });
         setTimeout(resolve, 320);
       }),
-    [],
+    [scrollY],
   );
 
   // ── Swipe handler ───────────────────────────────────────────────────────────
   const handleSwipe = useCallback(
     (direction: 'LIKE' | 'PASS', card: CardDto) => {
-      const isSuperLike = direction === 'LIKE' && pendingSuperLikeRef.current;
-      pendingSuperLikeRef.current = false;
+      const likeVariantCode = pendingLikeVariantRef.current;
+      pendingLikeVariantRef.current = DEFAULT_LIKE_VARIANT_CODE;
       lastSwipedCardRef.current = card;
       lastSwipedDirRef.current  = direction;
       setDisplayQueue((prev) => prev.filter((c) => c.user_id !== card.user_id));
       setSwipedIds((prev) => new Set(prev).add(card.user_id));
       swipe(
-        { type: isSuperLike ? 'SUPER_LIKE' : direction, targetUserId: card.user_id },
+        {
+          type: direction,
+          targetUserId: card.user_id,
+          actionVariantCode: likeVariantCode,
+        },
         {
           onSuccess: (response) => {
             if (direction === 'LIKE') {
@@ -703,7 +733,7 @@ export default function DiscoverScreen() {
             }
             if (!isLimitExceededError(e)) return;
             const errorType = getQuotaErrorType(e);
-            if (isSuperLike || errorType === 'SUPER_LIKE') {
+            if (errorType === 'SUPER_LIKE') {
               shownIdsRef.current.delete(card.user_id);
               setSwipedIds((prev) => { const n = new Set(prev); n.delete(card.user_id); return n; });
               setDisplayQueue((prev) => {
@@ -797,7 +827,8 @@ export default function DiscoverScreen() {
     cardStackRef.current?.triggerSwipe('PASS');
   }, [scrollToTop]);
 
-  const handleLike = useCallback(async () => {
+  const handleLikeVariant = useCallback(async (actionVariantCode: string) => {
+    pendingLikeVariantRef.current = actionVariantCode;
     await scrollToTop();
     cardStackRef.current?.triggerSwipe('LIKE');
   }, [scrollToTop]);
@@ -847,12 +878,6 @@ export default function DiscoverScreen() {
     [sendSuperMessage, router, entitlements],
   );
 
-  const handleSuperLike = useCallback(async () => {
-    pendingSuperLikeRef.current = true;
-    await scrollToTop();
-    cardStackRef.current?.triggerSwipe('LIKE');
-  }, [scrollToTop]);
-
   // Keep the suspense loader visible while we are fetching or while the API
   // has already returned cards but they have not yet been synced into the
   // display queue. This prevents the "no more profiles" empty state from
@@ -896,74 +921,95 @@ export default function DiscoverScreen() {
       {/* ── Header ─────────────────────────────────── */}
       <Animated.View style={[{ overflow: 'hidden' }, headerContainerStyle]}>
       <View style={styles.header}>
-        {/* Mode toggle — replaces Qaliye logo */}
-        <TouchableOpacity
-          style={styles.logoContainer}
-          onPress={() => {
-            if (modeSwitching) return;
-            setModeSwitching(true);
-            setViewMode(viewMode === 'swipe' ? 'browse' : 'swipe');
-          }}
-          disabled={modeSwitching}
-          activeOpacity={0.7}
-          accessibilityLabel={viewMode === 'swipe' ? 'Switch to browse mode' : 'Switch to swipe mode'}
-          accessibilityRole="button"
-        >
-          {viewMode === 'swipe' ? (
-            <Ionicons name="grid-outline" size={22} color={th.text} />
-          ) : (
-            <SwipeIcon color={th.text} active={false} inactiveFill={isDark ? '#E5E7EB' : '#0B0B0B'} />
-          )}
-        </TouchableOpacity>
-
-        {/* Rewind — browse mode only */}
-        {viewMode === 'browse' && (
+        <View style={styles.headerLeft}>
+          {/* Mode toggle — replaces Qaliye logo */}
           <TouchableOpacity
             style={[styles.settingsBtn, { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
-            onPress={() => setBrowseRewindTrigger((n) => n + 1)}
+            onPress={() => {
+              if (modeSwitching) return;
+              setModeSwitching(true);
+              setViewMode(viewMode === 'swipe' ? 'browse' : 'swipe');
+            }}
+            disabled={modeSwitching}
             activeOpacity={0.7}
-            disabled={!checkCanRewind(entitlements)}
-            accessibilityLabel="Rewind last action"
+            accessibilityLabel={viewMode === 'swipe' ? 'Switch to browse mode' : 'Switch to swipe mode'}
             accessibilityRole="button"
           >
-            <Text
-              style={{
-                fontSize: 28,
-                fontWeight: '700',
-                color: checkCanRewind(entitlements) ? '#F97316' : th.textSecondary,
-                transform: [{ rotate: '-90deg' }],
-              }}
+            {viewMode === 'swipe' ? (
+              <Ionicons name="grid-outline" size={22} color={th.text} />
+            ) : (
+              <SwipeIcon color={th.text} active={false} inactiveFill={isDark ? '#E5E7EB' : '#0B0B0B'} />
+            )}
+          </TouchableOpacity>
+
+          {/* Rewind — browse mode only */}
+          {viewMode === 'browse' && (
+            <TouchableOpacity
+              style={[styles.settingsBtn, { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
+              onPress={() => setBrowseRewindTrigger((n) => n + 1)}
+              activeOpacity={0.7}
+              disabled={!checkCanRewind(entitlements)}
+              accessibilityLabel="Rewind last action"
+              accessibilityRole="button"
             >
-              ↺
+              <MaterialCommunityIcons
+                name="undo"
+                size={22}
+                color={checkCanRewind(entitlements) ? '#FBBF24' : th.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
+
+          {/* Blind date button */}
+          <TouchableOpacity
+            style={[
+              styles.blindDateBtn,
+              { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface },
+            ]}
+            onPress={() => router.push('/(app)/blind-date' as any)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
+          >
+            <Image
+              source={require('@/assets/images/blind-date-logo.png')}
+              style={styles.blindDateIcon}
+              resizeMode="contain"
+            />
+            <Text style={[styles.blindDateText, { color: th.text }]}>
+              {t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
             </Text>
           </TouchableOpacity>
-        )}
+        </View>
 
-        {/* Incognito indicator OR Boost control */}
-        {isIncognito ? (
-          <View style={styles.incognitoIndicator}>
-            <Ionicons name="eye-off" size={12} color={th.textSecondary} />
-            <Text style={[styles.incognitoText, { color: th.textSecondary }]}>Private mode</Text>
-          </View>
-        ) : (
-          <BoostControl
-            boostStatus={boostStatus}
-            isActivating={activateBoost.isPending}
-            onActivate={handleBoostActivate}
-            themeColors={th}
-            isDark={isDark}
-          />
-        )}
+        <View style={styles.headerRight}>
+          {/* Incognito indicator OR Boost control */}
+          {isIncognito ? (
+            <View style={styles.incognitoIndicator}>
+              <Ionicons name="eye-off" size={12} color={th.textSecondary} />
+              <Text style={[styles.incognitoText, { color: th.textSecondary }]}>Private mode</Text>
+            </View>
+          ) : (
+            <BoostControl
+              boostStatus={boostStatus}
+              isActivating={activateBoost.isPending}
+              onActivate={handleBoostActivate}
+              onShowStatus={handleBoostStatusPress}
+              themeColors={th}
+              isDark={isDark}
+            />
+          )}
 
-        {/* Settings / Preferences */}
-        <TouchableOpacity
-          style={[styles.settingsBtn, { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
-          onPress={() => router.push('/(app)/preferences')}
-          activeOpacity={0.7}
-          accessibilityLabel={t('discovery.openPreferences')}
-        >
-          <Ionicons name="options-outline" size={21} color={th.text} />
-        </TouchableOpacity>
+          {/* Settings / Preferences */}
+          <TouchableOpacity
+            style={[styles.settingsBtn, { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
+            onPress={() => router.push('/(app)/preferences')}
+            activeOpacity={0.7}
+            accessibilityLabel={t('discovery.openPreferences')}
+          >
+            <Ionicons name="options-outline" size={21} color={th.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {bannerPromotions.length > 0 && (
@@ -1003,7 +1049,7 @@ export default function DiscoverScreen() {
             }}
             onRewind={() => {}}
             canRewind={checkCanRewind(entitlements)}
-            canSuperLike={checkCanSuperLike(entitlements)}
+            likeVariants={likeVariants}
             onSuperMessage={handleOpenSuperMessage}
             rewindTrigger={browseRewindTrigger}
             swipedIds={swipedIds}
@@ -1032,7 +1078,7 @@ export default function DiscoverScreen() {
           />
         ) : (
         <>
-        <ScrollView
+        <Animated.ScrollView
           ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={[
@@ -1041,7 +1087,7 @@ export default function DiscoverScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           scrollEventThrottle={16}
-          onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+          onScroll={scrollHandler}
           bounces
         >
           {/* Card zone — fixed height filling available space */}
@@ -1096,6 +1142,20 @@ export default function DiscoverScreen() {
                 cards={displayQueue}
                 onSwipe={handleSwipe}
                 animateTopCardIn={rewindIncoming}
+                scrollY={scrollY}
+                topActions={
+                  <TopLeftActionButtons
+                    onPass={handlePass}
+                    onRewind={handleRewind}
+                    onSuperMessage={() => {
+                      const top = displayQueue[0];
+                      if (top) handleOpenSuperMessage(top.user_id, top.display_name, top.photos?.[0]?.image_url ?? null);
+                    }}
+                  />
+                }
+                topRightActions={
+                  <ActionRail variants={likeVariants} onSelect={handleLikeVariant} />
+                }
               />
             )}
 
@@ -1124,23 +1184,8 @@ export default function DiscoverScreen() {
               <MorePhotosSection photos={enrichedTopCard.photos} />
             </>
           )}
-        </ScrollView>
+        </Animated.ScrollView>
 
-        {/* Fixed action buttons — float on the right edge over content */}
-        {!isLoading && !isError && !isEmpty && (
-          <View style={[styles.actionOverlay, { bottom: TOTAL_TAB + 30, right: getActionOverlayRight(SCREEN_W) }]}>
-            <CardActionButtons
-              onRewind={handleRewind}
-              onPass={handlePass}
-              onLike={handleLike}
-              onSuperLike={handleSuperLike}
-              onSuperMessage={() => {
-                const top = displayQueue[0];
-                if (top) handleOpenSuperMessage(top.user_id, top.display_name, top.photos?.[0]?.image_url ?? null);
-              }}
-            />
-          </View>
-        )}
         </>
         )}
       </View>
@@ -1234,12 +1279,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
   },
-  logoContainer: {
-    width: 42,
-    height: 42,
-    justifyContent: 'center',
+  headerLeft: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  blindDateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 42,
+    paddingHorizontal: 12,
+    borderRadius: 21,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  blindDateIcon: {
+    width: 28,
+    height: 28,
+  },
+  blindDateText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
   incognitoIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1279,11 +1351,9 @@ const styles = StyleSheet.create({
   cardArea: {
     paddingTop: 4,
     paddingBottom: 4,
-  },
-  actionOverlay: {
-    position: 'absolute',
-    right: 10,
-    zIndex: 10,
+    // The card's floating action buttons counter-translate over the profile
+    // details below — keep this subtree painted (and hit-tested) above them.
+    zIndex: 2,
   },
 
   // ── Scroll hint ─────────────────────────────────────────────────────────

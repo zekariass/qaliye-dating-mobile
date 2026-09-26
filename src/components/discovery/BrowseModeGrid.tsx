@@ -3,31 +3,36 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Easing,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withSequence,
-  withSpring,
-  withTiming
+    Easing,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withSequence,
+    withSpring,
+    withTiming
 } from 'react-native-reanimated';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
 import BrowseProfileDetailSheet from '@/components/discovery/BrowseProfileDetailSheet';
+import LikeVariantButtons, {
+    FALLBACK_VARIANT,
+    VariantIcon,
+} from '@/components/discovery/LikeVariantButtons';
 import { CardDto } from '@/components/discovery/ProfileCard';
+import TopLeftActionButtons from '@/components/discovery/TopLeftActionButtons';
 import { colors, radius, spacing } from '@/constants/theme';
 import { mapProfileToCard } from '@/hooks/discovery/useDiscoveryProfiles';
 import { useRewind } from '@/hooks/discovery/useRewind';
@@ -35,12 +40,12 @@ import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
-import type { SwipeActionResponse } from '@/types/discovery';
+import type { LikeActionVariantDto, SwipeActionResponse } from '@/types/discovery';
 import { formatDistance } from '@/utils/formatDistance';
+import { LOW_REMAINING_THRESHOLD, likeVariantResetHint } from '@/utils/likeVariants';
 import { rs, useTabletScale } from '@/utils/responsive';
 
 const TABLET_BREAK = 500;
-const ACTION_BTN = 42;
 
 interface BrowseItem {
   user_id: string;
@@ -101,26 +106,22 @@ function SkeletonCard({ themeBg }: { themeBg: string }) {
 function BrowseProfileCard({
   item,
   onPress,
-  onLike,
+  onLikeVariant,
   onPass,
-  onSuperLike,
   onSuperMessage,
-  canSuperLike,
+  likeVariants,
   cardBg,
-  iconBg,
   borderColor,
   textColor,
   isActing,
 }: {
   item: BrowseItem;
   onPress: (userId: string) => void;
-  onLike: (userId: string) => void;
+  onLikeVariant: (userId: string, variantCode: string) => void;
   onPass: (userId: string) => void;
-  onSuperLike: (userId: string) => void;
   onSuperMessage: (userId: string) => void;
-  canSuperLike: boolean;
+  likeVariants: LikeActionVariantDto[];
   cardBg: string;
-  iconBg: string;
   borderColor: string;
   textColor: string;
   isActing: boolean;
@@ -142,7 +143,11 @@ function BrowseProfileCard({
   const burstOpacity = useSharedValue(0);
   const burstIsSuper = useSharedValue(0);
   const [animating, setAnimating] = useState(false);
+  const [showVariantInfo, setShowVariantInfo] = useState(false);
+  const [infoH, setInfoH] = useState(0);
+  const [burstVariant, setBurstVariant] = useState<LikeActionVariantDto | null>(null);
   const actionType = useSharedValue<'none' | 'pass' | 'like' | 'super_like'>('none');
+  const variantList = likeVariants.length > 0 ? likeVariants : [FALLBACK_VARIANT];
 
   const photos = item.photos;
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -259,14 +264,13 @@ function BrowseProfileCard({
     animateAndAction('pass', () => onPass(item.user_id));
   }, [animateAndAction, onPass, item.user_id]);
 
-  const handleLike = useCallback(() => {
-    animateAndAction('like', () => onLike(item.user_id));
-  }, [animateAndAction, onLike, item.user_id]);
-
-  const handleSuperLike = useCallback(() => {
-    if (!canSuperLike) return;
-    animateAndAction('super_like', () => onSuperLike(item.user_id));
-  }, [animateAndAction, onSuperLike, canSuperLike, item.user_id]);
+  const handleLikeVariant = useCallback(
+    (variantCode: string) => {
+      setBurstVariant(variantList.find((v) => v.code === variantCode) ?? FALLBACK_VARIANT);
+      animateAndAction('like', () => onLikeVariant(item.user_id, variantCode));
+    },
+    [animateAndAction, onLikeVariant, item.user_id, variantList],
+  );
 
   const cardAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -304,6 +308,7 @@ function BrowseProfileCard({
   return (
     <Animated.View style={[styles.card, { width: CARD_W, backgroundColor: cardBg }, cardAnimatedStyle]}>
       {/* Photo — tap to view profile, swipe horizontally to browse photos */}
+      <View>
       <GestureDetector gesture={photoGesture}>
         <Animated.View
           accessibilityLabel={`View ${item.display_name}'s profile`}
@@ -371,7 +376,11 @@ function BrowseProfileCard({
 
           {/* Action stamps — LIKE / PASS / SUPER LIKE */}
           <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]} pointerEvents="none">
-            <Text style={{ fontSize: 90 }}>🌹</Text>
+            {burstVariant ? (
+              <VariantIcon variant={burstVariant} size={rs(90, scale)} color={colors.heartPink} />
+            ) : (
+              <Text style={{ fontSize: 90 }}>🌹</Text>
+            )}
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.passStamp, passStampStyle]} pointerEvents="none">
             <Ionicons name="close" size={110} color="#FF3B30" />
@@ -382,14 +391,21 @@ function BrowseProfileCard({
 
           {/* Like / super-like burst — big icon centered on the photo */}
           <Animated.View style={[styles.burstWrap, likeBurstStyle]} pointerEvents="none">
-            <Text style={styles.burstEmoji}>🌹</Text>
+            {burstVariant ? (
+              <VariantIcon variant={burstVariant} size={rs(110, scale)} color={colors.heartPink} />
+            ) : (
+              <Text style={styles.burstEmoji}>🌹</Text>
+            )}
           </Animated.View>
           <Animated.View style={[styles.burstWrap, superBurstStyle]} pointerEvents="none">
             <Text style={styles.burstEmoji}>💍</Text>
           </Animated.View>
 
           {/* Name + age + location — bottom of photo */}
-          <View style={styles.cardInfo}>
+          <View
+            style={styles.cardInfo}
+            onLayout={(e) => setInfoH(e.nativeEvent.layout.height)}
+          >
             <Text style={[styles.cardName, { fontSize: rs(22, scale) }]} numberOfLines={1}>
               {item.display_name}
               <Text style={[styles.cardAge, { fontSize: rs(18, scale) }]}>  · {item.age}</Text>
@@ -416,6 +432,21 @@ function BrowseProfileCard({
           </View>
         </Animated.View>
       </GestureDetector>
+
+      {/* Right-edge rail — pass / rewind / super message, same controls as
+          swipe mode's left rail. Kept outside the photo gesture so taps don't
+          trigger photo paging or the profile tap. */}
+      <View
+        style={[styles.sideActions, { paddingBottom: infoH + 6 }]}
+        pointerEvents="box-none"
+      >
+        <TopLeftActionButtons
+          onPass={handlePass}
+          onSuperMessage={() => onSuperMessage(item.user_id)}
+          disabled={animating || isActing}
+        />
+      </View>
+      </View>
 
       {/* Info section */}
       <View style={styles.infoSection}>
@@ -494,68 +525,71 @@ function BrowseProfileCard({
         )}
       </View>
 
-      {/* Action buttons */}
+      {/* Like action buttons — same variants as swipe mode, laid out
+          horizontally. Pass / rewind / super message live on the photo rail. */}
       <View style={[styles.actionRow, { borderColor }]}>
-        {/* Pass */}
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2 }]}
-          onPress={handlePass}
+        <LikeVariantButtons
+          variants={variantList}
+          onSelect={handleLikeVariant}
           disabled={animating || isActing}
-          activeOpacity={0.7}
-          accessibilityLabel="Pass profile"
-          accessibilityRole="button"
-        >
-          <Ionicons name="close" size={rs(25, scale)} color={colors.danger} />
-        </TouchableOpacity>
+          horizontal
+        />
 
-        {/* Like */}
+        {/* What each like means — expands the descriptions panel */}
         <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2 }]}
-          onPress={handleLike}
-          disabled={animating || isActing}
+          style={[
+            styles.variantInfoBtn,
+            { backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)' },
+          ]}
+          onPress={() => setShowVariantInfo((v) => !v)}
           activeOpacity={0.7}
-          accessibilityLabel="Like profile"
           accessibilityRole="button"
+          accessibilityLabel="Show like action descriptions"
+          accessibilityState={{ expanded: showVariantInfo }}
         >
-          <Text style={{ fontSize: rs(22, scale), transform: [{ rotate: '15deg' }] }}>🌹</Text>
-        </TouchableOpacity>
-
-        {/* Super Like — sparkling heart matching swipe mode */}
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2, opacity: canSuperLike ? 1 : 0.4 }]}
-          onPress={handleSuperLike}
-          disabled={animating || isActing || !canSuperLike}
-          activeOpacity={0.7}
-          accessibilityLabel="Super like profile"
-          accessibilityRole="button"
-        >
-          <Text style={{ fontSize: rs(22, scale) }}>💍</Text>
-        </TouchableOpacity>
-
-        {/* Super Message */}
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2 }]}
-          onPress={() => onSuperMessage(item.user_id)}
-          disabled={animating || isActing}
-          activeOpacity={0.7}
-          accessibilityLabel="Send super message"
-          accessibilityRole="button"
-        >
-          <Text style={{ fontSize: rs(22, scale) }}>💌</Text>
-        </TouchableOpacity>
-
-        {/* View profile — at the right end */}
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: iconBg, width: rs(ACTION_BTN, scale), height: rs(ACTION_BTN, scale), borderRadius: rs(ACTION_BTN, scale) / 2 }]}
-          onPress={() => onPress(item.user_id)}
-          disabled={animating || isActing}
-          activeOpacity={0.7}
-          accessibilityLabel="View profile"
-          accessibilityRole="button"
-        >
-          <Ionicons name="information-circle-outline" size={25} color={colors.primary} />
+          <Ionicons
+            name={showVariantInfo ? 'close' : 'help'}
+            size={rs(15, scale)}
+            color={th.textSecondary}
+          />
         </TouchableOpacity>
       </View>
+
+      {/* Variant descriptions — the browse-mode equivalent of swipe mode's
+          drag-out drawer, toggled by the ? button above. */}
+      {showVariantInfo && (
+        <View style={[styles.variantInfoPanel, { borderTopColor: borderColor }]}>
+          {variantList.map((variant) => (
+            <View key={variant.code} style={styles.variantInfoRow}>
+              <VariantIcon variant={variant} size={rs(26, scale)} />
+              <View style={styles.variantInfoTextCol}>
+                <Text style={[styles.variantInfoName, { color: textColor, fontSize: rs(13.5, scale) }]} numberOfLines={1}>
+                  {variant.name}
+                  {variant.credits > 0 && (
+                    <Text style={[styles.variantInfoCost, { fontSize: rs(11.5, scale) }]}>
+                      {` · ${variant.credits} Credit${variant.credits === 1 ? '' : 's'}`}
+                    </Text>
+                  )}
+                  {variant.blocked ? (
+                    <Text style={[styles.variantInfoLimit, { fontSize: rs(11.5, scale) }]}>
+                      {` · ${likeVariantResetHint(variant)}`}
+                    </Text>
+                  ) : variant.remaining != null && variant.remaining <= LOW_REMAINING_THRESHOLD ? (
+                    <Text style={[styles.variantInfoLimit, { fontSize: rs(11.5, scale) }]}>
+                      {` · ${variant.remaining} left`}
+                    </Text>
+                  ) : null}
+                </Text>
+                {variant.description ? (
+                  <Text style={[styles.variantInfoDesc, { color: th.textSecondary, fontSize: rs(12, scale) }]}>
+                    {variant.description}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
     </Animated.View>
   );
 }
@@ -571,7 +605,8 @@ interface Props {
   onMatch?: (response: SwipeActionResponse) => void;
   onRewind: () => void;
   canRewind: boolean;
-  canSuperLike: boolean;
+  /** Configurable LIKE action variants — same list as the swipe-mode rail. */
+  likeVariants: LikeActionVariantDto[];
   rewindTrigger: number;
   swipedIds: Set<string>;
   onCardAction: (userId: string, swiped: boolean, card?: CardDto) => void;
@@ -591,7 +626,7 @@ export default function BrowseModeGrid({
   onMatch,
   onRewind,
   canRewind,
-  canSuperLike,
+  likeVariants,
   rewindTrigger,
   swipedIds,
   onCardAction,
@@ -656,7 +691,7 @@ export default function BrowseModeGrid({
   }, []);
 
   const handleSwipe = useCallback(
-    async (type: 'LIKE' | 'PASS' | 'SUPER_LIKE', userId: string) => {
+    async (type: 'LIKE' | 'PASS' | 'SUPER_LIKE', userId: string, actionVariantCode?: string) => {
       const card = cardMap.get(userId);
       if (card) {
         lastHiddenRef.current = { userId, card };
@@ -670,7 +705,7 @@ export default function BrowseModeGrid({
         setSheetVisible(false);
       }
       try {
-        const response = await swipeAction({ type, targetUserId: userId });
+        const response = await swipeAction({ type, targetUserId: userId, actionVariantCode });
         if (type === 'LIKE' || type === 'SUPER_LIKE') {
           if (response.is_match && onMatch) {
             onMatch(response);
@@ -741,16 +776,12 @@ export default function BrowseModeGrid({
     }
   }, [rewindTrigger]);
 
-  const handleLike = useCallback(
-    (userId: string) => handleSwipe('LIKE', userId),
+  const handleLikeVariant = useCallback(
+    (userId: string, variantCode: string) => handleSwipe('LIKE', userId, variantCode),
     [handleSwipe],
   );
   const handlePass = useCallback(
     (userId: string) => handleSwipe('PASS', userId),
-    [handleSwipe],
-  );
-  const handleSuperLike = useCallback(
-    (userId: string) => handleSwipe('SUPER_LIKE', userId),
     [handleSwipe],
   );
 
@@ -765,7 +796,6 @@ export default function BrowseModeGrid({
   );
 
   const cardBg = isDark ? th.backgroundElement : th.surface;
-  const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';
   const skeletonBg = isDark ? th.backgroundElement : colors.backgroundLavender;
 
   // ── Loading state ──
@@ -848,13 +878,11 @@ export default function BrowseModeGrid({
           <BrowseProfileCard
             item={item}
             onPress={handlePress}
-            onLike={handleLike}
+            onLikeVariant={handleLikeVariant}
             onPass={handlePass}
-            onSuperLike={handleSuperLike}
             onSuperMessage={handleSuperMessage}
-            canSuperLike={canSuperLike}
+            likeVariants={likeVariants}
             cardBg={cardBg}
-            iconBg={iconBg}
             borderColor={th.border}
             textColor={th.text}
             isActing={isSwiping || isRewinding}
@@ -877,11 +905,8 @@ export default function BrowseModeGrid({
         visible={sheetVisible}
         card={selectedCard}
         onClose={handleCloseSheet}
-        onLike={handleLike}
-        onPass={handlePass}
-        onSuperLike={handleSuperLike}
-        onSuperMessage={handleSuperMessage}
-        canSuperLike={canSuperLike}
+        onLikeVariant={handleLikeVariant}
+        likeVariants={likeVariants}
         isActing={isSwiping || isRewinding}
       />
     </View>
@@ -1111,6 +1136,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  // ── Left-edge photo rail — bottom-anchored; paddingBottom (set inline from
+  //    the measured cardInfo height) parks the buttons just above the name. ──
+  sideActions: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 10,
+    justifyContent: 'flex-end',
+    zIndex: 5,
+  },
+
   // ── Action buttons row ──
   actionRow: {
     flexDirection: 'row',
@@ -1119,19 +1155,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderTopWidth: 1,
+    gap: 10,
   },
-  actionBtn: {
-    width: ACTION_BTN,
-    height: ACTION_BTN,
-    borderRadius: ACTION_BTN / 2,
+  variantInfoBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.10,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
   },
+  variantInfoPanel: {
+    borderTopWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  variantInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  variantInfoTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  variantInfoName: {
+    fontWeight: '700',
+  },
+  variantInfoCost: {
+    color: colors.warning,
+    fontWeight: '700',
+  },
+  variantInfoLimit: {
+    color: colors.secondary,
+    fontWeight: '700',
+  },
+  variantInfoDesc: {
+    lineHeight: 17,
+  },
+
 
   // ── Skeleton ──
   skeletonPhoto: {

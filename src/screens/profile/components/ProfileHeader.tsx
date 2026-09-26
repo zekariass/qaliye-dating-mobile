@@ -150,8 +150,8 @@ export default function ProfileHeader({
               accessibilityLabel="Edit Profile"
               accessibilityRole="button"
             >
-              <Ionicons name="pencil" size={14} color="#FFFFFF" />
-              <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Edit</Text>
+              <Ionicons name="pencil" size={14} color={th.text} />
+              <Text style={[styles.actionBtnText, { color: th.text }]}>Edit</Text>
             </Pressable>
             <Pressable
               style={[styles.actionBtn, { borderColor: th.border, borderWidth: 1.5 }]}
@@ -159,8 +159,8 @@ export default function ProfileHeader({
               accessibilityLabel="Settings"
               accessibilityRole="button"
             >
-              <Ionicons name="settings" size={14} color="#FFFFFF" />
-              <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Settings</Text>
+              <Ionicons name="settings" size={14} color={th.text} />
+              <Text style={[styles.actionBtnText, { color: th.text }]}>Settings</Text>
             </Pressable>
             {isVerified ? (
               <VerifiedBadge pill />
@@ -181,8 +181,8 @@ export default function ProfileHeader({
               accessibilityLabel="Help"
               accessibilityRole="button"
             >
-              <Ionicons name="help-circle-outline" size={14} color="#FFFFFF" />
-              <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Help</Text>
+              <Ionicons name="help-circle-outline" size={14} color={th.text} />
+              <Text style={[styles.actionBtnText, { color: th.text }]}>Help</Text>
             </Pressable>
           </View>
         </View>

@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { likeProfile, passProfile, superLikeProfile } from '@/api/discovery/discoveryApi';
+import { DEFAULT_LIKE_VARIANT_CODE, likeProfile, passProfile, superLikeProfile } from '@/api/discovery/discoveryApi';
 import { ENTITLEMENTS_KEY } from '@/hooks/billing/useEntitlements';
 import { DISCOVERY_COUNTS_KEY } from '@/hooks/discovery/useDiscoveryCounts';
+import { LIKE_ACTIONS_KEY } from '@/hooks/discovery/useLikeActions';
 import { INBOX_QUERY_KEY } from '@/hooks/messages/useInbox';
 import { type DiscoveryCountsDto, SwipeActionResponse } from '@/types/discovery';
 import { generateUUID } from '@/utils/uuid';
@@ -12,20 +13,27 @@ export type SwipeType = 'LIKE' | 'PASS' | 'SUPER_LIKE';
 type SwipeParams = {
   type: SwipeType;
   targetUserId: string;
+  // LIKE-only — the configurable LIKE variant code (e.g. HEART, ROSE). Falls
+  // back to the default variant when omitted so existing call sites keep working.
+  actionVariantCode?: string;
 };
 
 export function useSwipeAction() {
   const qc = useQueryClient();
   return useMutation<SwipeActionResponse, Error, SwipeParams>({
-    mutationFn: async ({ type, targetUserId }: SwipeParams) => {
+    mutationFn: async ({ type, targetUserId, actionVariantCode }: SwipeParams) => {
       const clientActionId = generateUUID();
-      if (type === 'LIKE') return likeProfile(targetUserId, clientActionId);
+      if (type === 'LIKE') return likeProfile(targetUserId, clientActionId, actionVariantCode ?? DEFAULT_LIKE_VARIANT_CODE);
       if (type === 'PASS') return passProfile(targetUserId, clientActionId);
       return superLikeProfile(targetUserId, clientActionId);
     },
     onSuccess: (data, variables) => {
       if (variables.type === 'LIKE' || variables.type === 'SUPER_LIKE') {
         qc.invalidateQueries({ queryKey: ENTITLEMENTS_KEY });
+        // Refresh variant limit/usage fields (used/remaining/blocked)
+        if (variables.type === 'LIKE') {
+          qc.invalidateQueries({ queryKey: LIKE_ACTIONS_KEY });
+        }
         // Optimistically increment sentLikesCount — no extra poll needed
         qc.setQueryData<DiscoveryCountsDto>(DISCOVERY_COUNTS_KEY, (prev) => {
           if (!prev) return prev;

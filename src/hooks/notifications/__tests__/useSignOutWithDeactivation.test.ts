@@ -5,9 +5,16 @@ import { supabase } from '@/lib/supabase';
 import { readInstallationId } from '@/services/notifications/installationId';
 import { useSignOutWithDeactivation } from '../useSignOutWithDeactivation';
 
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
+// The hook is invoked as a plain function (no renderer), so stub the hooks it
+// uses — a bare useState call would need React's dispatcher.
 jest.mock('react', () => ({
   ...jest.requireActual('react'),
   useCallback: (fn: unknown) => fn,
+  useState: (init: unknown) => [typeof init === 'function' ? init() : init, jest.fn()],
 }));
 
 jest.mock('@/api/notifications/notificationsApi', () => ({
@@ -25,7 +32,10 @@ jest.mock('@/lib/supabase', () => ({
 }));
 
 jest.mock('@/stores/me-store', () => ({
-  useMeStore: jest.fn((selector: any) => selector({ clearMe: jest.fn() })),
+  useMeStore: Object.assign(
+    jest.fn((selector: any) => selector({ clearMe: jest.fn() })),
+    { getState: () => ({ clearMe: jest.fn() }) },
+  ),
 }));
 
 jest.mock('expo-router', () => ({

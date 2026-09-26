@@ -25,6 +25,14 @@ export function getActionOverlayRight(screenW: number, inset = 10): number {
   return Math.floor((screenW - cardW) / 2) + inset;
 }
 
+/**
+ * Mirror of `getActionOverlayRight` for overlays flush with the card's left
+ * edge (e.g. the secondary action rail — rewind / super message / pass).
+ */
+export function getActionOverlayLeft(screenW: number, inset = 10): number {
+  return getActionOverlayRight(screenW, inset);
+}
+
 // ─── Tablet text / button scaling ────────────────────────────────────────────
 
 /**

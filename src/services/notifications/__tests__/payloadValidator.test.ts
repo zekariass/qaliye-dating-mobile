@@ -119,9 +119,77 @@ describe('buildNavIntent', () => {
     expect(intent?.screen).toBe('settings');
   });
 
-  it('routes MARKETING to index screen', () => {
+  it('routes MARKETING to home when no deep-link target is present', () => {
     const payload = validatePayload({ notification_type: 'MARKETING' })!;
     const intent = buildNavIntent(payload);
-    expect(intent?.screen).toBe('index');
+    expect(intent?.screen).toBe('');
+  });
+
+  it('routes BLIND_DATE_* ACCOUNT_ALERT codes to the blind-date screen', () => {
+    for (const code of [
+      'BLIND_DATE_REVEAL',
+      'BLIND_DATE_ELIMINATED',
+      'BLIND_DATE_MATCHED',
+      'BLIND_DATE_NO_MATCH',
+      'BLIND_DATE_ADVANCED',
+    ]) {
+      const payload = validatePayload({
+        notification_type: 'ACCOUNT_ALERT',
+        alert_code: code,
+      })!;
+      expect(payload.alert_code).toBe(code);
+      expect(buildNavIntent(payload)?.screen).toBe('blind-date');
+    }
+  });
+
+  it('carries session_id through to the blind-date intent', () => {
+    const sessionId = '550e8400-e29b-41d4-a716-446655440000';
+    const payload = validatePayload({
+      notification_type: 'ACCOUNT_ALERT',
+      alert_code: 'BLIND_DATE_REVEAL',
+      session_id: sessionId,
+    })!;
+    expect(payload.session_id).toBe(sessionId);
+    const intent = buildNavIntent(payload)!;
+    expect(intent.screen).toBe('blind-date');
+    expect(intent.session_id).toBe(sessionId);
+  });
+
+  it('still routes to the blind-date screen when session_id is missing', () => {
+    const payload = validatePayload({
+      notification_type: 'ACCOUNT_ALERT',
+      alert_code: 'BLIND_DATE_MATCHED',
+    })!;
+    expect(payload.session_id).toBeUndefined();
+    const intent = buildNavIntent(payload)!;
+    expect(intent.screen).toBe('blind-date');
+    expect(intent.session_id).toBeUndefined();
+  });
+
+  it('drops malformed session_id values', () => {
+    for (const bad of ['not-a-uuid', '550e8400e29b41d4a716446655440000', 42, '']) {
+      const payload = validatePayload({
+        notification_type: 'ACCOUNT_ALERT',
+        alert_code: 'BLIND_DATE_ELIMINATED',
+        session_id: bad,
+      })!;
+      expect(payload.session_id).toBeUndefined();
+    }
+  });
+
+  it('does not treat unrecognized blind-date-like codes as blind-date alerts', () => {
+    const payload = validatePayload({
+      notification_type: 'ACCOUNT_ALERT',
+      alert_code: 'BLIND_DATE_REMINDER',
+    })!;
+    expect(buildNavIntent(payload)?.screen).toBe('settings');
+  });
+
+  it('keeps unrelated ACCOUNT_ALERT codes on the settings screen', () => {
+    const payload = validatePayload({
+      notification_type: 'ACCOUNT_ALERT',
+      alert_code: 'VERIFICATION_APPROVED',
+    })!;
+    expect(buildNavIntent(payload)?.screen).toBe('settings');
   });
 });

@@ -96,6 +96,15 @@ export function EthnicityMultiSelectPicker({
     [onChange, selected],
   );
 
+  const handleCountryChange = useCallback(
+    (code: string | null) => {
+      if (code === countryFilter) return;
+      setCountryFilter(code);
+      if (selected.length > 0) onChange([]);
+    },
+    [countryFilter, onChange, selected],
+  );
+
   const selectedCountryName = useMemo(() => {
     if (countryFilter === null) return null;
     const quick = QUICK_COUNTRIES.find((c) => c.code === countryFilter);
@@ -127,7 +136,7 @@ export function EthnicityMultiSelectPicker({
           return (
             <Pressable
               key={c.code}
-              onPress={() => setCountryFilter(active ? null : c.code)}
+              onPress={() => handleCountryChange(active ? null : c.code)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -333,7 +342,7 @@ export function EthnicityMultiSelectPicker({
               const active = countryFilter === item.code;
               return (
                 <Pressable
-                  onPress={() => { setCountryFilter(item.code); setCountryModalOpen(false); }}
+                  onPress={() => { handleCountryChange(item.code); setCountryModalOpen(false); }}
                   style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: borderColor, gap: 12, backgroundColor: active ? accentColor + '12' : 'transparent' }}
                 >
                   <Text style={{ fontSize: 11, fontWeight: '700', color: mutedColor, width: 28 }}>{item.code}</Text>

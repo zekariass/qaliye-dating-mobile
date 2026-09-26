@@ -77,6 +77,39 @@ export type MatchSummaryDto = {
   other_user: MatchedUserSummaryDto;
 };
 
+// ─── LIKE action variants ───────────────────────────────────────────────────
+
+export type LikeActionVariantDto = {
+  code: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  credits: number;
+  sort_order: number;
+  // Per-period limit/usage for the current plan — additive fields; absent on
+  // older backend versions. `limit: null` means unlimited.
+  limit?: number | null;
+  used?: number;
+  remaining?: number | null;
+  resets_at?: string | null;
+  period_type?: 'DAY' | 'MONTH' | 'BILLING_CYCLE' | 'LIFETIME' | (string & {}) | null;
+  /** True when the limit is exhausted AND credits cannot be charged after the
+   *  limit — the action cannot be performed at all in this state. */
+  blocked?: boolean;
+};
+
+export type LikeActionsResponse = {
+  actions: LikeActionVariantDto[];
+};
+
+// Slim variant summary embedded in swipe-action / likes-list responses.
+export type ActionVariantSummary = {
+  code: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+};
+
 export type SwipeActionResponse = {
   action_id: string;
   action_type: 'LIKE' | 'PASS' | 'SUPER_LIKE';
@@ -88,6 +121,8 @@ export type SwipeActionResponse = {
   super_like_credits_remaining: number | null;
   created_at: string;
   idempotent: boolean;
+  action_variant_code?: string | null;
+  action_variant?: ActionVariantSummary | null;
 };
 
 export type RewindResponse = {
@@ -195,6 +230,8 @@ export type LikeItemDto = {
   region: string | null;
   country_name: string | null;
   activity_status?: ActivityStatus;
+  action_variant_code?: string | null;
+  action_variant?: ActionVariantSummary | null;
 };
 
 export type LikesPageResponse = {

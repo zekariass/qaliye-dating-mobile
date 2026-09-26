@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { ReactNode } from 'react';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import {
     StyleSheet,
@@ -16,6 +17,7 @@ import Animated, {
     useDerivedValue,
     useSharedValue,
     withTiming,
+    type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -80,10 +82,18 @@ interface Props {
   isTop: boolean;
   onSwipe: (direction: 'LIKE' | 'PASS') => void;
   animateIn?: 'LIKE' | 'PASS' | false;
+  actions?: ReactNode;
+  rightActions?: ReactNode;
+  /**
+   * Shared vertical scroll offset of the enclosing ScrollView. The fixed
+   * action overlay counter-translates by this so the buttons stay pinned on
+   * screen while the card scrolls beneath them.
+   */
+  scrollY?: SharedValue<number>;
 }
 
 const ProfileCard = forwardRef<ProfileCardHandle, Props>(
-  function ProfileCard({ card, isTop, onSwipe, animateIn = false as const }, ref) {
+  function ProfileCard({ card, isTop, onSwipe, animateIn = false as const, actions, rightActions, scrollY }, ref) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 500;
   const tabletCardW = isTablet ? getSwipeCardWidth(width) : undefined;
@@ -92,6 +102,11 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   const myCountry = myProfile?.address?.country_name ?? '';
 
   const [photoIndex, setPhotoIndex] = useState(0);
+  // Measurements pinning the fixed actions overlay where the actions row
+  // previously sat inside infoBox: its bottom edge aligns 6px above the name
+  // row (infoBox's first remaining child).
+  const [infoBoxH, setInfoBoxH] = useState(0);
+  const [nameTopY, setNameTopY] = useState(0);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
 
@@ -190,6 +205,12 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
     return { borderColor, borderWidth };
   });
 
+  // Counter-translate the fixed actions overlay by the screen's scroll offset
+  // so the buttons stay pinned in place while the card scrolls beneath them.
+  const fixedActionsStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scrollY?.value ?? 0 }],
+  }));
+
   const locationText = (() => {
     const sameCountry = myCountry !== '' && card.country_name === myCountry;
     const place = sameCountry
@@ -202,6 +223,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   })();
 
   return (
+    <View style={styles.container}>
     <GestureDetector gesture={gesture}>
       <Animated.View style={[styles.swipeWrap, animatedStyle]}>
         <Animated.View style={[styles.imageCard, isTablet && { width: tabletCardW, alignSelf: 'center' as const }, borderStyle]}>
@@ -259,8 +281,14 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
           </Animated.View>
 
           {/* Profile info overlay — bottom left */}
-          <View style={styles.infoBox}>
-            <View style={styles.nameRow}>
+          <View
+            style={styles.infoBox}
+            onLayout={(e) => setInfoBoxH(e.nativeEvent.layout.height)}
+          >
+            <View
+              style={styles.nameRow}
+              onLayout={(e) => setNameTopY(e.nativeEvent.layout.y)}
+            >
               <Text style={[styles.name, { fontSize: rs(32, scale) }]}>{card.display_name}</Text>
               <Text style={[styles.nameSeparator, { fontSize: rs(28, scale) }]}>·</Text>
               <Text style={[styles.age, { fontSize: rs(28, scale) }]}>{card.age}</Text>
@@ -327,12 +355,39 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
         </Animated.View>
       </Animated.View>
     </GestureDetector>
+
+    {/* Floating action buttons — rendered outside the swiping transform so
+        they don't move with the card, and counter-translated by scrollY so
+        they stay fixed on screen while the card scrolls beneath them.
+        The overlay's bottom edge sits 6px above the name row — the same
+        spot the actions row occupied when it lived inside infoBox. */}
+    {(actions || rightActions) && (
+      <Animated.View
+        pointerEvents="box-none"
+        style={[styles.actionsRow, { bottom: Math.max(0, infoBoxH - nameTopY + 6) }, fixedActionsStyle]}
+      >
+        {/* Mirrors imageCard's tablet width so the buttons align with the
+            card edges (not the wider container) on tablets. */}
+        <View
+          pointerEvents="box-none"
+          style={[styles.actionsRowInner, isTablet && { width: tabletCardW }]}
+        >
+          {actions}
+          <View style={styles.actionsSpacer} />
+          {rightActions}
+        </View>
+      </Animated.View>
+    )}
+    </View>
   );
 });
 
 export default ProfileCard;
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   swipeWrap: {
     position: 'absolute',
     top: 0,
@@ -380,7 +435,7 @@ const styles = StyleSheet.create({
   },
   thumbActive: {
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: '#FFFFFF',
   },
   thumbInactive: {
     borderWidth: 1.5,
@@ -411,10 +466,31 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: spacing.lg,
+    paddingLeft: spacing.sm,
     paddingBottom: spacing.lg + 6,
     paddingTop: spacing.xl,
     gap: 6,
     zIndex: 2,
+  },
+  // Fixed overlay hosting the left/right action buttons — positioned outside
+  // the swipe transform so the buttons don't fly away with the card.
+  // bottom is set dynamically to infoBoxH - 6 (buttons sit just above the
+  // name row, same spot they occupied inside infoBox).
+  actionsRow: {
+    position:   'absolute',
+    left:       0,
+    right:      0,
+  },
+  actionsRowInner: {
+    flexDirection:   'row',
+    alignItems:      'flex-end',
+    alignSelf:       'center',   // centers tablet-sized width like imageCard
+    width:           '100%',
+    paddingLeft:     spacing.sm, // matches infoBox's paddingLeft
+    paddingRight:    2,          // right rail sits ~2px from the card edge
+  },
+  actionsSpacer: {
+    flex: 1,
   },
   nameRow: {
     flexDirection: 'row',

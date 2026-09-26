@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, shadows } from '@/constants/theme';
+import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
+import { navigateBlindDateAlert } from '@/services/notifications/blindDateNavigation';
 import { navigateMarketingIntent } from '@/services/notifications/marketingNavigation';
 import { useNotificationsStore } from '@/stores/notifications-store';
 import type { ValidatedNavIntent } from '@/types/notifications';
@@ -27,11 +29,12 @@ export function NotificationBanner() {
   const { colors: th } = useTheme();
   const { top } = useSafeAreaInsets();
   const router = useRouter();
+  const myUserId = useCurrentProfile().data?.user_id;
   const banner = useNotificationsStore((s) => s.foregroundBanner);
   const dismiss = useNotificationsStore((s) => s.dismissForegroundBanner);
 
-  const translateY = useRef(new Animated.Value(-120)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [translateY] = useState(() => new Animated.Value(-120));
+  const [opacity] = useState(() => new Animated.Value(0));
   const isVisible = useRef(false);
 
   useEffect(() => {
@@ -73,7 +76,16 @@ export function NotificationBanner() {
         router.push('/(app)/(tabs)/likes' as any);
         break;
       case 'ACCOUNT_ALERT':
-        router.push('/(app)/settings' as any);
+        if (navIntent.screen === 'blind-date') {
+          void navigateBlindDateAlert({
+            router,
+            alertCode: navIntent.alert_code,
+            sessionId: navIntent.session_id,
+            userId: myUserId,
+          });
+        } else {
+          router.push('/(app)/settings' as any);
+        }
         break;
       case 'MARKETING':
         navigateMarketingIntent(

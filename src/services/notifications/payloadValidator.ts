@@ -4,6 +4,7 @@ import type {
     NotificationType,
     ValidatedNavIntent,
 } from '@/types/notifications';
+import { BLIND_DATE_ALERT_CODES } from '@/types/notifications';
 
 const SUPPORTED_TYPES: NotificationType[] = [
   'CHAT_MESSAGE',
@@ -69,6 +70,11 @@ export function validatePayload(raw: unknown): NotificationPayloadData | null {
       ? data.discovery_action_id
       : undefined,
     campaign_id: isValidUuid(data.campaign_id) ? data.campaign_id : undefined,
+    alert_code:
+      typeof data.alert_code === 'string' && data.alert_code
+        ? data.alert_code
+        : undefined,
+    session_id: isValidUuid(data.session_id) ? data.session_id : undefined,
     navigation,
   };
 }
@@ -97,7 +103,20 @@ export function buildNavIntent(
     case 'SUPERLIKE_RECEIVED':
       return { type, discovery_action_id, screen: 'likes' };
     case 'ACCOUNT_ALERT':
-      return { type, screen: 'settings' };
+      // Blind Date lifecycle alerts (reveal/eliminated/matched/no-match)
+      // deep-link into the session-scoped Blind Date screens — the concrete
+      // route is resolved by navigateBlindDateAlert, which fetches the
+      // session and falls back to the hub when `session_id` is absent or the
+      // fetch fails. Everything else keeps going to Settings.
+      if (payload.alert_code && BLIND_DATE_ALERT_CODES.has(payload.alert_code)) {
+        return {
+          type,
+          alert_code: payload.alert_code,
+          session_id: payload.session_id,
+          screen: 'blind-date',
+        };
+      }
+      return { type, alert_code: payload.alert_code, screen: 'settings' };
     case 'MARKETING':
       return {
         type,

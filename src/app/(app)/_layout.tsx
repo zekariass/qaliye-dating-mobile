@@ -18,6 +18,7 @@ import { useBootstrapApp } from '@/hooks/auth/useBootstrapApp';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
 import { useRevenueCatIdentity } from '@/hooks/billing/useRevenueCatIdentity';
+import { useLikeActions } from '@/hooks/discovery/useLikeActions';
 import { useForegroundNotifications } from '@/hooks/notifications/useForegroundNotifications';
 import { useNotificationNavigation } from '@/hooks/notifications/useNotificationNavigation';
 import { useNotificationSetup } from '@/hooks/notifications/useNotificationSetup';
@@ -39,6 +40,9 @@ export default function AppLayout() {
   useHeartbeat();
   useEligiblePromotions();
   useAppVersionCheck();
+  // Pre-fetch the configurable LIKE action variants (HEART, ROSE, …) once at
+  // app bootstrap so the discovery swipe screen can render them from cache.
+  useLikeActions();
 
   useEffect(() => {
     if (hasActiveSession && meStatus === 'idle') {
@@ -117,6 +121,30 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="user-profile"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="blind-date"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="blind-date-questions"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="blind-date-manage"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="blind-date-results"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="blind-date-create"
+          options={{ animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="blind-date-participant"
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen

@@ -71,6 +71,47 @@ function formatLocation(item: LikeItemDto, myCountry: string): string | null {
   return item.country_name ?? null;
 }
 
+// Resolves the label + emoji shown for a like's type. Prefers the specific
+// action variant returned by the backend (e.g. "Rose", "Fire") and falls
+// back to the plain LIKE/SUPERLIKE distinction when no variant is present.
+function getLikeTypeLabel(item: LikeItemDto): string {
+  if (item.action_variant?.name) return item.action_variant.name;
+  return item.action_type === 'SUPERLIKE' ? 'Super Liked' : 'Liked';
+}
+
+function getLikeTypeEmoji(item: LikeItemDto): string {
+  return item.action_type === 'SUPERLIKE' ? '💍' : '🌹';
+}
+
+// Badge glyph shown on the photo — remote variant icon when the backend
+// provides one, otherwise the emoji fallback above.
+function LikeTypeBadgeIcon({ item }: { item: LikeItemDto }) {
+  const iconUrl = item.action_variant?.icon;
+  if (iconUrl) {
+    return (
+      <Image
+        source={{ uri: iconUrl }}
+        style={styles.superBadgeIcon}
+        contentFit="contain"
+      />
+    );
+  }
+  return <Text style={styles.superBadgeEmoji}>{getLikeTypeEmoji(item)}</Text>;
+}
+
+// ─── Like type accent color ──────────────────────────────────────────────────
+// Ranking variants by "strength of intention" isn't well-defined (pricing
+// isn't a reliable proxy), so every like type shares the same accent color —
+// the badge/chip still show the specific type via icon + label.
+
+/** hex + alpha suffix, e.g. withAlpha('#8A2CFF', 0.14) */
+function withAlpha(hex: string, alpha: number): string {
+  const a = Math.round(alpha * 255).toString(16).padStart(2, '0');
+  return `${hex}${a}`;
+}
+
+const LIKE_TYPE_COLOR = colors.heartPink;
+
 // ─── Theme helper (mirrors MatchesListScreen's useMatchesTheme) ───────────────
 
 function useLikesTheme() {
@@ -254,7 +295,7 @@ interface LikeCardProps {
 }
 
 function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack, isLikingBack, activityStatus, myCountry }: LikeCardProps) {
-  const { card, textPrimary, textMuted, purple, chipBg } = useLikesTheme();
+  const { card, textPrimary, textMuted, purple } = useLikesTheme();
   const location = formatLocation(item, myCountry);
   const scale = useTabletScale();
 
@@ -282,11 +323,10 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
           </View>
         )}
 
-        {/* Like type badge — 🌹 like, 💍 super like */}
-        <View style={[styles.superBadge, { backgroundColor: '#FFFFFF' }]}>
-          <Text style={styles.superBadgeEmoji}>
-            {item.action_type === 'SUPERLIKE' ? '💍' : '🌹'}
-          </Text>
+        {/* Like type badge — variant icon when available, else 🌹/💍 fallback;
+            ring color matches the type chip below. */}
+        <View style={[styles.superBadge, { backgroundColor: '#FFFFFF', borderColor: LIKE_TYPE_COLOR }]}>
+          <LikeTypeBadgeIcon item={item} />
         </View>
 
         {/* Heart (like-back) button — received likes only */}
@@ -364,18 +404,22 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
           </View>
         ) : null}
 
-        {/* Action type chip + unsend like button */}
+        {/* Like type chip — shows the specific variant (or Like/Super Liked) */}
         <View style={styles.chipRow}>
-          {item.action_type === 'SUPERLIKE' && (
-            <View style={[styles.chip, { backgroundColor: chipBg }]}>
-              <Text style={{ fontSize: 11 }}>💍</Text>
-              <Text style={[styles.chipText, { color: purple }]} numberOfLines={2}>
-                Super Liked
-              </Text>
-            </View>
-          )}
-
-
+          <View style={[styles.chip, { backgroundColor: withAlpha(LIKE_TYPE_COLOR, 0.14) }]}>
+            {item.action_variant?.icon ? (
+              <Image
+                source={{ uri: item.action_variant.icon }}
+                style={styles.chipIcon}
+                contentFit="contain"
+              />
+            ) : (
+              <Text style={{ fontSize: 11 }}>{getLikeTypeEmoji(item)}</Text>
+            )}
+            <Text style={[styles.chipText, { color: LIKE_TYPE_COLOR }]} numberOfLines={2}>
+              {getLikeTypeLabel(item)}
+            </Text>
+          </View>
         </View>
 
         {/* Activity status */}
@@ -434,11 +478,10 @@ function BlurredLikeCard({ item, onPress, onReveal, isRevealing }: BlurredLikeCa
           </View>
         )}
 
-        {/* Like type badge — 🌹 like, 💍 super like */}
-        <View style={[styles.superBadge, { backgroundColor: '#FFFFFF' }]}>
-          <Text style={styles.superBadgeEmoji}>
-            {item.action_type === 'SUPERLIKE' ? '💍' : '🌹'}
-          </Text>
+        {/* Like type badge — variant icon when available, else 🌹/💍 fallback;
+            ring color matches the type chip on the revealed card. */}
+        <View style={[styles.superBadge, { backgroundColor: '#FFFFFF', borderColor: LIKE_TYPE_COLOR }]}>
+          <LikeTypeBadgeIcon item={item} />
         </View>
 
         <View style={[blurStyles.overlay, { backgroundColor: isDark ? 'rgba(13,7,18,0.55)' : 'rgba(0,0,0,0.25)' }]}>
@@ -1291,12 +1334,21 @@ const styles = StyleSheet.create({
     width:        24,
     height:       24,
     borderRadius: 12,
+    borderWidth:  1.5,
     alignItems:   'center',
     justifyContent: 'center',
   },
   superBadgeEmoji: {
     fontSize: 11,
     includeFontPadding: false,
+  },
+  superBadgeIcon: {
+    width:  14,
+    height: 14,
+  },
+  chipIcon: {
+    width:  13,
+    height: 13,
   },
 
   footerLoader: {

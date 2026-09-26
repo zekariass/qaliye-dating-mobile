@@ -49,12 +49,33 @@ export type MarketingNavigation = {
   params?: Record<string, unknown>;
 };
 
+/** ACCOUNT_ALERT sub-codes emitted by the Blind Date feature. */
+export type BlindDateAlertCode =
+  | 'BLIND_DATE_REVEAL'
+  | 'BLIND_DATE_ELIMINATED'
+  | 'BLIND_DATE_MATCHED'
+  | 'BLIND_DATE_NO_MATCH'
+  | 'BLIND_DATE_ADVANCED';
+
+export const BLIND_DATE_ALERT_CODES: ReadonlySet<string> = new Set<string>([
+  'BLIND_DATE_REVEAL',
+  'BLIND_DATE_ELIMINATED',
+  'BLIND_DATE_MATCHED',
+  'BLIND_DATE_NO_MATCH',
+  'BLIND_DATE_ADVANCED',
+]);
+
 export type NotificationPayloadData = {
   type: NotificationType;
   match_id?: string;
   message_id?: string;
   discovery_action_id?: string;
   campaign_id?: string;
+  /** Present on ACCOUNT_ALERT pushes (e.g. BLIND_DATE_* codes). */
+  alert_code?: string;
+  /** Blind Date session id — present on newer BLIND_DATE_* pushes; absent on
+   *  older queued notifications, so consumers must handle the fallback. */
+  session_id?: string;
   /** Only present for MARKETING notifications. Contains the deep-link target. */
   navigation?: MarketingNavigation;
 };
@@ -65,6 +86,8 @@ export type ValidatedNavIntent = {
   message_id?: string;
   discovery_action_id?: string;
   campaign_id?: string;
+  alert_code?: string;
+  session_id?: string;
   screen: string;
   params?: Record<string, unknown>;
 };

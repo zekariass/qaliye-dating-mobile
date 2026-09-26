@@ -1,0 +1,142 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+
+import { colors } from '@/constants/theme';
+import { rs, useTabletScale } from '@/utils/responsive';
+
+interface Props {
+  onPass: () => void;
+  /** Omit to hide the rewind button (e.g. browse-mode cards — rewind lives in the header). */
+  onRewind?: () => void;
+  onSuperMessage: () => void;
+  disabled?: boolean;
+}
+
+/**
+ * Vector icon fonts have no weight axis — layer the glyph twice with a
+ * sub-pixel offset for a faux-bold stroke.
+ */
+function BoldIcon({ children, style }: { children: React.ReactNode; style?: object }) {
+  return (
+    <View style={style}>
+      {children}
+      <View style={styles.boldClone} pointerEvents="none">
+        {children}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Pass + rewind + super message — boxed icons in a vertical column, rendered
+ * at the bottom-left of the swipe card photo just above the profile name.
+ */
+export default function TopLeftActionButtons({ onPass, onRewind, onSuperMessage, disabled }: Props) {
+  const scale = useTabletScale();
+
+  return (
+    <View style={styles.container}>
+      {/* Pass */}
+      <TouchableOpacity
+        style={styles.hitArea}
+        onPress={onPass}
+        disabled={disabled}
+        activeOpacity={0.7}
+        accessibilityLabel="Pass profile"
+      >
+        <View style={[styles.iconBox, styles.iconBoxDanger]}>
+          <BoldIcon style={styles.glyphBleed}>
+            <Ionicons
+              name="close"
+              size={rs(28, scale)}
+              color={colors.danger}
+              style={styles.icon}
+            />
+          </BoldIcon>
+        </View>
+      </TouchableOpacity>
+
+      {/* Rewind */}
+      {onRewind && (
+        <TouchableOpacity
+          style={styles.hitArea}
+          onPress={onRewind}
+          disabled={disabled}
+          activeOpacity={0.7}
+          accessibilityLabel="Rewind profile"
+        >
+          <View style={[styles.iconBox, styles.iconBoxAmber]}>
+            <BoldIcon>
+              <MaterialCommunityIcons
+                name="undo"
+                size={rs(24, scale)}
+                color="#FBBF24"
+                style={styles.icon}
+              />
+            </BoldIcon>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* Super Message */}
+      <TouchableOpacity
+        style={styles.hitArea}
+        onPress={onSuperMessage}
+        disabled={disabled}
+        activeOpacity={0.7}
+        accessibilityLabel="Send super message"
+      >
+        <View style={styles.iconBox}>
+          <BoldIcon>
+            <Ionicons
+              name="mail"
+              size={rs(24, scale)}
+              color="#FFFFFF"
+              style={styles.icon}
+            />
+          </BoldIcon>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'column',
+    gap: 10,
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  hitArea: {
+    padding: 4,
+  },
+  iconBox: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  iconBoxAmber: {
+    borderColor: 'rgba(251,191,36,0.9)',
+  },
+  iconBoxDanger: {
+    borderColor: 'rgba(239,68,68,0.9)',
+  },
+  icon: {
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  boldClone: {
+    position: 'absolute',
+    left: 0.9,
+    top: 0.4,
+  },
+  // Bleed past the box padding so a larger glyph doesn't grow the box.
+  glyphBleed: {
+    margin: -2,
+  },
+});
