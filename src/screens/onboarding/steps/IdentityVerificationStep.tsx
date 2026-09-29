@@ -16,6 +16,7 @@ import { getManualReviewStatus, requestManualReview, submitIdentityVerification 
 import { colors, radius, spacing } from '@/constants/theme';
 import { useNotificationPermission } from '@/hooks/notifications/useNotificationPermission';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { IdentityVerificationStatus } from '@/types/billing';
 import { extractApiError } from '@/utils/apiError';
 import { processSelfieForVerification } from '@/utils/imageProcessor';
@@ -144,7 +145,7 @@ function SelfieCamera({ onCapture, onClose }: SelfieCameraProps) {
           onPress={handleCapture}
           disabled={!isCameraReady || isCapturing}
           activeOpacity={0.85}
-          accessibilityLabel="Capture selfie"
+          accessibilityLabel={t('onboarding.identity.captureSelfie', 'Capture selfie')}
           accessibilityRole="button"
         >
           {isCapturing ? (
@@ -160,7 +161,7 @@ function SelfieCamera({ onCapture, onClose }: SelfieCameraProps) {
         style={camStyles.closeCameraBtn}
         onPress={onClose}
         activeOpacity={0.7}
-        accessibilityLabel="Close camera"
+        accessibilityLabel={t('onboarding.identity.closeCamera', 'Close camera')}
         accessibilityRole="button"
       >
         <Ionicons name="close" size={22} color="#FFFFFF" />
@@ -369,7 +370,7 @@ export default function IdentityVerificationStep({
 
   const handleAutomatedVerify = useCallback(async () => {
     if (!selfieUri) {
-      setError('Please capture a selfie first.');
+      setError(i18n.t('onboarding.identity.captureRequired', 'Please capture a selfie first.'));
       return;
     }
     setError(null);
@@ -414,7 +415,7 @@ export default function IdentityVerificationStep({
 
   const handleRequestManualReview = useCallback(async () => {
     if (!selfieUri) {
-      setError('Please capture a selfie first.');
+      setError(i18n.t('onboarding.identity.captureRequired', 'Please capture a selfie first.'));
       return;
     }
     setError(null);
@@ -525,7 +526,7 @@ export default function IdentityVerificationStep({
 
           {submittedAt && (
             <Text style={[styles.submittedText, { color: th.textMuted }]}>
-              {t('onboarding.identity.submittedOn', 'Submitted on {{date}}', { date: new Date(submittedAt).toLocaleDateString() })}
+              {t('onboarding.identity.submittedOn', 'Submitted on {{date}}', { date: new Date(submittedAt).toLocaleDateString(i18n.language || 'en') })}
             </Text>
           )}
 

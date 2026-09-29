@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/theme';
 import { usePaymentChannels } from '@/hooks/billing/usePaymentChannels';
 import { usePaymentOptions } from '@/hooks/billing/usePaymentOptions';
+import i18n from '@/i18n';
 import type { PaymentChannel, PaymentMethodDto } from '@/types/billing';
 
 type SheetStep = 'channel' | 'method';
@@ -31,11 +33,11 @@ function channelIcon(channel: string): React.ComponentProps<typeof Ionicons>['na
 }
 
 function channelSubtitle(channel: string): string {
-  if (channel === 'MANUAL_TRANSFER') return 'Bank transfer with manual verification';
-  if (channel === 'ONLINE' || channel === 'ONLINE_PAYMENT') return 'Pay online with card or mobile';
-  if (channel === 'CHAPA') return 'Online checkout via Chapa';
-  if (channel === 'DIRECT_TELEBIRR') return 'Pay directly through Telebirr';
-  return 'Choose a payment method';
+  if (channel === 'MANUAL_TRANSFER') return i18n.t('billing.channels.MANUAL_TRANSFER', 'Bank transfer with manual verification');
+  if (channel === 'ONLINE' || channel === 'ONLINE_PAYMENT') return i18n.t('billing.channels.ONLINE', 'Pay online with card or mobile');
+  if (channel === 'CHAPA') return i18n.t('billing.channels.CHAPA', 'Online checkout via Chapa');
+  if (channel === 'DIRECT_TELEBIRR') return i18n.t('billing.channels.DIRECT_TELEBIRR', 'Pay directly through Telebirr');
+  return i18n.t('billing.channels.default', 'Choose a payment method');
 }
 
 function methodIcon(channel: string): React.ComponentProps<typeof Ionicons>['name'] {
@@ -55,6 +57,7 @@ export function PaymentMethodSheet({
   secondaryColor,
   backgroundColor,
 }: Props) {
+  const { t } = useTranslation();
   const { bottom } = useSafeAreaInsets();
 
   const [step, setStep] = useState<SheetStep>('channel');
@@ -138,14 +141,14 @@ export function PaymentMethodSheet({
 
           <View style={styles.headerTitleWrap}>
             <Text style={[styles.title, { color: textColor }]}>
-              {step === 'channel' ? 'Payment Type' : 'Payment Method'}
+              {step === 'channel' ? t('billing.paymentType', 'Payment Type') : t('billing.paymentMethodTitle', 'Payment Method')}
             </Text>
             <Text style={[styles.subtitle, { color: secondaryColor }]}>
               {step === 'channel'
-                ? 'Choose how you want to pay'
+                ? t('billing.choosePaymentType', 'Choose how you want to pay')
                 : selectedChannel
                   ? channelSubtitle(selectedChannel)
-                  : 'Select a method to continue'}
+                  : t('billing.selectMethod', 'Select a method to continue')}
             </Text>
           </View>
 
@@ -153,7 +156,7 @@ export function PaymentMethodSheet({
             style={[styles.closeBtn, { backgroundColor }]}
             onPress={onDismiss}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t('common.close', 'Close')}
           >
             <Ionicons name="close" size={18} color={textColor} />
           </Pressable>
@@ -162,7 +165,7 @@ export function PaymentMethodSheet({
         {isLoading || isAutoConfirming ? (
           <View style={styles.loaderWrap}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.loaderText, { color: secondaryColor }]}>Loading options…</Text>
+            <Text style={[styles.loaderText, { color: secondaryColor }]}>{t('billing.loadingOptions', 'Loading options…')}</Text>
           </View>
         ) : step === 'channel' ? (
           <ScrollView showsVerticalScrollIndicator={false} style={styles.list}>
@@ -170,7 +173,7 @@ export function PaymentMethodSheet({
               <View style={styles.emptyWrap}>
                 <Ionicons name="wallet-outline" size={36} color={secondaryColor} />
                 <Text style={[styles.emptyText, { color: secondaryColor }]}>
-                  No payment options available.{'\n'}Please try again later.
+                  {t('billing.noPaymentOptions', 'No payment options available.\nPlease try again later.')}
                 </Text>
               </View>
             ) : (
@@ -253,7 +256,7 @@ export function PaymentMethodSheet({
                 <View style={styles.emptyWrap}>
                   <Ionicons name="card-outline" size={36} color={secondaryColor} />
                   <Text style={[styles.emptyText, { color: secondaryColor }]}>
-                    No payment methods available for this channel.
+                    {t('billing.noMethodsForChannel', 'No payment methods available for this channel.')}
                   </Text>
                 </View>
               )}
@@ -267,11 +270,11 @@ export function PaymentMethodSheet({
             >
               {selectedMethod ? (
                 <>
-                  <Text style={styles.confirmBtnText}>Continue with {selectedMethod.display_name}</Text>
+                  <Text style={styles.confirmBtnText}>{t('billing.continueWith', 'Continue with {{method}}', { method: selectedMethod.display_name })}</Text>
                   <Ionicons name="arrow-forward" size={18} color="#fff" />
                 </>
               ) : (
-                <Text style={styles.confirmBtnText}>Continue</Text>
+                <Text style={styles.confirmBtnText}>{t('common.continue', 'Continue')}</Text>
               )}
             </Pressable>
           </>

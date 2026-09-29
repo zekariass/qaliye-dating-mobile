@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Modal,
@@ -19,6 +20,7 @@ import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useLikeActions } from '@/hooks/discovery/useLikeActions';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { ActionLimitAndCost, ActionVariantLimitAndCost } from '@/types/billing';
 import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 import type { LikeActionVariantDto } from '@/types/discovery';
@@ -34,36 +36,38 @@ function formatDate(iso?: string): string {
 }
 
 function formatBoostTime(seconds: number): string {
-  if (seconds <= 0) return 'Expired';
+  if (seconds <= 0) return i18n.t('billing.balances.expired', 'Expired');
   const m = Math.floor(seconds / 60);
   const h = Math.floor(m / 60);
-  return h > 0 ? `${h}h ${m % 60}m remaining` : `${m}m remaining`;
+  return h > 0
+    ? i18n.t('billing.balances.timeRemainingHm', '{{hours}}h {{minutes}}m remaining', { hours: h, minutes: m % 60 })
+    : i18n.t('billing.balances.timeRemainingM', '{{minutes}}m remaining', { minutes: m });
 }
 
 function formatPeriodLabel(periodType: string | null | undefined): string {
   switch (periodType) {
-    case 'DAY':           return 'per day';
-    case 'MONTH':         return 'per month';
-    case 'BILLING_CYCLE': return 'per cycle';
-    case 'WEEK':          return 'per week';
-    case 'YEAR':          return 'per year';
-    case 'LIFETIME':      return 'per recipient';
+    case 'DAY':           return i18n.t('billing.balances.perDay', 'per day');
+    case 'MONTH':         return i18n.t('billing.balances.perMonth', 'per month');
+    case 'BILLING_CYCLE': return i18n.t('billing.balances.perBillingCycle', 'per cycle');
+    case 'WEEK':          return i18n.t('billing.balances.perWeek', 'per week');
+    case 'YEAR':          return i18n.t('billing.balances.perYear', 'per year');
+    case 'LIFETIME':      return i18n.t('billing.balances.perRecipient', 'per recipient');
     default:              return '';
   }
 }
 
 const PER_RECIPIENT_ACTIONS = new Set(['MESSAGE', 'VOICE_MESSAGE', 'IMAGE_MESSAGE']);
 
-const QUOTA_META: Record<string, { label: string; icon: string; color: string }> = {
-  LIKE:              { label: 'Likes',                  icon: 'heart-outline',      color: colors.secondary    },
-  SUPER_LIKE:        { label: 'Super Likes',             icon: 'star-outline',       color: colors.warning      },
-  REWIND:            { label: 'Rewinds',                 icon: 'refresh-outline',    color: colors.primary      },
-  BOOST:             { label: 'Boosts',                  icon: 'rocket-outline',     color: '#FF6B35'           },
-  VOICE_MESSAGE:     { label: 'Voice Messages',          icon: 'mic-outline',        color: colors.verifiedBlue },
-  IMAGE_MESSAGE:     { label: 'Image Messages',          icon: 'image-outline',      color: colors.primary      },
-  MESSAGE:           { label: 'Messages',                icon: 'chatbubble-outline', color: colors.primary      },
-  SUPER_MESSAGE:     { label: 'Before-Match Messages',   icon: 'sparkles-outline',   color: colors.warning      },
-  SEE_WHO_LIKED_YOU: { label: 'See Who Liked You',       icon: 'eye-outline',        color: colors.primary      },
+const QUOTA_META: Record<string, { label: string; labelKey: string; icon: string; color: string }> = {
+  LIKE:              { label: 'Likes',                  labelKey: 'billing.actionLabels.LIKE',              icon: 'heart-outline',      color: colors.secondary    },
+  SUPER_LIKE:        { label: 'Super Likes',             labelKey: 'billing.actionLabels.SUPER_LIKE',        icon: 'star-outline',       color: colors.warning      },
+  REWIND:            { label: 'Rewinds',                 labelKey: 'billing.actionLabels.REWIND',            icon: 'refresh-outline',    color: colors.primary      },
+  BOOST:             { label: 'Boosts',                  labelKey: 'billing.actionLabels.BOOST',             icon: 'rocket-outline',     color: '#FF6B35'           },
+  VOICE_MESSAGE:     { label: 'Voice Messages',          labelKey: 'billing.actionLabels.VOICE_MESSAGE',     icon: 'mic-outline',        color: colors.verifiedBlue },
+  IMAGE_MESSAGE:     { label: 'Image Messages',          labelKey: 'billing.actionLabels.IMAGE_MESSAGE',     icon: 'image-outline',      color: colors.primary      },
+  MESSAGE:           { label: 'Messages',                labelKey: 'billing.actionLabels.MESSAGE',           icon: 'chatbubble-outline', color: colors.primary      },
+  SUPER_MESSAGE:     { label: 'Before-Match Messages',   labelKey: 'billing.actionLabels.SUPER_MESSAGE',     icon: 'sparkles-outline',   color: colors.warning      },
+  SEE_WHO_LIKED_YOU: { label: 'See Who Liked You',       labelKey: 'billing.actionLabels.SEE_WHO_LIKED_YOU', icon: 'eye-outline',        color: colors.primary      },
 };
 
 const QUOTA_ORDER = [
@@ -72,16 +76,16 @@ const QUOTA_ORDER = [
   'REWIND', 'BOOST', 'SUPER_MESSAGE', 'SEE_WHO_LIKED_YOU',
 ];
 
-const ACTION_DEFINITIONS: Record<string, { title: string; description: string }> = {
-  LIKE:              { title: 'Like',                   description: 'Expressing interest in a profile to create a potential match.' },
-  SUPER_LIKE:        { title: 'Super Like',              description: 'Highlighting your profile to let someone know you are extremely interested before they swipe.' },
-  REWIND:            { title: 'Rewind',                  description: 'Reversing your last swipe or action to undo an accidental pass or like.' },
-  BOOST:             { title: 'Boost',                   description: "Temporarily increasing your profile's visibility to get more views and matches." },
-  VOICE_MESSAGE:     { title: 'Voice Message',           description: 'Sending an audio recording instead of text in a chat.' },
-  IMAGE_MESSAGE:     { title: 'Image Message',           description: 'Sending a photo or picture within a chat conversation.' },
-  MESSAGE:           { title: 'Message',                 description: 'Sending a standard text communication to a matched user.' },
-  SUPER_MESSAGE:     { title: 'Before-Match Message',    description: 'Sending a message to someone prior to matching to grab their attention.' },
-  SEE_WHO_LIKED_YOU: { title: 'See Who Liked You',       description: 'Viewing a list of users who have already liked your profile before you swipe on them.' },
+const ACTION_DEFINITIONS: Record<string, { title: string; titleKey: string; description: string; descriptionKey: string }> = {
+  LIKE:              { title: 'Like',                   titleKey: 'billing.actions.like',           description: 'Expressing interest in a profile to create a potential match.',                                                           descriptionKey: 'billing.actionInfo.LIKE' },
+  SUPER_LIKE:        { title: 'Super Like',              titleKey: 'billing.actions.superLike',      description: 'Highlighting your profile to let someone know you are extremely interested before they swipe.',                            descriptionKey: 'billing.actionInfo.SUPER_LIKE' },
+  REWIND:            { title: 'Rewind',                  titleKey: 'billing.actions.rewind',         description: 'Reversing your last swipe or action to undo an accidental pass or like.',                                                    descriptionKey: 'billing.actionInfo.REWIND' },
+  BOOST:             { title: 'Boost',                   titleKey: 'billing.actions.boost',          description: "Temporarily increasing your profile's visibility to get more views and matches.",                                           descriptionKey: 'billing.actionInfo.BOOST' },
+  VOICE_MESSAGE:     { title: 'Voice Message',           titleKey: 'billing.actions.voiceMessage',   description: 'Sending an audio recording instead of text in a chat.',                                                                        descriptionKey: 'billing.actionInfo.VOICE_MESSAGE' },
+  IMAGE_MESSAGE:     { title: 'Image Message',           titleKey: 'billing.actions.imageMessage',   description: 'Sending a photo or picture within a chat conversation.',                                                                       descriptionKey: 'billing.actionInfo.IMAGE_MESSAGE' },
+  MESSAGE:           { title: 'Message',                 titleKey: 'billing.actions.message',        description: 'Sending a standard text communication to a matched user.',                                                                   descriptionKey: 'billing.actionInfo.MESSAGE' },
+  SUPER_MESSAGE:     { title: 'Before-Match Message',    titleKey: 'billing.actions.superMessage',   description: 'Sending a message to someone prior to matching to grab their attention.',                                                    descriptionKey: 'billing.actionInfo.SUPER_MESSAGE' },
+  SEE_WHO_LIKED_YOU: { title: 'See Who Liked You',       titleKey: 'billing.actions.seeWhoLikedYou', description: 'Viewing a list of users who have already liked your profile before you swipe on them.',                                        descriptionKey: 'billing.actionInfo.SEE_WHO_LIKED_YOU' },
 };
 
 const cardShadow = Platform.select({
@@ -159,6 +163,7 @@ function QuotaRow({
   isLast: boolean;
   onInfo: (def: ActionDefinition) => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const isUnlimited = limit === null;
   const periodLabel = formatPeriodLabel(periodType);
@@ -192,7 +197,7 @@ function QuotaRow({
             {isUnlimited ? (
               <View style={[qStyles.chip, { backgroundColor: `${colors.success}14`, borderColor: `${colors.success}30` }]}>
                 <Ionicons name="infinite-outline" size={11} color={colors.success} />
-                <Text style={[qStyles.chipText, { color: colors.success }]}>Unlimited</Text>
+                <Text style={[qStyles.chipText, { color: colors.success }]}>{t('billing.unlimited', 'Unlimited')}</Text>
               </View>
             ) : (
               <View style={[qStyles.chip, { backgroundColor: `${accentColor}12`, borderColor: `${accentColor}28` }]}>
@@ -205,7 +210,7 @@ function QuotaRow({
               <View style={[qStyles.chip, { backgroundColor: `${colors.primary}10`, borderColor: `${colors.primary}25` }]}>
                 <Ionicons name="diamond" size={10} color={colors.primary} />
                 <Text style={[qStyles.chipText, { color: colors.primary }]}>
-                  {memberCreditCost} {memberCreditCost === 1 ? 'credit' : 'credits'} each
+                  {t('billing.balances.creditsEach', '{{count}} credits each', { count: memberCreditCost })}
                 </Text>
               </View>
             )}
@@ -213,7 +218,7 @@ function QuotaRow({
               <View style={[qStyles.chip, { backgroundColor: `${colors.primary}10`, borderColor: `${colors.primary}25` }]}>
                 <Ionicons name="diamond" size={10} color={colors.primary} />
                 <Text style={[qStyles.chipText, { color: colors.primary }]}>
-                  {actualCreditCost} cr after limit
+                  {t('billing.balances.creditsAfterLimit', '{{count}} cr after limit', { count: actualCreditCost })}
                 </Text>
               </View>
             )}
@@ -270,11 +275,13 @@ function ActionQuotaRow({ actionCode, action, isLast, onInfo }: {
   actionCode: string; action: ActionLimitAndCost; isLast: boolean;
   onInfo: (def: ActionDefinition) => void;
 }) {
+  const { t } = useTranslation();
   const meta = QUOTA_META[actionCode];
   const isPerRecipient = PER_RECIPIENT_ACTIONS.has(actionCode);
+  const def = ACTION_DEFINITIONS[actionCode];
   return (
     <QuotaRow
-      label={meta.label}
+      label={t(meta.labelKey, meta.label)}
       icon={<Ionicons name={meta.icon as any} size={17} color={meta.color} />}
       accentColor={meta.color}
       limit={action.limit}
@@ -285,7 +292,7 @@ function ActionQuotaRow({ actionCode, action, isLast, onInfo }: {
       actualCreditCost={action.actual_credit_cost ?? 0}
       applyCreditsAfterLimit={action.apply_credit_after_limit}
       isPerRecipient={isPerRecipient}
-      definition={ACTION_DEFINITIONS[actionCode] ?? null}
+      definition={def ? { title: t(def.titleKey, def.title), description: t(def.descriptionKey, def.description) } : null}
       isLast={isLast}
       onInfo={onInfo}
     />
@@ -310,6 +317,7 @@ function LikeVariantQuotaRow({ variant, quota, isLast, onInfo }: {
   isLast: boolean;
   onInfo: (def: ActionDefinition) => void;
 }) {
+  const { t } = useTranslation();
   const limit       = variant.limit !== undefined ? variant.limit : (quota?.limit ?? null);
   const used        = variant.used ?? quota?.used ?? 0;
   const remaining   = variant.remaining !== undefined ? variant.remaining : (quota?.remaining ?? null);
@@ -323,19 +331,20 @@ function LikeVariantQuotaRow({ variant, quota, isLast, onInfo }: {
   const blocked     = variant.blocked === true
     || (remaining === 0 && limit != null && !applyAfter);
 
-  const remainingSuffix = (
-    { DAY: 'today', WEEK: 'this week', MONTH: 'this month', BILLING_CYCLE: 'this cycle', YEAR: 'this year' } as Record<string, string>
-  )[periodType];
-
   const note = blocked
     ? { text: likeVariantResetHint({ ...variant, period_type: periodType || null, resets_at: resetsAt }), color: colors.warning }
     : remaining != null
-      ? { text: `${remaining} left${remainingSuffix ? ` ${remainingSuffix}` : ''}` }
+      ? {
+          text: t(`billing.balances.left.${periodType}`, {
+            count: remaining,
+            defaultValue: t('billing.balances.left.default', '{{count}} left', { count: remaining }),
+          }),
+        }
       : null;
 
   return (
     <QuotaRow
-      label={variant.name || 'Like'}
+      label={variant.name || t('billing.actions.like', 'Like')}
       icon={<VariantIconImg variant={variant} size={20} />}
       accentColor={colors.secondary}
       limit={limit}
@@ -349,7 +358,7 @@ function LikeVariantQuotaRow({ variant, quota, isLast, onInfo }: {
       blocked={blocked}
       note={note}
       definition={variant.description
-        ? { title: variant.name || 'Like', description: variant.description }
+        ? { title: variant.name || t('billing.actions.like', 'Like'), description: variant.description }
         : null}
       isLast={isLast}
       onInfo={onInfo}
@@ -360,6 +369,7 @@ function LikeVariantQuotaRow({ variant, quota, isLast, onInfo }: {
 // ─── BalancesScreen ───────────────────────────────────────────────────────────
 
 export default function BalancesScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { colors: th } = useTheme();
   const { entitlements, isLoading, isRefetching, refreshEntitlements } = useEntitlements();
@@ -378,7 +388,7 @@ export default function BalancesScreen() {
   const { plan, subscription, credits, limits_and_costs, active_boost } = entitlements;
   const isPremium           = isPremiumPlan(plan);
   const isFreePremium       = isFreePremiumPlan(plan);
-  const planLabel           = isFreePremium ? 'Free Premium' : isPremium ? 'Premium' : 'Free';
+  const planLabel           = isFreePremium ? t('billing.freePremiumActive', 'Free Premium') : isPremium ? t('billing.premiumActive', 'Premium') : t('billing.balances.free', 'Free');
   const planIcon            = isFreePremium ? 'gift-outline' : isPremium ? 'diamond-outline' : 'person-circle-outline';
   const planColor           = isFreePremium ? colors.warning : isPremium ? colors.primary : th.textSecondary;
   const creditsEnabled      = entitlements.country_settings?.credits_enabled ?? true;
@@ -425,17 +435,17 @@ export default function BalancesScreen() {
         <Pressable
           style={[styles.iconBtn, { backgroundColor: th.backgroundElement }]}
           onPress={() => router.replace('/(app)/(tabs)/profile' as any)}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back', 'Back')}
           accessibilityRole="button"
         >
           <Ionicons name="arrow-back" size={20} color={th.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: th.text }]}>Balances</Text>
+        <Text style={[styles.headerTitle, { color: th.text }]}>{t('billing.balances.title', 'Balances')}</Text>
         <Pressable
           style={[styles.iconBtn, { backgroundColor: th.backgroundElement, opacity: isRefetching ? 0.5 : 1 }]}
           onPress={() => refreshEntitlements()}
           disabled={isRefetching}
-          accessibilityLabel="Refresh balances"
+          accessibilityLabel={t('billing.balances.refresh', 'Refresh balances')}
           accessibilityRole="button"
         >
           {isRefetching
@@ -477,18 +487,20 @@ export default function BalancesScreen() {
                   {!isFreePremium && (
                     <View style={[styles.activeChip, { backgroundColor: `${colors.success}14`, borderColor: `${colors.success}28` }]}>
                       <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
-                      <Text style={[styles.activeChipText, { color: colors.success }]}>Active</Text>
+                      <Text style={[styles.activeChipText, { color: colors.success }]}>{t('billing.active', 'Active')}</Text>
                     </View>
                   )}
                 </View>
                 {subscription?.billing_interval_count != null && subscription?.billing_interval_unit && (
                   <Text style={[styles.planInterval, { color: th.textSecondary }]}>
-                    {subscription.billing_interval_count === 1 ? 'Monthly plan' : `${subscription.billing_interval_count}-month plan`}
+                    {subscription.billing_interval_count === 1
+                      ? t('billing.balances.monthlyPlan', 'Monthly plan')
+                      : t('billing.balances.monthsPlan', '{{count}}-month plan', { count: subscription.billing_interval_count })}
                   </Text>
                 )}
                 {subscription?.expires_at && (
                   <Text style={[styles.planExpiry, { color: th.textSecondary }]}>
-                    {subscription.auto_renew ? 'Renews' : 'Expires'} · {formatDate(subscription.expires_at)}
+                    {subscription.auto_renew ? t('billing.renews', 'Renews') : t('billing.expires', 'Expires')} · {formatDate(subscription.expires_at)}
                   </Text>
                 )}
               </View>
@@ -501,18 +513,18 @@ export default function BalancesScreen() {
                 <Ionicons name="person-circle-outline" size={26} color={th.textSecondary} />
               </View>
               <View>
-                <Text style={[styles.freePlanTitle, { color: th.text }]}>Free Plan</Text>
-                <Text style={[styles.freePlanSub, { color: th.textSecondary }]}>Limited features</Text>
+                <Text style={[styles.freePlanTitle, { color: th.text }]}>{t('billing.freePlan', 'Free Plan')}</Text>
+                <Text style={[styles.freePlanSub, { color: th.textSecondary }]}>{t('billing.balances.limitedFeatures', 'Limited features')}</Text>
               </View>
             </View>
             <Pressable
               style={[styles.upgradePill, { backgroundColor: colors.primary }]}
               onPress={() => router.push('/(app)/premium' as any)}
               accessibilityRole="button"
-              accessibilityLabel="Go Premium"
+              accessibilityLabel={t('common.goPremium', 'Go Premium')}
             >
               <Ionicons name="diamond-outline" size={14} color="#fff" />
-              <Text style={styles.upgradePillText}>Go Premium</Text>
+              <Text style={styles.upgradePillText}>{t('common.goPremium', 'Go Premium')}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -530,14 +542,14 @@ export default function BalancesScreen() {
                 <Ionicons name="rocket" size={22} color="#FF6B35" />
               </View>
               <View style={styles.boostTextWrap}>
-                <Text style={[styles.boostTitle, { color: th.text }]}>Boost Active</Text>
+                <Text style={[styles.boostTitle, { color: th.text }]}>{t('billing.balances.boostActive', 'Boost Active')}</Text>
                 <Text style={[styles.boostTimer, { color: '#FF6B35' }]}>
                   {formatBoostTime(active_boost.remaining_seconds)}
                 </Text>
               </View>
               <View style={[styles.liveBadge, { backgroundColor: '#FF6B3518', borderColor: '#FF6B3538' }]}>
                 <View style={styles.liveDot} />
-                <Text style={styles.liveText}>LIVE</Text>
+                <Text style={styles.liveText}>{t('billing.balances.live', 'LIVE')}</Text>
               </View>
             </View>
             <View style={[styles.boostTrack, { backgroundColor: '#FF6B3520' }]}>
@@ -553,7 +565,7 @@ export default function BalancesScreen() {
               <View style={[styles.blockIconBadge, { backgroundColor: colors.primary + '18' }]}>
                 <Ionicons name="diamond-outline" size={13} color={colors.primary} />
               </View>
-              <Text style={[styles.blockTitle, { color: colors.primary }]}>Credits</Text>
+              <Text style={[styles.blockTitle, { color: colors.primary }]}>{t('billing.balances.creditsTitle', 'Credits')}</Text>
             </View>
             <LinearGradient
               colors={[`${colors.primary}16`, `${colors.primaryLight}0A`]}
@@ -569,16 +581,16 @@ export default function BalancesScreen() {
                   <Text style={[styles.creditValue, { color: colors.primary }]}>
                     {credits.credit_balance.toLocaleString()}
                   </Text>
-                  <Text style={[styles.creditLabel, { color: th.textSecondary }]}>Available credits</Text>
+                  <Text style={[styles.creditLabel, { color: th.textSecondary }]}>{t('billing.balances.availableCredits', 'Available credits')}</Text>
                 </View>
                 <Pressable
                   style={[styles.buyPill, { backgroundColor: colors.primary }]}
                   onPress={() => router.push('/(app)/credits-shop' as any)}
-                  accessibilityLabel="Buy credits"
+                  accessibilityLabel={t('billing.balances.buyCredits', 'Buy credits')}
                   accessibilityRole="button"
                 >
                   <Ionicons name="add" size={14} color="#fff" />
-                  <Text style={styles.buyPillText}>Buy</Text>
+                  <Text style={styles.buyPillText}>{t('billing.balances.buy', 'Buy')}</Text>
                 </Pressable>
               </View>
             </LinearGradient>
@@ -592,7 +604,7 @@ export default function BalancesScreen() {
               <View style={[styles.blockIconBadge, { backgroundColor: colors.primary + '18' }]}>
                 <Ionicons name="stats-chart-outline" size={13} color={colors.primary} />
               </View>
-              <Text style={[styles.blockTitle, { color: colors.primary }]}>Usage & Limits</Text>
+              <Text style={[styles.blockTitle, { color: colors.primary }]}>{t('billing.balances.usageAndLimits', 'Usage & Limits')}</Text>
             </View>
             <View style={[styles.listCard, { backgroundColor: th.surface, borderColor: th.border }, cardShadow]}>
               {quotaItems.map((item, idx) => {
@@ -625,7 +637,7 @@ export default function BalancesScreen() {
             style={({ pressed }) => [styles.ctaBtn, { opacity: pressed ? 0.88 : 1 }]}
             onPress={() => router.push('/(app)/premium' as any)}
             accessibilityRole="button"
-            accessibilityLabel="Upgrade to Premium"
+            accessibilityLabel={t('billing.balances.upgradeToPremium', 'Upgrade to Premium')}
           >
             <LinearGradient
               colors={['#A020F0', '#6D35FF']}
@@ -634,7 +646,7 @@ export default function BalancesScreen() {
               style={styles.ctaGradient}
             >
               <Ionicons name="diamond-outline" size={20} color="#fff" />
-              <Text style={styles.ctaText}>Upgrade to Premium</Text>
+              <Text style={styles.ctaText}>{t('billing.balances.upgradeToPremium', 'Upgrade to Premium')}</Text>
               <Ionicons name="arrow-forward" size={18} color="#fff" />
             </LinearGradient>
           </Pressable>
@@ -655,7 +667,7 @@ export default function BalancesScreen() {
               <Text style={[infoModalStyles.title, { color: th.text }]}>
                 {infoDefinition?.title ?? ''}
               </Text>
-              <Pressable onPress={() => setInfoDefinition(null)} accessibilityLabel="Close" accessibilityRole="button">
+              <Pressable onPress={() => setInfoDefinition(null)} accessibilityLabel={t('common.close', 'Close')} accessibilityRole="button">
                 <Ionicons name="close" size={20} color={th.textSecondary} />
               </Pressable>
             </View>

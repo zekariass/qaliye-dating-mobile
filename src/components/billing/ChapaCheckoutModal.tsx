@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Linking,
@@ -28,6 +29,7 @@ export function ChapaCheckoutModal({
   onClose,
   onReturned,
 }: ChapaCheckoutModalProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
 
   return (
@@ -39,9 +41,9 @@ export function ChapaCheckoutModal({
     >
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Complete payment</Text>
+          <Text style={styles.headerTitle}>{t('billing.completePayment', 'Complete payment')}</Text>
           <Pressable onPress={onClose} hitSlop={12}>
-            <Text style={styles.closeBtn}>Close</Text>
+            <Text style={styles.closeBtn}>{t('common.close', 'Close')}</Text>
           </Pressable>
         </View>
 

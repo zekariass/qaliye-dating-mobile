@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Fragment } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { bdColors } from '@/constants/blindDateTheme';
@@ -51,6 +52,7 @@ export function RoundProgressBar({
   /** Muted styling for ended/inactive sessions. */
   muted?: boolean;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const accent = muted ? bdColors.slate : bdColors.primary;
@@ -68,10 +70,10 @@ export function RoundProgressBar({
     nodes.push({
       key: `r${i}`,
       label: isFinalRound && isLast
-        ? 'Final'
+        ? t('blindDate.progress.final')
         : compact
-          ? `R${i}`
-          : `Round ${i}`,
+          ? t('blindDate.progress.compact', { round: i })
+          : t('blindDate.progress.round', { round: i }),
       state,
       isFinal: isFinalRound && isLast,
     });
@@ -156,7 +158,7 @@ export function RoundProgressBar({
                   { color: accent },
                 ]}
               >
-                Current
+                {t('blindDate.progress.current')}
               </Text>
             )}
             {node.isFinal && node.state === 'current' && (
@@ -167,7 +169,7 @@ export function RoundProgressBar({
                   { color: bdColors.gold },
                 ]}
               >
-                Final
+                {t('blindDate.progress.final')}
               </Text>
             )}
           </View>

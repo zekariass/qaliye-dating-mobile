@@ -32,6 +32,7 @@ import { useTheme } from '@/hooks/use-theme';
 import type { InboxItem } from '@/types/chat';
 import type { SuperMessageDto } from '@/types/superMessage';
 import type { SupportConversationStatus } from '@/types/support';
+import { isBlindDateMatch } from '@/utils/matchSource';
 
 // How often to poll support/staff conversations while this screen is active.
 const SUPPORT_POLL_INTERVAL =
@@ -72,6 +73,7 @@ interface SegmentedControlProps {
 
 function SegmentedControl({ active, onChange }: SegmentedControlProps) {
   const th = useScreenTheme();
+  const { t } = useTranslation();
 
   return (
     <View
@@ -83,7 +85,7 @@ function SegmentedControl({ active, onChange }: SegmentedControlProps) {
     >
       {(['ALL', 'UNREAD'] as MessageFilter[]).map((key) => {
         const isActive = active === key;
-        const label = key === 'ALL' ? 'All' : 'Unread';
+        const label = key === 'ALL' ? t('common.all', 'All') : t('chat.filterUnread', 'Unread');
         return (
           <TouchableOpacity
             key={key}
@@ -156,6 +158,7 @@ const segStyles = StyleSheet.create({
 
 function EmptyState({ filter }: { filter: MessageFilter }) {
   const th = useScreenTheme();
+  const { t } = useTranslation();
   const isUnread = filter === 'UNREAD';
   return (
     <View style={emptyStyles.wrap}>
@@ -167,12 +170,12 @@ function EmptyState({ filter }: { filter: MessageFilter }) {
         />
       </View>
       <Text style={[emptyStyles.title, { color: th.text }]}>
-        {isUnread ? 'All caught up!' : 'No conversations yet'}
+        {isUnread ? t('chat.emptyUnreadTitle', 'All caught up!') : t('chat.emptyTitle', 'No conversations yet')}
       </Text>
       <Text style={[emptyStyles.subtitle, { color: th.textSecondary }]}>
         {isUnread
-          ? "You have no unread messages. You're all caught up!"
-          : "Start liking profiles and when you match, your conversations will appear here."}
+          ? t('chat.emptyUnreadBody', "You have no unread messages. You're all caught up!")
+          : t('chat.emptyBody', "Start liking profiles and when you match, your conversations will appear here.")}
       </Text>
     </View>
   );
@@ -213,23 +216,24 @@ const emptyStyles = StyleSheet.create({
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   const th = useScreenTheme();
+  const { t } = useTranslation();
   return (
     <View style={errorStyles.wrap}>
       <Ionicons name="alert-circle-outline" size={48} color={th.purple} />
       <Text style={[errorStyles.title, { color: th.text }]}>
-        Something went wrong
+        {t('common.somethingWentWrong')}
       </Text>
       <Text style={[errorStyles.subtitle, { color: th.textSecondary }]}>
-        We couldn't load your conversations.
+        {t('chat.loadErrorBody', "We couldn't load your conversations.")}
       </Text>
       <TouchableOpacity
         style={[errorStyles.retryBtn, { backgroundColor: th.purple }]}
         onPress={onRetry}
         activeOpacity={0.8}
         accessibilityRole="button"
-        accessibilityLabel="Retry loading conversations"
+        accessibilityLabel={t('chat.retryLoad', 'Retry loading conversations')}
       >
-        <Text style={errorStyles.retryText}>Retry</Text>
+        <Text style={errorStyles.retryText}>{t('common.retry')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -432,6 +436,7 @@ export default function MessagesListScreen() {
           displayName: item.participant.displayName,
           avatarUrl: item.participant.avatarUrl ?? '',
           isVerified: item.participant.isVerified ? '1' : '0',
+          ...(isBlindDateMatch(item) ? { matchSource: 'BLIND_DATE' } : {}),
         },
       });
     },
@@ -625,7 +630,7 @@ function Header({
         {/* Title */}
         <View style={styles.titleRow}>
           <Text style={[styles.title, { color: th.text }]}>
-            Your Conversations
+            {t('chat.yourConversations', 'Your Conversations')}
           </Text>
         </View>
 
@@ -723,7 +728,7 @@ function StaffSupportItem({
           )}
         </View>
         <Text style={[staffItemStyles.subtitle, { color: textSecondary }]} numberOfLines={1}>
-          {isLoading ? '...' : isError ? 'Tap to retry' : t('support.staffInboxSubtitle')}
+          {isLoading ? t('common.loading') : isError ? t('chat.tapToRetry', 'Tap to retry') : t('support.staffInboxSubtitle')}
         </Text>
         <View style={[staffItemStyles.divider, { backgroundColor: isDark ? '#3D2A6E' : '#F0EAF9' }]} />
       </View>

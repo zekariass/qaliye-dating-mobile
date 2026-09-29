@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Keyboard,
@@ -18,6 +19,10 @@ import Animated, {
     Easing,
     FadeIn,
     FadeInDown,
+    SlideInLeft,
+    SlideInRight,
+    SlideOutLeft,
+    SlideOutRight,
     useAnimatedStyle,
     useSharedValue,
     withRepeat,
@@ -30,6 +35,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BlindDateBottomNav from '@/components/blind-date/BlindDateBottomNav';
 import { CelebrationOverlay } from '@/components/blind-date/CelebrationOverlay';
+import { FloatingHeartsOverlay } from '@/components/blind-date/FloatingHeartsOverlay';
 import { FlowBackdrop } from '@/components/blind-date/FlowBackdrop';
 import { RoundProgressBar } from '@/components/blind-date/RoundProgressBar';
 import { BlurredPortraitFallback } from '@/components/blind-date/SessionSwipeCard';
@@ -43,13 +49,16 @@ import { useParticipantFlow } from '@/hooks/blindDate/useParticipantFlow';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { BlindDateJoinResponseDto, BlindDateSessionQuestionDto } from '@/types/blindDate';
+import { blindDateErrorMessage, showBlindDateError } from '@/utils/blindDateErrors';
 import { formatDecisionDeadline } from '@/utils/blindDateFormat';
 import { getCostForAction } from '@/utils/entitlements';
 import {
     RELATIONSHIP_API_TO_LABEL,
     RELIGION_API_TO_LABEL,
 } from '@/utils/profileMappers';
+import { translateProfileOption } from '@/utils/profileOptions';
 
 // ─── Palette helpers ──────────────────────────────────────────────────────────
 
@@ -73,6 +82,7 @@ function FlowScaffold({
   children: React.ReactNode;
   rightEl?: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { colors: th } = useTheme();
   return (
@@ -82,7 +92,7 @@ function FlowScaffold({
           onPress={onBack}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t('blindDate.common.back')}
           style={styles.headerBtn}
         >
           <Ionicons name="chevron-back" size={22} color={th.text} />
@@ -178,23 +188,24 @@ function WithdrawLink({
   flow: ReturnType<typeof useParticipantFlow>;
   onWithdrawn: () => void;
 }) {
+  const { t } = useTranslation();
   const handlePress = () => {
     themedAlert({
-      title: 'Leave this Blind Date?',
-      message: 'You will be removed from the session and cannot rejoin. This cannot be undone.',
+      title: t('blindDate.flow.leave.title'),
+      message: t('blindDate.flow.leave.message'),
       icon: 'exit-outline',
       iconColor: colors.danger,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Leave',
+          text: t('blindDate.flow.leave.confirm'),
           style: 'destructive',
           onPress: async () => {
             try {
               await flow.withdraw();
               onWithdrawn();
-            } catch {
-              themedError('Could not leave', 'Please try again.');
+            } catch (e) {
+              themedError(t('blindDate.flow.leave.errorTitle'), blindDateErrorMessage(e));
             }
           },
         },
@@ -214,7 +225,7 @@ function WithdrawLink({
         <ActivityIndicator size="small" color={colors.danger} />
       ) : (
         <Text style={[styles.withdrawLinkText, { color: colors.danger }]}>
-          Leave this Blind Date
+          {t('blindDate.flow.leave.link')}
         </Text>
       )}
     </TouchableOpacity>
@@ -297,6 +308,7 @@ function YouAreInStep({
   onBegin: () => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
@@ -326,7 +338,7 @@ function YouAreInStep({
           onPress={onBack}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t('blindDate.common.back')}
         >
           <Ionicons name="chevron-back" size={24} color={th.text} />
         </TouchableOpacity>
@@ -342,9 +354,9 @@ function YouAreInStep({
         <Image source={mysteryArt} style={styles.yaiArt} contentFit="contain" />
 
         {/* Headings */}
-        <Text style={[styles.yaiTitle, { color: th.text }]}>You are joined!</Text>
+        <Text style={[styles.yaiTitle, { color: th.text }]}>{t('blindDate.flow.joined.title')}</Text>
         <Text style={[styles.yaiSub, { color: th.textSecondary }]}>
-          Your Blind Date journey begins.
+          {t('blindDate.flow.joined.subtitle')}
         </Text>
 
         {/* Checklist card */}
@@ -357,14 +369,14 @@ function YouAreInStep({
           <CheckRow
             label={
               maxRounds != null
-                ? `Up to ${maxRounds} round${maxRounds === 1 ? '' : 's'}`
-                : 'Multiple rounds'
+                ? t('blindDate.flow.joined.upToRounds', { count: maxRounds })
+                : t('blindDate.flow.joined.multipleRounds')
             }
           />
-          <CheckRow label="Meaningful questions" />
-          <CheckRow label="Stay anonymous" />
-          <CheckRow label="Be honest and respectful" />
-          <CheckRow label="Take your time" />
+          <CheckRow label={t('blindDate.flow.joined.check1')} />
+          <CheckRow label={t('blindDate.flow.joined.check2')} />
+          <CheckRow label={t('blindDate.flow.joined.check3')} />
+          <CheckRow label={t('blindDate.flow.joined.check4')} />
         </View>
 
         {/* Primary CTA */}
@@ -374,13 +386,13 @@ function YouAreInStep({
           activeOpacity={0.88}
           accessibilityRole="button"
         >
-          <Text style={styles.yaiBeginBtnText}>Let&rsquo;s Begin</Text>
+          <Text style={styles.yaiBeginBtnText}>{t('blindDate.flow.joined.begin')}</Text>
           <Ionicons name="arrow-forward" size={18} color="#FFF" />
         </TouchableOpacity>
 
         {/* Footer tagline */}
         <Text style={[styles.yaiFooter, { color: th.textSecondary }]}>
-          Real people. Deeper conversations.
+          {t('blindDate.flow.joined.footer')}
         </Text>
       </ScrollView>
     </View>
@@ -400,6 +412,7 @@ function JoinConfirmStep({
   onJoined: (res: BlindDateJoinResponseDto) => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const { entitlements } = useEntitlements();
   const session = flow.session;
@@ -407,8 +420,8 @@ function JoinConfirmStep({
   const joinCost = getCostForAction('BLIND_DATE_PARTICIPATE', entitlements);
   const costLabel =
     joinCost === null || joinCost === 0
-      ? 'Free'
-      : `${joinCost} credit${joinCost === 1 ? '' : 's'}`;
+      ? t('blindDate.flow.joinConfirm.free')
+      : t('blindDate.common.credits', { count: joinCost });
 
   const [joining, setJoining] = useState(false);
 
@@ -417,15 +430,18 @@ function JoinConfirmStep({
     try {
       const res = await flow.joinSession();
       if (res) onJoined(res);
-    } catch {
-      // joinError is set inside the hook; the error alert is shown below
+    } catch (err) {
+      // joinError is also set inside the hook for the inline hint; the modal
+      // surfaces the localized reason (session full, expired, blocked, …).
+      // No-op for insufficient credits — the global purchase sheet handles it.
+      showBlindDateError(err, t('blindDate.home.joinErrorTitle'));
     } finally {
       setJoining(false);
     }
   };
 
   return (
-    <FlowScaffold title="Blind Date" onBack={onBack}>
+    <FlowScaffold title={t('blindDate.common.blindDate')} onBack={onBack}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -451,10 +467,10 @@ function JoinConfirmStep({
           <View style={styles.joinHeroOverlay}>
             <View style={styles.joinLockPill}>
               <Ionicons name="lock-closed" size={11} color="#FFF" />
-              <Text style={styles.joinLockText}>Identity hidden until reveal</Text>
+              <Text style={styles.joinLockText}>{t('blindDate.flow.joinConfirm.identityHidden')}</Text>
             </View>
-            <Text style={styles.joinHeroTitle}>You&rsquo;re in?</Text>
-            <Text style={styles.joinHeroSub}>Your Blind Date journey begins.</Text>
+            <Text style={styles.joinHeroTitle}>{t('blindDate.flow.joinConfirm.heroTitle')}</Text>
+            <Text style={styles.joinHeroSub}>{t('blindDate.flow.joined.subtitle')}</Text>
           </View>
         </View>
 
@@ -473,19 +489,21 @@ function JoinConfirmStep({
             {creator?.relationship_intention && (
               <InfoChip
                 icon="heart-outline"
-                label={
+                label={translateProfileOption(
                   RELATIONSHIP_API_TO_LABEL[creator.relationship_intention] ??
-                  toTitleCase(creator.relationship_intention)
-                }
+                    toTitleCase(creator.relationship_intention),
+                  t,
+                )}
               />
             )}
             {creator?.religion && (
               <InfoChip
                 icon="flower-outline"
-                label={
+                label={translateProfileOption(
                   RELIGION_API_TO_LABEL[creator.religion] ??
-                  toTitleCase(creator.religion)
-                }
+                    toTitleCase(creator.religion),
+                  t,
+                )}
               />
             )}
           </View>
@@ -495,7 +513,7 @@ function JoinConfirmStep({
         {flow.questions.length > 0 && (
           <View style={[styles.bulletCard, { backgroundColor: th.surface, borderColor: th.border }]}>
             <Text style={[styles.previewHeading, { color: th.text }]}>
-              Questions you&apos;ll answer
+              {t('blindDate.flow.joinConfirm.questionsPreview')}
             </Text>
             {flow.questions.map((q, i) => (
               <View key={q.id} style={styles.previewRow}>
@@ -510,10 +528,10 @@ function JoinConfirmStep({
 
         {/* How it works bullets */}
         <View style={[styles.bulletCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-          <BulletPoint icon="eye-off-outline" text="Stay anonymous — your photo and identity remain hidden while you progress." />
-          <BulletPoint icon="chatbubble-ellipses-outline" text="Meaningful questions — answer questions selected by the host." />
-          <BulletPoint icon="trending-up-outline" text="Earn your way forward — the host decides who advances to each round." />
-          <BulletPoint icon="shield-checkmark-outline" text="Be honest and respectful — real people, deeper conversations." />
+          <BulletPoint icon="eye-off-outline" text={t('blindDate.flow.joinConfirm.bullet1')} />
+          <BulletPoint icon="chatbubble-ellipses-outline" text={t('blindDate.flow.joinConfirm.bullet2')} />
+          <BulletPoint icon="trending-up-outline" text={t('blindDate.flow.joinConfirm.bullet3')} />
+          <BulletPoint icon="shield-checkmark-outline" text={t('blindDate.flow.joinConfirm.bullet4')} />
         </View>
 
         {/* Cost */}
@@ -529,7 +547,7 @@ function JoinConfirmStep({
         )}
 
         <PrimaryButton
-          label="Let's Begin"
+          label={t('blindDate.flow.joinConfirm.begin')}
           icon="heart"
           onPress={handleJoin}
           loading={joining || flow.joinMutation.isPending}
@@ -543,18 +561,18 @@ function JoinConfirmStep({
 
 /** Display theme name per round — visual flavor matching the reference flow. */
 function roundThemeName(round: number): string {
-  if (round <= 1) return 'First Impressions';
-  if (round === 2) return 'Values & Lifestyle';
-  if (round === 3) return 'Deeper Connection';
-  return 'The Final Chapter';
+  if (round <= 1) return i18n.t('blindDate.flow.answering.theme1');
+  if (round === 2) return i18n.t('blindDate.flow.answering.theme2');
+  if (round === 3) return i18n.t('blindDate.flow.answering.theme3');
+  return i18n.t('blindDate.flow.answering.theme4');
 }
 
 function roundThemeSub(round: number, total: number): string {
-  const q = total > 0 ? `${total} question${total === 1 ? '' : 's'} to answer.` : '';
-  if (round <= 1) return `Let's start with the basics. ${q}`;
-  if (round === 2) return `Now let's see what really matters. ${q}`;
-  if (round === 3) return `Let's go a little deeper. ${q}`;
-  return `The final stretch. ${q}`;
+  const q = total > 0 ? i18n.t('blindDate.flow.answering.questionsToAnswer', { count: total }) : '';
+  if (round <= 1) return i18n.t('blindDate.flow.answering.theme1Sub', { suffix: q });
+  if (round === 2) return i18n.t('blindDate.flow.answering.theme2Sub', { suffix: q });
+  if (round === 3) return i18n.t('blindDate.flow.answering.theme3Sub', { suffix: q });
+  return i18n.t('blindDate.flow.answering.theme4Sub', { suffix: q });
 }
 
 function AnsweringStep({
@@ -567,6 +585,7 @@ function AnsweringStep({
   onWithdrawn: () => void;
 }) {
   const { colors: th, mode } = useTheme();
+  const { t } = useTranslation();
   const isDark = mode === 'dark';
   const { configuration } = useBlindDateConfiguration();
   const maxRounds = configuration?.limits?.max_rounds ?? null;
@@ -575,7 +594,9 @@ function AnsweringStep({
   const idx = flow.currentQuestionIndex;
   const total = flow.totalQuestions;
   const round = flow.session?.current_round_number ?? 1;
-  const roundTitle = maxRounds ? `Round ${round} of ${maxRounds}` : `Round ${round}`;
+  const roundTitle = maxRounds
+    ? t('blindDate.common.roundOf', { round, max: maxRounds })
+    : t('blindDate.common.round', { number: round });
   const isLast = idx === total - 1;
   const [draft, setLocalDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -617,6 +638,15 @@ function AnsweringStep({
   if (q && q.id !== prevQId) {
     setPrevQId(q.id);
     setLocalDraft(flow.answerDrafts[q.id] ?? q.my_answer ?? '');
+  }
+
+  // Direction of the last index change — drives the slide transition so the
+  // new question visibly enters from the right (forward) or left (back).
+  const [qDir, setQDir] = useState<'next' | 'prev'>('next');
+  const prevIdxRef = useRef(idx);
+  if (idx !== prevIdxRef.current) {
+    setQDir(idx > prevIdxRef.current ? 'next' : 'prev');
+    prevIdxRef.current = idx;
   }
 
   const handleNext = async () => {
@@ -705,23 +735,31 @@ function AnsweringStep({
                 onPress={flow.goBackQuestion}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel="Previous question"
+                accessibilityLabel={t('blindDate.flow.answering.previousA11y')}
                 style={styles.prevBtn}
               >
                 <Ionicons name="chevron-back" size={14} color={bdColors.primary} />
-                <Text style={[styles.prevBtnText, { color: bdColors.primary }]}>Previous</Text>
+                <Text style={[styles.prevBtnText, { color: bdColors.primary }]}>{t('blindDate.flow.answering.previous')}</Text>
               </TouchableOpacity>
             ) : <View style={styles.prevBtnSpacer} />}
             <Text style={[styles.questionCounter, { color: th.textSecondary }]}>
-              Question {idx + 1} of {total}
+              {t('blindDate.flow.answering.questionCounter', { current: idx + 1, total })}
             </Text>
             <View style={styles.prevBtnSpacer} />
           </View>
 
-          {/* ── Question card (speech-bubble style) ───────────────────────── */}
+          {/* ── Question card + answer input — slides out/in on question
+              change so the next question visibly "opens" ──────────────────── */}
           <Animated.View
             key={q.id}
-            entering={FadeInDown.duration(350).delay(60)}
+            entering={(qDir === 'next' ? SlideInRight : SlideInLeft)
+              .duration(320)
+              .easing(Easing.out(Easing.cubic))}
+            exiting={(qDir === 'next' ? SlideOutLeft : SlideOutRight)
+              .duration(220)
+              .easing(Easing.in(Easing.cubic))}
+          >
+          <View
             style={[
               styles.ansQCard,
               {
@@ -734,11 +772,10 @@ function AnsweringStep({
             {/* Decorative large quote mark */}
             <Text style={[styles.ansQQuote, { color: isDark ? '#3D1B3D' : '#EFE7FF' }]}>{'\u201C'}</Text>
             <Text style={[styles.ansQText, { color: th.text }]}>{q.question}</Text>
-          </Animated.View>
+          </View>
 
           {/* ── Answer input ───────────────────────────────────────────────── */}
-          <Animated.View
-            entering={FadeInDown.duration(350).delay(120)}
+          <View
             onLayout={(e) => {
               inputYRef.current = e.nativeEvent.layout.y;
             }}
@@ -754,7 +791,7 @@ function AnsweringStep({
                   backgroundColor: isDark ? '#160F24' : '#FFF9FB',
                 },
               ]}
-              placeholder="Type your answer here…"
+              placeholder={t('blindDate.flow.answering.placeholder')}
               placeholderTextColor={th.textSecondary}
               multiline
               maxLength={MAX_ANSWER_LEN}
@@ -769,13 +806,14 @@ function AnsweringStep({
               {isSubmitted ? (
                 <View style={styles.savedPill}>
                   <Ionicons name="checkmark-circle" size={13} color={colors.success} />
-                  <Text style={[styles.savedText, { color: colors.success }]}>Saved</Text>
+                  <Text style={[styles.savedText, { color: colors.success }]}>{t('blindDate.flow.answering.saved')}</Text>
                 </View>
               ) : <View />}
               <Text style={[styles.charCount, { color: th.textSecondary }]}>
                 {draft.length}/{MAX_ANSWER_LEN}
               </Text>
             </View>
+          </View>
           </Animated.View>
 
           {/* ── Error & lock states ────────────────────────────────────────── */}
@@ -786,14 +824,18 @@ function AnsweringStep({
             <View style={[styles.lockedBanner, { borderColor: colors.warning }]}>
               <Ionicons name="lock-closed" size={14} color={colors.warning} />
               <Text style={[styles.lockedText, { color: colors.warning }]}>
-                The host has made their decision — answers are now locked.
+                {t('blindDate.flow.answering.locked')}
               </Text>
             </View>
           )}
 
           {/* ── Primary action ─────────────────────────────────────────────── */}
           <PrimaryButton
-            label={isLast ? (flow.editingAnswers ? 'Save Changes' : 'Submit Answers') : 'Next Question'}
+            label={isLast
+              ? (flow.editingAnswers
+                ? t('blindDate.flow.answering.saveChanges')
+                : t('blindDate.flow.answering.submitAnswers'))
+              : t('blindDate.flow.answering.nextQuestion')}
             icon={isLast ? 'checkmark-circle' : 'arrow-forward'}
             onPress={handleNext}
             loading={saving || flow.savingQuestionId === q.id}
@@ -802,7 +844,7 @@ function AnsweringStep({
 
           {/* Subtle encouragement */}
           <Text style={[styles.hintText, { color: th.textSecondary }]}>
-            Be honest and take your time. Real people, deeper conversations.
+            {t('blindDate.flow.answering.encouragement')}
           </Text>
 
           <WithdrawLink flow={flow} onWithdrawn={onWithdrawn} />
@@ -853,6 +895,7 @@ function RcStepRow({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text:
 }
 
 function RoundCompleteStep({ flow, onBack }: { flow: ReturnType<typeof useParticipantFlow>; onBack: () => void }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const insets = useSafeAreaInsets();
@@ -876,8 +919,8 @@ function RoundCompleteStep({ flow, onBack }: { flow: ReturnType<typeof usePartic
           ]}
         />
       ))}
-      {/* Particle burst on mount */}
-      <CelebrationOverlay visible />
+      {/* Floating hearts & flowers */}
+      <FloatingHeartsOverlay visible />
 
       {/* Minimal header — back only, no title (matches reference) */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -885,7 +928,7 @@ function RoundCompleteStep({ flow, onBack }: { flow: ReturnType<typeof usePartic
           onPress={onBack}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t('blindDate.common.back')}
           style={styles.headerBtn}
         >
           <Ionicons name="chevron-back" size={22} color={th.text} />
@@ -909,13 +952,13 @@ function RoundCompleteStep({ flow, onBack }: { flow: ReturnType<typeof usePartic
           entering={FadeInDown.delay(180).duration(400)}
           style={[styles.rcTitle, { color: th.text }]}
         >
-          Round {round} Complete!
+          {t('blindDate.flow.roundComplete.title', { round })}
         </Animated.Text>
         <Animated.Text
           entering={FadeInDown.delay(260).duration(400)}
           style={[styles.rcSub, { color: th.textSecondary }]}
         >
-          Great job! You&rsquo;ve answered{'\n'}all the questions.
+          {t('blindDate.flow.roundComplete.subtitle')}
         </Animated.Text>
 
         {/* What happens next */}
@@ -923,22 +966,22 @@ function RoundCompleteStep({ flow, onBack }: { flow: ReturnType<typeof usePartic
           entering={FadeInDown.delay(360).duration(400)}
           style={[styles.rcCard, { backgroundColor: th.surface, borderColor: th.border }]}
         >
-          <Text style={[styles.rcCardTitle, { color: th.text }]}>What happens next?</Text>
+          <Text style={[styles.rcCardTitle, { color: th.text }]}>{t('blindDate.flow.roundComplete.nextTitle')}</Text>
           <RcStepRow
             icon="eye-outline"
-            text="The host will review all responses and decide who moves to the next round."
+            text={t('blindDate.flow.roundComplete.next1')}
           />
           <RcStepRow
             icon="notifications-outline"
-            text="You&rsquo;ll be notified once a decision is made."
+            text={t('blindDate.flow.roundComplete.next2')}
           />
           <RcStepRow
             icon="heart-outline"
-            text="Keep an eye on your Blind Dates."
+            text={t('blindDate.flow.roundComplete.next3')}
           />
         </Animated.View>
 
-        <PrimaryButton label="Back to My Blind Dates" onPress={onBack} />
+        <PrimaryButton label={t('blindDate.flow.backToMyBlindDates')} onPress={onBack} />
       </ScrollView>
     </View>
   );
@@ -947,6 +990,7 @@ function RoundCompleteStep({ flow, onBack }: { flow: ReturnType<typeof usePartic
 // ─── Step 5: WAITING ─────────────────────────────────────────────────────────
 
 function WaitingStep({ flow, onBack, onWithdrawn, onEditAnswers }: { flow: ReturnType<typeof useParticipantFlow>; onBack: () => void; onWithdrawn: () => void; onEditAnswers: () => void }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const round = flow.session?.current_round_number ?? 1;
@@ -961,11 +1005,11 @@ function WaitingStep({ flow, onBack, onWithdrawn, onEditAnswers }: { flow: Retur
           <View style={styles.waitingHourglass}>
             <Ionicons name="hourglass-outline" size={52} color="rgba(255,255,255,0.9)" />
           </View>
-          <Text style={styles.waitingTitle}>Now it&rsquo;s their turn</Text>
+          <Text style={styles.waitingTitle}>{t('blindDate.flow.waiting.title')}</Text>
           <Text style={styles.waitingSub}>
             {flow.participation?.status === 'ADVANCED'
-              ? 'You made it through!\nThe host is setting up the next round.'
-              : 'You\u2019ve answered all the questions.\nThe host is reviewing the responses.'}
+              ? t('blindDate.flow.waiting.subAdvanced')
+              : t('blindDate.flow.waiting.subReviewing')}
           </Text>
         </LinearGradient>
       </View>
@@ -975,19 +1019,19 @@ function WaitingStep({ flow, onBack, onWithdrawn, onEditAnswers }: { flow: Retur
         <View style={styles.waitingInfoRow}>
           <Ionicons name="lock-closed" size={13} color={bdColors.primary} />
           <Text style={[styles.waitingInfoText, { color: th.textSecondary }]}>
-            Identity hidden — the host can&rsquo;t see who you are
+            {t('blindDate.flow.waiting.identityHidden')}
           </Text>
         </View>
         <View style={[styles.waitingTip, { backgroundColor: isDark ? '#2E1F50' : '#EFE7FF' }]}>
           <Ionicons name="notifications-outline" size={14} color={bdColors.primary} />
           <Text style={[styles.waitingTipText, { color: bdColors.primary }]}>
-            You&rsquo;ll get a notification when the next round is unlocked.
+            {t('blindDate.flow.waiting.notifyTip')}
           </Text>
         </View>
       </View>
 
       <View style={styles.waitingFooter}>
-        <PrimaryButton label="Back to My Blind Dates" onPress={onBack} />
+        <PrimaryButton label={t('blindDate.flow.backToMyBlindDates')} onPress={onBack} />
         {flow.participation?.status === 'ACTIVE' && flow.session?.status === 'OPEN' && (
           <TouchableOpacity
             onPress={onEditAnswers}
@@ -997,7 +1041,7 @@ function WaitingStep({ flow, onBack, onWithdrawn, onEditAnswers }: { flow: Retur
           >
             <Ionicons name="create-outline" size={14} color={bdColors.primary} />
             <Text style={[styles.editAnswersText, { color: bdColors.primary }]}>
-              Edit my answers
+              {t('blindDate.flow.waiting.editAnswers')}
             </Text>
           </TouchableOpacity>
         )}
@@ -1010,9 +1054,27 @@ function WaitingStep({ flow, onBack, onWithdrawn, onEditAnswers }: { flow: Retur
 // ─── Step 6: ADVANCED ────────────────────────────────────────────────────────
 
 function AdvancedStep({ flow, onContinue }: { flow: ReturnType<typeof useParticipantFlow>; onContinue: () => void }) {
+  const { t } = useTranslation();
   // session.current_round_number is already the NEW round the participant
   // advanced into — the creator opened it when they advanced this user.
   const round = flow.session?.current_round_number ?? 1;
+
+  // Gentle pulse on the "Round unlocked" pill — keeps drawing the eye until
+  // the user taps Continue.
+  const pulse = useSharedValue(0);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+    );
+  }, [pulse]);
+  const pillPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + pulse.value * 0.06 }],
+  }));
+
   return (
     <View style={styles.fullScreen}>
       <CelebrationOverlay visible />
@@ -1021,32 +1083,43 @@ function AdvancedStep({ flow, onContinue }: { flow: ReturnType<typeof usePartici
         style={styles.fullScreenGradient}
       >
         <View style={styles.celebrationContent}>
-          <View style={styles.trophyCircle}>
+          <Animated.View entering={ZoomIn.delay(120).springify().damping(10)} style={styles.trophyCircle}>
             <Ionicons name="trophy" size={56} color="#FFF" />
-          </View>
-          <Text style={styles.celebrationTitle}>You&rsquo;re through!</Text>
-          <Text style={styles.celebrationSub}>Your answers caught their attention.</Text>
-          <View style={styles.roundUnlockedPill}>
+          </Animated.View>
+          <Animated.Text entering={FadeInDown.delay(280).duration(350)} style={styles.celebrationTitle}>
+            {t('blindDate.flow.advanced.title')}
+          </Animated.Text>
+          <Animated.Text entering={FadeInDown.delay(380).duration(350)} style={styles.celebrationSub}>
+            {t('blindDate.flow.advanced.subtitle')}
+          </Animated.Text>
+          <Animated.View
+            entering={ZoomIn.delay(520).springify().damping(12)}
+            style={[styles.roundUnlockedPill, pillPulseStyle]}
+          >
             <Ionicons name="lock-open" size={13} color="#FFF" />
-            <Text style={styles.roundUnlockedText}>Round {round} Unlocked</Text>
-          </View>
+            <Text style={styles.roundUnlockedText}>{t('blindDate.flow.advanced.roundUnlocked', { round })}</Text>
+          </Animated.View>
         </View>
       </LinearGradient>
       <View style={styles.celebrationBody}>
-        <RoundProgressBar currentRound={round} isFinalRound={false} large />
-        <View style={styles.nextRoundCard}>
-          <Text style={styles.nextRoundTitle}>Round {round}</Text>
+        <Animated.View entering={FadeInDown.delay(620).duration(350)}>
+          <RoundProgressBar currentRound={round} isFinalRound={false} large />
+        </Animated.View>
+        <Animated.View entering={FadeInDown.delay(720).duration(350)} style={styles.nextRoundCard}>
+          <Text style={styles.nextRoundTitle}>{t('blindDate.common.round', { number: round })}</Text>
           <Text style={styles.nextRoundSub}>
             {flow.totalQuestions > 0
-              ? `${flow.totalQuestions} question${flow.totalQuestions === 1 ? '' : 's'} await you.`
-              : 'New questions are ready.'}
+              ? t('blindDate.flow.advanced.questionsAwait', { count: flow.totalQuestions })
+              : t('blindDate.flow.advanced.newQuestions')}
           </Text>
-        </View>
-        <PrimaryButton
-          label={`Continue to Round ${round}`}
-          icon="arrow-forward"
-          onPress={onContinue}
-        />
+        </Animated.View>
+        <Animated.View entering={FadeInDown.delay(800).duration(350)}>
+          <PrimaryButton
+            label={t('blindDate.flow.advanced.continue', { round })}
+            icon="arrow-forward"
+            onPress={onContinue}
+          />
+        </Animated.View>
       </View>
     </View>
   );
@@ -1063,6 +1136,7 @@ function RoundAnswersSection({
   roundNumber: number;
   questions: BlindDateSessionQuestionDto[];
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const answered = questions.filter((q) => q.my_answer != null);
@@ -1077,10 +1151,10 @@ function RoundAnswersSection({
           style={styles.myRoundBadge}
         >
           <Ionicons name="albums-outline" size={12} color="#FFF" />
-          <Text style={styles.myRoundBadgeText}>Round {roundNumber}</Text>
+          <Text style={styles.myRoundBadgeText}>{t('blindDate.common.round', { number: roundNumber })}</Text>
         </LinearGradient>
         <Text style={[styles.myRoundCount, { color: th.textSecondary }]}>
-          {answered.length}/{questions.length} answered
+          {t('blindDate.flow.answeredCount', { answered: answered.length, total: questions.length })}
         </Text>
       </View>
 
@@ -1091,7 +1165,7 @@ function RoundAnswersSection({
               colors={bdGradients.hero as unknown as [string, string, string]}
               style={styles.myAnswerQBadge}
             >
-              <Text style={styles.myAnswerQBadgeText}>Q{i + 1}</Text>
+              <Text style={styles.myAnswerQBadgeText}>{t('blindDate.flow.questionShort', { number: i + 1 })}</Text>
             </LinearGradient>
             <Text style={[styles.myAnswerQ, { color: th.text }]}>{q.question}</Text>
           </View>
@@ -1108,7 +1182,7 @@ function RoundAnswersSection({
                 !q.my_answer && styles.myAnswerPending,
               ]}
             >
-              {q.my_answer ?? 'Not answered'}
+              {q.my_answer ?? t('blindDate.flow.notAnswered')}
             </Text>
           </View>
         </View>
@@ -1126,6 +1200,7 @@ function EliminatedStep({
   onExplore: () => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const participantStatus = flow.participation?.status;
   const { rows, isLoading } = useMyRoundAnswers(flow.session?.rounds ?? []);
@@ -1138,23 +1213,23 @@ function EliminatedStep({
     participantStatus === 'WITHDRAWN'
       ? {
           icon: 'exit-outline' as const,
-          title: 'You left this Blind Date',
-          subtext: 'You can join a new Blind Date anytime.',
+          title: t('blindDate.flow.eliminated.withdrawnTitle'),
+          subtext: t('blindDate.flow.eliminated.withdrawnSub'),
         }
       : participantStatus === 'ELIMINATED'
         ? {
             icon: 'heart-dislike-outline' as const,
-            title: "You didn't move forward this time",
-            subtext: 'The host chose other participants to continue. Thank you for sharing your answers.',
+            title: t('blindDate.flow.eliminated.title'),
+            subtext: t('blindDate.flow.eliminated.sub'),
           }
         : {
             icon: 'flag-outline' as const,
-            title: 'This Blind Date has ended',
-            subtext: 'Thank you for taking part — your answers are below.',
+            title: t('blindDate.flow.eliminated.endedTitle'),
+            subtext: t('blindDate.flow.eliminated.endedSub'),
           };
 
   return (
-    <FlowScaffold title="Blind Date" onBack={onBack}>
+    <FlowScaffold title={t('blindDate.common.blindDate')} onBack={onBack}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -1172,7 +1247,7 @@ function EliminatedStep({
           <ActivityIndicator color={bdColors.primary} style={{ marginTop: 24 }} />
         ) : answeredRows.length > 0 ? (
           <>
-            <SectionDivider label="Your answers" />
+            <SectionDivider label={t('blindDate.flow.eliminated.yourAnswers')} />
             {answeredRows.map((r) => (
               <RoundAnswersSection key={r.round_id} roundNumber={r.round_number} questions={r.questions} />
             ))}
@@ -1182,7 +1257,7 @@ function EliminatedStep({
         <View style={[styles.eliminatedDivider, { backgroundColor: th.border }]} />
         <View style={styles.eliminatedActions}>
           <PrimaryButton
-            label="Explore More Blind Dates"
+            label={t('blindDate.flow.exploreMore')}
             icon="compass-outline"
             onPress={onExplore}
           />
@@ -1195,6 +1270,7 @@ function EliminatedStep({
 // ─── Step 8: FINALIST ─────────────────────────────────────────────────────────
 
 function FinalistStep({ flow, onReveal }: { flow: ReturnType<typeof useParticipantFlow>; onReveal: () => void }) {
+  const { t } = useTranslation();
   const round = flow.session?.current_round_number ?? 1;
   return (
     <View style={styles.fullScreen}>
@@ -1207,9 +1283,9 @@ function FinalistStep({ flow, onReveal }: { flow: ReturnType<typeof useParticipa
           <View style={styles.crownCircle}>
             <Ionicons name="star" size={52} color="#FFF" />
           </View>
-          <Text style={styles.celebrationTitle}>You&rsquo;re the finalist!</Text>
+          <Text style={styles.celebrationTitle}>{t('blindDate.flow.finalist.title')}</Text>
           <Text style={styles.celebrationSub}>
-            You&rsquo;ve been selected for the final stage before the reveal.
+            {t('blindDate.flow.finalist.subtitle')}
           </Text>
         </View>
       </LinearGradient>
@@ -1219,9 +1295,9 @@ function FinalistStep({ flow, onReveal }: { flow: ReturnType<typeof useParticipa
           isFinalRound={true}
           large
         />
-        <Text style={styles.celebrationSectionTitle}>The reveal is waiting</Text>
+        <Text style={styles.celebrationSectionTitle}>{t('blindDate.flow.finalist.revealWaiting')}</Text>
         <PrimaryButton
-          label="Continue to the Reveal"
+          label={t('blindDate.flow.finalist.continue')}
           icon="eye"
           onPress={onReveal}
         />
@@ -1233,13 +1309,14 @@ function FinalistStep({ flow, onReveal }: { flow: ReturnType<typeof useParticipa
 // ─── Steps 9–10: REVEAL_INTRO + REVEAL_COUNTDOWN ─────────────────────────────
 
 function RevealIntroStep({ flow, onReveal, onBack }: { flow: ReturnType<typeof useParticipantFlow>; onReveal: () => void; onBack: () => void }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const creator = flow.session?.creator;
   const fd = flow.session?.final_decision;
   const deadline = formatDecisionDeadline(fd?.decision_deadline_at);
 
   return (
-    <FlowScaffold title="Reveal" onBack={onBack}>
+    <FlowScaffold title={t('blindDate.flow.reveal.title')} onBack={onBack}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* Blurred portrait */}
         <View style={styles.revealPhotoWrap}>
@@ -1248,6 +1325,7 @@ function RevealIntroStep({ flow, onReveal, onBack }: { flow: ReturnType<typeof u
               source={{ uri: creator.primary_photo.signed_url }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
+              contentPosition="top"
               blurRadius={30}
             />
           ) : (
@@ -1260,10 +1338,10 @@ function RevealIntroStep({ flow, onReveal, onBack }: { flow: ReturnType<typeof u
         </View>
 
         <Text style={[styles.revealIntroTitle, { color: th.text }]}>
-          Are you ready to meet your Blind Date?
+          {t('blindDate.flow.reveal.introTitle')}
         </Text>
         <Text style={[styles.revealIntroSub, { color: th.textSecondary }]}>
-          You&rsquo;ve made it to the end. The moment is here.
+          {t('blindDate.flow.reveal.introSub')}
         </Text>
         {deadline && (
           <View style={[styles.deadlinePill, { borderColor: colors.warning }]}>
@@ -1271,7 +1349,7 @@ function RevealIntroStep({ flow, onReveal, onBack }: { flow: ReturnType<typeof u
             <Text style={[styles.deadlineText, { color: colors.warning }]}>{deadline}</Text>
           </View>
         )}
-        <PrimaryButton label="Reveal Blind Date" icon="eye" onPress={onReveal} />
+        <PrimaryButton label={t('blindDate.flow.reveal.cta')} icon="eye" onPress={onReveal} />
       </ScrollView>
     </FlowScaffold>
   );
@@ -1335,6 +1413,7 @@ function RevealProfileStep({
   onDecide: () => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const session = flow.session;
   const creator = session?.creator;
@@ -1346,7 +1425,7 @@ function RevealProfileStep({
     creatorProfile?.photos?.find((p) => p.is_primary)?.signed_url ??
     creatorProfile?.primary_photo_url ??
     creator?.primary_photo?.signed_url;
-  const displayName = creatorProfile?.display_name ?? 'Your Blind Date';
+  const displayName = creatorProfile?.display_name ?? t('blindDate.flow.reveal.fallbackName');
   const age = creatorProfile?.age ?? creator?.age;
 
   // Shared interests — only genuine matches between profiles
@@ -1356,17 +1435,25 @@ function RevealProfileStep({
   const myCountry = myProfile?.address?.country_name;
 
   if (myReligion && creator?.religion && myReligion === creator.religion) {
-    sharedItems.push(`You both share the same faith (${RELIGION_API_TO_LABEL[creator.religion] ?? toTitleCase(creator.religion)})`);
+    sharedItems.push(
+      t('blindDate.flow.reveal.sharedFaith', {
+        value: translateProfileOption(RELIGION_API_TO_LABEL[creator.religion] ?? toTitleCase(creator.religion), t),
+      }),
+    );
   }
   if (myIntention && creator?.relationship_intention && myIntention === creator.relationship_intention) {
-    sharedItems.push(`You're both looking for ${(RELATIONSHIP_API_TO_LABEL[creator.relationship_intention] ?? toTitleCase(creator.relationship_intention)).toLowerCase()}`);
+    sharedItems.push(
+      t('blindDate.flow.reveal.sharedIntention', {
+        value: translateProfileOption(RELATIONSHIP_API_TO_LABEL[creator.relationship_intention] ?? toTitleCase(creator.relationship_intention), t).toLowerCase(),
+      }),
+    );
   }
   if (myCountry && creator?.country && myCountry === creator.country) {
-    sharedItems.push(`You're both from ${creator.country}`);
+    sharedItems.push(t('blindDate.flow.reveal.sharedCountry', { country: creator.country }));
   }
 
   return (
-    <FlowScaffold title="Reveal" onBack={onBack}>
+    <FlowScaffold title={t('blindDate.flow.reveal.title')} onBack={onBack}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Photo */}
         <View style={styles.revealedPhotoWrap}>
@@ -1375,6 +1462,7 @@ function RevealProfileStep({
               source={{ uri: photo }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
+              contentPosition="top"
             />
           ) : (
             <LinearGradient
@@ -1393,7 +1481,7 @@ function RevealProfileStep({
           </Text>
           {creator?.country && (
             <Text style={[styles.revealedMeta, { color: th.textSecondary }]}>
-              📍 {creator.country}
+              {t('blindDate.flow.reveal.countryMeta', { country: creator.country })}
             </Text>
           )}
         </View>
@@ -1404,17 +1492,17 @@ function RevealProfileStep({
             {creator?.relationship_intention && (
               <InfoChip
                 icon="heart-outline"
-                label={RELATIONSHIP_API_TO_LABEL[creator.relationship_intention] ?? toTitleCase(creator.relationship_intention)}
+                label={translateProfileOption(RELATIONSHIP_API_TO_LABEL[creator.relationship_intention] ?? toTitleCase(creator.relationship_intention), t)}
               />
             )}
             {creator?.religion && (
               <InfoChip
                 icon="flower-outline"
-                label={RELIGION_API_TO_LABEL[creator.religion] ?? toTitleCase(creator.religion)}
+                label={translateProfileOption(RELIGION_API_TO_LABEL[creator.religion] ?? toTitleCase(creator.religion), t)}
               />
             )}
             {creator?.age != null && (
-              <InfoChip icon="person-outline" label={`Age ${creator.age}`} />
+              <InfoChip icon="person-outline" label={t('blindDate.flow.reveal.ageChip', { age: creator.age })} />
             )}
           </View>
         )}
@@ -1422,7 +1510,7 @@ function RevealProfileStep({
         {/* Shared interests */}
         {sharedItems.length > 0 && (
           <>
-            <SectionDivider label="You both said…" />
+            <SectionDivider label={t('blindDate.flow.reveal.bothSaid')} />
             <View style={[styles.sharedBox, { backgroundColor: th.surface, borderColor: th.border }]}>
               {sharedItems.map((item, i) => (
                 <View key={i} style={styles.sharedItem}>
@@ -1435,7 +1523,7 @@ function RevealProfileStep({
         )}
 
         <PrimaryButton
-          label="Continue to Final Decision"
+          label={t('blindDate.flow.reveal.continue')}
           icon="arrow-forward"
           onPress={onDecide}
         />
@@ -1453,66 +1541,104 @@ function FinalDecisionStep({
   flow: ReturnType<typeof useParticipantFlow>;
   onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
-  const creator = flow.session?.creator;
-  const fd = flow.session?.final_decision;
+  const session = flow.session;
+  const creator = session?.creator;
+  const { data: creatorProfile } = useOtherUserProfile(session?.creator_user_id ?? '');
+  const fd = session?.final_decision;
   const deadline = formatDecisionDeadline(fd?.decision_deadline_at);
   const deciding = flow.deciding;
+
+  const photo =
+    creatorProfile?.photos?.find((p) => p.is_primary)?.signed_url ??
+    creatorProfile?.primary_photo_url ??
+    creator?.primary_photo?.signed_url;
+  const displayName = creatorProfile?.display_name ?? t('blindDate.flow.reveal.fallbackName');
+  const age = creatorProfile?.age ?? creator?.age;
 
   const handleDecision = async (decision: 'INTERESTED' | 'NOT_INTERESTED') => {
     try {
       await flow.submitDecision(decision);
-    } catch {
-      // decisionError set in hook
+    } catch (err) {
+      // decisionError set in hook — the modal surfaces the localized reason.
+      showBlindDateError(err, t('blindDate.manage.errors.submitDecision'));
     }
   };
 
   return (
-    <FlowScaffold title="Final Decision" onBack={onBack}>
+    <FlowScaffold title={t('blindDate.flow.decision.title')} onBack={onBack}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.decisionTitle, { color: th.text }]}>
-          What do you think?
-        </Text>
-        <Text style={[styles.decisionSub, { color: th.textSecondary }]}>
-          Would you like to get to know each other?
-        </Text>
-        {deadline && (
-          <View style={[styles.deadlinePill, { borderColor: colors.warning, alignSelf: 'center' }]}>
-            <Ionicons name="time-outline" size={13} color={colors.warning} />
-            <Text style={[styles.deadlineText, { color: colors.warning }]}>{deadline}</Text>
-          </View>
-        )}
-        {creator?.primary_photo?.signed_url && (
-          <View style={styles.decisionPhotoWrap}>
+        {/* Hero photo card with identity overlay */}
+        <View style={styles.decisionPhotoWrap}>
+          {photo ? (
             <Image
-              source={{ uri: creator.primary_photo.signed_url }}
+              source={{ uri: photo }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
+              contentPosition="top"
             />
+          ) : (
+            <LinearGradient
+              colors={bdGradients.hero as unknown as [string, string, string]}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          {deadline && (
+            <View style={[styles.deadlinePill, styles.decisionDeadlinePill]}>
+              <Ionicons name="time-outline" size={13} color="#FFF" />
+              <Text style={[styles.deadlineText, { color: '#FFF' }]}>{deadline}</Text>
+            </View>
+          )}
+          <LinearGradient
+            colors={['transparent', 'rgba(8,3,18,0.85)']}
+            locations={[0.45, 1]}
+            style={styles.decisionPhotoShade}
+            pointerEvents="none"
+          />
+          <View style={styles.decisionPhotoMeta}>
+            <Text style={styles.decisionPhotoName}>
+              {displayName}{age ? `, ${age}` : ''}
+            </Text>
+            {creator?.country && (
+              <Text style={styles.decisionPhotoMetaSub}>{t('blindDate.flow.reveal.countryMeta', { country: creator.country })}</Text>
+            )}
           </View>
-        )}
-        <Text style={[styles.decisionPrivacy, { color: th.textSecondary }]}>
-          Your choice is private until both sides have decided.
+        </View>
+
+        <Text style={[styles.decisionTitle, { color: th.text }]}>
+          {t('blindDate.flow.decision.question')}
         </Text>
+        <Text style={[styles.decisionSub, { color: th.textSecondary }]}>
+          {t('blindDate.flow.decision.subtitle')}
+        </Text>
+
         {flow.decisionError && (
           <Text style={[styles.errorText, { color: colors.danger }]}>{flow.decisionError}</Text>
         )}
         <View style={styles.decisionBtnRow}>
           <TouchableOpacity
-            style={[styles.decisionBtn, styles.decisionBtnInterested]}
+            style={styles.decisionBtnInterestedWrap}
             onPress={() => handleDecision('INTERESTED')}
             disabled={deciding}
             activeOpacity={0.85}
             accessibilityRole="button"
           >
-            {deciding ? (
-              <ActivityIndicator color="#FFF" size="small" />
-            ) : (
-              <>
-                <Ionicons name="heart" size={20} color="#FFF" />
-                <Text style={styles.decisionBtnText}>I&rsquo;m Interested</Text>
-              </>
-            )}
+            <LinearGradient
+              colors={[...bdGradients.hero]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.decisionBtn}
+            >
+              {deciding ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="heart" size={20} color="#FFF" />
+                  <Text style={styles.decisionBtnText}>{t('blindDate.flow.decision.interested')}</Text>
+                </>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.decisionBtn, { backgroundColor: th.surface, borderColor: th.border, borderWidth: 1.5 }]}
@@ -1522,8 +1648,14 @@ function FinalDecisionStep({
             accessibilityRole="button"
           >
             <Ionicons name="close" size={20} color={th.textSecondary} />
-            <Text style={[styles.decisionBtnText, { color: th.textSecondary }]}>Not for me</Text>
+            <Text style={[styles.decisionBtnText, { color: th.textSecondary }]}>{t('blindDate.flow.decision.notForMe')}</Text>
           </TouchableOpacity>
+        </View>
+        <View style={styles.decisionPrivacyRow}>
+          <Ionicons name="lock-closed-outline" size={12} color={th.textSecondary} />
+          <Text style={[styles.decisionPrivacy, { color: th.textSecondary }]}>
+            {t('blindDate.flow.decision.privacy')}
+          </Text>
         </View>
       </ScrollView>
     </FlowScaffold>
@@ -1533,33 +1665,34 @@ function FinalDecisionStep({
 // ─── Step 13: WAITING_DECISION ────────────────────────────────────────────────
 
 function WaitingDecisionStep({ flow, onBack }: { flow: ReturnType<typeof useParticipantFlow>; onBack: () => void }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const fd = flow.session?.final_decision;
   const decided = fd?.other_party_decided;
 
   return (
-    <FlowScaffold title="Decision Sent" onBack={onBack}>
+    <FlowScaffold title={t('blindDate.flow.decision.sentTitle')} onBack={onBack}>
       <View style={styles.waitingDecisionWrap}>
         <View style={styles.lockCircle}>
           <Ionicons name="lock-closed" size={44} color={bdColors.primary} />
         </View>
         <Text style={[styles.waitingDecisionTitle, { color: th.text }]}>
-          Your answer is locked in.
+          {t('blindDate.flow.decision.lockedTitle')}
         </Text>
         <Text style={[styles.waitingDecisionSub, { color: th.textSecondary }]}>
           {decided
-            ? "They've decided — the result is being finalized."
-            : "Now we're waiting for their decision."}
+            ? t('blindDate.flow.decision.subTheyDecided')
+            : t('blindDate.flow.decision.subWaiting')}
         </Text>
         {decided && (
           <View style={[styles.decidedBadge, { backgroundColor: `${colors.success}18` }]}>
             <Ionicons name="checkmark-circle" size={14} color={colors.success} />
             <Text style={[styles.decidedBadgeText, { color: colors.success }]}>
-              They&rsquo;ve decided
+              {t('blindDate.flow.decision.theyDecided')}
             </Text>
           </View>
         )}
-        <PrimaryButton label="Back to My Blind Dates" onPress={onBack} />
+        <PrimaryButton label={t('blindDate.flow.backToMyBlindDates')} onPress={onBack} />
       </View>
     </FlowScaffold>
   );
@@ -1572,6 +1705,7 @@ function MatchStep({ flow, onChat, onLater }: {
   onChat: () => void;
   onLater: () => void;
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const creator = flow.session?.creator;
   const creatorPhoto = creator?.primary_photo?.signed_url;
@@ -1656,12 +1790,12 @@ function MatchStep({ flow, onChat, onLater }: {
           {/* MATCHED pill */}
           <View style={styles.matchedPill}>
             <Ionicons name="star" size={12} color="#FFE066" />
-            <Text style={styles.matchedPillText}>MATCHED</Text>
+            <Text style={styles.matchedPillText}>{t('blindDate.status.matched').toUpperCase()}</Text>
             <Ionicons name="star" size={12} color="#FFE066" />
           </View>
 
-          <Text style={styles.matchTitle}>It&rsquo;s a Match!</Text>
-          <Text style={styles.matchSub}>You both said yes to each other.</Text>
+          <Text style={styles.matchTitle}>{t('blindDate.flow.match.title')}</Text>
+          <Text style={styles.matchSub}>{t('blindDate.flow.match.subtitle')}</Text>
         </Animated.View>
 
         {/* Spacer */}
@@ -1674,14 +1808,14 @@ function MatchStep({ flow, onChat, onLater }: {
             onPress={onChat}
             activeOpacity={0.88}
             accessibilityRole="button"
-            accessibilityLabel="Start chatting"
+            accessibilityLabel={t('blindDate.flow.match.startChatting')}
           >
             <Ionicons name="chatbubble-ellipses" size={20} color="#C044FF" />
-            <Text style={styles.matchChatBtnText}>Start Chatting</Text>
+            <Text style={styles.matchChatBtnText}>{t('blindDate.flow.match.startChatting')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={onLater} activeOpacity={0.7} accessibilityRole="button">
-            <Text style={styles.matchLaterText}>Maybe later</Text>
+            <Text style={styles.matchLaterText}>{t('blindDate.flow.match.maybeLater')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -1700,27 +1834,28 @@ function NoMatchStep({
   onExplore: () => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const fd = flow.session?.final_decision;
   const isExpired = fd?.outcome === 'EXPIRED';
 
   return (
-    <FlowScaffold title="Blind Date Ended" onBack={onBack}>
+    <FlowScaffold title={t('blindDate.flow.noMatch.title')} onBack={onBack}>
       <View style={styles.eliminatedWrap}>
         <View style={styles.eliminatedIcon}>
           <Ionicons name="heart-dislike-outline" size={52} color={bdColors.slate} />
         </View>
         <Text style={[styles.eliminatedTitle, { color: th.text }]}>
-          {isExpired ? 'The window closed' : 'No match this time'}
+          {isExpired ? t('blindDate.flow.noMatch.windowClosed') : t('blindDate.flow.noMatch.noMatchTitle')}
         </Text>
         <Text style={[styles.eliminatedSub, { color: th.textSecondary }]}>
           {isExpired
-            ? 'The decision window expired before both sides responded.'
-            : 'The journey ends here — but there are more Blind Dates waiting.'}
+            ? t('blindDate.flow.noMatch.expiredSub')
+            : t('blindDate.flow.noMatch.sub')}
         </Text>
         <View style={[styles.eliminatedDivider, { backgroundColor: th.border }]} />
         <View style={styles.eliminatedActions}>
-          <PrimaryButton label="Explore More Blind Dates" icon="compass-outline" onPress={onExplore} />
+          <PrimaryButton label={t('blindDate.flow.exploreMore')} icon="compass-outline" onPress={onExplore} />
         </View>
       </View>
     </FlowScaffold>
@@ -1807,6 +1942,7 @@ export default function ParticipantFlowScreen() {
         })
       }
       onJoined={goJoined}
+      onMatches={() => router.push('/(app)/(tabs)/matches' as never)}
       onProfile={() => router.push('/(app)/(tabs)/profile' as never)}
     />
   ) : null;
@@ -1878,7 +2014,7 @@ export default function ParticipantFlowScreen() {
             flow={flow}
             onChat={() => {
               const matchId = flow.session?.final_decision?.match_id;
-              router.push({ pathname: '/(app)/chat' as never, params: { matchId } });
+              router.push({ pathname: '/(app)/chat' as never, params: { matchId, matchSource: 'BLIND_DATE' } });
             }}
             onLater={goJoined}
           />
@@ -2510,30 +2646,75 @@ const styles = StyleSheet.create({
   sharedText: { fontSize: 14, flex: 1 },
 
   // FINAL_DECISION
-  decisionTitle: { fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 8 },
-  decisionSub: { fontSize: 15.5, textAlign: 'center', marginBottom: 16 },
+  decisionTitle: { fontSize: 24, fontWeight: '900', textAlign: 'center', marginBottom: 6 },
+  decisionSub: { fontSize: 15, textAlign: 'center', marginBottom: 18 },
   decisionPhotoWrap: {
-    height: 160,
-    borderRadius: 20,
+    // Sized like the stored photo (primary photos are cropped 4:5) so cover
+    // fills the card instead of cropping it to a strip; capped for tablets.
+    width: '100%',
+    aspectRatio: 4 / 5,
+    maxHeight: 520,
+    borderRadius: 28,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: 18,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
+      android: { elevation: 8 },
+    }),
+  },
+  decisionPhotoShade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '55%',
+  },
+  decisionPhotoMeta: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    bottom: 16,
+  },
+  decisionPhotoName: { fontSize: 24, fontWeight: '900', color: '#FFF' },
+  decisionPhotoMetaSub: { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 3 },
+  decisionDeadlinePill: {
+    position: 'absolute',
+    top: 14,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(8,3,18,0.55)',
+    borderColor: 'rgba(255,255,255,0.35)',
+    marginBottom: 0,
   },
   decisionPrivacy: {
-    fontSize: 13,
+    fontSize: 12.5,
     textAlign: 'center',
-    marginBottom: 16,
     fontStyle: 'italic',
   },
-  decisionBtnRow: { gap: 10, marginTop: 8 },
+  decisionPrivacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 14,
+    paddingHorizontal: 24,
+  },
+  decisionBtnRow: { gap: 10, marginTop: 4 },
   decisionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderRadius: 16,
+    borderRadius: 18,
     paddingVertical: 16,
   },
-  decisionBtnInterested: { backgroundColor: bdColors.primary },
+  decisionBtnInterestedWrap: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: { shadowColor: bdColors.primary, shadowOpacity: 0.4, shadowRadius: 14, shadowOffset: { width: 0, height: 6 } },
+      android: { elevation: 6 },
+    }),
+  },
   decisionBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 
   // WAITING_DECISION

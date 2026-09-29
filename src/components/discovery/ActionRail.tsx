@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -37,6 +38,7 @@ interface Props {
  * Dragging the pill left reveals a matching panel describing each action.
  */
 export default function ActionRail({ variants, onSelect, disabled }: Props) {
+  const { t } = useTranslation();
   const scale = useTabletScale();
   const reduceMotion = useReducedMotion();
   const descW = rs(170, scale);
@@ -125,7 +127,7 @@ export default function ActionRail({ variants, onSelect, disabled }: Props) {
             style={styles.backdrop}
             onPress={() => snapTo(false)}
             accessibilityRole="button"
-            accessibilityLabel="Close action descriptions"
+            accessibilityLabel={t('discovery.closeActionDescriptions')}
           />
         )}
 
@@ -135,15 +137,15 @@ export default function ActionRail({ variants, onSelect, disabled }: Props) {
           <Pressable
             onPress={toggle}
             accessibilityRole="button"
-            accessibilityLabel="Show or hide action descriptions"
-            accessibilityHint="Reveals a description for each action button"
+            accessibilityLabel={t('discovery.toggleActionDescriptions')}
+            accessibilityHint={t('discovery.toggleActionDescriptionsHint')}
             hitSlop={6}
           >
             <Animated.View style={[styles.hintRow, { height: rs(HINT_H, scale) }, hintRowStyle]}>
               <Animated.View style={hintChevronStyle}>
                 <Ionicons name="chevron-back" size={rs(15, scale)} color="rgba(255,255,255,0.9)" />
               </Animated.View>
-              <Text style={[styles.hintText, { fontSize: rs(11, scale) }]}>Drag</Text>
+              <Text style={[styles.hintText, { fontSize: rs(11, scale) }]}>{t('discovery.drag')}</Text>
             </Animated.View>
           </Pressable>
 
@@ -156,7 +158,7 @@ export default function ActionRail({ variants, onSelect, disabled }: Props) {
         >
           {/* Close hint — mirrored chevron animates rightward */}
           <View style={[styles.closeHintRow, { height: rs(HINT_H, scale), marginBottom: 14 }]}>
-            <Text style={[styles.hintText, { fontSize: rs(11, scale) }]}>Drag right</Text>
+            <Text style={[styles.hintText, { fontSize: rs(11, scale) }]}>{t('discovery.dragRight')}</Text>
             <Animated.View style={closeChevronStyle}>
               <Ionicons name="chevron-forward" size={rs(15, scale)} color="rgba(255,255,255,0.9)" />
             </Animated.View>
@@ -169,12 +171,12 @@ export default function ActionRail({ variants, onSelect, disabled }: Props) {
                 <Text style={[styles.descName, { fontSize: rs(12, scale) }]} numberOfLines={1}>
                   {variant.name}
                   {variant.credits > 0 ? (
-                    <Text style={[styles.descCost, { fontSize: rs(11, scale) }]}>{` · ${variant.credits} Credit${variant.credits === 1 ? '' : 's'}`}</Text>
+                    <Text style={[styles.descCost, { fontSize: rs(11, scale) }]}>{` · ${t('discovery.creditCount', { count: variant.credits })}`}</Text>
                   ) : null}
                   {variant.blocked ? (
                     <Text style={[styles.descLimit, { fontSize: rs(11, scale) }]}>{` · ${likeVariantResetHint(variant)}`}</Text>
                   ) : variant.remaining != null && variant.remaining <= LOW_REMAINING_THRESHOLD ? (
-                    <Text style={[styles.descLimit, { fontSize: rs(11, scale) }]}>{` · ${variant.remaining} left`}</Text>
+                    <Text style={[styles.descLimit, { fontSize: rs(11, scale) }]}>{` · ${t('discovery.remainingLeft', { count: variant.remaining })}`}</Text>
                   ) : null}
                 </Text>
                 {variant.description ? (

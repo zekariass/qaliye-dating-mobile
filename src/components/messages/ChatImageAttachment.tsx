@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { refreshAttachmentSignedUrl } from '@/api/chat/chatApi';
@@ -28,6 +29,7 @@ export function ChatImageAttachment({
   attachment: ChatAttachment;
   isOutgoing: boolean;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const [modalVisible, setModalVisible] = useState(false);
@@ -73,7 +75,7 @@ export function ChatImageAttachment({
         onPress={() => setModalVisible(true)}
         activeOpacity={0.9}
         accessibilityRole="imagebutton"
-        accessibilityLabel={`Image: ${attachment.fileName}`}
+        accessibilityLabel={t('chat.imageLabel', { name: attachment.fileName })}
       >
         <View style={[styles.thumbnailWrap, { borderColor: isOutgoing ? 'rgba(255,255,255,0.2)' : isDark ? th.border : '#E4D9F7' }]}>
           {(urlFetching || (!loaded && !error && !!uri)) && (
@@ -84,7 +86,7 @@ export function ChatImageAttachment({
           {error ? (
             <View style={styles.errorOverlay}>
               <Text style={[styles.errorText, { color: isOutgoing ? '#FFD0D0' : colors.danger }]}>
-                Failed to load image
+                {t('chat.imageLoadFailed')}
               </Text>
             </View>
           ) : uri ? (
@@ -112,7 +114,7 @@ export function ChatImageAttachment({
             style={styles.modalCloseBtn}
             onPress={() => setModalVisible(false)}
             accessibilityRole="button"
-            accessibilityLabel="Close image"
+            accessibilityLabel={t('chat.closeImage')}
           >
             <Text style={styles.modalCloseText}>✕</Text>
           </TouchableOpacity>

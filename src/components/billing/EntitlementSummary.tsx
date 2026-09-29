@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
+import i18n from '@/i18n';
 import type { ActionLimitAndCost, EntitlementResponse } from '@/types/billing';
 import { isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 
@@ -31,19 +33,21 @@ const ACTION_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']>
   IMAGE_MESSAGE: 'image',
 };
 
-const ACTION_LABEL: Record<string, string> = {
-  LIKE: 'Likes',
-  SUPER_LIKE: 'Super Likes',
-  REWIND: 'Rewinds',
-  BOOST: 'Boosts',
-  VOICE_MESSAGE: 'Voice Msgs',
-  IMAGE_MESSAGE: 'Image Msgs',
+const ACTION_LABEL_KEY: Record<string, { key: string; defaultValue: string }> = {
+  LIKE:          { key: 'billing.actionLabels.LIKE',          defaultValue: 'Likes' },
+  SUPER_LIKE:    { key: 'billing.actionLabels.SUPER_LIKE',    defaultValue: 'Super Likes' },
+  REWIND:        { key: 'billing.actionLabels.REWIND',        defaultValue: 'Rewinds' },
+  BOOST:         { key: 'billing.actionLabels.BOOST',         defaultValue: 'Boosts' },
+  VOICE_MESSAGE: { key: 'billing.actionLabelsShort.VOICE_MESSAGE', defaultValue: 'Voice Msgs' },
+  IMAGE_MESSAGE: { key: 'billing.actionLabelsShort.IMAGE_MESSAGE', defaultValue: 'Image Msgs' },
 };
 
 const ACTION_ORDER = ['LIKE', 'SUPER_LIKE', 'REWIND', 'BOOST', 'VOICE_MESSAGE', 'IMAGE_MESSAGE'];
 
 function formatActionLabel(code: string): string {
-  return ACTION_LABEL[code] ?? code
+  const entry = ACTION_LABEL_KEY[code];
+  if (entry) return i18n.t(entry.key, entry.defaultValue);
+  return code
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
@@ -51,7 +55,7 @@ function formatActionLabel(code: string): string {
 
 function formatLimitValue(action: ActionLimitAndCost, creditsAvailable: number): string {
   const limit = action.limit;
-  if (limit === null || limit === undefined) return 'Unlimited';
+  if (limit === null || limit === undefined) return i18n.t('billing.unlimited', 'Unlimited');
   const remaining = action.remaining ?? 0;
   const total = remaining + creditsAvailable;
   return `${total}`;
@@ -64,6 +68,7 @@ export function EntitlementSummary({
   surfaceColor,
   borderColor,
 }: Props) {
+  const { t } = useTranslation();
   const { plan, subscription } = entitlements;
   const isPremium = isPremiumPlan(plan);
   const isFreePremium = isFreePremiumPlan(plan);
@@ -92,12 +97,12 @@ export function EntitlementSummary({
             size={12}
             color="#fff"
           />
-          <Text style={styles.badgeText}>{isPremium ? (isFreePremium ? 'Free Premium' : 'Premium') : 'Free'}</Text>
+          <Text style={styles.badgeText}>{isPremium ? (isFreePremium ? t('billing.freePremiumActive', 'Free Premium') : t('billing.premiumActive', 'Premium')) : t('billing.balances.free', 'Free')}</Text>
         </View>
 
         {isPremium && subscription?.expires_at && (
           <Text style={[styles.expiry, { color: secondaryColor }]}>
-            {subscription.auto_renew ? 'Renews' : 'Expires'}{' '}
+            {subscription.auto_renew ? t('billing.renews', 'Renews') : t('billing.expires', 'Expires')}{' '}
             {formatDate(subscription.expires_at)}
           </Text>
         )}

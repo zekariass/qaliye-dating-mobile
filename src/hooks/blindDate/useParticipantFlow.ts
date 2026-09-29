@@ -10,13 +10,19 @@ import {
 } from '@/api/blindDate/blindDateApi';
 import { useJoinSession } from '@/hooks/blindDate/useJoinSession';
 import { useMyParticipations } from '@/hooks/blindDate/useMyParticipations';
+import i18n from '@/i18n';
 import type {
     BlindDateFinalDecisionValue,
     BlindDateParticipationDto,
     BlindDateSessionDto,
     BlindDateSessionQuestionDto,
 } from '@/types/blindDate';
-import { extractApiError } from '@/utils/apiError';
+import {
+    blindDateErrorCode,
+    blindDateErrorMessage,
+    isRetryableBlindDateError,
+} from '@/utils/blindDateErrors';
+import { isInsufficientCreditsError } from '@/utils/entitlements';
 
 // ─── Step model ───────────────────────────────────────────────────────────────
 
@@ -51,12 +57,12 @@ function deriveStep(args: {
   hasDrafts: boolean;
   justSubmitted: boolean;
   seenFinalist: boolean;
-  celebratedRound: number | null;
+  advancedPending: boolean;
 }): ParticipantStep {
   const {
     participantId, participation, session, questions,
     submittedIds, startedAnswering, hasDrafts,
-    justSubmitted, seenFinalist, celebratedRound,
+    justSubmitted, seenFinalist, advancedPending,
   } = args;
 
   if (!participantId) return 'JOIN_CONFIRM';
@@ -95,16 +101,21 @@ function deriveStep(args: {
   // Normal round states
   if (justSubmitted) return 'ROUND_COMPLETE';
 
-  const allSubmitted =
-    questions.length > 0 &&
-    questions.every((q) => q.my_answer != null || submittedIds.has(q.id));
-  if (allSubmitted || participation?.answers_submitted === true) return 'WAITING';
+  const allDone =
+    (questions.length > 0 &&
+      questions.every((q) => q.my_answer != null || submittedIds.has(q.id))) ||
+    participation?.answers_submitted === true;
+
+  // "You advanced" celebration — only on a LIVE status transition while this
+  // screen is mounted (advancedPending) and only while the new round still
+  // has unanswered questions. Revisiting the flow later must resume at the
+  // user's real position; replaying "You're Through" for an already-completed
+  // round looks like the round restarted.
+  if (pStatus === 'ADVANCED' && advancedPending && !allDone) return 'ADVANCED';
+
+  if (allDone) return 'WAITING';
 
   if (submittedIds.size > 0 || startedAnswering || hasDrafts) return 'ANSWERING';
-
-  // "Advanced" celebration fires once per newly unlocked round.
-  const round = participation?.current_round_number ?? session?.current_round_number ?? 1;
-  if (pStatus === 'ADVANCED' && celebratedRound !== round) return 'ADVANCED';
 
   // Skip the intro screen entirely — the merged answering screen shows the
   // round theme inline, so there is no separate ROUND_INTRO step.
@@ -179,7 +190,9 @@ export function useParticipantFlow(
 
   const [revealPhase, setRevealPhase] = useState<RevealPhase>('intro');
   const [seenFinalist, setSeenFinalist] = useState(false);
-  const [celebratedRound, setCelebratedRound] = useState<number | null>(null);
+  // Set when the participant's status transitions to ADVANCED while this
+  // screen is mounted — gates the once-per-mount "You advanced" celebration.
+  const [advancedPending, setAdvancedPending] = useState(false);
 
   // ── Join ───────────────────────────────────────────────────────────────────
 
@@ -194,18 +207,13 @@ export function useParticipantFlow(
       void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
       return result;
     } catch (err) {
-      const { code, message } = extractApiError(err);
-      const friendly: Record<string, string> = {
-        already_joined: 'You already joined this session.',
-        session_full: 'This session is full.',
-        session_expired: 'This session has expired.',
-        session_not_open: 'This session is no longer open.',
-        creator_cannot_join: 'You cannot join your own session.',
-        join_window_closed: 'Joining is only allowed during Round 1.',
-        no_open_round: 'Round 1 is not open right now.',
-        session_not_found: 'This Blind Date no longer exists.',
-      };
-      setJoinError(friendly[code.toLowerCase()] ?? message);
+      if (isInsufficientCreditsError(err)) throw err; // global credits modal handles it
+      if (blindDateErrorCode(err) === 'already_joined') {
+        // Per the API contract: navigate into the session — refetch the
+        // participations list so the flow picks up the existing row.
+        void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
+      }
+      setJoinError(blindDateErrorMessage(err));
       throw err;
     }
   }, [sessionId, joinMutation, queryClient]);
@@ -217,15 +225,15 @@ export function useParticipantFlow(
       if (!effectiveParticipantId) return false;
       const answer = (answerOverride ?? answerDrafts[questionId] ?? '').trim();
       if (!answer) {
-        setAnswerError('Please write an answer before continuing.');
+        setAnswerError(i18n.t('blindDate.errors.answerRequired'));
         return false;
       }
       if (answer.length > 2000) {
-        setAnswerError('Answer is too long (max 2000 characters).');
+        setAnswerError(i18n.t('blindDate.errors.answerTooLong'));
         return false;
       }
       if (answerLocked) {
-        setAnswerError('The host has made their decision — your answers are now locked.');
+        setAnswerError(i18n.t('blindDate.errors.answerLocked'));
         return false;
       }
 
@@ -239,25 +247,22 @@ export function useParticipantFlow(
         setSubmittedIds((prev) => new Set([...prev, questionId]));
         return true;
       } catch (err) {
-        const { code, message } = extractApiError(err);
-        const c = code.toLowerCase();
+        const c = blindDateErrorCode(err);
         if (c === 'answer_locked') {
           setAnswerLocked(true);
-          setAnswerError('The host has made their decision — your answers are now locked.');
+          setAnswerError(i18n.t('blindDate.errors.answerLocked'));
           void refetchSession();
           void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
-        } else if (c === 'answer_too_long') {
-          setAnswerError('Answer is too long (max 2000 characters).');
         } else if (c === 'round_closed') {
-          setAnswerError('This round has ended.');
+          setAnswerError(i18n.t('blindDate.errors.roundClosed'));
           void refetchSession();
           void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
         } else if (c === 'participant_not_active' || c === 'participant_not_found') {
-          setAnswerError('Your participation has ended.');
+          setAnswerError(i18n.t('blindDate.errors.participantNotActive'));
           void refetchSession();
           void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
         } else {
-          setAnswerError(message);
+          setAnswerError(blindDateErrorMessage(err));
         }
         return false;
       } finally {
@@ -287,8 +292,8 @@ export function useParticipantFlow(
       setEditingAnswers(false);
       return true;
     } catch (err) {
-      const { code, message } = extractApiError(err);
-      if (code.toLowerCase() === 'answer_locked') {
+      const code = blindDateErrorCode(err);
+      if (code === 'answer_locked') {
         // Creator already decided — stop the flow; the refetched participation
         // status moves the step to ADVANCED/ELIMINATED/WAITING via deriveStep.
         setAnswerLocked(true);
@@ -296,13 +301,13 @@ export function useParticipantFlow(
         void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
         return true;
       }
-      if (code.toLowerCase() === 'round_closed') {
-        setAnswerError('This round has ended.');
+      if (code === 'round_closed') {
+        setAnswerError(i18n.t('blindDate.errors.roundClosed'));
         void refetchSession();
         void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
         return false;
       }
-      setAnswerError(message);
+      setAnswerError(blindDateErrorMessage(err));
       return false;
     }
   }, [effectiveParticipantId, roundQuestions, answerDrafts, submittedIds, editingAnswers, refetchSession, queryClient]);
@@ -318,14 +323,33 @@ export function useParticipantFlow(
       setDeciding(true);
       setDecisionError(null);
       try {
-        const res = await submitFinalDecision(sessionId, decision);
+        // match_conflict / like_conflict mean the request lost a concurrent
+        // race — per the API contract the retry is safe and resolves to the
+        // committed state, so retry exactly once.
+        const res = await submitFinalDecision(sessionId, decision).catch((err) =>
+          isRetryableBlindDateError(err)
+            ? submitFinalDecision(sessionId, decision)
+            : Promise.reject(err),
+        );
         void queryClient.invalidateQueries({ queryKey: ['blindDate', 'session', sessionId] });
         void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
         void refetchSession();
         return res;
       } catch (err) {
-        const { message } = extractApiError(err);
-        setDecisionError(message);
+        const code = blindDateErrorCode(err);
+        // These mean the outcome already moved on — refetch so the step
+        // machine lands on WAITING_DECISION / NO_MATCH instead of an error.
+        if (
+          code === 'decision_already_submitted' ||
+          code === 'decision_already_resolved' ||
+          code === 'finalist_withdrawn' ||
+          code === 'session_not_in_reveal' ||
+          code === 'no_final_decision'
+        ) {
+          void refetchSession();
+          void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
+        }
+        setDecisionError(blindDateErrorMessage(err));
         throw err;
       } finally {
         setDeciding(false);
@@ -386,11 +410,7 @@ export function useParticipantFlow(
     setCurrentQuestionIndex((i) => Math.max(0, i - 1));
   }, []);
 
-  const markAdvancedSeen = useCallback(() => {
-    const round =
-      participation?.current_round_number ?? session?.current_round_number ?? 1;
-    setCelebratedRound(round);
-  }, [participation?.current_round_number, session?.current_round_number]);
+  const markAdvancedSeen = useCallback(() => setAdvancedPending(false), []);
 
   const markFinalistSeen = useCallback(() => setSeenFinalist(true), []);
 
@@ -435,6 +455,12 @@ export function useParticipantFlow(
     if (s !== 'ACTIVE') {
       setEditingAnswers(false);
     }
+    // Only count a real transition (a loaded prior status changing) — the
+    // initial fetch going from undefined → ADVANCED is a revisit, not a
+    // live advance, so it must not arm the celebration.
+    if (s === 'ADVANCED' && prevPStatus != null) {
+      setAdvancedPending(true);
+    }
   }
 
   const acknowledgeRoundComplete = useCallback(() => setJustSubmitted(false), []);
@@ -456,7 +482,7 @@ export function useParticipantFlow(
     hasDrafts: Object.keys(answerDrafts).length > 0,
     justSubmitted,
     seenFinalist,
-    celebratedRound,
+    advancedPending,
   });
 
   // Reveal sub-phases refine REVEAL_INTRO into countdown/profile/decision steps.

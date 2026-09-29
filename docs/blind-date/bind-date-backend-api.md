@@ -450,7 +450,10 @@ creator can start another round.
 #### `POST /sessions/{sessionId}/close`
 
 Creator closes the session early. Closes open rounds and eliminates
-still-active participants. **Response `204`.**
+still-active participants. Allowed while `OPEN` or `REVEAL` — closing
+during `REVEAL` resolves each still-`PENDING` final decision as
+`NOT_INTERESTED`, records outcome `NO_MATCH` and completes the session
+(the finalist is notified). **Response `204`.**
 **Errors:** `not_session_creator`, `session_not_open`
 
 #### `POST /sessions/{sessionId}/rounds`

@@ -27,6 +27,7 @@ import { useRevenueCatPurchase } from '@/hooks/billing/useRevenueCatPurchase';
 import { useRevenueCatReconcile } from '@/hooks/billing/useRevenueCatReconcile';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppLink } from '@/hooks/useAppLink';
+import i18n from '@/i18n';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
 import type { OfferDto, OfferPromotionDto, PaymentMethodDto } from '@/types/billing';
 import { extractApiError } from '@/utils/apiError';
@@ -77,10 +78,10 @@ function formatEndsAtLabel(endsAt: string): string {
   const diffMs = new Date(endsAt).getTime() - Date.now();
   if (diffMs <= 0) return '';
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  if (diffHours < 24) return `Ends in ${diffHours}h`;
+  if (diffHours < 24) return i18n.t('billing.endsInHours', 'Ends in {{count}}h', { count: diffHours });
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 7) return `Ends in ${diffDays}d`;
-  return `Ends ${new Date(endsAt).toLocaleDateString()}`;
+  if (diffDays < 7) return i18n.t('billing.endsInDays', 'Ends in {{count}}d', { count: diffDays });
+  return i18n.t('billing.endsOn', 'Ends {{date}}', { date: new Date(endsAt).toLocaleDateString() });
 }
 
 function buildPackViewModel(

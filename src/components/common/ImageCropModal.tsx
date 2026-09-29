@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Animated,
@@ -47,9 +48,10 @@ export function ImageCropModal({
   aspectRatio,
   onConfirm,
   onCancel,
-  title = 'Crop Photo',
+  title,
   processing = false,
 }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   // Canvas area (between top bar and bottom bar)
@@ -241,14 +243,14 @@ export function ImageCropModal({
 
         <View style={[styles.topBar, { paddingTop: insets.top || 12 }]}>
           <TouchableOpacity onPress={onCancel} disabled={processing} style={styles.topBtn}>
-            <Text style={styles.topBtnTextCancel}>Cancel</Text>
+            <Text style={styles.topBtnTextCancel}>{t('common.cancel', 'Cancel')}</Text>
           </TouchableOpacity>
-          <Text style={styles.topTitle}>{title}</Text>
+          <Text style={styles.topTitle}>{title ?? t('common.cropPhoto', 'Crop Photo')}</Text>
           <TouchableOpacity onPress={handleConfirm} disabled={processing} style={styles.topBtn}>
             {processing ? (
               <ActivityIndicator color={colors.primary} size="small" />
             ) : (
-              <Text style={styles.topBtnTextDone}>Done</Text>
+              <Text style={styles.topBtnTextDone}>{t('common.done', 'Done')}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -306,14 +308,14 @@ export function ImageCropModal({
         </View>
 
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom || 12 }]}>
-          <Text style={styles.hintText}>Drag to move • Pinch to resize</Text>
+          <Text style={styles.hintText}>{t('common.cropHint', 'Drag to move • Pinch to resize')}</Text>
           <TouchableOpacity
             onPress={resetCrop}
             disabled={processing}
             style={styles.resetBtn}
           >
             <Ionicons name="refresh-outline" size={22} color="#FFF" />
-            <Text style={styles.resetText}>Reset</Text>
+            <Text style={styles.resetText}>{t('common.reset', 'Reset')}</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -169,6 +169,25 @@ export function isImageMimeType(mimeType: string | undefined | null): boolean {
   return IMAGE_MIME_TYPES.has(mimeType.toLowerCase());
 }
 
+/**
+ * Re-encodes an expo-camera capture so the file's real pixel dimensions match
+ * the asset's reported `width`/`height`.
+ *
+ * On iOS, `takePictureAsync` normalizes orientation by redrawing with
+ * `UIGraphicsImageRenderer` at the device screen scale (@2x/@3x). The saved
+ * file therefore contains 2–3× more pixels than the reported dimensions
+ * (which are in points). Pixel-space operations like cropping then hit the
+ * wrong region of the image unless the file is normalized first.
+ */
+export async function normalizeCameraCapture(asset: ImagePickerAsset): Promise<ImagePickerAsset> {
+  const result = await ImageManipulator.manipulateAsync(
+    asset.uri,
+    [{ resize: { width: asset.width } }],
+    { compress: 1, format: ImageManipulator.SaveFormat.JPEG },
+  );
+  return { ...asset, uri: result.uri, width: result.width, height: result.height };
+}
+
 const SELFIE_MAX_DIMENSION = 1280;
 const SELFIE_QUALITY = 0.85;
 

@@ -105,7 +105,10 @@ export default function PreferencesStep({ onComplete, isCompleted }: Props) {
   }, [interestedIn, isCompleted, isDirty, minAge, maxAge, maxDistance, onComplete]);
 
   const ageLabel = `${minAge} – ${maxAge === 100 ? '100+' : maxAge}`;
-  const distanceLabel = maxDistance >= 500 ? '500+ km' : `${maxDistance} km`;
+  const distanceLabel = t('onboarding.preferences.distanceKm', {
+    distance: maxDistance >= 500 ? '500+' : String(maxDistance),
+    defaultValue: '{{distance}} km',
+  });
   const saveLabel = isCompleted && isDirty ? t('onboarding.preferences.saveAndContinue') : t('onboarding.preferences.continue');
 
   if (isPrefilling) {

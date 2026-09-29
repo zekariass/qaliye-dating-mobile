@@ -26,6 +26,7 @@ import { InterestPicker } from '@/components/profile/InterestPicker';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useSemanticTheme } from '@/hooks/use-semantic-theme';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import {
     DatePickerField,
     LabeledField,
@@ -55,12 +56,23 @@ import {
     SMOKING_API_TO_LABEL,
     SMOKING_LABEL_TO_API,
 } from '@/utils/profileMappers';
+import { translateProfileOption } from '@/utils/profileOptions';
 
-const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// Month abbreviations come from the same i18n keys used by DatePickerField so
+// that the "DD MMM YYYY" display strings it produces can be parsed back here.
+const MONTH_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+] as const;
+const MONTH_SHORT_EN = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+] as const;
+const MONTHS_SHORT = MONTH_KEYS.map((m, i) => i18n.t(`profile.edit.monthsShort.${m}`, MONTH_SHORT_EN[i]));
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 function calculateAge(dobDisplay: string): number | null {
-  const match = dobDisplay.match(/^(\d{1,2})\s+(\w{3})\s+(\d{4})$/);
+  const match = dobDisplay.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
   if (!match) return null;
   const day = parseInt(match[1], 10);
   const monthIdx = MONTHS_SHORT.indexOf(match[2]);
@@ -82,17 +94,17 @@ const schema = z
   .object({
     display_name: z
       .string()
-      .min(1, 'Display name is required.')
-      .max(50, 'Must be 50 characters or less.'),
+      .min(1, { error: () => i18n.t('onboarding.basicProfile.errors.displayNameRequired', 'Display name is required.') })
+      .max(50, { error: () => i18n.t('onboarding.basicProfile.errors.displayNameTooLong', 'Must be 50 characters or less.') }),
     gender: z.enum(['MALE', 'FEMALE'] as const, {
-      error: 'Please select your gender.',
+      error: () => i18n.t('onboarding.basicProfile.errors.genderRequired', 'Please select your gender.'),
     }),
     date_of_birth: z
       .string()
-      .min(1, 'Date of birth is required.')
-      .refine((v) => /^\d{1,2}\s+\w{3}\s+\d{4}$/.test(v), { message: 'Please select a valid date.' })
+      .min(1, { error: () => i18n.t('onboarding.basicProfile.errors.dobRequired', 'Date of birth is required.') })
+      .refine((v) => /^\d{1,2}\s+\S+\s+\d{4}$/.test(v), { error: () => i18n.t('onboarding.basicProfile.errors.dobInvalid', 'Please select a valid date.') })
       .refine((v) => {
-        const match = v.match(/^(\d{1,2})\s+(\w{3})\s+(\d{4})$/);
+        const match = v.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
         if (!match) return false;
         const day = parseInt(match[1], 10);
         const monthIdx = MONTHS_SHORT.indexOf(match[2]);
@@ -100,9 +112,9 @@ const schema = z
         if (monthIdx < 0) return false;
         const dob = new Date(year, monthIdx, day);
         return dob.getFullYear() === year && dob.getMonth() === monthIdx && dob.getDate() === day;
-      }, { message: 'Invalid date.' })
+      }, { error: () => i18n.t('onboarding.basicProfile.errors.dobInvalidDate', 'Invalid date.') })
       .refine((v) => {
-        const match = v.match(/^(\d{1,2})\s+(\w{3})\s+(\d{4})$/);
+        const match = v.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
         if (!match) return false;
         const day = parseInt(match[1], 10);
         const monthIdx = MONTHS_SHORT.indexOf(match[2]);
@@ -112,25 +124,25 @@ const schema = z
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const eighteenthBirthday = new Date(year + 18, monthIdx, day);
         return eighteenthBirthday <= today;
-      }, { message: 'You must be at least 18 years old.' }),
+      }, { error: () => i18n.t('onboarding.basicProfile.errors.under18', 'You must be at least 18 years old.') }),
     relationship_intention: z.enum(
       ['MARRIAGE', 'SERIOUS_RELATIONSHIP', 'LONG_TERM', 'FRIENDSHIP', 'NOT_SURE_YET'] as const,
-      { error: 'Please select what you are looking for.' },
+      { error: () => i18n.t('onboarding.basicProfile.errors.intentionRequired', 'Please select what you are looking for.') },
     ),
     religion: z
-      .string({ error: 'Please select your religion.' })
-      .min(1, 'Please select your religion.'),
+      .string({ error: () => i18n.t('onboarding.basicProfile.errors.religionRequired', 'Please select your religion.') })
+      .min(1, { error: () => i18n.t('onboarding.basicProfile.errors.religionRequired', 'Please select your religion.') }),
     smoking_detail: z
-      .string({ error: 'Please select whether you smoke.' })
-      .min(1, 'Please select whether you smoke.'),
+      .string({ error: () => i18n.t('onboarding.basicProfile.errors.smokingRequired', 'Please select whether you smoke.') })
+      .min(1, { error: () => i18n.t('onboarding.basicProfile.errors.smokingRequired', 'Please select whether you smoke.') }),
     drinking_detail: z
-      .string({ error: 'Please select whether you drink.' })
-      .min(1, 'Please select whether you drink.'),
+      .string({ error: () => i18n.t('onboarding.basicProfile.errors.drinkingRequired', 'Please select whether you drink.') })
+      .min(1, { error: () => i18n.t('onboarding.basicProfile.errors.drinkingRequired', 'Please select whether you drink.') }),
     activity_level: z
-      .string({ error: 'Please select your activity level.' })
-      .min(1, 'Please select your activity level.'),
+      .string({ error: () => i18n.t('onboarding.basicProfile.errors.activityRequired', 'Please select your activity level.') })
+      .min(1, { error: () => i18n.t('onboarding.basicProfile.errors.activityRequired', 'Please select your activity level.') }),
     education_level: z.string().optional(),
-    occupation: z.string().max(100, 'Must be 100 characters or less.').optional(),
+    occupation: z.string().max(100, { error: () => i18n.t('onboarding.basicProfile.errors.occupationTooLong', 'Must be 100 characters or less.') }).optional(),
   })
 
 type FormValues = z.infer<typeof schema>;
@@ -173,6 +185,8 @@ const LIFESTYLE_COLORS = {
   fitness: '#10B981',  // green
 };
 
+
+
 const TOTAL_STEPS = 8;
 
 // Sub-step index → form fields that must validate before advancing
@@ -208,6 +222,10 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
     mode: 'onSubmit',
     reValidateMode: 'onChange',
   });
+
+  // Translate an option's canonical English label for display; the stored
+  // value stays in English so the *_LABEL_TO_API mappings keep working.
+  const optionLabel = (opt: string) => translateProfileOption(opt, t);
 
   const [isPrefilling, setIsPrefilling] = useState(isCompleted);
   const [subStep, setSubStep] = useState(0);
@@ -320,7 +338,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
       await onComplete();
       return;
     }
-    const match = values.date_of_birth.match(/^(\d{1,2})\s+(\w{3})\s+(\d{4})$/);
+    const match = values.date_of_birth.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
     const day = parseInt(match![1], 10);
     const monthIdx = MONTHS_SHORT.indexOf(match![2]);
     const year = parseInt(match![3], 10);
@@ -342,7 +360,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string };
       setError('root', {
-        message: err?.response?.data?.message ?? err?.message ?? 'Something went wrong. Please try again.',
+        message: err?.response?.data?.message ?? err?.message ?? t('common.somethingWentWrong'),
       });
     }
   };
@@ -518,7 +536,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                     value={value}
                     onSelect={onChange}
                     sem={sem}
-                    placeholder="DD MMM YYYY"
+                    placeholder={t('profile.edit.dobPlaceholder')}
                   />
                 )}
               />
@@ -675,7 +693,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                             ]}
                             numberOfLines={2}
                           >
-                            {opt}
+                            {optionLabel(opt)}
                           </Text>
                         </TouchableOpacity>
                       );
@@ -736,7 +754,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                                 <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={styles.chipCheckIcon} />
                               )}
                               <Text style={[styles.chipText, { color: sel ? '#FFFFFF' : th.text }]}>
-                                {opt}
+                                {optionLabel(opt)}
                               </Text>
                             </TouchableOpacity>
                           );
@@ -783,7 +801,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                                 <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={styles.chipCheckIcon} />
                               )}
                               <Text style={[styles.chipText, { color: sel ? '#FFFFFF' : th.text }]}>
-                                {opt}
+                                {optionLabel(opt)}
                               </Text>
                             </TouchableOpacity>
                           );
@@ -837,7 +855,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                                 style={[styles.fitnessCardText, { color: sel ? '#FFFFFF' : th.text }]}
                                 numberOfLines={2}
                               >
-                                {opt}
+                                {optionLabel(opt)}
                               </Text>
                               {sel && (
                                 <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
@@ -878,6 +896,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                           sem={sem}
                           leftIcon="school-outline"
                           placeholder={t('onboarding.basicProfile.educationLevelPlaceholder')}
+                          getOptionLabel={optionLabel}
                         />
                       )}
                     />

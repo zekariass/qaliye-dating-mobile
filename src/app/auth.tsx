@@ -106,7 +106,7 @@ export default function Auth() {
                 )}
               </Text>
               <Text style={[deletedOverlay.countdown, { color: th.textSecondary }]}>
-                {countdown}s
+                {t('settings.signOutCountdown', { seconds: countdown, defaultValue: '{{seconds}}s' })}
               </Text>
             </View>
           </View>

@@ -114,7 +114,7 @@ export default function HelpScreen() {
         <Pressable
           style={[styles.circleBtn, { backgroundColor: th.surface }]}
           onPress={handleBack}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back', 'Back')}
           accessibilityRole="button"
         >
           <Ionicons name="chevron-back" size={22} color={th.text} />

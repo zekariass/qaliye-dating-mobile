@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 interface StatusItem {
+  id: 'visibility' | 'onboarding' | 'verification' | 'completion';
   icon: IoniconName;
   label: string;
   value: string;
@@ -18,27 +21,31 @@ interface StatusItem {
 function buildStatusItems(p: CurrentUserProfile): StatusItem[] {
   return [
     {
+      id: 'visibility',
       icon: 'eye-outline',
-      label: 'Profile Visibility',
-      value: p.isVisible ? 'Visible' : 'Hidden',
+      label: i18n.t('profile.status.profileVisibility'),
+      value: p.isVisible ? i18n.t('profile.status.visible') : i18n.t('profile.status.hidden'),
       active: p.isVisible,
     },
     {
+      id: 'onboarding',
       icon: 'checkmark-done-outline',
-      label: 'Onboarding Status',
-      value: p.isOnboarded ? 'Completed' : 'In Progress',
+      label: i18n.t('profile.status.onboardingStatus'),
+      value: p.isOnboarded ? i18n.t('profile.status.completed') : i18n.t('profile.status.inProgress'),
       active: p.isOnboarded,
     },
     {
+      id: 'verification',
       icon: 'shield-checkmark-outline',
-      label: 'Verification Status',
-      value: p.isVerified ? 'Verified' : 'Not Verified',
+      label: i18n.t('profile.status.verificationStatus'),
+      value: p.isVerified ? i18n.t('profile.status.verified') : i18n.t('profile.status.notVerified'),
       active: p.isVerified,
     },
     {
+      id: 'completion',
       icon: 'speedometer-outline',
-      label: 'Profile Completion',
-      value: `${p.profileCompletionScore}%`,
+      label: i18n.t('profile.status.profileCompletion'),
+      value: i18n.t('profile.status.completionPercent', { percent: p.profileCompletionScore }),
       active: p.profileCompletionScore >= 80,
     },
   ];
@@ -49,6 +56,7 @@ interface StatusContentProps {
 }
 
 export default function StatusContent({ profile }: StatusContentProps) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const router = useRouter();
@@ -77,7 +85,7 @@ export default function StatusContent({ profile }: StatusContentProps) {
         ]}
       >
         {items.map((item, idx) => (
-          <View key={item.label}>
+          <View key={item.id}>
             {idx > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
             <View style={styles.listRow}>
               <View style={[styles.detailIconWrap, { backgroundColor: iconBg, borderColor: borderCol }]}>
@@ -94,26 +102,26 @@ export default function StatusContent({ profile }: StatusContentProps) {
                     ]}
                   />
                 </View>
-                {item.label === 'Profile Completion' && showCompleteBtn && (
+                {item.id === 'completion' && showCompleteBtn && (
                   <Pressable
                     style={[styles.completeBtn, { backgroundColor: colors.primary }]}
                     onPress={() => router.push('/(app)/edit-profile' as any)}
-                    accessibilityLabel="Complete your profile"
+                    accessibilityLabel={t('profile.status.completeProfile')}
                     accessibilityRole="button"
                   >
-                    <Text style={styles.completeBtnText}>Complete Profile</Text>
+                    <Text style={styles.completeBtnText}>{t('profile.status.completeProfile')}</Text>
                     <Ionicons name="arrow-forward" size={14} color="#fff" />
                   </Pressable>
                 )}
-                {item.label === 'Verification Status' && !profile.isVerified && (
+                {item.id === 'verification' && !profile.isVerified && (
                   <Pressable
                     style={[styles.completeBtn, { backgroundColor: colors.primary }]}
                     onPress={() => router.push('/(app)/verify-identity' as any)}
-                    accessibilityLabel="Verify your identity"
+                    accessibilityLabel={t('profile.verifyIdentity')}
                     accessibilityRole="button"
                   >
                     <Ionicons name="shield-checkmark-outline" size={14} color="#fff" />
-                    <Text style={styles.completeBtnText}>Verify</Text>
+                    <Text style={styles.completeBtnText}>{t('profile.status.verify')}</Text>
                   </Pressable>
                 )}
               </View>

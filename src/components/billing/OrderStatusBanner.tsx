@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -106,6 +107,7 @@ const STATUS_CONFIG: Record<OrderStatus, StatusConfig> = {
 };
 
 export function OrderStatusBanner({ status, textColor, secondaryColor }: Props) {
+  const { t } = useTranslation();
   const config = STATUS_CONFIG[status];
   if (!config) return null;
 
@@ -115,8 +117,8 @@ export function OrderStatusBanner({ status, textColor, secondaryColor }: Props) 
         <Ionicons name={config.icon} size={24} color={config.iconColor} />
       </View>
       <View style={styles.textWrap}>
-        <Text style={[styles.title, { color: textColor }]}>{config.title}</Text>
-        <Text style={[styles.body, { color: secondaryColor }]}>{config.body}</Text>
+        <Text style={[styles.title, { color: textColor }]}>{t(`billing.statusBanner.${status}.title`, config.title)}</Text>
+        <Text style={[styles.body, { color: secondaryColor }]}>{t(`billing.statusBanner.${status}.body`, config.body)}</Text>
       </View>
     </View>
   );

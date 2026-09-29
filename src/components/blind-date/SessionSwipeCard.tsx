@@ -3,6 +3,7 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { forwardRef, useEffect, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -21,6 +22,7 @@ import {
     RELATIONSHIP_API_TO_LABEL,
     RELIGION_API_TO_LABEL,
 } from '@/utils/profileMappers';
+import { translateProfileOption } from '@/utils/profileOptions';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 110;
@@ -106,6 +108,7 @@ const SessionSwipeCard = forwardRef<SessionSwipeCardHandle, Props>(
     },
     ref,
   ) {
+    const { t } = useTranslation();
     const translateX = useSharedValue(0);
     const translateY = useSharedValue(0);
     const depthSV = useSharedValue(depth);
@@ -229,19 +232,19 @@ const SessionSwipeCard = forwardRef<SessionSwipeCardHandle, Props>(
     if (creator?.gender) {
       chips.push({
         icon: 'male-female-outline',
-        label: GENDER_API_TO_LABEL[creator.gender] ?? toTitleCase(creator.gender),
+        label: translateProfileOption(GENDER_API_TO_LABEL[creator.gender] ?? toTitleCase(creator.gender), t),
       });
     }
     if (creator?.relationship_intention) {
       chips.push({
         icon: 'heart-outline',
-        label: RELATIONSHIP_API_TO_LABEL[creator.relationship_intention] ?? toTitleCase(creator.relationship_intention),
+        label: translateProfileOption(RELATIONSHIP_API_TO_LABEL[creator.relationship_intention] ?? toTitleCase(creator.relationship_intention), t),
       });
     }
     if (creator?.religion) {
       chips.push({
         icon: 'flower-outline',
-        label: RELIGION_API_TO_LABEL[creator.religion] ?? toTitleCase(creator.religion),
+        label: translateProfileOption(RELIGION_API_TO_LABEL[creator.religion] ?? toTitleCase(creator.religion), t),
       });
     }
     if (languageName) {
@@ -270,16 +273,16 @@ const SessionSwipeCard = forwardRef<SessionSwipeCardHandle, Props>(
           <View style={styles.topRow}>
             <View style={styles.openBadge}>
               <View style={styles.openDot} />
-              <Text style={styles.badgeText}>Open</Text>
+              <Text style={styles.badgeText}>{t('blindDate.swipe.openBadge')}</Text>
             </View>
           </View>
 
           {/* ── Swipe stamps ──────────────────────────────────────────────── */}
           <Animated.View style={[styles.stamp, styles.stampJoin, joinStampStyle]}>
-            <Text style={styles.stampTextJoin}>JOIN</Text>
+            <Text style={styles.stampTextJoin}>{t('blindDate.swipe.join')}</Text>
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.stampPass, passStampStyle]}>
-            <Text style={styles.stampTextPass}>PASS</Text>
+            <Text style={styles.stampTextPass}>{t('blindDate.swipe.pass')}</Text>
           </Animated.View>
 
           {/* ── Bottom info + actions over gradient ───────────────────────── */}
@@ -290,7 +293,9 @@ const SessionSwipeCard = forwardRef<SessionSwipeCardHandle, Props>(
           >
             {/* Anonymous identity block */}
             {creator?.age != null && (
-              <Text style={styles.ageText}>{creator.age}</Text>
+              <Text style={styles.ageText}>
+                {t('blindDate.swipe.age', { age: creator.age })}
+              </Text>
             )}
             {locationText ? (
               <View style={styles.locationRow}>

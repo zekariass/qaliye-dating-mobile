@@ -8,6 +8,7 @@ import {
     Dimensions,
     Image,
     Modal,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -20,11 +21,12 @@ import { ImageCropModal, type CropRegion } from '@/components/common/ImageCropMo
 import PhotoSourceModal, { type PhotoSource } from '@/components/common/PhotoSourceModal';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import { supabase } from '@/lib/supabase';
 import type { ProfilePhotoDto } from '@/types/profile';
 import { extractApiError, getApiErrorMessage } from '@/utils/apiError';
 import type { ProcessedImage } from '@/utils/imageProcessor';
-import { processWithCrop } from '@/utils/imageProcessor';
+import { normalizeCameraCapture, processWithCrop } from '@/utils/imageProcessor';
 import { getModerationMessage, isModerationRejection } from '@/utils/photoModeration';
 import type { ImagePickerAsset } from 'expo-image-picker';
 
@@ -64,10 +66,10 @@ async function requestCameraPermission(): Promise<boolean> {
 
 function moderationLabel(status: ProfilePhotoDto['moderation_status']): string {
   switch (status) {
-    case 'APPROVED': return 'Approved';
-    case 'PENDING':  return 'Under review';
-    case 'REJECTED': return 'Rejected';
-    default:         return 'Under review';
+    case 'APPROVED': return i18n.t('onboarding.photo.statusApproved', 'Approved');
+    case 'PENDING':  return i18n.t('onboarding.photo.statusUnderReview', 'Under review');
+    case 'REJECTED': return i18n.t('onboarding.photo.statusRejected', 'Rejected');
+    default:         return i18n.t('onboarding.photo.statusUnderReview', 'Under review');
   }
 }
 
@@ -146,12 +148,19 @@ function FrontCameraModal({ visible, onCapture, onClose }: FrontCameraModalProps
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
       if (photo?.uri) {
-        onCapture({
+        let asset = {
           uri: photo.uri,
           width: photo.width,
           height: photo.height,
           type: 'image',
-        } as ImagePickerAsset);
+        } as ImagePickerAsset;
+        // On iOS the captured file is rendered at screen scale, so it holds
+        // 2–3× more pixels than the reported width/height. Normalize it so
+        // crop coordinates map to real pixels.
+        if (Platform.OS === 'ios') {
+          asset = await normalizeCameraCapture(asset);
+        }
+        onCapture(asset);
       }
     } catch {
       // ignore capture errors
@@ -185,7 +194,7 @@ function FrontCameraModal({ visible, onCapture, onClose }: FrontCameraModalProps
         <View style={camStyles.center}>
           <Ionicons name="camera-outline" size={48} color={th.textMuted} />
           <Text style={[camStyles.permissionText, { color: th.text }]}>
-            {t('onboarding.identity.cameraPermission', 'Camera access is required to take photos.')}
+            {t('onboarding.photo.cameraPermission', 'Camera access is required to take photos.')}
           </Text>
           <TouchableOpacity
             style={[camStyles.grantBtn, { backgroundColor: colors.primary }]}
@@ -230,7 +239,7 @@ function FrontCameraModal({ visible, onCapture, onClose }: FrontCameraModalProps
             onPress={handleCapture}
             disabled={!isCameraReady || isCapturing}
             activeOpacity={0.85}
-            accessibilityLabel="Capture photo"
+            accessibilityLabel={t('onboarding.photo.capturePhoto', 'Capture photo')}
             accessibilityRole="button"
           >
             {isCapturing ? (
@@ -246,7 +255,7 @@ function FrontCameraModal({ visible, onCapture, onClose }: FrontCameraModalProps
           style={camStyles.flipCameraBtn}
           onPress={handleFlipCamera}
           activeOpacity={0.7}
-          accessibilityLabel="Flip camera"
+          accessibilityLabel={t('onboarding.photo.flipCamera', 'Flip camera')}
           accessibilityRole="button"
         >
           <Ionicons
@@ -261,7 +270,7 @@ function FrontCameraModal({ visible, onCapture, onClose }: FrontCameraModalProps
           style={camStyles.closeCameraBtn}
           onPress={onClose}
           activeOpacity={0.7}
-          accessibilityLabel="Close camera"
+          accessibilityLabel={t('onboarding.photo.closeCamera', 'Close camera')}
           accessibilityRole="button"
         >
           <Ionicons name="close" size={22} color="#FFFFFF" />
@@ -496,7 +505,7 @@ export default function PhotoStep({ onComplete }: Props) {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+      if (!session) throw new Error(i18n.t('onboarding.photo.notAuthenticated', 'Not authenticated'));
       const userId = session.user.id;
 
       if (uploadCancelRefs.current[slotKey]) {
@@ -578,7 +587,7 @@ export default function PhotoStep({ onComplete }: Props) {
 
     if (source === 'camera') {
       if (!(await requestCameraPermission())) {
-        setError('Camera access is required to take photos.');
+        setError(i18n.t('onboarding.photo.cameraPermission', 'Camera access is required to take photos.'));
         return;
       }
       // Open the custom front-camera modal — expo-image-picker's cameraType
@@ -590,7 +599,7 @@ export default function PhotoStep({ onComplete }: Props) {
     }
 
     if (!(await requestLibraryPermission())) {
-      setError('Photo library access is required.');
+      setError(i18n.t('onboarding.photo.libraryPermission', 'Photo library access is required.'));
       return;
     }
 
@@ -601,13 +610,13 @@ export default function PhotoStep({ onComplete }: Props) {
 
     if (mode === 'primary') {
       if (asset.width < 720 || asset.height < 900) {
-        setError('Image too small. Upload at least 720 × 900 px for your profile avatar.');
+        setError(i18n.t('onboarding.photo.imageTooSmallPrimary', 'Image too small. Upload at least 720 × 900 px for your profile avatar.'));
         return;
       }
       setCropState({ asset, mode: 'primary' });
     } else {
       if (asset.width < 720 || asset.height < 960) {
-        setError('Image too small. Upload at least 720 × 960 px for card photos.');
+        setError(i18n.t('onboarding.photo.imageTooSmallCard', 'Image too small. Upload at least 720 × 960 px for card photos.'));
         return;
       }
       setCropState({ asset, mode: 'card', cardIdx });
@@ -623,13 +632,13 @@ export default function PhotoStep({ onComplete }: Props) {
 
     if (ctx.mode === 'primary') {
       if (asset.width < 720 || asset.height < 900) {
-        setError('Image too small. Upload at least 720 × 900 px for your profile avatar.');
+        setError(i18n.t('onboarding.photo.imageTooSmallPrimary', 'Image too small. Upload at least 720 × 900 px for your profile avatar.'));
         return;
       }
       setCropState({ asset, mode: 'primary' });
     } else {
       if (asset.width < 720 || asset.height < 960) {
-        setError('Image too small. Upload at least 720 × 960 px for card photos.');
+        setError(i18n.t('onboarding.photo.imageTooSmallCard', 'Image too small. Upload at least 720 × 960 px for card photos.'));
         return;
       }
       setCropState({ asset, mode: 'card', cardIdx: ctx.cardIdx });
@@ -716,7 +725,7 @@ export default function PhotoStep({ onComplete }: Props) {
           setExistingPrimary(null);
           setPrimarySlot({ uri: null, serverId: null, status: 'idle', processed: null, errorMessage: null });
         })
-        .catch(() => setError('Failed to delete photo.'))
+        .catch(() => setError(i18n.t('onboarding.photo.deleteFailed', 'Failed to delete photo.')))
         .finally(() => setIsDeletingPrimary(false));
     }
   }, [primarySlot, existingPrimary]);
@@ -760,7 +769,7 @@ export default function PhotoStep({ onComplete }: Props) {
             return next;
           });
         })
-        .catch(() => setError('Failed to delete photo.'))
+        .catch(() => setError(i18n.t('onboarding.photo.deleteFailed', 'Failed to delete photo.')))
         .finally(() => setDeletingCardId(null));
     }
   }, [cardSlots]);
@@ -830,16 +839,16 @@ export default function PhotoStep({ onComplete }: Props) {
   const handleSubmit = useCallback(async () => {
     const primaryOk = primarySlot.uri != null && primarySlot.status !== 'error';
     if (!primaryOk) {
-      setError('A profile photo is required.');
+      setError(i18n.t('onboarding.photo.primaryRequired', 'A profile photo is required.'));
       return;
     }
     if (isRejected) {
-      setError('Your profile photo was rejected. Please delete it and upload a new one.');
+      setError(i18n.t('onboarding.photo.primaryRejected', 'Your profile photo was rejected. Please delete it and upload a new one.'));
       return;
     }
     const cardOk = cardSlots.filter((s) => s != null && s.uri != null && s.status !== 'error').length >= 2;
     if (!cardOk) {
-      setError('At least two discovery card photos are required.');
+      setError(i18n.t('onboarding.photo.minCardsRequired', 'At least two discovery card photos are required.'));
       return;
     }
 
@@ -912,7 +921,7 @@ export default function PhotoStep({ onComplete }: Props) {
         <TouchableOpacity
           onPress={() => {
             if (primarySlot.status === 'error') {
-              setErrorModal({ slotKey: 'primary', message: primarySlot.errorMessage ?? 'Upload failed', isPrimary: true, slotIdx: 0, isModerationRejection: !!primarySlot.isModerationRejection });
+              setErrorModal({ slotKey: 'primary', message: primarySlot.errorMessage ?? t('onboarding.photo.uploadFailed', 'Upload failed'), isPrimary: true, slotIdx: 0, isModerationRejection: !!primarySlot.isModerationRejection });
             } else {
               pickPrimary();
             }
@@ -935,7 +944,7 @@ export default function PhotoStep({ onComplete }: Props) {
               {(primaryBusy) && (
                 <View style={styles.uploadOverlay}>
                   <ActivityIndicator color="#FFF" size="small" />
-                  <Text style={styles.uploadingText}>Uploading…</Text>
+                  <Text style={styles.uploadingText}>{t('onboarding.photo.uploading')}</Text>
                 </View>
               )}
               {primarySlot.status === 'success' && (
@@ -974,7 +983,7 @@ export default function PhotoStep({ onComplete }: Props) {
             {t('onboarding.photo.profilePhotoDesc')}
           </Text>
           <Text style={[styles.primaryInfoMeta, { color: th.textMuted }]}>
-            4:5 · min 720×900 px · WebP 1080×1350
+            {t('onboarding.photo.primaryMeta', '4:5 · min 720×900 px · WebP 1080×1350')}
           </Text>
           {existingPrimary != null && primarySlot.status !== 'error' && (
             <View style={styles.moderationRow}>
@@ -1022,7 +1031,7 @@ export default function PhotoStep({ onComplete }: Props) {
               <TouchableOpacity
                 onPress={() => {
                   if (isError) {
-                    setErrorModal({ slotKey: `card_${i}`, message: slot?.errorMessage ?? 'Upload failed', isPrimary: false, slotIdx: i, isModerationRejection: !!slot?.isModerationRejection });
+                    setErrorModal({ slotKey: `card_${i}`, message: slot?.errorMessage ?? t('onboarding.photo.uploadFailed', 'Upload failed'), isPrimary: false, slotIdx: i, isModerationRejection: !!slot?.isModerationRejection });
                   } else if (!isBusy && !hasServer && !slotUri) {
                     pickCard(i);
                   }
@@ -1048,7 +1057,7 @@ export default function PhotoStep({ onComplete }: Props) {
                     {isBusy && (
                       <View style={styles.uploadOverlay}>
                         <ActivityIndicator color="#FFF" size="small" />
-                        <Text style={styles.uploadingText}>Uploading…</Text>
+                        <Text style={styles.uploadingText}>{t('onboarding.photo.uploading')}</Text>
                       </View>
                     )}
                     {isSuccess && (
@@ -1079,7 +1088,7 @@ export default function PhotoStep({ onComplete }: Props) {
                   <View style={styles.slotEmpty}>
                     <Ionicons name="add" size={26} color={i < 2 && !hasMinCards ? '#D97706' : th.textMuted} />
                     {i < 2 && !hasMinCards && (
-                      <Text style={styles.slotRequiredLabel}>Required</Text>
+                      <Text style={styles.slotRequiredLabel}>{t('onboarding.photo.required')}</Text>
                     )}
                   </View>
                 )}
@@ -1090,7 +1099,7 @@ export default function PhotoStep({ onComplete }: Props) {
       </View>
 
       <Text style={[styles.cardMeta, { color: th.textMuted }]}>
-        3:4 · min 720×960 px · WebP 1080×1440 · tap empty slot to add
+        {t('onboarding.photo.cardMeta', '3:4 · min 720×960 px · WebP 1080×1440 · tap empty slot to add')}
       </Text>
 
       {/* ── Error ──────────────────────────────────────────────────────────── */}
@@ -1104,7 +1113,7 @@ export default function PhotoStep({ onComplete }: Props) {
       {(primaryError || anyCardError) && (
         <View style={styles.errorBox}>
           <Ionicons name="alert-circle-outline" size={16} color="#FF6B6B" />
-          <Text style={styles.errorText}>Some photos failed to upload. Tap the photo to retry, choose another, or remove it.</Text>
+          <Text style={styles.errorText}>{t('onboarding.photo.uploadErrorsHint', 'Some photos failed to upload. Tap the photo to retry, choose another, or remove it.')}</Text>
         </View>
       )}
 
@@ -1162,7 +1171,9 @@ export default function PhotoStep({ onComplete }: Props) {
               />
             </View>
             <Text style={[styles.errorModalTitle, { color: th.text }]}>
-              {errorModal?.isModerationRejection ? 'Photo not approved' : 'Upload failed'}
+              {errorModal?.isModerationRejection
+                ? t('onboarding.photo.notApproved', 'Photo not approved')
+                : t('onboarding.photo.uploadFailed', 'Upload failed')}
             </Text>
             <Text style={[styles.errorModalMessage, { color: th.textSecondary }]}>
               {errorModal?.message}
@@ -1182,7 +1193,7 @@ export default function PhotoStep({ onComplete }: Props) {
                   }}
                 >
                   <Text style={styles.errorModalBtnTextPrimary}>
-                    Choose Another Photo
+                    {t('onboarding.photo.chooseAnother', 'Choose Another Photo')}
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -1199,7 +1210,7 @@ export default function PhotoStep({ onComplete }: Props) {
                   }}
                 >
                   <Text style={styles.errorModalBtnTextPrimary}>
-                    Retry
+                    {t('common.retry')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -1216,7 +1227,7 @@ export default function PhotoStep({ onComplete }: Props) {
                 }}
               >
                 <Text style={[styles.errorModalBtnText, { color: th.textSecondary }]}>
-                  Remove Photo
+                  {t('onboarding.photo.removePhoto', 'Remove Photo')}
                 </Text>
               </TouchableOpacity>
               {/* Tertiary action: Close */}
@@ -1225,7 +1236,7 @@ export default function PhotoStep({ onComplete }: Props) {
                 onPress={() => setErrorModal(null)}
               >
                 <Text style={[styles.errorModalBtnText, { color: th.textSecondary }]}>
-                  Close
+                  {t('common.close')}
                 </Text>
               </TouchableOpacity>
             </View>

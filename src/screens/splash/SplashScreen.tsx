@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as NativeSplash from 'expo-splash-screen';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 import Animated, {
     Easing,
@@ -153,6 +154,7 @@ const ORBS = [
 ];
 
 export default function SplashScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { mode } = useTheme();
   const isDark = mode === 'dark';
@@ -286,16 +288,16 @@ export default function SplashScreen() {
       {/* Text + progress bar — anchored to bottom, well clear of the centered animation */}
       <View style={styles.bottom}>
         <Animated.View style={titleStyle}>
-          <AnimatedTitle text="Qal Dating" color="#FFFFFF" />
+          <AnimatedTitle text={t('app.name', 'Qal Dating')} color="#FFFFFF" />
         </Animated.View>
         <Animated.Text style={[styles.tagline, { color: 'rgba(255,255,255,0.85)' }, taglineStyle]}>
-          Find your soulmate.
+          {t('splash.tagline', 'Find your soulmate.')}
         </Animated.Text>
         <View style={styles.progressTrack}>
           <ShimmerBar />
         </View>
         <Text style={styles.versionText}>
-          v{Constants.expoConfig?.version ?? '1.0.0'}
+          {t('splash.version', { version: Constants.expoConfig?.version ?? '1.0.0', defaultValue: 'v{{version}}' })}
         </Text>
       </View>
     </Animated.View>

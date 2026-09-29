@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
+import i18n from '@/i18n';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
 import type { BillingIntervalUnit, OfferDto } from '@/types/billing';
 
@@ -27,8 +28,8 @@ type Props = {
 function intervalLabel(count?: number, unit?: BillingIntervalUnit): string {
   if (!count || !unit) return '';
   const u = unit.toLowerCase();
-  if (count === 1) return `Every ${u}`;
-  return `Every ${count} ${u}s`;
+  if (count === 1) return i18n.t('billing.everyIntervalOne', 'Every {{unit}}', { unit: u });
+  return i18n.t('billing.everyInterval', 'Every {{count}} {{unit}}s', { count, unit: u });
 }
 
 function planDisplayName(productCode: string): string {
@@ -168,7 +169,7 @@ export function OfferCard({
             onPress={onPurchase}
             disabled={isPurchasing}
             accessibilityRole="button"
-            accessibilityLabel={`Purchase ${offer.product_code}`}
+            accessibilityLabel={t('billing.purchaseOffer', 'Purchase {{name}}', { name: offer.product_code })}
           >
             {isPurchasing ? (
               <ActivityIndicator size="small" color="#fff" />

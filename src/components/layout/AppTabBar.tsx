@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,12 +42,12 @@ interface AppTabBarProps {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const LABELS: Record<string, string> = {
-  index:    'Discover',
-  matches:  'Matches',
-  messages: 'Messages',
-  likes:    'Likes',
-  profile:  'Profile',
+const LABEL_KEYS: Record<string, string> = {
+  index:    'tabs.discover',
+  matches:  'tabs.matches',
+  messages: 'tabs.messages',
+  likes:    'tabs.likes',
+  profile:  'tabs.profile',
 };
 
 const ACTIVE_COLOR = colors.primary;
@@ -149,6 +150,7 @@ function UnreadBadge({ count }: { count: number }) {
 // Main component
 // ---------------------------------------------------------------------------
 export default function AppTabBar({ state, descriptors: _d, navigation, activeTab }: AppTabBarProps) {
+  const { t } = useTranslation();
   const { bottom } = useSafeAreaInsets();
   const { colors: th, mode } = useTheme();
   const router = useRouter();
@@ -214,6 +216,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
         {routes.map((route, index) => {
           const isFocused = focusedIndex === index;
           const isCenter  = route.name === CENTER;
+          const tabLabel  = LABEL_KEYS[route.name] ? t(LABEL_KEYS[route.name]) : route.name;
 
           const onPress = () => {
             if (isStandalone) {
@@ -246,7 +249,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
                 onPress={onPress}
                 activeOpacity={0.85}
                 accessibilityRole="button"
-                accessibilityLabel="Go to Messages"
+                accessibilityLabel={t('tabs.goToMessages')}
               >
                 {/* Outer ring provides visual separation from content above */}
                 <View
@@ -274,7 +277,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
               onPress={onPress}
               activeOpacity={0.75}
               accessibilityRole="button"
-              accessibilityLabel={`Go to ${LABELS[route.name] ?? route.name}`}
+              accessibilityLabel={t('tabs.goToTab', { label: tabLabel })}
             >
               {/* Top pill indicator — modern alternative to underline for flat bars */}
               {isFocused && (
@@ -322,7 +325,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
                   isFocused && { color: activeColor, fontWeight: '700' },
                 ]}
               >
-                {LABELS[route.name] ?? ''}
+                {LABEL_KEYS[route.name] ? tabLabel : ''}
               </Text>
             </TouchableOpacity>
           );

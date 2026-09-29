@@ -1,4 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -6,10 +7,12 @@ import { rs, useTabletScale } from '@/utils/responsive';
 
 interface Props {
   onPass: () => void;
-  /** Omit to hide the rewind button (e.g. browse-mode cards — rewind lives in the header). */
+  /** Omit to hide the rewind button. */
   onRewind?: () => void;
   onSuperMessage: () => void;
   disabled?: boolean;
+  /** Disables only the rewind button (e.g. no rewind credits left). */
+  rewindDisabled?: boolean;
 }
 
 /**
@@ -31,18 +34,43 @@ function BoldIcon({ children, style }: { children: React.ReactNode; style?: obje
  * Pass + rewind + super message — boxed icons in a vertical column, rendered
  * at the bottom-left of the swipe card photo just above the profile name.
  */
-export default function TopLeftActionButtons({ onPass, onRewind, onSuperMessage, disabled }: Props) {
+export default function TopLeftActionButtons({ onPass, onRewind, onSuperMessage, disabled, rewindDisabled }: Props) {
+  const { t } = useTranslation();
   const scale = useTabletScale();
+
+  const rewindBtn = onRewind ? (
+    <TouchableOpacity
+      style={styles.hitArea}
+      onPress={onRewind}
+      disabled={disabled || rewindDisabled}
+      activeOpacity={0.7}
+      accessibilityLabel={t('discovery.rewindProfile')}
+    >
+      <View style={[styles.iconBox, styles.iconBoxAmber]}>
+        <BoldIcon>
+          <MaterialCommunityIcons
+            name="undo"
+            size={rs(24, scale)}
+            color="#FBBF24"
+            style={styles.icon}
+          />
+        </BoldIcon>
+      </View>
+    </TouchableOpacity>
+  ) : null;
 
   return (
     <View style={styles.container}>
+      {/* Rewind */}
+      {rewindBtn}
+
       {/* Pass */}
       <TouchableOpacity
         style={styles.hitArea}
         onPress={onPass}
         disabled={disabled}
         activeOpacity={0.7}
-        accessibilityLabel="Pass profile"
+        accessibilityLabel={t('discovery.passProfile')}
       >
         <View style={[styles.iconBox, styles.iconBoxDanger]}>
           <BoldIcon style={styles.glyphBleed}>
@@ -56,35 +84,13 @@ export default function TopLeftActionButtons({ onPass, onRewind, onSuperMessage,
         </View>
       </TouchableOpacity>
 
-      {/* Rewind */}
-      {onRewind && (
-        <TouchableOpacity
-          style={styles.hitArea}
-          onPress={onRewind}
-          disabled={disabled}
-          activeOpacity={0.7}
-          accessibilityLabel="Rewind profile"
-        >
-          <View style={[styles.iconBox, styles.iconBoxAmber]}>
-            <BoldIcon>
-              <MaterialCommunityIcons
-                name="undo"
-                size={rs(24, scale)}
-                color="#FBBF24"
-                style={styles.icon}
-              />
-            </BoldIcon>
-          </View>
-        </TouchableOpacity>
-      )}
-
       {/* Super Message */}
       <TouchableOpacity
         style={styles.hitArea}
         onPress={onSuperMessage}
         disabled={disabled}
         activeOpacity={0.7}
-        accessibilityLabel="Send super message"
+        accessibilityLabel={t('discovery.sendSuperMessage')}
       >
         <View style={styles.iconBox}>
           <BoldIcon>

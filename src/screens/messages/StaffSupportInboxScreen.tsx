@@ -19,6 +19,7 @@ import { getStaffConversations } from '@/api/support/staffSupportApi';
 import { colors, spacing } from '@/constants/theme';
 import { useStaffConversations } from '@/hooks/support/useStaffConversations';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { StaffConversationListParams, StaffConversationSummaryDto, SupportConversationStatus } from '@/types/support';
 
 const POLL_INTERVAL = Number(process.env.EXPO_PUBLIC_SUPPORT_POLL_INTERVAL_MS) || 30_000;
@@ -26,6 +27,15 @@ const POLL_INTERVAL = Number(process.env.EXPO_PUBLIC_SUPPORT_POLL_INTERVAL_MS) |
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+const MONTH_KEYS_SHORT = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const;
+const MONTHS_SHORT_EN = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+] as const;
 
 function formatTimestamp(isoString: string | null): string {
   if (!isoString) return '';
@@ -35,8 +45,12 @@ function formatTimestamp(isoString: string | null): string {
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
-  if (diffMinutes < 60) return `${Math.max(diffMinutes, 1)}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffMinutes < 60) {
+    return i18n.t('support.minutesAgo', { count: Math.max(diffMinutes, 1), defaultValue: '{{count}}m ago' });
+  }
+  if (diffHours < 24) {
+    return i18n.t('support.hoursAgo', { count: diffHours, defaultValue: '{{count}}h ago' });
+  }
 
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -45,10 +59,14 @@ function formatTimestamp(isoString: string | null): string {
     date.getMonth() === yesterday.getMonth() &&
     date.getFullYear() === yesterday.getFullYear()
   ) {
-    return 'Yesterday';
+    return i18n.t('chat.yesterday', 'Yesterday');
   }
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[date.getMonth()]} ${date.getDate()}`;
+  const monthIdx = date.getMonth();
+  return i18n.t('chat.dateLabelShort', {
+    month: i18n.t(`chat.months.${MONTH_KEYS_SHORT[monthIdx]}`, MONTHS_SHORT_EN[monthIdx]),
+    day: date.getDate(),
+    defaultValue: '{{month}} {{day}}',
+  });
 }
 
 const STATUS_COLORS: Record<SupportConversationStatus, string> = {
@@ -69,7 +87,16 @@ const STATUS_ICONS: Record<SupportConversationStatus, keyof typeof Ionicons.glyp
   CLOSED: 'checkmark-done-outline',
 };
 
-const STATUS_LABELS: Record<SupportConversationStatus, string> = {
+const STATUS_LABEL_KEYS: Record<SupportConversationStatus, string> = {
+  IDLE: 'support.convStatus.idle',
+  WAITING_FOR_STAFF: 'support.convStatus.waitingStaff',
+  WAITING_STAFF: 'support.convStatus.waitingStaff',
+  ACTIVE: 'support.convStatus.active',
+  WAITING_USER: 'support.convStatus.waitingUser',
+  CLOSED: 'support.convStatus.closed',
+};
+
+const STATUS_LABEL_DEFAULTS: Record<SupportConversationStatus, string> = {
   IDLE: 'Idle',
   WAITING_FOR_STAFF: 'Waiting for staff reply',
   WAITING_STAFF: 'Waiting for staff reply',
@@ -77,6 +104,10 @@ const STATUS_LABELS: Record<SupportConversationStatus, string> = {
   WAITING_USER: 'Waiting for user reply',
   CLOSED: 'Closed',
 };
+
+function statusLabel(status: SupportConversationStatus): string {
+  return i18n.t(STATUS_LABEL_KEYS[status], STATUS_LABEL_DEFAULTS[status]);
+}
 
 // ---------------------------------------------------------------------------
 // Conversation row
@@ -100,15 +131,16 @@ function ConversationRow({
       : Math.max(0, item.next_public_sequence - 1 - item.staff_last_read_sequence);
   const statusColor = STATUS_COLORS[item.status];
 
-  const displayName = item.user_display_name || `User ${item.user_id.slice(0, 8)}`;
+  const displayName = item.user_display_name
+    || t('support.fallbackUser', { id: item.user_id.slice(0, 8), defaultValue: 'User {{id}}' });
 
   const accessibilityLabel = [
     displayName,
-    STATUS_LABELS[item.status],
-    item.assigned_staff_user_id ? 'Assigned' : 'Unassigned',
-    `Priority ${item.priority}`,
+    statusLabel(item.status),
+    item.assigned_staff_user_id ? t('support.assigned', 'Assigned') : t('support.unassigned', 'Unassigned'),
+    t('support.priorityN', { priority: item.priority, defaultValue: 'Priority {{priority}}' }),
     item.last_public_message_at ? formatTimestamp(item.last_public_message_at) : null,
-    unreadCount > 0 ? `${unreadCount} unread` : null,
+    unreadCount > 0 ? t('chat.unread', { count: unreadCount, defaultValue: '{{count}} unread' }) : null,
   ]
     .filter(Boolean)
     .join('. ');
@@ -141,18 +173,18 @@ function ConversationRow({
         <View style={rowStyles.bottomRow}>
           <View style={rowStyles.statusBadge}>
             <Ionicons name={STATUS_ICONS[item.status]} size={12} color={statusColor} />
-            <Text style={[rowStyles.statusText, { color: statusColor }]}>{STATUS_LABELS[item.status]}</Text>
+            <Text style={[rowStyles.statusText, { color: statusColor }]}>{statusLabel(item.status)}</Text>
           </View>
           {!item.assigned_staff_user_id && (
             <View style={[rowStyles.unassignedBadge, { backgroundColor: isDark ? '#3A2A1A' : '#FEF3C7' }]}>
               <Ionicons name="person-add-outline" size={10} color="#F59E0B" />
-              <Text style={rowStyles.unassignedText}>Unassigned</Text>
+              <Text style={rowStyles.unassignedText}>{t('support.unassigned', 'Unassigned')}</Text>
             </View>
           )}
           {item.priority >= 4 && (
             <View style={[rowStyles.priorityBadge, { backgroundColor: isDark ? '#3A1A1A' : '#FEE2E2' }]}>
               <Ionicons name="alert-outline" size={10} color="#EF4444" />
-              <Text style={rowStyles.priorityText}>P{item.priority}</Text>
+              <Text style={rowStyles.priorityText}>{t('support.priorityShort', { priority: item.priority, defaultValue: 'P{{priority}}' })}</Text>
             </View>
           )}
           <View style={rowStyles.spacer} />
@@ -261,11 +293,11 @@ const rowStyles = StyleSheet.create({
 // Screen
 // ---------------------------------------------------------------------------
 
-const STATUS_FILTER_OPTIONS: { label: string; value: SupportConversationStatus | null }[] = [
-  { label: 'All', value: null },
-  { label: 'Waiting Staff', value: 'WAITING_STAFF' },
-  { label: 'Waiting User', value: 'WAITING_USER' },
-  { label: 'Closed', value: 'CLOSED' },
+const STATUS_FILTER_OPTIONS: { labelKey: string; label: string; value: SupportConversationStatus | null }[] = [
+  { labelKey: 'common.all', label: 'All', value: null },
+  { labelKey: 'support.filterWaitingStaff', label: 'Waiting Staff', value: 'WAITING_STAFF' },
+  { labelKey: 'support.filterWaitingUser', label: 'Waiting User', value: 'WAITING_USER' },
+  { labelKey: 'support.convStatus.closed', label: 'Closed', value: 'CLOSED' },
 ];
 
 const PAGE_LIMIT = 25;
@@ -382,7 +414,8 @@ export default function StaffSupportInboxScreen() {
           const isActive = statusFilter === opt.value;
           return (
             <TouchableOpacity
-              key={opt.label}
+              key={opt.labelKey}
+              accessibilityLabel={t(opt.labelKey, opt.label)}
               style={[
                 filterStyles.chip,
                 isActive
@@ -397,7 +430,7 @@ export default function StaffSupportInboxScreen() {
                   { color: isActive ? '#FFF' : th.textSecondary },
                 ]}
               >
-                {opt.label}
+                {t(opt.labelKey, opt.label)}
               </Text>
             </TouchableOpacity>
           );
@@ -429,7 +462,9 @@ export default function StaffSupportInboxScreen() {
                   { color: isSelected ? '#FFF' : th.textSecondary },
                 ]}
               >
-                {p == null ? 'All P' : `P${p}`}
+                {p == null
+                  ? t('support.allPriorities', 'All P')
+                  : t('support.priorityShort', { priority: p, defaultValue: 'P{{priority}}' })}
               </Text>
             </TouchableOpacity>
           );
@@ -519,7 +554,7 @@ export default function StaffSupportInboxScreen() {
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
                   <Text style={[screenStyles.loadMoreText, { color: colors.primary }]}>
-                    Load more
+                    {t('support.loadMore', 'Load more')}
                   </Text>
                 )}
               </TouchableOpacity>

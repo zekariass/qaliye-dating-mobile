@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
 
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export const EditProfileHeader = memo(function EditProfileHeader({ sem }: Props) {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const handleBack = () => {
@@ -24,7 +26,7 @@ export const EditProfileHeader = memo(function EditProfileHeader({ sem }: Props)
         onPress={handleBack}
         className="w-10 h-10 items-center justify-center rounded-full"
         style={{ backgroundColor: sem.surfaceMuted }}
-        accessibilityLabel="Go back"
+        accessibilityLabel={t('profile.goBack')}
         accessibilityRole="button"
       >
         {({ pressed }) => (
@@ -37,7 +39,7 @@ export const EditProfileHeader = memo(function EditProfileHeader({ sem }: Props)
       </Pressable>
 
       <Text className="text-xl font-bold" style={{ color: sem.textPrimary }}>
-        Edit Profile
+        {t('profile.editTitle')}
       </Text>
 
       {/* Spacer to keep title centered */}

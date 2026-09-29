@@ -1,0 +1,32 @@
+{
+  "matches": {
+    "title": "Your Matches",
+    "viewProfileA11y": "View {{name}}'s profile",
+    "messageA11y": "Message {{name}}",
+    "locationUnknown": "Location unknown",
+    "newMatch": "New Match!",
+    "offlineNow": "Offline now",
+    "emptyTitle": "No matches yet",
+    "emptySubtitle": "Keep swiping to find your perfect match.\nWe'll notify you when someone likes you back!",
+    "errorBody": "We couldn't load your matches. Pull down to retry."
+  },
+  "likes": {
+    "liked": "Liked",
+    "superLiked": "Super Liked",
+    "receivedLikes": "Received Likes",
+    "sentLikes": "Sent Likes",
+    "viewProfileA11y": "View {{name}}'s profile",
+    "likeBackA11y": "Like back {{name}}",
+    "unsendLikeA11y": "Unsend like {{name}}",
+    "locationUnknown": "Location unknown",
+    "offlineNow": "Offline now",
+    "viewWhoLikedYou": "View who liked you",
+    "view": "View",
+    "someoneLikesYou": "Someone likes you",
+    "tapViewToReveal": "Tap View to reveal",
+    "emptyTitleReceived": "No likes yet",
+    "emptyTitleSent": "No sent likes",
+    "emptySubtitleReceived": "No one has liked you yet. Keep your profile active and we'll notify you when someone does!",
+    "emptySubtitleSent": "You haven't liked anyone yet. Start exploring and find your match!"
+  }
+}

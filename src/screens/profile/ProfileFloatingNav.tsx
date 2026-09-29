@@ -2,9 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 
 // Mirrors AppTabBar constants exactly
 const ACTIVE_COLOR = colors.primary;
@@ -34,11 +36,11 @@ function MatchesIcon({ active, inactiveColor }: { active: boolean; inactiveColor
 }
 
 const TABS = [
-  { name: 'index',    label: 'Home' },
-  { name: 'matches',  label: 'Matches' },
-  { name: 'messages', label: 'Messages' },
-  { name: 'likes',    label: 'Likes' },
-  { name: 'profile',  label: 'Profile' },
+  { name: 'index',    label: i18n.t('tabs.home') },
+  { name: 'matches',  label: i18n.t('tabs.matches') },
+  { name: 'messages', label: i18n.t('tabs.messages') },
+  { name: 'likes',    label: i18n.t('tabs.likes') },
+  { name: 'profile',  label: i18n.t('tabs.profile') },
 ];
 
 const TAB_ROUTES: Record<string, string> = {
@@ -53,6 +55,7 @@ interface Props {
 }
 
 export default function ProfileFloatingNav({ activeTab = 'profile' }: Props) {
+  const { t } = useTranslation();
   const { bottom } = useSafeAreaInsets();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
@@ -84,7 +87,7 @@ export default function ProfileFloatingNav({ activeTab = 'profile' }: Props) {
                 onPress={() => handleTabPress(tab.name)}
                 activeOpacity={0.85}
                 accessibilityRole="button"
-                accessibilityLabel="Go to Messages"
+                accessibilityLabel={t('tabs.goToMessages')}
               >
                 <View style={[styles.centerOuter, { backgroundColor: centerOuterBg, borderColor: centerOuterBorder }]}>
                   <View style={styles.centerCircle}>
@@ -104,7 +107,7 @@ export default function ProfileFloatingNav({ activeTab = 'profile' }: Props) {
               onPress={() => handleTabPress(tab.name)}
               activeOpacity={0.75}
               accessibilityRole="button"
-              accessibilityLabel={`Go to ${tab.label}`}
+              accessibilityLabel={t('tabs.goToTab', { label: tab.label })}
             >
               <View style={styles.iconWrap}>
                 {tab.name === 'matches' ? (

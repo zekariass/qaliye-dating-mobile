@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -51,6 +52,7 @@ export function QuestionSetPicker({
   usedTexts?: Set<string>;
   onManageQuestions?: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const purple = colors.primary;
@@ -82,10 +84,10 @@ export function QuestionSetPicker({
     return (
       <View style={styles.center}>
         <Text style={[styles.muted, { color: th.textSecondary }]}>
-          Couldn’t load your question set.
+          {t('blindDate.picker.loadError')}
         </Text>
         <TouchableOpacity onPress={() => refetch()} accessibilityRole="button">
-          <Text style={{ color: purple, fontWeight: '700' }}>Retry</Text>
+          <Text style={{ color: purple, fontWeight: '700' }}>{t('blindDate.common.retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -95,7 +97,7 @@ export function QuestionSetPicker({
       <View style={styles.center}>
         <Ionicons name="chatbubble-ellipses-outline" size={36} color={purple} />
         <Text style={[styles.muted, { color: th.textSecondary, textAlign: 'center' }]}>
-          Your question set is empty. Add questions first — they’re reused every time you host.
+          {t('blindDate.picker.empty')}
         </Text>
         {onManageQuestions && (
           <TouchableOpacity
@@ -105,7 +107,7 @@ export function QuestionSetPicker({
             accessibilityRole="button"
           >
             <Ionicons name="create-outline" size={16} color="#FFF" />
-            <Text style={styles.ctaText}>Set up my questions</Text>
+            <Text style={styles.ctaText}>{t('blindDate.picker.setupCta')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -153,7 +155,7 @@ export function QuestionSetPicker({
             <View style={[styles.hintPill, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
               <Ionicons name="pencil" size={10} color="#F59E0B" />
               <Text style={[styles.hintPillText, { color: '#F59E0B' }]}>
-                Needs your answer first
+                {t('blindDate.picker.needsAnswer')}
               </Text>
             </View>
           ) : (
@@ -170,7 +172,7 @@ export function QuestionSetPicker({
                   size={13}
                   color={purple}
                 />
-                <Text style={[styles.answerToggleText, { color: purple }]}>Your answer</Text>
+                <Text style={[styles.answerToggleText, { color: purple }]}>{t('blindDate.picker.yourAnswer')}</Text>
               </TouchableOpacity>
               {expanded.has(id) && (
                 <Text style={[styles.a, { color: th.textSecondary }]}>{answer}</Text>
@@ -190,11 +192,11 @@ export function QuestionSetPicker({
     >
       {allUsed && (
         <Text style={[styles.muted, styles.allUsedNote, { color: th.textSecondary }]}>
-          All your questions were already used in earlier rounds — add new ones to continue.
+          {t('blindDate.picker.allUsed')}
         </Text>
       )}
       {visibleQuestions.length > 0 && (
-        <Text style={[styles.sectionLabel, { color: th.textSecondary }]}>Platform questions</Text>
+        <Text style={[styles.sectionLabel, { color: th.textSecondary }]}>{t('blindDate.picker.platformSection')}</Text>
       )}
       {visibleQuestions.map((q) =>
         renderRow(q.question_id, pickedQ.has(q.question_id), q.question, q.answer, () => {
@@ -203,7 +205,7 @@ export function QuestionSetPicker({
         }),
       )}
       {visibleCustomQuestions.length > 0 && (
-        <Text style={[styles.sectionLabel, { color: th.textSecondary }]}>Your questions</Text>
+        <Text style={[styles.sectionLabel, { color: th.textSecondary }]}>{t('blindDate.picker.customSection')}</Text>
       )}
       {visibleCustomQuestions.map((q) =>
         renderRow(q.id, pickedC.has(q.id), q.question, q.answer, () => {
@@ -211,10 +213,15 @@ export function QuestionSetPicker({
         }),
       )}
       {onManageQuestions && (
-        <TouchableOpacity style={styles.manage} onPress={onManageQuestions} accessibilityRole="button">
-          <Ionicons name="settings-outline" size={13} color={purple} />
-          <Text style={{ color: purple, fontSize: 12.5, fontWeight: '700' }}>
-            Manage my question set
+        <TouchableOpacity
+          style={[styles.manage, { backgroundColor: chipBg, borderColor: `${purple}55` }]}
+          onPress={onManageQuestions}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+        >
+          <Ionicons name="settings-outline" size={18} color={purple} />
+          <Text style={{ color: purple, fontSize: 15, fontWeight: '800' }}>
+            {t('blindDate.picker.manageSet')}
           </Text>
         </TouchableOpacity>
       )}
@@ -233,10 +240,11 @@ export function QuestionSetPicker({
           },
         ]}
       >
-        {pickedCount}
-        {maxQuestions != null ? `/${maxQuestions}` : ''} selected
+        {maxQuestions != null
+          ? t('blindDate.picker.selectedOfMax', { picked: pickedCount, max: maxQuestions })
+          : t('blindDate.picker.selected', { picked: pickedCount })}
         {maxQuestions != null && pickedCount >= maxQuestions
-          ? ' — deselect one to pick another'
+          ? t('blindDate.picker.maxHint')
           : ''}
       </Text>
     </ScrollView>
@@ -304,8 +312,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
+    gap: 8,
+    paddingVertical: 12,
+    marginTop: 4,
+    borderRadius: 14,
+    borderWidth: 1.5,
   },
   allUsedNote: {
     textAlign: 'center',

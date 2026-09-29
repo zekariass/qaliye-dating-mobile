@@ -28,6 +28,7 @@ import Reanimated, {
     useSharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { ReportType } from '@/api/safety/safetyApi';
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
@@ -44,6 +45,7 @@ import { useOtherUserProfile } from '@/hooks/profile/useOtherUserProfile';
 import { useBlockUser } from '@/hooks/safety/useBlockUser';
 import { useReportUser } from '@/hooks/safety/useReportUser';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import { isInsufficientCreditsError } from '@/utils/entitlements';
 import {
     mapOtherUserProfileDtoToView,
@@ -58,32 +60,33 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const HERO_H = Math.round(SCREEN_W * 1.1);
 
 const STATUS_META: Record<NonNullable<OtherUserRelationStatus>, { label: string; icon: IoniconName; chipBg: string; chipColor: string }> = {
-  matched:       { label: 'Matched',   icon: 'heart-circle',  chipBg: '#EFE4FF', chipColor: colors.primary },
-  like_sent:     { label: 'Like Sent', icon: 'heart',         chipBg: '#FFE8F3', chipColor: colors.heartPink },
-  like_received: { label: 'Likes You', icon: 'heart',         chipBg: '#E8FFF0', chipColor: colors.success },
+  matched:       { label: i18n.t('profile.other.matched'),   icon: 'heart-circle',  chipBg: '#EFE4FF', chipColor: colors.primary },
+  like_sent:     { label: i18n.t('profile.other.likeSent'),  icon: 'heart',         chipBg: '#FFE8F3', chipColor: colors.heartPink },
+  like_received: { label: i18n.t('profile.other.likesYou'),  icon: 'heart',         chipBg: '#E8FFF0', chipColor: colors.success },
 };
 
-const ACTION_META: Record<NonNullable<OtherUserRelationStatus>, { primary: { icon: IoniconName; color: string; label: string }; secondary?: { icon: IoniconName; color: string; label: string } }> = {
-  matched:       { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: 'Unmatch' } },
-  like_sent:     { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: 'Cancel Like' } },
-  like_received: { primary: { icon: 'close-circle', color: colors.danger, label: 'Decline' }, secondary: { icon: 'heart', color: colors.heartPink, label: 'Like Back' } },
+const ACTION_META: Record<NonNullable<OtherUserRelationStatus>, { primary: { icon: IoniconName; color: string; label: string }; secondary?: { icon: IoniconName; color: string; label: string; accent?: boolean } }> = {
+  matched:       { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: i18n.t('profile.other.unmatch') } },
+  like_sent:     { primary: { icon: 'heart-dislike-outline', color: colors.danger, label: i18n.t('profile.other.cancelLike') } },
+  like_received: { primary: { icon: 'close-circle', color: colors.danger, label: i18n.t('profile.other.decline') }, secondary: { icon: 'heart', color: colors.heartPink, label: i18n.t('profile.other.likeBack'), accent: true } },
 };
 
 const REPORT_OPTIONS: { type: ReportType; label: string }[] = [
-  { type: 'FAKE_PROFILE',              label: 'Fake Profile' },
-  { type: 'HARASSMENT',                label: 'Harassment' },
-  { type: 'HATE_SPEECH',               label: 'Hate Speech' },
-  { type: 'INAPPROPRIATE_CONTENT',     label: 'Inappropriate Content' },
-  { type: 'SCAM',                      label: 'Scam' },
-  { type: 'UNDERAGE',                  label: 'Underage' },
-  { type: 'VIOLENCE_OR_THREATS',       label: 'Violence or Threats' },
-  { type: 'PRIVACY_VIOLATION',         label: 'Privacy Violation' },
-  { type: 'OFF_PLATFORM_SOLICITATION', label: 'Solicitation' },
-  { type: 'SPAM',                      label: 'Spam' },
-  { type: 'OTHER',                     label: 'Other' },
+  { type: 'FAKE_PROFILE',              label: i18n.t('profile.other.reportOptions.fakeProfile') },
+  { type: 'HARASSMENT',                label: i18n.t('profile.other.reportOptions.harassment') },
+  { type: 'HATE_SPEECH',               label: i18n.t('profile.other.reportOptions.hateSpeech') },
+  { type: 'INAPPROPRIATE_CONTENT',     label: i18n.t('profile.other.reportOptions.inappropriateContent') },
+  { type: 'SCAM',                      label: i18n.t('profile.other.reportOptions.scam') },
+  { type: 'UNDERAGE',                  label: i18n.t('profile.other.reportOptions.underage') },
+  { type: 'VIOLENCE_OR_THREATS',       label: i18n.t('profile.other.reportOptions.violenceOrThreats') },
+  { type: 'PRIVACY_VIOLATION',         label: i18n.t('profile.other.reportOptions.privacyViolation') },
+  { type: 'OFF_PLATFORM_SOLICITATION', label: i18n.t('profile.other.reportOptions.solicitation') },
+  { type: 'SPAM',                      label: i18n.t('profile.other.reportOptions.spam') },
+  { type: 'OTHER',                     label: i18n.t('profile.other.reportOptions.other') },
 ];
 
 export default function OtherUserProfileScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { userId, matchId } = useLocalSearchParams<{ userId: string; matchId?: string }>();
   const { colors: th, mode } = useTheme();
@@ -126,18 +129,27 @@ export default function OtherUserProfileScreen() {
     if (!userId) return;
     const isLikeReceived = profile?.status === 'like_received';
     const isLikeSent = profile?.status === 'like_sent';
-    const label = isLikeReceived ? 'Decline' : isLikeSent ? 'Unsend Like' : 'Pass';
+    const name = profile?.name ?? t('profile.other.thisUser');
+    const label = isLikeReceived
+      ? t('profile.other.decline')
+      : isLikeSent
+        ? t('profile.other.unsendLike')
+        : t('profile.other.pass');
     themedAlert({
-      title: `${label}?`,
-      message: isLikeReceived
-        ? `Reject ${profile?.name ?? 'this user'}'s like?`
+      title: isLikeReceived
+        ? t('profile.other.declineTitle')
         : isLikeSent
-          ? `Withdraw your like from ${profile?.name ?? 'this user'}?`
-          : `Pass on ${profile?.name ?? 'this user'}?`,
+          ? t('profile.other.unsendLikeTitle')
+          : t('profile.other.passTitle'),
+      message: isLikeReceived
+        ? t('profile.other.declineBody', { name })
+        : isLikeSent
+          ? t('profile.other.unsendLikeBody', { name })
+          : t('profile.other.passBody', { name }),
       icon: 'close-circle-outline',
       iconColor: colors.danger,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: label,
           style: 'destructive',
@@ -148,7 +160,7 @@ export default function OtherUserProfileScreen() {
               router.back();
             } catch (err: any) {
               if (isInsufficientCreditsError(err)) return;
-              themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
+              themedError(t('common.error'), err?.response?.data?.message ?? err?.message ?? t('profile.other.couldNotComplete'));
             }
           },
         },
@@ -163,41 +175,41 @@ export default function OtherUserProfileScreen() {
       invalidateLikesAndDiscovery();
       if (result.is_match && result.match) {
         themedAlert({
-          title: "It's a Match!",
-          message: `You and ${profile?.name ?? 'this user'} are now matched.`,
+          title: t('profile.other.itsAMatch'),
+          message: t('profile.other.matchBody', { name: profile?.name ?? t('profile.other.thisUser') }),
           icon: 'heart',
           iconColor: colors.secondary,
-          buttons: [{ text: 'OK', onPress: () => router.back() }],
+          buttons: [{ text: t('common.ok'), onPress: () => router.back() }],
         });
       } else {
         themedAlert({
-          title: 'Like sent',
-          message: 'Your like has been sent.',
+          title: t('profile.other.likeSentTitle'),
+          message: t('profile.other.likeSentBody'),
           icon: 'heart-outline',
           iconColor: colors.primary,
-          buttons: [{ text: 'OK', onPress: () => router.back() }],
+          buttons: [{ text: t('common.ok'), onPress: () => router.back() }],
         });
       }
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) return;
-      themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
+      themedError(t('common.error'), err?.response?.data?.message ?? err?.message ?? t('profile.other.couldNotComplete'));
     }
   };
 
   const handleUnmatch = () => {
     if (!resolvedMatchId) {
-      themedError('Cannot unmatch', 'Match information is missing. Try opening this profile from the matches list or chat.');
+      themedError(t('profile.other.cannotUnmatch'), t('profile.other.cannotUnmatchBody'));
       return;
     }
     themedAlert({
-      title: 'Unmatch?',
-      message: 'This conversation will be removed and you will no longer see each other.',
+      title: t('profile.other.unmatchTitle'),
+      message: t('profile.other.unmatchBody'),
       icon: 'heart-dislike-outline',
       iconColor: colors.danger,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Unmatch',
+          text: t('profile.other.unmatch'),
           style: 'destructive',
           onPress: () => {
             unmatch(resolvedMatchId, {
@@ -206,13 +218,13 @@ export default function OtherUserProfileScreen() {
               },
               onError: (error: any) => {
                 const status = error?.response?.status;
-                let message = 'Could not unmatch right now. Please try again later.';
+                let message = t('profile.other.unmatchFailed');
                 if (status === 403) {
-                  message = 'You are not a participant in this match.';
+                  message = t('profile.other.notParticipant');
                 } else if (status === 404) {
-                  message = 'Match not found.';
+                  message = t('profile.other.matchNotFound');
                 }
-                themedError('Unmatch failed', message);
+                themedError(t('profile.other.unmatchFailedTitle'), message);
               },
             });
           },
@@ -224,14 +236,14 @@ export default function OtherUserProfileScreen() {
   const handleBlock = () => {
     setMenuVisible(false);
     themedAlert({
-      title: 'Block user?',
-      message: `${profile?.name ?? 'This user'} will no longer appear in your discovery and any active match will be ended.`,
+      title: t('profile.other.blockTitle'),
+      message: t('profile.other.blockBody', { name: profile?.name ?? t('profile.other.thisUserCap') }),
       icon: 'ban-outline',
       iconColor: colors.danger,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Block',
+          text: t('common.block'),
           style: 'destructive',
           onPress: () => {
             if (!userId) return;
@@ -240,20 +252,20 @@ export default function OtherUserProfileScreen() {
               {
                 onSuccess: () => {
                   themedAlert({
-                    title: 'Blocked',
-                    message: 'User has been blocked.',
+                    title: t('profile.other.blockedTitle'),
+                    message: t('profile.other.blockedBody'),
                     icon: 'ban',
                     iconColor: colors.danger,
-                    buttons: [{ text: 'OK', onPress: () => router.back() }],
+                    buttons: [{ text: t('common.ok'), onPress: () => router.back() }],
                   });
                 },
                 onError: (error: any) => {
                   const msg = error?.response?.data?.message;
                   themedError(
-                    'Could not block',
+                    t('profile.other.couldNotBlock'),
                     msg === 'CANNOT_BLOCK_SELF'
-                      ? 'You cannot block yourself.'
-                      : 'Something went wrong. Please try again.',
+                      ? t('profile.other.cannotBlockSelf')
+                      : t('common.somethingWentWrong'),
                   );
                 },
               },
@@ -286,15 +298,15 @@ export default function OtherUserProfileScreen() {
         onSuccess: () => {
           setReportVisible(false);
           setReportDescription('');
-          themedSuccess('Report submitted', 'Thank you. Our team will review this report.');
+          themedSuccess(t('profile.other.reportSubmitted'), t('profile.other.reportSubmittedBody'));
         },
         onError: (error: any) => {
           const msg = error?.response?.data?.message;
           themedError(
-            'Could not submit report',
+            t('profile.other.couldNotSubmitReport'),
             msg === 'CANNOT_REPORT_SELF'
-              ? 'You cannot report yourself.'
-              : 'Something went wrong. Please try again.',
+              ? t('profile.other.cannotReportSelf')
+              : t('common.somethingWentWrong'),
           );
         },
       },
@@ -397,20 +409,20 @@ export default function OtherUserProfileScreen() {
     return (
       <View style={[styles.screen, styles.centered, { backgroundColor: th.background }]}>
         <Ionicons name="person-circle-outline" size={56} color={th.textMuted} />
-        <Text style={[styles.errorText, { color: th.textSecondary }]}>Profile not available</Text>
+        <Text style={[styles.errorText, { color: th.textSecondary }]}>{t('profile.notAvailable')}</Text>
         <TouchableOpacity
           style={styles.retryBtn}
           onPress={() => refetch()}
           activeOpacity={0.75}
         >
-          <Text style={[styles.retryBtnText, { color: colors.primary }]}>Try again</Text>
+          <Text style={[styles.retryBtnText, { color: colors.primary }]}>{t('profile.tryAgain')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => router.back()}
           activeOpacity={0.75}
         >
-          <Text style={[styles.backBtnText, { color: th.textMuted }]}>Go back</Text>
+          <Text style={[styles.backBtnText, { color: th.textMuted }]}>{t('profile.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -432,7 +444,7 @@ export default function OtherUserProfileScreen() {
             style={styles.closeBtn}
             onPress={() => router.back()}
             activeOpacity={0.8}
-            accessibilityLabel="Go back"
+            accessibilityLabel={t('profile.goBack')}
             accessibilityRole="button"
           >
             <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
@@ -442,7 +454,7 @@ export default function OtherUserProfileScreen() {
             style={styles.closeBtn}
             onPress={() => setMenuVisible(true)}
             activeOpacity={0.8}
-            accessibilityLabel="More options"
+            accessibilityLabel={t('profile.moreOptions')}
             accessibilityRole="button"
           >
             <Ionicons name="ellipsis-horizontal" size={20} color="#FFFFFF" />
@@ -575,10 +587,10 @@ export default function OtherUserProfileScreen() {
                   }}
                   activeOpacity={0.82}
                   accessibilityRole="button"
-                  accessibilityLabel="Chat"
+                  accessibilityLabel={t('profile.other.chat')}
                 >
                   <Ionicons name="chatbubble-ellipses" size={15} color="#FFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.actionTextButtonLabel}>Chat</Text>
+                  <Text style={styles.actionTextButtonLabel}>{t('profile.other.chat')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -589,14 +601,14 @@ export default function OtherUserProfileScreen() {
                   disabled={isUnmatching}
                   activeOpacity={0.82}
                   accessibilityRole="button"
-                  accessibilityLabel="Unmatch"
+                  accessibilityLabel={t('profile.other.unmatch')}
                 >
                   {isUnmatching ? (
                     <ActivityIndicator size="small" color="#FFF" />
                   ) : (
                     <>
                       <Ionicons name="heart-dislike" size={15} color="#FFF" style={{ marginRight: 6 }} />
-                      <Text style={styles.actionTextButtonLabel}>Unmatch</Text>
+                      <Text style={styles.actionTextButtonLabel}>{t('profile.other.unmatch')}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -611,14 +623,14 @@ export default function OtherUserProfileScreen() {
                 disabled={isSwiping}
                 activeOpacity={0.82}
                 accessibilityRole="button"
-                accessibilityLabel="Cancel Like"
+                accessibilityLabel={t('profile.other.cancelLike')}
               >
                 {isSwiping ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
                   <>
                     <Ionicons name="heart-dislike" size={15} color="#FFF" style={{ marginRight: 6 }} />
-                    <Text style={styles.actionTextButtonLabel}>Cancel Like</Text>
+                    <Text style={styles.actionTextButtonLabel}>{t('profile.other.cancelLike')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -640,7 +652,7 @@ export default function OtherUserProfileScreen() {
             )}
             {actionMeta.secondary && (() => {
               const secondary = actionMeta.secondary;
-              const isPrimary = secondary.label === 'Like Back';
+              const isPrimary = !!secondary.accent;
               return (
                 <TouchableOpacity
                   style={[styles.actionIconButton, { backgroundColor: isPrimary ? colors.primary : th.surface, opacity: isSwiping ? 0.6 : 1 }]}
@@ -684,10 +696,10 @@ export default function OtherUserProfileScreen() {
               style={styles.dropdownItem}
               onPress={handleOpenReport}
               accessibilityRole="button"
-              accessibilityLabel="Report user"
+              accessibilityLabel={t('profile.other.reportUser')}
             >
               <Ionicons name="flag-outline" size={18} color={colors.danger} />
-              <Text style={[styles.dropdownItemText, { color: colors.danger }]}>Report</Text>
+              <Text style={[styles.dropdownItemText, { color: colors.danger }]}>{t('common.report')}</Text>
             </Pressable>
             <View style={[styles.dropdownDivider, { backgroundColor: th.border }]} />
             <Pressable
@@ -695,14 +707,14 @@ export default function OtherUserProfileScreen() {
               onPress={handleBlock}
               disabled={isBlocking}
               accessibilityRole="button"
-              accessibilityLabel="Block user"
+              accessibilityLabel={t('profile.other.blockUser')}
             >
               {isBlocking ? (
                 <ActivityIndicator size="small" color={th.text} />
               ) : (
                 <Ionicons name="ban-outline" size={18} color={th.text} />
               )}
-              <Text style={[styles.dropdownItemText, { color: th.text }]}>Block</Text>
+              <Text style={[styles.dropdownItemText, { color: th.text }]}>{t('common.block')}</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -730,9 +742,9 @@ export default function OtherUserProfileScreen() {
             {/* Handle bar */}
             <View style={[styles.reportHandle, { backgroundColor: th.border }]} />
 
-            <Text style={[styles.reportTitle, { color: th.text }]}>Report Profile</Text>
+            <Text style={[styles.reportTitle, { color: th.text }]}>{t('profile.other.reportProfile')}</Text>
             <Text style={[styles.reportSubtitle, { color: th.textMuted }]}>
-              Select the reason for reporting {profile.name}
+              {t('profile.other.reportReason', { name: profile.name })}
             </Text>
 
             {/* Dropdown trigger */}
@@ -749,7 +761,7 @@ export default function OtherUserProfileScreen() {
                 setReportDropdownOpen((v) => !v);
               }}
               accessibilityRole="button"
-              accessibilityLabel="Select report reason"
+              accessibilityLabel={t('profile.other.selectReportReason')}
             >
               <Text
                 style={[
@@ -760,7 +772,7 @@ export default function OtherUserProfileScreen() {
               >
                 {selectedReportType
                   ? REPORT_OPTIONS.find((o) => o.type === selectedReportType)?.label
-                  : 'Select a reason…'}
+                  : t('profile.other.selectReason')}
               </Text>
               <Ionicons
                 name={reportDropdownOpen ? 'chevron-up' : 'chevron-down'}
@@ -823,7 +835,7 @@ export default function OtherUserProfileScreen() {
                   backgroundColor: isDark ? '#1A1525' : th.backgroundSelected,
                 },
               ]}
-              placeholder="Optional: add details (max 2000 characters)"
+              placeholder={t('profile.other.reportDetailsPlaceholder')}
               placeholderTextColor={th.textMuted}
               multiline
               numberOfLines={4}
@@ -832,10 +844,10 @@ export default function OtherUserProfileScreen() {
               value={reportDescription}
               onChangeText={setReportDescription}
               editable={!isReporting}
-              accessibilityLabel="Report description"
+              accessibilityLabel={t('profile.other.reportDescription')}
             />
             <Text style={[styles.reportCharCount, { color: th.textMuted }]}>
-              {reportDescription.length}/2000
+              {t('profile.other.charCount', { count: reportDescription.length })}
             </Text>
 
             <TouchableOpacity
@@ -850,12 +862,12 @@ export default function OtherUserProfileScreen() {
               disabled={!selectedReportType || isReporting}
               activeOpacity={0.82}
               accessibilityRole="button"
-              accessibilityLabel="Submit report"
+              accessibilityLabel={t('profile.other.submitReport')}
             >
               {isReporting ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text style={styles.reportSubmitLabel}>Submit Report</Text>
+                <Text style={styles.reportSubmitLabel}>{t('profile.other.submitReport')}</Text>
               )}
             </TouchableOpacity>
           </Pressable>

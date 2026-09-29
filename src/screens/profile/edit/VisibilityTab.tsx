@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
+import i18n from '@/i18n';
 import { SectionCard, SectionTitle } from './FormComponents';
 
 type Props = {
@@ -16,10 +18,10 @@ const MODE_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> 
   PUBLIC: 'globe-outline',
   INCOGNITO: 'glasses-outline',
 };
-const MODE_LABELS: Record<string, string> = { PUBLIC: 'Public', INCOGNITO: 'Private' };
+const MODE_LABELS: Record<string, string> = { PUBLIC: i18n.t('profile.visibility.public'), INCOGNITO: i18n.t('profile.visibility.private') };
 const MODE_HELPERS: Record<string, string> = {
-  PUBLIC: 'Public — Your profile is visible in discovery. Others can find and swipe on you.',
-  INCOGNITO: 'Private — Your profile is hidden from discovery. You can still swipe, but others won\'t see you.',
+  PUBLIC: i18n.t('profile.visibility.publicDesc'),
+  INCOGNITO: i18n.t('profile.visibility.privateDesc'),
 };
 
 export const VisibilityTab = memo(function VisibilityTab({
@@ -27,14 +29,15 @@ export const VisibilityTab = memo(function VisibilityTab({
   discoveryMode,
   onDiscoveryModeChange,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <View>
       {/* ─── Profile Visibility ─── */}
       <SectionCard sem={sem}>
-        <SectionTitle title="Profile Visibility" sem={sem} />
+        <SectionTitle title={t('profile.visibility.title')} sem={sem} />
 
         <Text className="text-sm font-medium mb-1.5" style={{ color: sem.textSecondary }}>
-          Discovery mode
+          {t('profile.visibility.discoveryMode')}
         </Text>
         <View
           className="flex-row rounded-xl overflow-hidden border"

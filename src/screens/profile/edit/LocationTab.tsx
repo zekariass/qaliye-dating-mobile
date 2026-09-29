@@ -9,6 +9,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { searchLocations } from '@/api/locationsApi';
 import { type SemanticTheme } from '@/constants/semantic-colors';
@@ -39,6 +40,7 @@ export const LocationTab = memo(function LocationTab({
   isSaving,
   scrollRef,
 }: Props) {
+  const { t } = useTranslation();
   const [pendingPayload, setPendingPayload] = useState<LocationPayload | null>(null);
   const [pendingDisplay, setPendingDisplay] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -79,7 +81,7 @@ export const LocationTab = memo(function LocationTab({
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setLocationError('Location permission denied.');
+        setLocationError(t('profile.location.permissionDenied'));
         return;
       }
       const pos = await Location.getCurrentPositionAsync({
@@ -108,15 +110,15 @@ export const LocationTab = memo(function LocationTab({
       };
 
       setPendingPayload(gpsPayload);
-      setPendingDisplay(formatted || 'Current location');
+      setPendingDisplay(formatted || t('profile.location.currentLocation'));
       setQuery('');
       setResults([]);
     } catch {
-      setLocationError('Failed to get current location.');
+      setLocationError(t('profile.location.locateFailed'));
     } finally {
       setIsLocating(false);
     }
-  }, []);
+  }, [t]);
 
   // ─── Manual city selection ────────────────────────────────────────────
   const handleSelectCity = useCallback((item: LocationSearchItem) => {
@@ -148,7 +150,7 @@ export const LocationTab = memo(function LocationTab({
   return (
     <View>
       <SectionCard sem={sem}>
-        <SectionTitle title="Your Location" sem={sem} />
+        <SectionTitle title={t('profile.location.title')} sem={sem} />
 
         {/* Current / pending address chip */}
         <View
@@ -169,7 +171,7 @@ export const LocationTab = memo(function LocationTab({
             style={{ color: hasPending ? sem.accent : displayedAddress ? sem.textPrimary : sem.textMuted }}
             numberOfLines={2}
           >
-            {displayedAddress ?? 'No location set'}
+            {displayedAddress ?? t('profile.location.noLocation')}
           </Text>
           {hasPending && (
             <View
@@ -177,7 +179,7 @@ export const LocationTab = memo(function LocationTab({
               style={{ backgroundColor: sem.accent }}
             >
               <Text className="text-sm font-semibold" style={{ color: '#FFFFFF' }}>
-                Pending
+                {t('profile.location.pending')}
               </Text>
             </View>
           )}
@@ -207,7 +209,7 @@ export const LocationTab = memo(function LocationTab({
                 );
               }, 300);
             }}
-            placeholder="Search city…"
+            placeholder={t('profile.location.searchPlaceholder')}
             placeholderTextColor={sem.textMuted}
             autoCapitalize="words"
             className="flex-1 text-base"
@@ -228,7 +230,7 @@ export const LocationTab = memo(function LocationTab({
         {/* No results */}
         {!isSearching && query.length >= 2 && results.length === 0 && (
           <Text className="text-sm text-center py-2" style={{ color: sem.textMuted }}>
-            No cities found
+            {t('profile.location.noResults')}
           </Text>
         )}
 
@@ -269,7 +271,7 @@ export const LocationTab = memo(function LocationTab({
         <View className="flex-row items-center my-3">
           <View className="flex-1 h-px" style={{ backgroundColor: sem.border }} />
           <Text className="text-sm mx-3" style={{ color: sem.textMuted }}>
-            or use GPS
+            {t('profile.location.orGps')}
           </Text>
           <View className="flex-1 h-px" style={{ backgroundColor: sem.border }} />
         </View>
@@ -281,7 +283,7 @@ export const LocationTab = memo(function LocationTab({
           className="flex-row items-center justify-center rounded-xl py-3 mb-3 border"
           style={{ borderColor: colors.primary, backgroundColor: `${colors.primary}12` }}
           accessibilityRole="button"
-          accessibilityLabel="Use current GPS location"
+          accessibilityLabel={t('profile.location.useGps')}
         >
           {isLocating ? (
             <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
@@ -289,7 +291,7 @@ export const LocationTab = memo(function LocationTab({
             <Ionicons name="locate" size={16} color={colors.primary} style={{ marginRight: 8 }} />
           )}
           <Text className="text-base font-semibold" style={{ color: colors.primary }}>
-            {isLocating ? 'Getting location…' : 'Use current GPS location'}
+            {isLocating ? t('profile.location.locating') : t('profile.location.useGps')}
           </Text>
         </Pressable>
 
@@ -302,7 +304,7 @@ export const LocationTab = memo(function LocationTab({
 
         {/* Helper */}
         <Text className="text-sm mt-1 mb-4" style={{ color: sem.textMuted }}>
-          Your location helps show you closer matches and appear in local searches.
+          {t('profile.location.helper')}
         </Text>
 
         {/* Save button */}
@@ -315,7 +317,7 @@ export const LocationTab = memo(function LocationTab({
             opacity: !hasPending || isSaving ? 0.6 : 1,
           }}
           accessibilityRole="button"
-          accessibilityLabel="Save location"
+          accessibilityLabel={t('profile.location.save')}
         >
           {({ pressed }) =>
             isSaving ? (
@@ -328,7 +330,7 @@ export const LocationTab = memo(function LocationTab({
                   opacity: pressed ? 0.8 : 1,
                 }}
               >
-                Save Location
+                {t('profile.location.save')}
               </Text>
             )
           }

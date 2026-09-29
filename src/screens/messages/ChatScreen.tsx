@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Alert,
@@ -48,6 +49,7 @@ import { useNotificationPrompt } from '@/hooks/notifications/useNotificationProm
 import { useBlockUser } from '@/hooks/safety/useBlockUser';
 import { useReportUser } from '@/hooks/safety/useReportUser';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import { useChatStore } from '@/stores/chat-store';
 import type {
     ChatFileAttachment,
@@ -62,6 +64,7 @@ import {
     getVoiceChatMsgsStatus
 } from '@/utils/entitlements';
 import { processChatImage } from '@/utils/imageProcessor';
+import { isBlindDateMatch } from '@/utils/matchSource';
 
 
 // ---------------------------------------------------------------------------
@@ -74,11 +77,16 @@ type RawParams = Record<string, string | string[]>;
 // Message → view-model builder
 // ---------------------------------------------------------------------------
 
+const MONTH_KEYS = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const;
+
 function formatTime(iso: string): string {
   const d = new Date(iso);
   const h = d.getHours();
   const m = d.getMinutes().toString().padStart(2, '0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
+  const ampm = i18n.t(h >= 12 ? 'chat.timePm' : 'chat.timeAm');
   return `${h % 12 || 12}:${m} ${ampm}`;
 }
 
@@ -91,10 +99,13 @@ function formatDateLabel(iso: string): string {
     (today.getTime() - msgDay.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  if (diffDays === 0) return i18n.t('chat.today');
+  if (diffDays === 1) return i18n.t('chat.yesterday');
+  return i18n.t('chat.dateLabel', {
+    month: i18n.t(`chat.months.${MONTH_KEYS[d.getMonth()]}`),
+    day: d.getDate(),
+    year: d.getFullYear(),
+  });
 }
 
 function deriveDeliveryStatus(
@@ -246,18 +257,18 @@ const typingStyles = StyleSheet.create({
   },
 });
 
-const REPORT_OPTIONS: { type: ReportType; label: string }[] = [
-  { type: 'FAKE_PROFILE', label: 'Fake profile' },
-  { type: 'HARASSMENT', label: 'Harassment' },
-  { type: 'HATE_SPEECH', label: 'Hate speech' },
-  { type: 'INAPPROPRIATE_CONTENT', label: 'Inappropriate content' },
-  { type: 'SCAM', label: 'Scam or fraud' },
-  { type: 'UNDERAGE', label: 'Underage user' },
-  { type: 'VIOLENCE_OR_THREATS', label: 'Violence or threats' },
-  { type: 'PRIVACY_VIOLATION', label: 'Privacy violation' },
-  { type: 'OFF_PLATFORM_SOLICITATION', label: 'Off-platform solicitation' },
-  { type: 'SPAM', label: 'Spam' },
-  { type: 'OTHER', label: 'Other' },
+const REPORT_OPTIONS: { type: ReportType; labelKey: string }[] = [
+  { type: 'FAKE_PROFILE', labelKey: 'chat.reportOptions.fakeProfile' },
+  { type: 'HARASSMENT', labelKey: 'chat.reportOptions.harassment' },
+  { type: 'HATE_SPEECH', labelKey: 'chat.reportOptions.hateSpeech' },
+  { type: 'INAPPROPRIATE_CONTENT', labelKey: 'chat.reportOptions.inappropriateContent' },
+  { type: 'SCAM', labelKey: 'chat.reportOptions.scam' },
+  { type: 'UNDERAGE', labelKey: 'chat.reportOptions.underage' },
+  { type: 'VIOLENCE_OR_THREATS', labelKey: 'chat.reportOptions.violenceOrThreats' },
+  { type: 'PRIVACY_VIOLATION', labelKey: 'chat.reportOptions.privacyViolation' },
+  { type: 'OFF_PLATFORM_SOLICITATION', labelKey: 'chat.reportOptions.solicitation' },
+  { type: 'SPAM', labelKey: 'chat.reportOptions.spam' },
+  { type: 'OTHER', labelKey: 'chat.reportOptions.other' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -265,20 +276,21 @@ const REPORT_OPTIONS: { type: ReportType; label: string }[] = [
 // ---------------------------------------------------------------------------
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   return (
     <View style={stateStyles.wrap}>
-      <Text style={[stateStyles.title, { color: th.text }]}>Something went wrong</Text>
+      <Text style={[stateStyles.title, { color: th.text }]}>{t('common.somethingWentWrong')}</Text>
       <Text style={[stateStyles.sub, { color: th.textSecondary }]}>
-        Could not load messages.
+        {t('chat.loadError')}
       </Text>
       <TouchableOpacity
         style={[stateStyles.retryBtn, { backgroundColor: colors.primary }]}
         onPress={onRetry}
         accessibilityRole="button"
-        accessibilityLabel="Retry loading messages"
+        accessibilityLabel={t('chat.retryLoad')}
       >
-        <Text style={stateStyles.retryText}>Retry</Text>
+        <Text style={stateStyles.retryText}>{t('common.retry')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -297,6 +309,7 @@ const stateStyles = StyleSheet.create({
 // ---------------------------------------------------------------------------
 
 export default function ChatScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors: th } = useTheme();
@@ -306,10 +319,12 @@ export default function ChatScreen() {
   // ── Route params ─────────────────────────────────────────────────────────
   const params = useLocalSearchParams() as RawParams;
   const matchId = (params.matchId as string) ?? '';
-  const displayName = (params.displayName as string) ?? 'Unknown';
+  const displayName = (params.displayName as string) ?? t('chat.unknownUser');
   const rawAvatar = params.avatarUrl as string | undefined;
   const avatarUrl = rawAvatar && rawAvatar.length > 0 ? rawAvatar : null;
   const isVerified = (params.isVerified as string) === '1';
+  // Instant badge before the thread metadata finishes loading.
+  const paramIsBlindDate = params.matchSource === 'BLIND_DATE';
 
   // Guard: if there's no matchId, the route is invalid (e.g. stale notification
   // or persisted navigation state). Redirect to the discovery tab instead of
@@ -442,16 +457,16 @@ export default function ChatScreen() {
       const isText = type === 'text';
       const subscriptionEnabled = entitlements?.country_settings?.subscription_enabled ?? true;
       const fallbackMessage = isVoice
-        ? "You've used all your available voice messages."
+        ? t('chat.voiceLimitReached')
         : isText
-        ? "You've used all your available messages for this conversation."
-        : "You've used all your available image messages.";
+        ? t('chat.messageLimitReached')
+        : t('chat.imageLimitReached');
       const baseMessage = serverMessage ?? fallbackMessage;
       const title = isVoice
-        ? 'Voice Message Limit Reached'
+        ? t('chat.voiceLimitTitle')
         : isText
-        ? 'Message Limit Reached'
-        : 'Image Message Limit Reached';
+        ? t('chat.messageLimitTitle')
+        : t('chat.imageLimitTitle');
       const icon = isVoice ? 'mic-outline' : isText ? 'chatbubble-outline' : 'image-outline';
       themedAlert({
         title,
@@ -460,7 +475,7 @@ export default function ChatScreen() {
         iconColor: colors.warning,
         buttons: [
           ...(subscriptionEnabled ? [{
-            text: 'Go Premium',
+            text: t('common.goPremium'),
             style: 'default' as const,
             icon: 'crown',
             iconFamily: 'material' as const,
@@ -469,11 +484,11 @@ export default function ChatScreen() {
               router.push('/(app)/premium' as any);
             },
           }] : []),
-          { text: 'Cancel', style: 'cancel' as const },
+          { text: t('common.cancel'), style: 'cancel' as const },
         ],
       });
     },
-    [router, entitlements],
+    [router, entitlements, t],
   );
 
   const handleQuotaExceeded = useCallback(
@@ -569,7 +584,7 @@ export default function ChatScreen() {
         setSelectedFiles((prev) => {
           const combined = [...prev, file];
           if (combined.length > 3) {
-            Alert.alert('Too many attachments', 'You can attach up to 3 images per message.');
+            Alert.alert(t('chat.tooManyImages'), t('chat.tooManyImagesBody'));
             return prev;
           }
           return combined;
@@ -579,11 +594,11 @@ export default function ChatScreen() {
         );
       }
     } catch {
-      Alert.alert('Error', 'Could not open image picker.');
+      Alert.alert(t('common.error'), t('chat.attachmentPickerError'));
     } finally {
       setIsProcessingImages(false);
     }
-  }, []);
+  }, [t]);
 
   const handleRemoveFile = useCallback((idx: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
@@ -648,40 +663,39 @@ export default function ChatScreen() {
     handleCloseActions();
     if (!matchId) return;
     themedAlert({
-      title: 'Clear conversation?',
-      message:
-        'This hides the existing messages for you. The other person will still see the chat.',
+      title: t('chat.clearTitle'),
+      message: t('chat.clearBody'),
       icon: 'trash-outline',
       iconColor: colors.danger,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Clear',
+          text: t('chat.clear'),
           style: 'destructive',
           onPress: () => {
             clearMessages(matchId, {
               onSuccess: () => {
-                themedSuccess('Conversation cleared', 'Only new messages will appear from now on.');
+                themedSuccess(t('chat.clearSuccessTitle'), t('chat.clearSuccessBody'));
               },
               onError: (error: any) => {
                 const status = error?.response?.status;
                 const code = error?.response?.data?.code;
-                let message = 'Could not clear this conversation. Please try again later.';
+                let message = t('chat.clearError');
                 if (status === 403 && code === 'ACCOUNT_NOT_ACTIVE') {
-                  message = 'Your account must be active to manage chats.';
+                  message = t('chat.accountNotActive');
                 } else if (status === 403 && code === 'MATCH_ACCESS_DENIED') {
-                  message = 'You no longer have access to this conversation.';
+                  message = t('chat.matchAccessDenied');
                 } else if (status === 404) {
-                  message = 'This match no longer exists.';
+                  message = t('chat.matchNotFound');
                 }
-                themedError('Clear failed', message);
+                themedError(t('chat.clearFailedTitle'), message);
               },
             });
           },
         },
       ],
     });
-  }, [clearMessages, handleCloseActions, matchId]);
+  }, [clearMessages, handleCloseActions, matchId, t]);
 
   const handleConfirmBlock = useCallback(() => {
     if (!participant?.userId) return;
@@ -690,40 +704,40 @@ export default function ChatScreen() {
       {
         onSuccess: () => {
           themedAlert({
-            title: 'User blocked',
-            message: `${participant.displayName} has been blocked.`,
+            title: t('chat.blockedTitle'),
+            message: t('chat.blockedBody', { name: participant.displayName }),
             icon: 'ban',
             iconColor: colors.danger,
-            buttons: [{ text: 'OK', onPress: () => router.back() }],
+            buttons: [{ text: t('common.ok'), onPress: () => router.back() }],
           });
         },
         onError: (error: any) => {
           const msg = error?.response?.data?.message;
           themedError(
-            'Could not block user',
+            t('chat.couldNotBlock'),
             msg === 'CANNOT_BLOCK_SELF'
-              ? 'You cannot block yourself.'
-              : 'Something went wrong. Please try again.',
+              ? t('chat.cannotBlockSelf')
+              : t('common.somethingWentWrong'),
           );
         },
       },
     );
-  }, [blockUser, participant, router]);
+  }, [blockUser, participant, router, t]);
 
   const handleBlock = useCallback(() => {
     handleCloseActions();
     if (!participant) return;
     themedAlert({
-      title: 'Block user?',
-      message: `Blocking ${participant.displayName} will end the match and hide them from your discovery feed.`,
+      title: t('chat.blockTitle'),
+      message: t('chat.blockBody', { name: participant.displayName }),
       icon: 'ban-outline',
       iconColor: colors.danger,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Block', style: 'destructive', onPress: handleConfirmBlock },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.block'), style: 'destructive', onPress: handleConfirmBlock },
       ],
     });
-  }, [handleCloseActions, handleConfirmBlock, participant]);
+  }, [handleCloseActions, handleConfirmBlock, participant, t]);
 
   const handleOpenReport = useCallback(() => {
     handleCloseActions();
@@ -747,20 +761,20 @@ export default function ChatScreen() {
         onSuccess: () => {
           setReportVisible(false);
           setReportDescription('');
-          themedSuccess('Report submitted', 'Thank you. Our team will review this conversation.');
+          themedSuccess(t('chat.reportSubmitted'), t('chat.reportSubmittedBody'));
         },
         onError: (error: any) => {
           const msg = error?.response?.data?.message;
           themedError(
-            'Could not submit report',
+            t('chat.couldNotSubmitReport'),
             msg === 'CANNOT_REPORT_SELF'
-              ? 'You cannot report yourself.'
-              : 'Something went wrong. Please try again.',
+              ? t('chat.cannotReportSelf')
+              : t('common.somethingWentWrong'),
           );
         },
       },
     );
-  }, [participant, reportDescription, reportUser, selectedReportType]);
+  }, [participant, reportDescription, reportUser, selectedReportType, t]);
 
   const reportButtonDisabled = !selectedReportType || isReporting;
 
@@ -832,6 +846,7 @@ export default function ChatScreen() {
         displayName={thread?.participant.displayName ?? displayName}
         avatarUrl={avatarUrl ?? thread?.participant.avatarUrl ?? null}
         isVerified={thread?.participant.isVerified ?? isVerified}
+        isBlindDate={isBlindDateMatch(thread) || paramIsBlindDate}
         activityStatus={headerActivityStatus}
         onBack={handleBack}
         onProfilePress={handleProfilePress}
@@ -880,7 +895,7 @@ export default function ChatScreen() {
       {isEnded && (
         <View style={styles.endedBanner}>
           <Text style={styles.endedText}>
-            This match has ended. You can no longer send messages.
+            {t('chat.matchEnded')}
           </Text>
         </View>
       )}
@@ -928,7 +943,7 @@ export default function ChatScreen() {
               onPress={handleOpenReport}
             >
               <Ionicons name="flag-outline" size={18} color={colors.danger} />
-              <Text style={[styles.actionsText, { color: colors.danger }]}>Report</Text>
+              <Text style={[styles.actionsText, { color: colors.danger }]}>{t('common.report')}</Text>
             </Pressable>
             <View style={[styles.actionsDivider, { backgroundColor: th.border }]} />
             <Pressable
@@ -941,7 +956,7 @@ export default function ChatScreen() {
               ) : (
                 <Ionicons name="ban-outline" size={18} color={th.text} />
               )}
-              <Text style={[styles.actionsText, { color: th.text }]}>Block user</Text>
+              <Text style={[styles.actionsText, { color: th.text }]}>{t('chat.blockUser')}</Text>
             </Pressable>
             <View style={[styles.actionsDivider, { backgroundColor: th.border }]} />
             <Pressable
@@ -954,7 +969,7 @@ export default function ChatScreen() {
               ) : (
                 <Ionicons name="trash-outline" size={18} color={colors.danger} />
               )}
-              <Text style={[styles.actionsText, { color: colors.danger }]}>Clear conversation</Text>
+              <Text style={[styles.actionsText, { color: colors.danger }]}>{t('chat.clearConversation')}</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -983,8 +998,8 @@ export default function ChatScreen() {
             onPress={() => {}}
           >
             <View style={[styles.reportHandle, { backgroundColor: th.border }]} />
-            <Text style={[styles.reportTitle, { color: th.text }]}>Report conversation</Text>
-            <Text style={[styles.reportSubtitle, { color: th.textMuted }]}>Why are you reporting {participant?.displayName ?? 'this user'}?</Text>
+            <Text style={[styles.reportTitle, { color: th.text }]}>{t('chat.reportConversation')}</Text>
+            <Text style={[styles.reportSubtitle, { color: th.textMuted }]}>{t('chat.reportSubtitle', { name: participant?.displayName ?? t('chat.thisUser') })}</Text>
 
             <Pressable
               style={[
@@ -1007,8 +1022,8 @@ export default function ChatScreen() {
                 numberOfLines={1}
               >
                 {selectedReportType
-                  ? REPORT_OPTIONS.find((o) => o.type === selectedReportType)?.label
-                  : 'Select a reason…'}
+                  ? t(REPORT_OPTIONS.find((o) => o.type === selectedReportType)?.labelKey ?? 'chat.reportOptions.other')
+                  : t('chat.selectReason')}
               </Text>
               <Ionicons
                 name={reportDropdownOpen ? 'chevron-up' : 'chevron-down'}
@@ -1023,7 +1038,7 @@ export default function ChatScreen() {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
               >
-                {REPORT_OPTIONS.map(({ type, label }, idx) => {
+                {REPORT_OPTIONS.map(({ type, labelKey }, idx) => {
                   const selected = selectedReportType === type;
                   return (
                     <Pressable
@@ -1048,7 +1063,7 @@ export default function ChatScreen() {
                           selected && { fontWeight: '700' },
                         ]}
                       >
-                        {label}
+                        {t(labelKey)}
                       </Text>
                       {selected && (
                         <Ionicons name="checkmark" size={16} color={colors.primary} />
@@ -1071,7 +1086,7 @@ export default function ChatScreen() {
               multiline
               numberOfLines={4}
               maxLength={2000}
-              placeholder="Add details (optional)"
+              placeholder={t('chat.reportDetailsPlaceholder')}
               placeholderTextColor={th.textMuted}
               value={reportDescription}
               onChangeText={setReportDescription}
@@ -1079,7 +1094,7 @@ export default function ChatScreen() {
               textAlignVertical="top"
             />
             <Text style={[styles.reportCharCount, { color: th.textMuted }]}>
-              {reportDescription.length}/2000
+              {t('chat.charCount', { count: reportDescription.length })}
             </Text>
 
             <TouchableOpacity
@@ -1097,7 +1112,7 @@ export default function ChatScreen() {
               {isReporting ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text style={styles.reportSubmitLabel}>Submit report</Text>
+                <Text style={styles.reportSubmitLabel}>{t('chat.submitReport')}</Text>
               )}
             </TouchableOpacity>
           </Pressable>

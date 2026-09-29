@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { BlurredPortraitFallback } from '@/components/blind-date/SessionSwipeCard';
@@ -14,22 +15,22 @@ import { bdColors, bdGradients } from '@/constants/blindDateTheme';
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type {
-    BlindDateParticipantStatus,
-    BlindDateRosterParticipantDto,
+  BlindDateParticipantStatus,
+  BlindDateRosterParticipantDto,
 } from '@/types/blindDate';
 
 // ─── Status presentation ──────────────────────────────────────────────────────
 
 const STATUS_META: Record<
   BlindDateParticipantStatus,
-  { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }
+  { labelKey: string; icon: keyof typeof Ionicons.glyphMap; color: string }
 > = {
-  ACTIVE:     { label: 'In the running', icon: 'ellipse',            color: colors.success },
-  ADVANCED:   { label: 'Advanced',       icon: 'arrow-up-circle',    color: '#3B82F6' },
-  FINALIST:   { label: 'Finalist',       icon: 'star',               color: bdColors.gold },
-  REVEALED:   { label: 'Revealed',       icon: 'eye',                color: bdColors.primary },
-  ELIMINATED: { label: 'Eliminated',     icon: 'close-circle',       color: bdColors.slate },
-  WITHDRAWN:  { label: 'Withdrew',       icon: 'exit-outline',       color: bdColors.slate },
+  ACTIVE:     { labelKey: 'blindDate.roster.statusActive',     icon: 'ellipse',            color: colors.success },
+  ADVANCED:   { labelKey: 'blindDate.roster.statusAdvanced',   icon: 'arrow-up-circle',    color: '#3B82F6' },
+  FINALIST:   { labelKey: 'blindDate.roster.statusFinalist',   icon: 'star',               color: bdColors.gold },
+  REVEALED:   { labelKey: 'blindDate.roster.statusRevealed',   icon: 'eye',                color: bdColors.primary },
+  ELIMINATED: { labelKey: 'blindDate.roster.statusEliminated', icon: 'close-circle',       color: '#d53605' },
+  WITHDRAWN:  { labelKey: 'blindDate.roster.statusWithdrawn',  icon: 'exit-outline',       color: bdColors.slate },
 };
 
 function formatJoinedAt(iso: string): string {
@@ -38,6 +39,11 @@ function formatJoinedAt(iso: string): string {
     ? ''
     : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
+
+// Alternating card tints — light purple vs darker purple, echoing the Blind
+// Date violet palette while keeping the card content readable.
+const CARD_TINTS_LIGHT = ['#EFE3FF', '#D6C0FF'];
+const CARD_TINTS_DARK  = ['#251741', '#170D2E'];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -71,9 +77,11 @@ export function AnonymousParticipantCard({
    */
   isFinalRound?: boolean;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const meta = STATUS_META[participant.status];
+  const metaLabel = t(meta.labelKey);
   const [expanded, setExpanded] = useState(false);
 
   // ADVANCE is only a recorded selection — status stays ACTIVE until the
@@ -83,23 +91,29 @@ export function AnonymousParticipantCard({
     participant.decision === 'ADVANCE' &&
     (participant.status === 'ACTIVE' || participant.status === 'ADVANCED');
   const pillMeta = markedAdvance
-    ? { label: 'Selected', icon: 'checkmark-circle' as const, color: bdColors.primary }
-    : meta;
+    ? { label: t('blindDate.roster.selected'), icon: 'checkmark-circle' as const, color: bdColors.primary }
+    : { ...meta, label: metaLabel };
 
   const answerCount = participant.answers.filter((a) => a.submitted_at != null).length;
   const totalQuestions = participant.answers.length;
   const isDimmed =
     participant.status === 'ELIMINATED' || participant.status === 'WITHDRAWN';
   const showActions = selectable && !isDimmed;
+  const cardPalette = isDark ? CARD_TINTS_DARK : CARD_TINTS_LIGHT;
+  const cardBg = cardPalette[index % cardPalette.length];
 
   return (
     <View
       style={[
         styles.card,
         {
-          backgroundColor: th.surface,
+          backgroundColor: cardBg,
           borderColor:
-            participant.status === 'FINALIST' ? bdColors.gold : th.border,
+            participant.status === 'FINALIST'
+              ? bdColors.gold
+              : isFinalRound
+                ? `${bdColors.gold}80`
+                : th.border,
         },
         isDimmed && styles.cardDim,
       ]}
@@ -110,7 +124,7 @@ export function AnonymousParticipantCard({
         onPress={() => setExpanded((v) => !v)}
         activeOpacity={0.75}
         accessibilityRole="button"
-        accessibilityLabel={`Participant ${index + 1}, ${meta.label}`}
+        accessibilityLabel={t('blindDate.roster.participantA11y', { index: index + 1, status: metaLabel })}
       >
         {/* Blurred portrait */}
         <View style={styles.avatarWrap}>
@@ -127,12 +141,12 @@ export function AnonymousParticipantCard({
 
         <View style={styles.headText}>
           <Text style={[styles.name, { color: th.text }]}>
-            Participant #{index + 1}
+            {t('blindDate.roster.participantN', { index: index + 1 })}
           </Text>
           <Text style={[styles.sub, { color: th.textSecondary }]}>
-            Joined {formatJoinedAt(participant.joined_at)}
+            {t('blindDate.roster.joinedOn', { date: formatJoinedAt(participant.joined_at) })}
             {totalQuestions > 0
-              ? `  ·  ${answerCount}/${totalQuestions} answered`
+              ? `  ·  ${t('blindDate.roster.answeredCount', { answered: answerCount, total: totalQuestions })}`
               : ''}
           </Text>
         </View>
@@ -162,8 +176,8 @@ export function AnonymousParticipantCard({
           accessibilityRole="button"
           accessibilityLabel={
             expanded
-              ? 'Hide answers'
-              : `View answers, ${answerCount} of ${totalQuestions} answered`
+              ? t('blindDate.roster.hideAnswers')
+              : t('blindDate.roster.viewAnswersA11y', { answered: answerCount, total: totalQuestions })
           }
           accessibilityState={{ expanded }}
         >
@@ -174,8 +188,10 @@ export function AnonymousParticipantCard({
           />
           <Text style={[styles.viewAnswersText, { color: bdColors.primary }]}>
             {expanded
-              ? 'Hide answers'
-              : `View answers${totalQuestions > 0 ? ` · ${answerCount}/${totalQuestions}` : ''}`}
+              ? t('blindDate.roster.hideAnswers')
+              : totalQuestions > 0
+                ? t('blindDate.roster.viewAnswersCount', { answered: answerCount, total: totalQuestions })
+                : t('blindDate.roster.viewAnswers')}
           </Text>
           <Ionicons
             name={expanded ? 'chevron-up' : 'chevron-down'}
@@ -191,8 +207,8 @@ export function AnonymousParticipantCard({
           {participant.answers.length === 0 ? (
             <Text style={[styles.answerEmpty, { color: th.textSecondary }]}>
               {participant.status === 'WITHDRAWN'
-                ? 'Withdrew before answering.'
-                : 'No answers for the current round yet.'}
+                ? t('blindDate.roster.withdrewBeforeAnswering')
+                : t('blindDate.roster.noAnswersYet')}
             </Text>
           ) : (
             participant.answers.map((a, i) => (
@@ -219,7 +235,7 @@ export function AnonymousParticipantCard({
                       !a.submitted_at && styles.answerPending,
                     ]}
                   >
-                    {a.submitted_at ? a.answer : 'Not answered yet'}
+                    {a.submitted_at ? a.answer : t('blindDate.roster.notAnsweredYet')}
                   </Text>
                 </View>
               </View>
@@ -252,7 +268,7 @@ export function AnonymousParticipantCard({
               >
                 <Ionicons name="close" size={15} color={colors.danger} />
                 <Text style={[styles.actionText, { color: colors.danger }]}>
-                  Pass
+                  {t('blindDate.roster.pass')}
                 </Text>
               </TouchableOpacity>
 
@@ -283,10 +299,8 @@ export function AnonymousParticipantCard({
                     ]}
                   >
                     {markedAdvance
-                      ? 'Selected'
-                      : participant.status === 'ADVANCED'
-                        ? 'Keep'
-                        : 'Select'}
+                      ? t('blindDate.roster.selected')
+                      : t('blindDate.roster.select')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -304,11 +318,11 @@ export function AnonymousParticipantCard({
                 disabled={disabled}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                accessibilityLabel="Select as finalist"
+                accessibilityLabel={t('blindDate.roster.selectFinalistA11y')}
               >
                 <Ionicons name="star" size={15} color={bdColors.gold} />
                 <Text style={[styles.actionText, { color: '#B45309' }]}>
-                  Finalist
+                  {t('blindDate.roster.finalist')}
                 </Text>
               </TouchableOpacity>
             </>

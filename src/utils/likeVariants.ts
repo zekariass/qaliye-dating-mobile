@@ -1,7 +1,22 @@
+import i18n from '@/i18n';
 import type { LikeActionVariantDto } from '@/types/discovery';
 
 /** Show a "N left" badge on a like variant once this few remain. */
 export const LOW_REMAINING_THRESHOLD = 2;
+
+/**
+ * The variant a "plain" like sends — the one flagged `is_default` by the
+ * backend. `is_default` is absent on older payloads, which is treated as
+ * false; when nothing is flagged the first variant (lowest sort_order) is
+ * used. Returns null when the catalog is empty or not yet loaded — callers
+ * should then fall back to DEFAULT_LIKE_VARIANT_CODE.
+ */
+export function defaultLikeVariant(
+  variants: LikeActionVariantDto[] | null | undefined,
+): LikeActionVariantDto | null {
+  if (!variants || variants.length === 0) return null;
+  return variants.find((v) => v.is_default === true) ?? variants[0];
+}
 
 /** True when the variant has a period limit at all (limit null/undefined → unlimited). */
 export function isLikeVariantLimited(variant: LikeActionVariantDto): boolean {
@@ -28,21 +43,21 @@ export function likeVariantResetHint(variant: LikeActionVariantDto): string {
   switch (variant.period_type) {
     case 'DAY':
       return validDate
-        ? `Resets at ${validDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
-        : 'Resets at midnight';
+        ? i18n.t('billing.balances.resetsAtTime', { time: validDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) })
+        : i18n.t('billing.balances.resetsMidnight');
     case 'MONTH':
       return validDate
-        ? `Resets on ${validDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-        : 'Resets next month';
+        ? i18n.t('billing.balances.resetsOnDate', { date: validDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })
+        : i18n.t('billing.balances.resetsNextMonth');
     case 'BILLING_CYCLE':
       return validDate
-        ? `Resets on ${validDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-        : 'Resets with your subscription';
+        ? i18n.t('billing.balances.resetsOnDate', { date: validDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })
+        : i18n.t('billing.balances.resetsWithSubscription');
     case 'LIFETIME':
-      return 'Limit reached';
+      return i18n.t('billing.balances.limitReached');
     default:
       return validDate
-        ? `Resets on ${validDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-        : 'Limit reached';
+        ? i18n.t('billing.balances.resetsOnDate', { date: validDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })
+        : i18n.t('billing.balances.limitReached');
   }
 }

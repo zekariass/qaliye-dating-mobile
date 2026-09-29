@@ -31,6 +31,7 @@ import { useRevenueCatReconcile } from '@/hooks/billing/useRevenueCatReconcile';
 import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppLink } from '@/hooks/useAppLink';
+import i18n from '@/i18n';
 import type { PurchasesPackage } from '@/services/billing/revenueCatService';
 import type { ClaimablePromotionDto, PaymentMethodDto, SubscriptionProvider } from '@/types/billing';
 import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
@@ -38,15 +39,15 @@ import { extractApiError } from '@/utils/apiError';
 import { cachePaymentPhone } from '@/utils/paymentPhone';
 
 function formatProviderName(provider?: SubscriptionProvider): string {
-  if (!provider) return 'Local';
+  if (!provider) return i18n.t('billing.providerLocal', 'Local');
   const names: Record<string, string> = {
     TELEBIRR: 'Telebirr',
     CBE_BIRR: 'CBE Birr',
     CHAPA: 'Chapa',
     ARIFPAY: 'ArifPay',
-    BANK_TRANSFER: 'Bank Transfer',
+    BANK_TRANSFER: i18n.t('billing.providerBankTransfer', 'Bank Transfer'),
     STRIPE: 'Stripe',
-    PROMOTION: 'Promotion',
+    PROMOTION: i18n.t('billing.providerPromotion', 'Promotion'),
   };
   return names[provider] ?? provider.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 }
@@ -207,7 +208,7 @@ export default function PremiumPaywallScreen() {
 
   const handleRcPurchase = useCallback((pkg: PurchasesPackage) => {
     purchase({ pkg, productType: 'SUBSCRIPTION' }, {
-      onError: (e) => themedError('Purchase failed', e.message),
+      onError: (e) => themedError(t('billing.purchaseFailed', 'Purchase failed'), e.message),
     });
   }, [purchase]);
 
@@ -325,10 +326,16 @@ export default function PremiumPaywallScreen() {
 
   const selectedOffer = subscriptionOffers.find((o) => o.id === selectedOfferId) ?? null;
   const confirmedFeatureName = selectedOffer
-    ? `Premium${selectedOffer.billing_interval_count && selectedOffer.billing_interval_unit
-        ? ` · ${selectedOffer.billing_interval_count} ${selectedOffer.billing_interval_unit.toLowerCase()}${selectedOffer.billing_interval_count > 1 ? 's' : ''}`
+    ? `${t('billing.premiumActive', 'Premium')}${selectedOffer.billing_interval_count && selectedOffer.billing_interval_unit
+        ? ` · ${t('billing.cycleInterval', '{{count}} {{unit}}', {
+            count: selectedOffer.billing_interval_count,
+            unit: t(`billing.unit.${selectedOffer.billing_interval_unit.toLowerCase()}`, {
+              count: selectedOffer.billing_interval_count,
+              defaultValue: `${selectedOffer.billing_interval_unit.toLowerCase()}${selectedOffer.billing_interval_count > 1 ? 's' : ''}`,
+            }),
+          })}`
         : ''}`
-    : 'Premium';
+    : t('billing.premiumActive', 'Premium');
 
   return (
     <View style={[styles.screen, { backgroundColor: th.background, paddingTop: top }]}>
@@ -622,7 +629,7 @@ export default function PremiumPaywallScreen() {
                   <View style={[styles.alreadyActiveBanner, { backgroundColor: colors.primary + '15' }]}>
                     <ActivityIndicator size="small" color={colors.primary} />
                     <Text style={[styles.alreadyActiveText, { color: th.text }]}>
-                      {t('billing.purchaseActivating', 'Activating your subscription…')}
+                      {t('billing.subscriptionActivating', 'Activating your subscription…')}
                     </Text>
                   </View>
                 )}

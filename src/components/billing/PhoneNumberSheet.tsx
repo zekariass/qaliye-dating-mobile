@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Keyboard,
@@ -40,6 +41,7 @@ export function PhoneNumberSheet({
   secondaryColor,
   backgroundColor,
 }: Props) {
+  const { t } = useTranslation();
   const { bottom } = useSafeAreaInsets();
   const [phone, setPhone] = useState('0');
   const [touched, setTouched] = useState(false);
@@ -101,16 +103,16 @@ export function PhoneNumberSheet({
 
         <View style={styles.headerRow}>
           <View style={styles.headerTitleWrap}>
-            <Text style={[styles.title, { color: textColor }]}>Phone Number</Text>
+            <Text style={[styles.title, { color: textColor }]}>{t('billing.phoneNumber', 'Phone Number')}</Text>
             <Text style={[styles.subtitle, { color: secondaryColor }]}>
-              Enter your phone number to receive a payment prompt
+              {t('billing.phonePromptBody', 'Enter your phone number to receive a payment prompt')}
             </Text>
           </View>
           <Pressable
             style={[styles.closeBtn, { backgroundColor }]}
             onPress={onDismiss}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t('common.close', 'Close')}
           >
             <Ionicons name="close" size={18} color={textColor} />
           </Pressable>
@@ -132,13 +134,13 @@ export function PhoneNumberSheet({
               keyboardType="numeric"
               maxLength={13}
               editable={!isSubmitting}
-              accessibilityLabel="Phone number"
+              accessibilityLabel={t('billing.phoneNumber', 'Phone number')}
             />
           </View>
 
           {(showError || errorMessage) && (
             <Text style={styles.helperText}>
-              {errorMessage ?? 'Please enter a valid Ethiopian phone number starting with 09'}
+              {errorMessage ?? t('billing.phoneInvalid', 'Please enter a valid Ethiopian phone number starting with 09')}
             </Text>
           )}
         </View>
@@ -150,7 +152,7 @@ export function PhoneNumberSheet({
             disabled={isSubmitting}
             accessibilityRole="button"
           >
-            <Text style={[styles.cancelBtnText, { color: textColor }]}>Cancel</Text>
+            <Text style={[styles.cancelBtnText, { color: textColor }]}>{t('common.cancel', 'Cancel')}</Text>
           </Pressable>
 
           <Pressable
@@ -163,7 +165,7 @@ export function PhoneNumberSheet({
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                <Text style={styles.continueBtnText}>Continue</Text>
+                <Text style={styles.continueBtnText}>{t('common.continue', 'Continue')}</Text>
                 <Ionicons name="arrow-forward" size={18} color="#fff" />
               </>
             )}

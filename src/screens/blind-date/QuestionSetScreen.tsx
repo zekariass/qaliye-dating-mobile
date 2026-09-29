@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     FlatList,
@@ -35,6 +36,7 @@ import {
     useQuestionSetMutations,
 } from '@/hooks/blindDate/useQuestionSet';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type {
     BlindDateCatalogCategoryDto,
     BlindDateCatalogQuestionDto,
@@ -43,6 +45,7 @@ import type {
     BlindDateSetQuestionDto,
 } from '@/types/blindDate';
 import { extractApiError } from '@/utils/apiError';
+import { blindDateErrorMessage } from '@/utils/blindDateErrors';
 
 const MAX_QUESTION_LEN = 500;
 const MAX_ANSWER_LEN = 2000;
@@ -67,16 +70,19 @@ function useQTheme() {
 }
 
 function fieldError(err: unknown): string {
-  const { code, message } = extractApiError(err);
+  const { code } = extractApiError(err);
   switch (code.toLowerCase()) {
     case 'answer_too_long':
-      return `Answers can be at most ${MAX_ANSWER_LEN} characters.`;
+      return i18n.t('blindDate.questionSet.errors.answerTooLong', { max: MAX_ANSWER_LEN });
     case 'question_too_long':
-      return `Questions can be at most ${MAX_QUESTION_LEN} characters.`;
+      return i18n.t('blindDate.questionSet.errors.questionTooLong', { max: MAX_QUESTION_LEN });
     case 'question_required':
-      return 'Please write a question.';
+      return i18n.t('blindDate.questionSet.errors.questionRequired');
+    case 'answer_required':
+      return i18n.t('blindDate.questionSet.errors.answerRequired');
     default:
-      return message;
+      // error.message mirrors the machine code — use the localized mapping.
+      return blindDateErrorMessage(err);
   }
 }
 
@@ -127,6 +133,7 @@ function Sheet({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
   const { sheetBg, textMuted } = useQTheme();
   const insets = useSafeAreaInsets();
   return (
@@ -147,7 +154,7 @@ function Sheet({
               onPress={onClose}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Close"
+              accessibilityLabel={t('blindDate.common.close')}
             >
               <Ionicons name="close" size={20} color={textMuted} />
             </TouchableOpacity>
@@ -201,6 +208,7 @@ function AnswerForm({
   onSave: (answer: string, onError: (msg: string) => void) => void;
   saving: boolean;
 }) {
+  const { t } = useTranslation();
   const { textPrimary, textMuted, border, inputBg, isDark } = useQTheme();
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState(target.answer ?? '');
@@ -234,12 +242,12 @@ function AnswerForm({
     >
       {/* Header — matches the custom-question composer */}
       <View style={[styles.customHead, { paddingTop: insets.top + 8, borderBottomColor: border }]}>
-        <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Back">
+        <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('blindDate.common.back')}>
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.customTitle, { color: textPrimary }]}>Your Answer</Text>
+        <Text style={[styles.customTitle, { color: textPrimary }]}>{t('blindDate.questionSet.answerTitle')}</Text>
         <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityRole="button">
-          <Text style={[styles.customCancel, { color: bdColors.primaryLight }]}>Cancel</Text>
+          <Text style={[styles.customCancel, { color: bdColors.primaryLight }]}>{t('blindDate.common.cancel')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -264,7 +272,7 @@ function AnswerForm({
         <View onLayout={(e) => { fieldYRef.current = e.nativeEvent.layout.y; }}>
           <View style={styles.fieldLabelRow}>
             <Text style={[styles.fieldLabel, { color: textPrimary }]}>
-              Your answer <Text style={{ color: bdColors.primaryLight }}>*</Text>
+              {t('blindDate.questionSet.yourAnswer')} <Text style={{ color: bdColors.primaryLight }}>*</Text>
             </Text>
             <Text style={[styles.charCount, { color: textMuted, marginTop: 0 }]}>
               {draft.length}/{MAX_ANSWER_LEN}
@@ -272,7 +280,7 @@ function AnswerForm({
           </View>
           <TextInput
             style={[styles.input, styles.inputMultiline, { color: textPrimary, borderColor: border, backgroundColor: inputBg }]}
-            placeholder="Type your answer…"
+            placeholder={t('blindDate.questionSet.answerPlaceholder')}
             placeholderTextColor={textMuted}
             multiline
             maxLength={MAX_ANSWER_LEN}
@@ -286,12 +294,12 @@ function AnswerForm({
 
         <View style={{ marginTop: 18 }}>
           <GradientCta
-            label="Save Answer"
+            label={t('blindDate.questionSet.saveAnswer')}
             loading={saving}
             onPress={() => {
               const a = draft.trim();
               if (!a) {
-                setError('Please write an answer.');
+                setError(t('blindDate.questionSet.errors.answerRequired'));
                 return;
               }
               onSave(a, setError);
@@ -304,11 +312,11 @@ function AnswerForm({
           activeOpacity={0.75}
           accessibilityRole="button"
         >
-          <Text style={[styles.customCancelBtnText, { color: textPrimary }]}>Cancel</Text>
+          <Text style={[styles.customCancelBtnText, { color: textPrimary }]}>{t('blindDate.common.cancel')}</Text>
         </TouchableOpacity>
 
         <Text style={[styles.hint, { color: textMuted, marginTop: 16 }]}>
-          Answers stay anonymous — participants see them without knowing who wrote them.
+          {t('blindDate.questionSet.answerHint')}
         </Text>
 
         {/* Scrollable room while the keyboard is open */}
@@ -320,11 +328,11 @@ function AnswerForm({
 
 // ─── Custom question composer (create / edit) ─────────────────────────────────
 
-const QUESTION_TIPS = [
-  'Be open-ended to get meaningful answers',
-  'Keep it respectful and positive',
-  'Avoid sensitive or overly personal questions early on',
-  'Make it relevant to getting to know the person',
+const QUESTION_TIP_KEYS = [
+  'blindDate.questionSet.tips.openEnded',
+  'blindDate.questionSet.tips.respectful',
+  'blindDate.questionSet.tips.sensitive',
+  'blindDate.questionSet.tips.relevant',
 ];
 
 function CustomQuestionSheet({
@@ -374,6 +382,7 @@ function CustomQuestionForm({
   onEdit: (id: string, patch: { question?: string; answer?: string }, onError: (msg: string) => void) => void;
   saving: boolean;
 }) {
+  const { t } = useTranslation();
   const { textPrimary, textMuted, border, inputBg, isDark } = useQTheme();
   const insets = useSafeAreaInsets();
   const isEdit = target !== null;
@@ -410,9 +419,9 @@ function CustomQuestionForm({
   const submit = () => {
     const q = question.trim();
     const a = answer.trim();
-    if (!q) return setError('Please write a question.');
-    if (q.length > MAX_QUESTION_LEN) return setError(`Questions can be at most ${MAX_QUESTION_LEN} characters.`);
-    if (!a) return setError('Please write your answer.');
+    if (!q) return setError(t('blindDate.questionSet.errors.questionRequired'));
+    if (q.length > MAX_QUESTION_LEN) return setError(t('blindDate.questionSet.errors.questionTooLong', { max: MAX_QUESTION_LEN }));
+    if (!a) return setError(t('blindDate.questionSet.errors.yourAnswerRequired'));
     if (target) {
       const patch: { question?: string; answer?: string } = {};
       if (q !== target.question) patch.question = q;
@@ -431,14 +440,14 @@ function CustomQuestionForm({
     >
       {/* Header — back chevron, title, cancel (reference screen 2) */}
       <View style={[styles.customHead, { paddingTop: insets.top + 8, borderBottomColor: border }]}>
-        <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Back">
+        <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('blindDate.common.back')}>
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.customTitle, { color: textPrimary }]}>
-          {isEdit ? 'Edit Custom Question' : 'Create Custom Question'}
+          {isEdit ? t('blindDate.questionSet.editCustomTitle') : t('blindDate.questionSet.createCustomTitle')}
         </Text>
         <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityRole="button">
-          <Text style={[styles.customCancel, { color: bdColors.primaryLight }]}>Cancel</Text>
+          <Text style={[styles.customCancel, { color: bdColors.primaryLight }]}>{t('blindDate.common.cancel')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -451,7 +460,7 @@ function CustomQuestionForm({
         contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 28 }}
       >
         <Text style={[styles.customSub, { color: textMuted }]}>
-          {isEdit ? 'Update your custom question' : 'Add your own question to your set'}
+          {isEdit ? t('blindDate.questionSet.customSubEdit') : t('blindDate.questionSet.customSubNew')}
         </Text>
 
         {/* Hero card */}
@@ -461,10 +470,10 @@ function CustomQuestionForm({
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.customHeroTitle, { color: textPrimary }]}>
-              Your questions, your way
+              {t('blindDate.questionSet.customHeroTitle')}
             </Text>
             <Text style={[styles.customHeroSub, { color: textMuted }]}>
-              Add a custom question to make your Blind Date more personal and meaningful.
+              {t('blindDate.questionSet.customHeroSub')}
             </Text>
           </View>
         </View>
@@ -475,7 +484,7 @@ function CustomQuestionForm({
         >
           <View style={styles.fieldLabelRow}>
             <Text style={[styles.fieldLabel, { color: textPrimary }]}>
-              Question <Text style={{ color: bdColors.primaryLight }}>*</Text>
+              {t('blindDate.questionSet.questionLabel')} <Text style={{ color: bdColors.primaryLight }}>*</Text>
             </Text>
             <Text style={[styles.charCount, { color: textMuted, marginTop: 0 }]}>
               {question.length}/{MAX_QUESTION_LEN}
@@ -483,7 +492,7 @@ function CustomQuestionForm({
           </View>
           <TextInput
             style={[styles.input, styles.inputMultiline, { color: textPrimary, borderColor: border, backgroundColor: inputBg }]}
-            placeholder="Type your question here…"
+            placeholder={t('blindDate.questionSet.questionPlaceholder')}
             placeholderTextColor={textMuted}
             multiline
             maxLength={MAX_QUESTION_LEN}
@@ -501,7 +510,7 @@ function CustomQuestionForm({
         >
           <View style={styles.fieldLabelRow}>
             <Text style={[styles.fieldLabel, { color: textPrimary }]}>
-              Your answer <Text style={{ color: bdColors.primaryLight }}>*</Text>
+              {t('blindDate.questionSet.yourAnswer')} <Text style={{ color: bdColors.primaryLight }}>*</Text>
             </Text>
             <Text style={[styles.charCount, { color: textMuted, marginTop: 0 }]}>
               {answer.length}/{MAX_ANSWER_LEN}
@@ -509,7 +518,7 @@ function CustomQuestionForm({
           </View>
           <TextInput
             style={[styles.input, styles.inputMultiline, { color: textPrimary, borderColor: border, backgroundColor: inputBg }]}
-            placeholder="Type your answer…"
+            placeholder={t('blindDate.questionSet.answerPlaceholder')}
             placeholderTextColor={textMuted}
             multiline
             maxLength={MAX_ANSWER_LEN}
@@ -526,20 +535,20 @@ function CustomQuestionForm({
           <View style={styles.customTipsHead}>
             <Ionicons name="bulb-outline" size={18} color={bdColors.primaryLight} />
             <Text style={[styles.customTipsTitle, { color: textPrimary }]}>
-              Tips for great questions
+              {t('blindDate.questionSet.tipsTitle')}
             </Text>
           </View>
-          {QUESTION_TIPS.map((tip) => (
-            <View key={tip} style={styles.customTipRow}>
+          {QUESTION_TIP_KEYS.map((key) => (
+            <View key={key} style={styles.customTipRow}>
               <Ionicons name="checkmark" size={15} color={bdColors.primaryLight} />
-              <Text style={[styles.customTipText, { color: textMuted }]}>{tip}</Text>
+              <Text style={[styles.customTipText, { color: textMuted }]}>{t(key)}</Text>
             </View>
           ))}
         </View>
 
         {/* Actions */}
         <GradientCta
-          label={isEdit ? 'Save Changes' : 'Save Question'}
+          label={isEdit ? t('blindDate.questionSet.saveChanges') : t('blindDate.questionSet.saveQuestion')}
           loading={saving}
           onPress={submit}
         />
@@ -549,7 +558,7 @@ function CustomQuestionForm({
           activeOpacity={0.75}
           accessibilityRole="button"
         >
-          <Text style={[styles.customCancelBtnText, { color: textPrimary }]}>Cancel</Text>
+          <Text style={[styles.customCancelBtnText, { color: textPrimary }]}>{t('blindDate.common.cancel')}</Text>
         </TouchableOpacity>
 
         {/* Scrollable room while the keyboard is open */}
@@ -600,13 +609,16 @@ function CatalogQuestionRow({
   adding,
   setFull,
   onAdd,
+  onFocusField,
 }: {
   question: BlindDateCatalogQuestionDto;
   added: boolean;
   adding: boolean;
   setFull: boolean;
   onAdd: (questionId: string, answer: string | undefined, onError: (msg: string) => void) => void;
+  onFocusField?: () => void;
 }) {
+  const { t } = useTranslation();
   const { textPrimary, textMuted, purple, border, inputBg } = useQTheme();
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState('');
@@ -635,7 +647,7 @@ function CatalogQuestionRow({
         </Text>
         {added && (
           <View style={styles.addedPill}>
-            <Text style={styles.addedPillText}>Added</Text>
+            <Text style={styles.addedPillText}>{t('blindDate.questionSet.catalog.added')}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -646,7 +658,7 @@ function CatalogQuestionRow({
             <View style={styles.setFullHint}>
               <Ionicons name="information-circle-outline" size={15} color="#F59E0B" />
               <Text style={styles.setFullHintText}>
-                Question set full — remove a question to add another.
+                {t('blindDate.questionSet.catalog.setFullHint')}
               </Text>
             </View>
           ) : (
@@ -658,12 +670,13 @@ function CatalogQuestionRow({
                   styles.inputMultiline,
                   { color: textPrimary, borderColor: border, backgroundColor: inputBg },
                 ]}
-                placeholder="Your answer (optional — you can answer later)"
+                placeholder={t('blindDate.questionSet.catalog.answerPlaceholder')}
                 placeholderTextColor={textMuted}
                 multiline
                 maxLength={MAX_ANSWER_LEN}
                 value={draft}
                 onChangeText={setDraft}
+                onFocus={onFocusField}
               />
               <Text style={[styles.charCount, { color: textMuted }]}>
                 {draft.length}/{MAX_ANSWER_LEN}
@@ -671,7 +684,7 @@ function CatalogQuestionRow({
               {error ? <Text style={styles.fieldError}>{error}</Text> : null}
               <View style={{ marginTop: 8 }}>
                 <GradientCta
-                  label="Add to my set"
+                  label={t('blindDate.questionSet.catalog.addToMySet')}
                   loading={adding}
                   onPress={() => onAdd(question.id, draft.trim() || undefined, setError)}
                 />
@@ -694,6 +707,7 @@ function CategoryAccordion({
   setFull,
   onAdd,
   addingId,
+  onFocusField,
 }: {
   category: BlindDateCatalogCategoryDto;
   index: number;
@@ -703,7 +717,9 @@ function CategoryAccordion({
   setFull: boolean;
   onAdd: (questionId: string, answer: string | undefined, onError: (msg: string) => void) => void;
   addingId: string | null;
+  onFocusField?: () => void;
 }) {
+  const { t } = useTranslation();
   const { textPrimary, textMuted, purple, border, chipBg, isDark } = useQTheme();
   const [open, setOpen] = useState(false);
   // Questions load only when the section is opened — cached per category.
@@ -730,7 +746,7 @@ function CategoryAccordion({
         activeOpacity={0.75}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={`${category.name} category`}
+        accessibilityLabel={t('blindDate.questionSet.catalog.categoryA11y', { category: category.name })}
       >
         <View style={[styles.accIcon, { backgroundColor: isDark ? `${tint.fg}33` : tint.bg }]}>
           {category.icon_url ? (
@@ -746,7 +762,7 @@ function CategoryAccordion({
           <View style={[styles.accCount, { backgroundColor: chipBg }]}>
             <Text style={[styles.accCountText, { color: purple }]}>
               {count}
-              {addedCount > 0 ? ` · ${addedCount} added` : ''}
+              {addedCount > 0 ? ` · ${t('blindDate.questionSet.catalog.countAdded', { count: addedCount })}` : ''}
             </Text>
           </View>
         )}
@@ -760,15 +776,15 @@ function CategoryAccordion({
           ) : isError ? (
             <View style={styles.accErr}>
               <Text style={[styles.catalogEmptyText, { color: textMuted }]}>
-                Couldn’t load questions.
+                {t('blindDate.questionSet.catalog.loadQuestionsError')}
               </Text>
               <TouchableOpacity onPress={() => refetch()} accessibilityRole="button">
-                <Text style={{ color: purple, fontWeight: '700' }}>Retry</Text>
+                <Text style={{ color: purple, fontWeight: '700' }}>{t('blindDate.common.retry')}</Text>
               </TouchableOpacity>
             </View>
           ) : questions.length === 0 ? (
             <Text style={[styles.catalogEmptyText, { color: textMuted, paddingVertical: 14 }]}>
-              No questions in this category yet.
+              {t('blindDate.questionSet.catalog.emptyCategory')}
             </Text>
           ) : (
             questions.map((q) => (
@@ -779,6 +795,7 @@ function CategoryAccordion({
                 adding={addingId === q.id}
                 setFull={setFull}
                 onAdd={onAdd}
+                onFocusField={onFocusField}
               />
             ))
           )}
@@ -805,11 +822,40 @@ function CatalogSheet({
   onAdd: (questionId: string, answer: string | undefined, onError: (msg: string) => void) => void;
   addingId: string | null;
 }) {
+  const { t } = useTranslation();
   const { sheetBg, textPrimary, textMuted, purple } = useQTheme();
   const insets = useSafeAreaInsets();
 
   const { categories, isLoading: catsLoading, isError, refetch } =
     useCatalogCategories(language, visible);
+
+  // Keyboard-safe scroll — same pattern as the custom-question composer.
+  // The spacer gives the FlatList room so the focused answer field can be
+  // scrolled above the keyboard (essential on Android, where the modal
+  // doesn't resize and KeyboardAvoidingView does nothing).
+  const listRef = useRef<FlatList<BlindDateCatalogCategoryDto>>(null);
+  const focusIndexRef = useRef<number | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  const scrollToCategory = useCallback((index: number) => {
+    setTimeout(() => {
+      listRef.current?.scrollToIndex({ index, viewPosition: 0, animated: true });
+    }, Platform.OS === 'ios' ? 280 : 80);
+  }, []);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      if (focusIndexRef.current != null) scrollToCategory(focusIndexRef.current);
+    });
+    const onHide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, [scrollToCategory]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -826,19 +872,19 @@ function CatalogSheet({
           >
             <View style={styles.handle} />
             <View style={styles.catalogHead}>
-              <Text style={[styles.sheetTitle, { color: textPrimary }]}>Question catalog</Text>
-              <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
+              <Text style={[styles.sheetTitle, { color: textPrimary }]}>{t('blindDate.questionSet.catalog.title')}</Text>
+              <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('blindDate.common.close')}>
                 <Ionicons name="close" size={22} color={textMuted} />
               </TouchableOpacity>
             </View>
             <Text style={[styles.catalogSub, { color: textMuted }]}>
-              Browse categories — tap a question to add it to your set.
+              {t('blindDate.questionSet.catalog.subtitle')}
             </Text>
             {setFull && (
               <View style={styles.setFullHint}>
                 <Ionicons name="information-circle-outline" size={15} color="#F59E0B" />
                 <Text style={styles.setFullHintText}>
-                  Question set full — remove a question to add another.
+                  {t('blindDate.questionSet.catalog.setFullHint')}
                 </Text>
               </View>
             )}
@@ -849,14 +895,15 @@ function CatalogSheet({
               <View style={styles.catalogEmpty}>
                 <Ionicons name="alert-circle-outline" size={36} color={purple} />
                 <Text style={[styles.catalogEmptyText, { color: textMuted }]}>
-                  Couldn’t load categories.
+                  {t('blindDate.questionSet.catalog.loadCategoriesError')}
                 </Text>
                 <TouchableOpacity onPress={() => refetch()} accessibilityRole="button">
-                  <Text style={{ color: purple, fontWeight: '700' }}>Retry</Text>
+                  <Text style={{ color: purple, fontWeight: '700' }}>{t('blindDate.common.retry')}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <FlatList
+                ref={listRef}
                 data={categories}
                 keyExtractor={(c) => c.id}
                 contentContainerStyle={{ paddingBottom: 20 }}
@@ -865,10 +912,18 @@ function CatalogSheet({
                 ListEmptyComponent={
                   <View style={styles.catalogEmpty}>
                     <Text style={[styles.catalogEmptyText, { color: textMuted }]}>
-                      No question categories available.
+                      {t('blindDate.questionSet.catalog.emptyCategories')}
                     </Text>
                   </View>
                 }
+                ListFooterComponent={<View style={{ height: keyboardHeight }} />}
+                onScrollToIndexFailed={({ index }) => {
+                  // Row may not be laid out yet — retry once it has settled.
+                  setTimeout(
+                    () => listRef.current?.scrollToIndex({ index, viewPosition: 0, animated: true }),
+                    250,
+                  );
+                }}
                 renderItem={({ item: c, index }) => (
                   <CategoryAccordion
                     category={c}
@@ -879,6 +934,10 @@ function CatalogSheet({
                     setFull={setFull}
                     onAdd={onAdd}
                     addingId={addingId}
+                    onFocusField={() => {
+                      focusIndexRef.current = index;
+                      if (keyboardHeight > 0) scrollToCategory(index);
+                    }}
                   />
                 )}
               />
@@ -905,12 +964,13 @@ function LanguageSheet({
   current: string;
   onPick: (code: string) => void;
 }) {
+  const { t } = useTranslation();
   const { textPrimary, textMuted, purple } = useQTheme();
   return (
     <Sheet visible={visible} onClose={onClose}>
-      <Text style={[styles.sheetTitle, { color: textPrimary }]}>Question language</Text>
+      <Text style={[styles.sheetTitle, { color: textPrimary }]}>{t('blindDate.questionSet.languageTitle')}</Text>
       <Text style={[styles.hint, { color: textMuted, marginBottom: 12 }]}>
-        Platform questions are shown in this language.
+        {t('blindDate.questionSet.languageHint')}
       </Text>
       {languages.map((l) => {
         const active = l.code === current;
@@ -975,6 +1035,7 @@ function SetQuestionRow({
   onMove: (dir: -1 | 1) => void;
   busy: boolean;
 }) {
+  const { t } = useTranslation();
   const { card, textPrimary, border, isDark } = useQTheme();
   const [showAnswer, setShowAnswer] = useState(false);
   const unanswered = item.answer == null || item.answer.trim() === '';
@@ -985,7 +1046,7 @@ function SetQuestionRow({
   });
   const chipBg = isDark ? `${chip.fg}2E` : chip.bg;
   const chipLabel =
-    kind === 'custom' ? 'My Custom Question' : (categoryName ?? (item.category_code ? prettyCode(item.category_code) : 'Question'));
+    kind === 'custom' ? t('blindDate.questionSet.customChip') : (categoryName ?? (item.category_code ? prettyCode(item.category_code) : t('blindDate.questionSet.questionChip')));
 
   return (
     <View style={[styles.qRow, { backgroundColor: card, borderColor: border }]}>
@@ -1013,7 +1074,7 @@ function SetQuestionRow({
             accessibilityRole="button"
           >
             <Ionicons name="pencil" size={11} color="#F59E0B" />
-            <Text style={styles.unansweredText}>Add answer</Text>
+            <Text style={styles.unansweredText}>{t('blindDate.questionSet.addAnswer')}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -1028,7 +1089,7 @@ function SetQuestionRow({
               color={bdColors.primaryLight}
             />
             <Text style={styles.viewAnswerText}>
-              {showAnswer ? 'Hide' : 'Answer'}
+              {showAnswer ? t('blindDate.questionSet.hideAnswer') : t('blindDate.questionSet.viewAnswer')}
             </Text>
           </TouchableOpacity>
         )}
@@ -1044,9 +1105,9 @@ function SetQuestionRow({
         >
           <View style={styles.answerPanelHead}>
             <Ionicons name="chatbubble-ellipses-outline" size={13} color={bdColors.primary} />
-            <Text style={[styles.answerPanelLabel, { color: bdColors.primary }]}>Your answer</Text>
-            <TouchableOpacity onPress={onEdit} hitSlop={8} accessibilityRole="button" accessibilityLabel="Edit answer">
-              <Text style={[styles.answerPanelEdit, { color: bdColors.primaryLight }]}>Edit</Text>
+            <Text style={[styles.answerPanelLabel, { color: bdColors.primary }]}>{t('blindDate.questionSet.yourAnswer')}</Text>
+            <TouchableOpacity onPress={onEdit} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('blindDate.questionSet.editAnswerA11y')}>
+              <Text style={[styles.answerPanelEdit, { color: bdColors.primaryLight }]}>{t('blindDate.common.edit')}</Text>
             </TouchableOpacity>
           </View>
           <Text style={[styles.answerPanelText, { color: textPrimary }]}>{item.answer}</Text>
@@ -1063,7 +1124,7 @@ function SetQuestionRow({
               disabled={index === 0 || busy}
               hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel="Move up"
+              accessibilityLabel={t('blindDate.questionSet.moveUp')}
             >
               <Ionicons name="chevron-up" size={18} color={textPrimary} />
             </TouchableOpacity>
@@ -1073,7 +1134,7 @@ function SetQuestionRow({
               disabled={index === total - 1 || busy}
               hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel="Move down"
+              accessibilityLabel={t('blindDate.questionSet.moveDown')}
             >
               <Ionicons name="chevron-down" size={18} color={textPrimary} />
             </TouchableOpacity>
@@ -1085,7 +1146,7 @@ function SetQuestionRow({
               onPress={onEdit}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel={kind === 'custom' ? 'Edit question' : 'Edit answer'}
+              accessibilityLabel={kind === 'custom' ? t('blindDate.questionSet.editQuestionA11y') : t('blindDate.questionSet.editAnswerA11y')}
             >
               <Ionicons name="pencil-outline" size={17} color={bdColors.primaryLight} />
             </TouchableOpacity>
@@ -1096,7 +1157,7 @@ function SetQuestionRow({
               hitSlop={8}
               disabled={busy}
               accessibilityRole="button"
-              accessibilityLabel={kind === 'custom' ? 'Delete question' : 'Remove question'}
+              accessibilityLabel={kind === 'custom' ? t('blindDate.questionSet.deleteQuestionA11y') : t('blindDate.questionSet.removeQuestionA11y')}
             >
               <Ionicons name="trash-outline" size={17} color={bdColors.primaryLight} />
             </TouchableOpacity>
@@ -1110,6 +1171,7 @@ function SetQuestionRow({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function QuestionSetScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
@@ -1157,7 +1219,7 @@ export default function QuestionSetScreen() {
     void refetchConfig();
   };
 
-  const err = (msg: string) => themedError('Something went wrong', msg);
+  const err = (msg: string) => themedError(t('blindDate.questionSet.errors.generic'), msg);
 
   // ── Platform question handlers ──────────────────────────────────────────
   const handleSaveAnswer = (answer: string, onError: (m: string) => void) => {
@@ -1173,14 +1235,14 @@ export default function QuestionSetScreen() {
 
   const handleDeleteSetQuestion = (item: BlindDateSetQuestionDto) => {
     themedAlert({
-      title: 'Remove question?',
-      message: `"${item.question}" will be removed from your set.`,
+      title: t('blindDate.questionSet.removeTitle'),
+      message: t('blindDate.questionSet.removeMessage', { question: item.question }),
       icon: 'trash-outline',
       iconColor: colors.danger,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('blindDate.common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('blindDate.common.remove'),
           style: 'destructive',
           icon: 'trash-outline',
           onPress: () =>
@@ -1232,7 +1294,7 @@ export default function QuestionSetScreen() {
         onError: (e) => {
           if (extractApiError(e).code.toLowerCase() === 'max_custom_questions_reached') {
             resyncLimits();
-            onError(`Custom questions are capped at ${maxCustom ?? 'the server limit'} — remove one to add another.`);
+            onError(t('blindDate.questionSet.errors.maxCustom', { max: maxCustom ?? t('blindDate.questionSet.errors.serverLimit') }));
             return;
           }
           onError(fieldError(e));
@@ -1257,14 +1319,14 @@ export default function QuestionSetScreen() {
 
   const handleDeleteCustom = (item: BlindDateCustomQuestionDto) => {
     themedAlert({
-      title: 'Delete question?',
-      message: `"${item.question}" will be permanently deleted.`,
+      title: t('blindDate.questionSet.deleteTitle'),
+      message: t('blindDate.questionSet.deleteMessage', { question: item.question }),
       icon: 'trash-outline',
       iconColor: colors.danger,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('blindDate.common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('blindDate.common.delete'),
           style: 'destructive',
           icon: 'trash-outline',
           onPress: () =>
@@ -1315,15 +1377,15 @@ export default function QuestionSetScreen() {
     mutations.addQuestion.mutate(
       { questionId, answer },
       {
-        onSuccess: () => themedSuccess('Added', 'Question added to your set.'),
+        onSuccess: () => themedSuccess(t('blindDate.questionSet.addedTitle'), t('blindDate.questionSet.addedMessage')),
         onError: (e) => {
           const code = extractApiError(e).code.toLowerCase();
           if (code === 'question_not_found') {
             void mutations.invalidate();
-            onError('That question is no longer available.');
+            onError(t('blindDate.questionSet.errors.questionGone'));
           } else if (code === 'max_questions_reached') {
             resyncLimits();
-            onError(`Your question set is full (${maxSet ?? 'limit'} platform questions) — remove one to add another.`);
+            onError(t('blindDate.questionSet.errors.maxPlatform', { max: maxSet ?? t('blindDate.questionSet.errors.serverLimit') }));
           } else {
             onError(fieldError(e));
           }
@@ -1342,12 +1404,12 @@ export default function QuestionSetScreen() {
           hitSlop={10}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('blindDate.common.back')}
         >
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: textPrimary }]}>My Question Set</Text>
+          <Text style={[styles.headerTitle, { color: textPrimary }]}>{t('blindDate.questionSet.title')}</Text>
         </View>
         <TouchableOpacity
           style={[
@@ -1357,7 +1419,7 @@ export default function QuestionSetScreen() {
           onPress={() => setEditingOrder((e) => !e)}
           activeOpacity={0.75}
           accessibilityRole="button"
-          accessibilityLabel={editingOrder ? 'Done reordering' : 'Edit order'}
+          accessibilityLabel={editingOrder ? t('blindDate.questionSet.doneReorderingA11y') : t('blindDate.questionSet.editOrderA11y')}
         >
           <Ionicons
             name={editingOrder ? 'checkmark' : 'swap-vertical'}
@@ -1365,7 +1427,7 @@ export default function QuestionSetScreen() {
             color={editingOrder ? '#FFF' : bdColors.primary}
           />
           <Text style={[styles.editOrderText, { color: editingOrder ? '#FFF' : bdColors.primary }]}>
-            {editingOrder ? 'Done' : 'Edit Order'}
+            {editingOrder ? t('blindDate.common.done') : t('blindDate.questionSet.editOrder')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1377,9 +1439,9 @@ export default function QuestionSetScreen() {
       ) : isError ? (
         <View style={styles.loadingWrap}>
           <Ionicons name="alert-circle-outline" size={44} color={purple} />
-          <Text style={[styles.emptyTitle, { color: textPrimary }]}>Something went wrong</Text>
+          <Text style={[styles.emptyTitle, { color: textPrimary }]}>{t('blindDate.questionSet.errors.generic')}</Text>
           <View style={{ alignSelf: 'stretch', paddingHorizontal: 40 }}>
-            <GradientCta label="Retry" onPress={() => refetch()} />
+            <GradientCta label={t('blindDate.common.retry')} onPress={() => refetch()} />
           </View>
         </View>
       ) : (
@@ -1409,7 +1471,7 @@ export default function QuestionSetScreen() {
                 accessibilityRole="button"
               >
                 <Ionicons name="globe-outline" size={17} color={purple} />
-                <Text style={[styles.settingsLabel, { color: textPrimary }]}>Question language</Text>
+                <Text style={[styles.settingsLabel, { color: textPrimary }]}>{t('blindDate.questionSet.languageTitle')}</Text>
                 <Text style={[styles.settingsValue, { color: textMuted }]}>
                   {configuration.supported_languages.find((l) => l.code === configuration.language_code)?.name ??
                     configuration.language_code}
@@ -1426,7 +1488,7 @@ export default function QuestionSetScreen() {
                 <View style={[styles.usagePill, { borderColor: platformFull ? '#F59E0B' : border }]}>
                   <Ionicons name="book-outline" size={12} color={platformFull ? '#F59E0B' : textMuted} />
                   <Text style={[styles.usageText, { color: platformFull ? '#F59E0B' : textMuted }]}>
-                    Platform questions: {questions.length}/{maxSet}
+                    {t('blindDate.questionSet.platformUsage', { used: questions.length, max: maxSet })}
                   </Text>
                 </View>
               )}
@@ -1434,7 +1496,7 @@ export default function QuestionSetScreen() {
                 <View style={[styles.usagePill, { borderColor: customFull ? '#F59E0B' : border }]}>
                   <Ionicons name="pencil-outline" size={12} color={customFull ? '#F59E0B' : textMuted} />
                   <Text style={[styles.usageText, { color: customFull ? '#F59E0B' : textMuted }]}>
-                    Custom questions: {customQuestions.length}/{maxCustom}
+                    {t('blindDate.questionSet.customUsage', { used: customQuestions.length, max: maxCustom })}
                   </Text>
                 </View>
               )}
@@ -1445,7 +1507,7 @@ export default function QuestionSetScreen() {
           {totalCount === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: card, borderColor: border }]}>
               <Text style={[styles.emptyCardText, { color: textMuted }]}>
-                No questions yet — browse the catalog or write your own below.
+                {t('blindDate.questionSet.emptySet')}
               </Text>
             </View>
           ) : (
@@ -1503,9 +1565,9 @@ export default function QuestionSetScreen() {
               <Ionicons name="add" size={22} color="#FFF" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.addDashedTitle, { color: textPrimary }]}>Add Another Question</Text>
+              <Text style={[styles.addDashedTitle, { color: textPrimary }]}>{t('blindDate.questionSet.addAnotherTitle')}</Text>
               <Text style={[styles.addDashedSub, { color: textMuted }]}>
-                Choose from our question library or create your own.
+                {t('blindDate.questionSet.addAnotherSub')}
               </Text>
             </View>
             <Ionicons name={showAddOptions ? 'chevron-up' : 'chevron-forward'} size={18} color={bdColors.primaryLight} />
@@ -1523,11 +1585,11 @@ export default function QuestionSetScreen() {
                 <View style={[styles.optIcon, { backgroundColor: isDark ? 'rgba(138,44,255,0.16)' : '#EFE7FF' }]}>
                   <Ionicons name="book" size={20} color={bdColors.primary} />
                 </View>
-                <Text style={[styles.optTitle, { color: textPrimary }]}>Browse Question Library</Text>
+                <Text style={[styles.optTitle, { color: textPrimary }]}>{t('blindDate.questionSet.browseLibraryTitle')}</Text>
                 <Text style={[styles.optSub, { color: platformFull ? '#F59E0B' : textMuted }]}>
                   {platformFull
-                    ? `Question set full (${questions.length}/${maxSet}) — remove a question to add another.`
-                    : 'Explore curated questions across different categories.'}
+                    ? t('blindDate.questionSet.platformFullHint', { used: questions.length, max: maxSet })
+                    : t('blindDate.questionSet.browseLibrarySub')}
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color={bdColors.primaryLight} style={styles.optChevron} />
               </TouchableOpacity>
@@ -1547,11 +1609,11 @@ export default function QuestionSetScreen() {
                 <View style={[styles.optIcon, { backgroundColor: isDark ? 'rgba(138,44,255,0.16)' : '#F2E7FF' }]}>
                   <Ionicons name="pencil" size={20} color={purple} />
                 </View>
-                <Text style={[styles.optTitle, { color: textPrimary }]}>Create Your Own Question</Text>
+                <Text style={[styles.optTitle, { color: textPrimary }]}>{t('blindDate.questionSet.createOwnTitle')}</Text>
                 <Text style={[styles.optSub, { color: customFull ? '#F59E0B' : textMuted }]}>
                   {customFull
-                    ? `Custom questions are full (${customQuestions.length}/${maxCustom}) — remove one to add another.`
-                    : 'Add a custom question to make your Blind Date unique.'}
+                    ? t('blindDate.questionSet.customFullHint', { used: customQuestions.length, max: maxCustom })
+                    : t('blindDate.questionSet.createOwnSub')}
                 </Text>
                 {!customFull && (
                   <Ionicons name="chevron-forward" size={16} color={bdColors.primaryLight} style={styles.optChevron} />
@@ -1562,8 +1624,8 @@ export default function QuestionSetScreen() {
 
           <Text style={[styles.hint, { color: textMuted, marginTop: 18 }]}>
             {configuration?.limits?.max_round_questions != null
-              ? `When you start a Blind Date, you pick up to ${configuration.limits.max_round_questions} questions from this set for participants to answer.`
-              : 'When you start a Blind Date, you pick questions from this set for participants to answer.'}
+              ? t('blindDate.questionSet.roundPickHint', { max: configuration.limits.max_round_questions })
+              : t('blindDate.questionSet.roundPickHintNoMax')}
           </Text>
         </ScrollView>
       )}
@@ -1604,7 +1666,7 @@ export default function QuestionSetScreen() {
                 const { code: c } = extractApiError(e);
                 err(
                   c.toLowerCase() === 'unsupported_language'
-                    ? 'That language is not supported yet.'
+                    ? t('blindDate.questionSet.errors.unsupportedLanguage')
                     : fieldError(e),
                 );
               },
@@ -1613,7 +1675,7 @@ export default function QuestionSetScreen() {
         }
       />
 
-      {/* Shared Blind Date nav — question sets live under the Hosted tab */}
+      {/* Shared Blind Date nav — question sets live under the Create tab */}
       <BlindDateBottomNav
         activeTab="mine"
         onHome={() => router.replace('/(app)/(tabs)' as never)}
@@ -1630,6 +1692,7 @@ export default function QuestionSetScreen() {
             params: { tab: 'participating' },
           })
         }
+        onMatches={() => router.push('/(app)/(tabs)/matches' as never)}
         onProfile={() => router.push('/(app)/(tabs)/profile' as never)}
       />
     </View>

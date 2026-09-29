@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -25,6 +26,15 @@ const TAB_ICONS: Record<ProfileTab, React.ComponentProps<typeof Ionicons>['name'
   Preferences: 'options-outline',
 };
 
+const TAB_LABEL_KEYS: Record<ProfileTab, string> = {
+  Details: 'profile.tabs.details',
+  Bio: 'profile.tabs.bio',
+  Photo: 'profile.tabs.photo',
+  Lifestyle: 'profile.tabs.lifestyle',
+  Status: 'profile.tabs.status',
+  Preferences: 'profile.tabs.preferences',
+};
+
 // Track measured positions of each tab so we can auto-scroll to the active one
 const tabLayouts = new Map<ProfileTab, { x: number; width: number }>();
 
@@ -34,6 +44,7 @@ interface ProfileTabBarProps {
 }
 
 export default function ProfileTabBar({ activeTab, onTabChange }: ProfileTabBarProps) {
+  const { t } = useTranslation();
   const scrollRef = useRef<ScrollView>(null);
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
@@ -103,7 +114,7 @@ export default function ProfileTabBar({ activeTab, onTabChange }: ProfileTabBarP
               onPress={() => handlePress(tab)}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
-              accessibilityLabel={tab}
+              accessibilityLabel={t(TAB_LABEL_KEYS[tab])}
             >
               <Ionicons
                 name={TAB_ICONS[tab]}
@@ -119,7 +130,7 @@ export default function ProfileTabBar({ activeTab, onTabChange }: ProfileTabBarP
                 ]}
                 numberOfLines={1}
               >
-                {tab}
+                {t(TAB_LABEL_KEYS[tab])}
               </Text>
             </Pressable>
           );

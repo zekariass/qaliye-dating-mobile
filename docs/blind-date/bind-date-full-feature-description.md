@@ -333,7 +333,7 @@ CANCELLED
 
 Termination paths differ by state:
 
-- **Manual close** is only allowed while `OPEN`. Once a finalist exists (`REVEAL`), the creator cannot close the session — they must submit a final decision instead.
+- **Manual close** is allowed while `OPEN` or `REVEAL`. Closing during `REVEAL` — e.g. when the finalist is unresponsive — resolves each still-`PENDING` final decision as `NOT_INTERESTED` and completes the session with outcome `NO_MATCH`.
 - **Expiry** of an `OPEN` session transitions it to `EXPIRED`.
 - **Expiry or decision-deadline pass** of a `REVEAL` session resolves each `PENDING` decision as `NOT_INTERESTED` and completes the session with outcome `EXPIRED`.
 - **Admin cancellation** transitions the session to `CANCELLED` from any non-terminal state.
@@ -1538,7 +1538,7 @@ Custom questions are user-generated content shown to other users:
 51. Creating a new round closes the previous round; at most one round per session is `OPEN`.
 52. An existing `ACTIVE` `PASS` between the pair is reversed and replaced by the `BLIND_DATE` action; an existing LIKE-type action is reused.
 53. If the finalist withdraws during `REVEAL`, the session completes with outcome `NO_MATCH`.
-54. The creator cannot manually close a session in `REVEAL`; they must submit a final decision.
+54. The creator can manually close a session in `REVEAL`; pending decisions resolve as `NOT_INTERESTED` and the outcome is `NO_MATCH`.
 55. Deadline- or expiry-driven resolution of pending final decisions records outcome `EXPIRED`; explicit decisions record `MATCHED` or `NO_MATCH`.
 
 ---

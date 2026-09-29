@@ -1,13 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Switch, Text, View } from 'react-native';
 
 import { CountryMultiSelectPicker } from '@/components/catalog/CountryMultiSelectPicker';
 import { EthnicityMultiSelectPicker } from '@/components/catalog/EthnicityMultiSelectPicker';
 import { LanguageMultiSelectPicker } from '@/components/catalog/LanguageMultiSelectPicker';
 import { type SemanticTheme } from '@/constants/semantic-colors';
+import i18n from '@/i18n';
 import type { EthnicityOption, LanguageOption } from '@/types/catalog';
+import { translateProfileOption } from '@/utils/profileOptions';
 import {
     type DiscoveryPrefDraft,
     type HasChildrenPref,
@@ -30,27 +33,28 @@ type Props = {
 const DISTANCE_MARKS = [1, 100, 250, 400, 500];
 
 const LOCATION_MODES: { key: LocationMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-  { key: 'nearby',             label: 'Near Me',   icon: 'locate-outline' },
-  { key: 'diaspora',           label: 'Diaspora',  icon: 'earth-outline' },
-  { key: 'specific_countries', label: 'Specific',  icon: 'flag-outline' },
-  { key: 'anywhere',           label: 'Anywhere',  icon: 'globe-outline' },
+  { key: 'nearby',             label: i18n.t('profile.prefsEdit.nearMe'),   icon: 'locate-outline' },
+  { key: 'diaspora',           label: i18n.t('profile.prefsEdit.diaspora'), icon: 'earth-outline' },
+  { key: 'specific_countries', label: i18n.t('profile.prefsEdit.specific'), icon: 'flag-outline' },
+  { key: 'anywhere',           label: i18n.t('profile.prefsEdit.anywhere'), icon: 'globe-outline' },
 ];
 
 const HAS_CHILDREN_OPTIONS: { key: HasChildrenPref; label: string }[] = [
-  { key: 'any', label: 'Any' },
-  { key: 'yes', label: 'Has children' },
-  { key: 'no',  label: 'No children' },
+  { key: 'any', label: i18n.t('profile.prefsEdit.any') },
+  { key: 'yes', label: i18n.t('profile.prefsEdit.hasChildren') },
+  { key: 'no',  label: i18n.t('profile.prefsEdit.noChildren') },
 ];
 
 const WANTS_CHILDREN_OPTIONS: { key: WantsChildrenPref; label: string }[] = [
-  { key: 'any',                label: 'Any' },
-  { key: 'yes',                label: 'Wants' },
-  { key: 'no',                 label: 'Does not want' },
-  { key: 'not_sure',           label: 'Not sure' },
-  { key: 'open_to_discussion', label: 'Open to discuss' },
+  { key: 'any',                label: i18n.t('profile.prefsEdit.any') },
+  { key: 'yes',                label: i18n.t('profile.prefsEdit.wants') },
+  { key: 'no',                 label: i18n.t('profile.prefsEdit.doesNotWant') },
+  { key: 'not_sure',           label: i18n.t('profile.prefsEdit.notSure') },
+  { key: 'open_to_discussion', label: i18n.t('profile.prefsEdit.openToDiscuss') },
 ];
 
 export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChange, onReset, onSave, isSaving = false, userGender, sem }: Props) {
+  const { t } = useTranslation();
 
   const handleToggleReligion = useCallback((val: string) => {
     const current = prefs.religionPreferences;
@@ -67,10 +71,10 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
           CARD 1 · Who you want to meet
       ═══════════════════════════════════════════════════════════════════ */}
       <SectionCard sem={sem}>
-        <SectionTitle title="Who You Want to Meet" sem={sem} />
+        <SectionTitle title={t('profile.prefsEdit.whoYouWant')} sem={sem} />
 
         {/* ─── Interested In (locked — auto-derived from gender) ─── */}
-        <PrefsLabel label="Interested in" sem={sem}>
+        <PrefsLabel label={t('profile.prefsEdit.interestedIn')} sem={sem}>
           <Ionicons name="lock-closed-outline" size={13} color={sem.textMuted} />
         </PrefsLabel>
         <View
@@ -88,25 +92,25 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
             />
           </View>
           <Text className="flex-1 text-base font-semibold" style={{ color: sem.textPrimary }}>
-            {prefs.interestedIn === 'MALE' ? 'Men' : 'Women'}
+            {prefs.interestedIn === 'MALE' ? t('profile.prefsEdit.men') : t('profile.prefsEdit.women')}
           </Text>
           <View
             className="px-3 py-1 rounded-full"
             style={{ backgroundColor: sem.accentSoft }}
           >
-            <Text className="text-xs font-semibold" style={{ color: sem.accent }}>Auto</Text>
+            <Text className="text-xs font-semibold" style={{ color: sem.accent }}>{t('profile.prefsEdit.auto')}</Text>
           </View>
         </View>
         <Text className="text-sm mt-2 ml-0.5" style={{ color: sem.textMuted }}>
           {userGender
-            ? `Automatically set based on your gender (${userGender === 'MALE' ? 'Man' : 'Woman'}).`
-            : 'Automatically set based on your profile gender.'}
+            ? t('profile.prefsEdit.autoGender', { gender: userGender === 'MALE' ? t('profile.prefsEdit.man') : t('profile.prefsEdit.woman') })
+            : t('profile.prefsEdit.autoGeneric')}
         </Text>
 
         <SectionDivider sem={sem} />
 
         {/* ─── Location Mode ─── */}
-        <PrefsLabel label="Where to discover people" sem={sem} />
+        <PrefsLabel label={t('profile.prefsEdit.whereToDiscover')} sem={sem} />
         <View className="flex-row flex-wrap gap-2.5 mt-1">
           {LOCATION_MODES.map(({ key, label, icon }) => {
             const isActive = prefs.locationMode === key;
@@ -150,12 +154,12 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
           CARD 2 · Age & Distance
       ═══════════════════════════════════════════════════════════════════ */}
       <SectionCard sem={sem}>
-        <SectionTitle title="Age & Distance" sem={sem} />
+        <SectionTitle title={t('profile.prefsEdit.ageDistance')} sem={sem} />
 
         {/* ─── Age Range ─── */}
-        <PrefsLabel label="Age range" sem={sem} />
+        <PrefsLabel label={t('profile.prefsEdit.ageRange')} sem={sem} />
         <View className="flex-row items-center gap-3 mt-2">
-          <AgeDisplay value={prefs.minAge} label="Min" sem={sem} />
+          <AgeDisplay value={prefs.minAge} label={t('profile.prefsEdit.min')} sem={sem} />
           <View className="flex-1">
             <Slider
               minimumValue={18}
@@ -166,7 +170,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
               minimumTrackTintColor={sem.accent}
               maximumTrackTintColor={sem.accentSoft}
               thumbTintColor={sem.accent}
-              accessibilityLabel={`Minimum age: ${prefs.minAge}`}
+              accessibilityLabel={t('profile.prefsEdit.minAgeA11y', { age: prefs.minAge })}
             />
             <Slider
               minimumValue={prefs.minAge + 1}
@@ -177,10 +181,10 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
               minimumTrackTintColor={sem.accent}
               maximumTrackTintColor={sem.accentSoft}
               thumbTintColor={sem.accent}
-              accessibilityLabel={`Maximum age: ${prefs.maxAge}`}
+              accessibilityLabel={t('profile.prefsEdit.maxAgeA11y', { age: prefs.maxAge })}
             />
           </View>
-          <AgeDisplay value={prefs.maxAge} label="Max" sem={sem} />
+          <AgeDisplay value={prefs.maxAge} label={t('profile.prefsEdit.max')} sem={sem} />
         </View>
 
         <SectionDivider sem={sem} />
@@ -188,14 +192,14 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
         {/* ─── Maximum Distance ─── */}
         <View className="flex-row items-center justify-between mb-3">
           <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
-            Maximum distance
+            {t('profile.prefsEdit.maximumDistance')}
           </Text>
           <View
             className="px-3 py-1.5 rounded-full"
             style={{ backgroundColor: sem.accentSoft }}
           >
             <Text className="text-base font-bold" style={{ color: sem.accent }}>
-              {prefs.maximumDistanceKm} km
+              {t('profile.prefsEdit.distanceValue', { distance: prefs.maximumDistanceKm })}
             </Text>
           </View>
         </View>
@@ -208,7 +212,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
           minimumTrackTintColor={sem.accent}
           maximumTrackTintColor={sem.accentSoft}
           thumbTintColor={sem.accent}
-          accessibilityLabel={`Maximum distance: ${prefs.maximumDistanceKm} kilometers`}
+          accessibilityLabel={t('profile.prefsEdit.maxDistanceA11y', { distance: prefs.maximumDistanceKm })}
         />
         <View className="flex-row justify-between mt-2">
           {DISTANCE_MARKS.map((d) => (
@@ -217,24 +221,24 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
               className="text-xs font-medium"
               style={{ color: d === prefs.maximumDistanceKm ? sem.accent : sem.textMuted }}
             >
-              {d === 500 ? '500+' : `${d}`}
+              {d === 500 ? t('profile.prefsEdit.maxDistanceMark') : `${d}`}
             </Text>
           ))}
         </View>
-        <Text className="text-xs text-center mt-1" style={{ color: sem.textMuted }}>km</Text>
+        <Text className="text-xs text-center mt-1" style={{ color: sem.textMuted }}>{t('profile.prefsEdit.km')}</Text>
       </SectionCard>
 
       {/* ═══════════════════════════════════════════════════════════════════
           CARD 3 · Filters & Children Preferences
       ═══════════════════════════════════════════════════════════════════ */}
       <SectionCard sem={sem}>
-        <SectionTitle title="Filters" sem={sem} />
+        <SectionTitle title={t('profile.prefsEdit.filters')} sem={sem} />
 
         {/* ─── Toggles ─── */}
         <ToggleRow
           icon="search-outline"
-          label="Expand search when limited"
-          helperText="Broaden discovery if few matches found."
+          label={t('profile.prefsEdit.expandSearch')}
+          helperText={t('profile.prefsEdit.expandSearchHelper')}
           value={prefs.expandSearchWhenLimited}
           onToggle={(v) => onPrefsChange({ expandSearchWhenLimited: v })}
           sem={sem}
@@ -242,8 +246,8 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
         <View style={{ height: 1, backgroundColor: sem.border, marginVertical: 4 }} />
         <ToggleRow
           icon="checkmark-circle-outline"
-          label="Show verified profiles only"
-          helperText="Only show people with a blue check."
+          label={t('profile.prefsEdit.verifiedOnly')}
+          helperText={t('profile.prefsEdit.verifiedOnlyHelper')}
           value={prefs.verifiedProfilesOnly}
           onToggle={(v) => onPrefsChange({ verifiedProfilesOnly: v })}
           sem={sem}
@@ -252,7 +256,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
         <SectionDivider sem={sem} />
 
         {/* ─── Has Children Preference ─── */}
-        <PrefsLabel label="Partner has children" sem={sem} />
+        <PrefsLabel label={t('profile.prefsEdit.partnerHasChildren')} sem={sem} />
         <View className="flex-row flex-wrap gap-2.5 mt-1">
           {HAS_CHILDREN_OPTIONS.map(({ key, label }) => {
             const isActive = prefs.hasChildrenPreference === key;
@@ -272,7 +276,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
         <SectionDivider sem={sem} />
 
         {/* ─── Wants Children Preference ─── */}
-        <PrefsLabel label="Partner wants children" sem={sem} />
+        <PrefsLabel label={t('profile.prefsEdit.partnerWantsChildren')} sem={sem} />
         <View className="flex-row flex-wrap gap-2.5 mt-1">
           {WANTS_CHILDREN_OPTIONS.map(({ key, label }) => {
             const isActive = prefs.wantsChildrenPreference === key;
@@ -294,12 +298,12 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
           CARD 4 · Culture & Background
       ═══════════════════════════════════════════════════════════════════ */}
       <SectionCard sem={sem}>
-        <SectionTitle title="Culture & Background" sem={sem} />
+        <SectionTitle title={t('profile.prefsEdit.cultureBackground')} sem={sem} />
 
         {/* ─── Religion Preferences ─── */}
-        <PrefsLabel label="Religion" sem={sem} />
+        <PrefsLabel label={t('profile.prefsEdit.religion')} sem={sem} />
         <Text className="text-sm mb-3" style={{ color: sem.textMuted }}>
-          Leave empty to see all religions.
+          {t('profile.prefsEdit.religionHelper')}
         </Text>
         <View className="flex-row flex-wrap gap-2.5">
           {RELIGION_OPTIONS.map((r) => {
@@ -307,7 +311,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
             return (
               <ChipButton
                 key={r}
-                label={r}
+                label={translateProfileOption(r, t)}
                 isActive={isActive}
                 onPress={() => handleToggleReligion(r)}
                 role="checkbox"
@@ -320,9 +324,9 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
         <SectionDivider sem={sem} />
 
         {/* ─── Language Preferences ─── */}
-        <PrefsLabel label="Languages" sem={sem} />
+        <PrefsLabel label={t('profile.prefsEdit.languages')} sem={sem} />
         <Text className="text-sm mb-3" style={{ color: sem.textMuted }}>
-          Leave empty to see all languages.
+          {t('profile.prefsEdit.languagesHelper')}
         </Text>
         <LanguageMultiSelectPicker
           selected={prefs.languagePreferences}
@@ -337,9 +341,9 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
         <SectionDivider sem={sem} />
 
         {/* ─── Ethnicity Preferences ─── */}
-        <PrefsLabel label="Ethnicity" sem={sem} />
+        <PrefsLabel label={t('profile.prefsEdit.ethnicity')} sem={sem} />
         <Text className="text-sm mb-3" style={{ color: sem.textMuted }}>
-          Leave empty to see all backgrounds.
+          {t('profile.prefsEdit.ethnicityHelper')}
         </Text>
         <EthnicityMultiSelectPicker
           selected={prefs.ethnicityPreferences}
@@ -362,7 +366,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
           className="rounded-2xl items-center justify-center"
           style={{ backgroundColor: sem.accent, opacity: isSaving ? 0.75 : 1, minHeight: 60 }}
           accessibilityRole="button"
-          accessibilityLabel="Save Preferences"
+          accessibilityLabel={t('profile.prefsEdit.save')}
         >
           {({ pressed }) =>
             isSaving ? (
@@ -372,7 +376,7 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
                 className="text-lg font-bold"
                 style={{ color: '#FFFFFF', opacity: pressed ? 0.8 : 1 }}
               >
-                Save Preferences
+                {t('profile.prefsEdit.save')}
               </Text>
             )
           }
@@ -383,14 +387,14 @@ export const PreferencesTab = memo(function PreferencesTab({ prefs, onPrefsChang
           className="rounded-2xl items-center justify-center border"
           style={{ borderColor: sem.border, minHeight: 60 }}
           accessibilityRole="button"
-          accessibilityLabel="Reset preferences to defaults"
+          accessibilityLabel={t('profile.prefsEdit.resetA11y')}
         >
           {({ pressed }) => (
             <Text
               className="text-base font-semibold"
               style={{ color: pressed ? sem.accentStrong : sem.textSecondary }}
             >
-              Reset to Defaults
+              {t('profile.prefsEdit.reset')}
             </Text>
           )}
         </Pressable>
@@ -491,6 +495,7 @@ type ToggleRowProps = {
 };
 
 function ToggleRow({ icon, label, helperText, value, onToggle, sem }: ToggleRowProps) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center py-4">
       <View
@@ -514,7 +519,7 @@ function ToggleRow({ icon, label, helperText, value, onToggle, sem }: ToggleRowP
         onValueChange={onToggle}
         trackColor={{ false: sem.border, true: sem.accent }}
         thumbColor="#FFFFFF"
-        accessibilityLabel={`${label}: ${value ? 'enabled' : 'disabled'}`}
+        accessibilityLabel={t('profile.prefsEdit.toggleA11y', { label, state: t(value ? 'profile.prefsEdit.enabled' : 'profile.prefsEdit.disabled') })}
       />
     </View>
   );

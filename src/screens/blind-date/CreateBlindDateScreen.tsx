@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Modal,
@@ -28,8 +29,10 @@ import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useBlindDateConfiguration } from '@/hooks/blindDate/useBlindDateConfiguration';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { BlindDateSessionDto } from '@/types/blindDate';
 import { extractApiError } from '@/utils/apiError';
+import { blindDateErrorCode, blindDateErrorMessage } from '@/utils/blindDateErrors';
 import { isInsufficientCreditsError } from '@/utils/entitlements';
 import { generateUUID } from '@/utils/uuid';
 
@@ -40,20 +43,21 @@ type Step = 'config' | 'questions' | 'success';
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function friendlyCreateError(err: unknown, maxRoundQuestions?: number): string {
-  const { code, message } = extractApiError(err);
+  const { code } = extractApiError(err);
   switch (code.toLowerCase()) {
     case 'active_session_exists':
-      return 'You already have an active Blind Date session. Close it first or pick up where you left off.';
+      return i18n.t('blindDate.create.errors.activeSessionExists');
     case 'invalid_question_count':
       return maxRoundQuestions != null
-        ? `Select between 1 and ${maxRoundQuestions} questions.`
-        : 'Please select a valid number of questions.';
+        ? i18n.t('blindDate.create.errors.invalidQuestionCount', { max: maxRoundQuestions })
+        : i18n.t('blindDate.create.errors.invalidQuestionCountNoMax');
     case 'question_unanswered':
-      return 'Some selected questions need your own answer first — edit them in your question set.';
+      return i18n.t('blindDate.create.errors.questionUnanswered');
     case 'unsupported_language':
-      return 'That language is not supported right now.';
+      return i18n.t('blindDate.create.errors.unsupportedLanguage');
     default:
-      return message;
+      // error.message mirrors the machine code — use the localized mapping.
+      return blindDateErrorMessage(err);
   }
 }
 
@@ -61,7 +65,14 @@ function friendlyCreateError(err: unknown, maxRoundQuestions?: number): string {
 
 type ExpiryMode = 'none' | '3d' | '7d' | 'custom';
 
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_KEYS = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const;
+
+function shortMonthName(monthIdx: number): string {
+  return i18n.t(`blindDate.create.months.${MONTH_KEYS[monthIdx]}`);
+}
 
 /** Expiry means "open until the end of this day" (local time). */
 function endOfDay(d: Date): Date {
@@ -76,7 +87,7 @@ function addDaysISO(days: number): string {
 
 function formatExpiry(iso: string): string {
   const d = new Date(iso);
-  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+  return `${d.getDate()} ${shortMonthName(d.getMonth())} ${d.getFullYear()}`;
 }
 
 function isFutureDate(d: Date): boolean {
@@ -171,6 +182,7 @@ function ExpiryPickerModal({
   onClose: () => void;
   onConfirm: (iso: string) => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
 
@@ -191,7 +203,7 @@ function ExpiryPickerModal({
   const confirm = () => {
     const picked = endOfDay(new Date(years[yearIdx], month, clampedDay));
     if (!isFutureDate(picked)) {
-      setError('Pick a date in the future.');
+      setError(t('blindDate.create.picker.futureDateError'));
       return;
     }
     onConfirm(picked.toISOString());
@@ -209,9 +221,9 @@ function ExpiryPickerModal({
             <View style={[styles.pickerIconWrap, { backgroundColor: `${bdColors.primary}1A` }]}>
               <Ionicons name="calendar" size={20} color={bdColors.primary} />
             </View>
-            <Text style={[styles.pickerTitle, { color: th.text }]}>Session end date</Text>
+            <Text style={[styles.pickerTitle, { color: th.text }]}>{t('blindDate.create.picker.title')}</Text>
             <Text style={[styles.pickerSubtitle, { color: th.textSecondary }]}>
-              The session auto-closes at the end of this day
+              {t('blindDate.create.picker.subtitle')}
             </Text>
           </View>
 
@@ -232,7 +244,7 @@ function ExpiryPickerModal({
                 mutedColor={th.textSecondary}
               />
               <WheelColumn
-                items={MONTHS_SHORT}
+                items={MONTH_KEYS.map((_, i) => shortMonthName(i))}
                 selectedIndex={month}
                 onChange={(i) => { setMonth(i); setError(null); }}
                 textColor={bdColors.primary}
@@ -257,7 +269,7 @@ function ExpiryPickerModal({
               activeOpacity={0.8}
               accessibilityRole="button"
             >
-              <Text style={[styles.pickerBtnText, { color: th.text }]}>Cancel</Text>
+              <Text style={[styles.pickerBtnText, { color: th.text }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.pickerBtn, styles.pickerBtnPrimary]}
@@ -265,7 +277,7 @@ function ExpiryPickerModal({
               activeOpacity={0.85}
               accessibilityRole="button"
             >
-              <Text style={[styles.pickerBtnText, { color: '#FFFFFF' }]}>Set date</Text>
+              <Text style={[styles.pickerBtnText, { color: '#FFFFFF' }]}>{t('blindDate.create.picker.setDate')}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -293,6 +305,7 @@ function ConfigStep({
   onNext: () => void;
   loading: boolean;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const [langOpen, setLangOpen] = useState(false);
@@ -322,12 +335,12 @@ function ConfigStep({
         <View style={styles.heroIconWrap}>
           <Ionicons name="heart" size={24} color="#FFF" />
         </View>
-        <Text style={styles.heroTitle}>Set up your Blind Date</Text>
+        <Text style={styles.heroTitle}>{t('blindDate.create.heroTitle')}</Text>
       </Animated.View>
 
       {/* Language */}
       <Animated.View entering={FadeInDown.duration(400).delay(80)}>
-        <Text style={[styles.sectionLabel, { color: th.textSecondary }]}>Language</Text>
+        <Text style={[styles.sectionLabel, { color: th.textSecondary }]}>{t('blindDate.create.languageLabel')}</Text>
         <TouchableOpacity
           style={[styles.selectRow, { borderColor: th.border, backgroundColor: th.surface }]}
           onPress={() => setLangOpen((v) => !v)}
@@ -364,17 +377,17 @@ function ConfigStep({
 
       {/* Expiry */}
       <Animated.View entering={FadeInDown.duration(400).delay(140)}>
-        <Text style={[styles.sectionLabel, { color: th.textSecondary }]}>Session expiry</Text>
+        <Text style={[styles.sectionLabel, { color: th.textSecondary }]}>{t('blindDate.create.expiryLabel')}</Text>
         <View style={styles.expiryGrid}>
           {(
             [
-              { m: 'none', label: 'No deadline', sub: 'You close it', icon: 'infinite-outline' },
-              { m: '3d', label: '3 days', sub: 'Auto-close', icon: 'time-outline' },
-              { m: '7d', label: '7 days', sub: 'Auto-close', icon: 'time-outline' },
+              { m: 'none', label: t('blindDate.create.expiry.none'), sub: t('blindDate.create.expiry.noneSub'), icon: 'infinite-outline' },
+              { m: '3d', label: t('blindDate.create.expiry.days3'), sub: t('blindDate.create.expiry.autoClose'), icon: 'time-outline' },
+              { m: '7d', label: t('blindDate.create.expiry.days7'), sub: t('blindDate.create.expiry.autoClose'), icon: 'time-outline' },
               {
                 m: 'custom',
-                label: expiryMode === 'custom' && expiresAt ? formatExpiry(expiresAt) : 'Pick a date',
-                sub: 'Custom day',
+                label: expiryMode === 'custom' && expiresAt ? formatExpiry(expiresAt) : t('blindDate.create.expiry.pickDate'),
+                sub: t('blindDate.create.expiry.customSub'),
                 icon: 'calendar-outline',
               },
             ] as const
@@ -418,12 +431,12 @@ function ConfigStep({
         </View>
         {expiryMode !== 'none' && expiresAt && (
           <Text style={[styles.hintText, { color: th.textSecondary }]}>
-            Auto-closes at the end of {formatExpiry(expiresAt)}.
+            {t('blindDate.create.expiry.autoClosesAt', { date: formatExpiry(expiresAt) })}
           </Text>
         )}
         {expiryMode === 'none' && (
           <Text style={[styles.hintText, { color: th.textSecondary }]}>
-            The session stays open until you close it manually.
+            {t('blindDate.create.expiry.staysOpen')}
           </Text>
         )}
       </Animated.View>
@@ -443,7 +456,7 @@ function ConfigStep({
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFill}
           />
-          <Text style={styles.primaryBtnText}>Choose Questions</Text>
+          <Text style={styles.primaryBtnText}>{t('blindDate.create.chooseQuestions')}</Text>
           <Ionicons name="arrow-forward" size={17} color="#FFF" />
         </TouchableOpacity>
       </Animated.View>
@@ -484,6 +497,7 @@ function QuestionsStep({
   publishing: boolean;
   error: string | null;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -496,12 +510,12 @@ function QuestionsStep({
         <View style={{ flex: 1 }}>
           <View style={styles.questionStepBadgeRow}>
             <View style={styles.stepBadge}>
-              <Text style={styles.stepBadgeText}>STEP 2</Text>
+              <Text style={styles.stepBadgeText}>{t('blindDate.create.step2Badge')}</Text>
             </View>
-            <Text style={[styles.questionHeaderTitle, { color: th.text }]}>Round 1 Questions</Text>
+            <Text style={[styles.questionHeaderTitle, { color: th.text }]}>{t('blindDate.create.round1Questions')}</Text>
           </View>
           <Text style={[styles.questionHeaderSub, { color: th.textSecondary }]}>
-            Tap to include — participants answer anonymously
+            {t('blindDate.create.questionsSub')}
           </Text>
         </View>
         <View style={[styles.questionCountPill, { backgroundColor: `${bdColors.primary}14` }]}>
@@ -540,7 +554,7 @@ function QuestionsStep({
             accessibilityRole="button"
           >
             <Ionicons name="arrow-back" size={15} color={th.textSecondary} />
-            <Text style={[styles.secondaryBtnText, { color: th.textSecondary }]}>Back</Text>
+            <Text style={[styles.secondaryBtnText, { color: th.textSecondary }]}>{t('blindDate.common.back')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.publishBtn, (!canPublish || publishing) && { opacity: 0.5 }]}
@@ -561,7 +575,9 @@ function QuestionsStep({
               <>
                 <Ionicons name="heart" size={16} color="#FFF" />
                 <Text style={styles.primaryBtnText}>
-                  Publish{canPublish ? ` (${pickedCount})` : ''}
+                  {canPublish
+                    ? t('blindDate.create.publishCount', { count: pickedCount })
+                    : t('blindDate.create.publish')}
                 </Text>
               </>
             )}
@@ -579,6 +595,7 @@ function SuccessStep({ session, questionCount, maxParticipants, onManage, onHome
   onManage: () => void;
   onHome: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const insets = useSafeAreaInsets();
@@ -591,30 +608,32 @@ function SuccessStep({ session, questionCount, maxParticipants, onManage, onHome
   const nextSteps = [
     {
       icon: 'people-outline' as const,
-      title: 'Participants join',
+      title: t('blindDate.create.success.next1Title'),
       sub:
         maxParticipants != null
-          ? `Up to ${maxParticipants} people answer your ${questionCount} question${questionCount === 1 ? '' : 's'} anonymously`
-          : `Participants answer your ${questionCount} question${questionCount === 1 ? '' : 's'} anonymously`,
+          ? t('blindDate.create.success.next1SubMax', { max: maxParticipants, count: questionCount })
+          : t('blindDate.create.success.next1Sub', { count: questionCount }),
     },
     {
       icon: 'chatbubble-ellipses-outline' as const,
-      title: 'You review answers',
-      sub: 'Advance your favorites to each next round',
+      title: t('blindDate.create.success.next2Title'),
+      sub: t('blindDate.create.success.next2Sub'),
     },
     {
       icon: 'eye-outline' as const,
-      title: 'The reveal',
-      sub: 'Pick your finalist — then decide together',
+      title: t('blindDate.create.success.next3Title'),
+      sub: t('blindDate.create.success.next3Sub'),
     },
   ];
 
   const chips = [
-    { icon: 'chatbubbles-outline' as const, label: `${questionCount} question${questionCount === 1 ? '' : 's'}` },
+    { icon: 'chatbubbles-outline' as const, label: t('blindDate.common.questions', { count: questionCount }) },
     { icon: 'globe-outline' as const, label: session.language_code.toUpperCase() },
     {
       icon: 'time-outline' as const,
-      label: session.expires_at ? `Closes ${formatExpiry(session.expires_at)}` : 'No deadline',
+      label: session.expires_at
+        ? t('blindDate.create.success.closesOn', { date: formatExpiry(session.expires_at) })
+        : t('blindDate.format.noDeadline'),
     },
   ];
 
@@ -637,13 +656,13 @@ function SuccessStep({ session, questionCount, maxParticipants, onManage, onHome
         entering={FadeInDown.delay(180).springify()}
         style={[styles.successTitle, { color: th.text }]}
       >
-        Your Blind Date is live!
+        {t('blindDate.create.success.title')}
       </Animated.Text>
       <Animated.Text
         entering={FadeInDown.delay(260).springify()}
         style={[styles.successSub, { color: th.textSecondary }]}
       >
-        Participants can now discover and join Round 1.
+        {t('blindDate.create.success.subtitle')}
       </Animated.Text>
 
       {/* Session summary chips */}
@@ -673,7 +692,7 @@ function SuccessStep({ session, questionCount, maxParticipants, onManage, onHome
         entering={FadeInDown.delay(420).springify()}
         style={[styles.nextCard, { backgroundColor: th.surface, borderColor: th.border }]}
       >
-        <Text style={[styles.nextCardTitle, { color: th.text }]}>What happens next</Text>
+        <Text style={[styles.nextCardTitle, { color: th.text }]}>{t('blindDate.create.success.nextTitle')}</Text>
         {nextSteps.map((s, i) => (
           <View key={s.title} style={styles.nextStep}>
             <View
@@ -712,7 +731,7 @@ function SuccessStep({ session, questionCount, maxParticipants, onManage, onHome
             style={styles.successPrimaryBtn}
           >
             <Ionicons name="people" size={17} color="#FFF" />
-            <Text style={styles.primaryBtnText}>Manage my Blind Date</Text>
+            <Text style={styles.primaryBtnText}>{t('blindDate.create.success.manageCta')}</Text>
           </LinearGradient>
         </TouchableOpacity>
         <TouchableOpacity
@@ -721,7 +740,7 @@ function SuccessStep({ session, questionCount, maxParticipants, onManage, onHome
           accessibilityRole="button"
           style={styles.ghostBtn}
         >
-          <Text style={[styles.ghostBtnText, { color: th.textSecondary }]}>Back to Home</Text>
+          <Text style={[styles.ghostBtnText, { color: th.textSecondary }]}>{t('blindDate.create.success.backHome')}</Text>
         </TouchableOpacity>
       </Animated.View>
     </ScrollView>
@@ -731,6 +750,7 @@ function SuccessStep({ session, questionCount, maxParticipants, onManage, onHome
 // ─── Root screen ─────────────────────────────────────────────────────────────
 
 export default function CreateBlindDateScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors: th } = useTheme();
@@ -748,7 +768,7 @@ export default function CreateBlindDateScreen() {
   const [createdSession, setCreatedSession] = useState<BlindDateSessionDto | null>(null);
 
   // Stable idempotency key — same across retries so retries don't double-charge
-  const idempotencyKey = useRef(generateUUID()).current;
+  const idempotencyKeyRef = useRef(generateUUID());
 
   const languages = configuration?.supported_languages ?? [{ code: 'en', name: 'English' }];
   // undefined → no client-side cap (older backend); the server still validates.
@@ -775,13 +795,25 @@ export default function CreateBlindDateScreen() {
   const handlePublish = useCallback(async () => {
     setPublishing(true);
     setPublishError(null);
+    const payload = {
+      questionIds: [...pickedQ],
+      customQuestionIds: [...pickedC],
+      languageCode: language,
+      expiresAt,
+    };
     try {
+      // idempotency_key_in_use means the key was claimed by another request —
+      // per the API contract, retry once with a freshly generated key.
       const session = await createBlindDateSession({
-        idempotencyKey,
-        questionIds: [...pickedQ],
-        customQuestionIds: [...pickedC],
-        languageCode: language,
-        expiresAt,
+        idempotencyKey: idempotencyKeyRef.current,
+        ...payload,
+      }).catch((err) => {
+        if (blindDateErrorCode(err) !== 'idempotency_key_in_use') throw err;
+        idempotencyKeyRef.current = generateUUID();
+        return createBlindDateSession({
+          idempotencyKey: idempotencyKeyRef.current,
+          ...payload,
+        });
       });
       refreshEntitlements();
       setCreatedSession(session);
@@ -795,22 +827,22 @@ export default function CreateBlindDateScreen() {
       setPublishError(msg);
       if (extractApiError(err).code.toLowerCase() === 'active_session_exists') {
         themedAlert({
-          title: 'Active session exists',
+          title: t('blindDate.home.activeSessionTitle'),
           message: msg,
           icon: 'warning-outline',
           iconColor: colors.warning,
-          buttons: [{ text: 'OK', style: 'cancel' }],
+          buttons: [{ text: t('common.ok', 'OK'), style: 'cancel' }],
         });
       }
     } finally {
       setPublishing(false);
     }
-  }, [idempotencyKey, pickedQ, pickedC, language, expiresAt, refreshEntitlements, maxQuestions]);
+  }, [pickedQ, pickedC, language, expiresAt, refreshEntitlements, maxQuestions, t]);
 
   const stepTitles: Record<Step, string> = {
-    config: 'Start a Blind Date',
-    questions: 'Round 1 Questions',
-    success: 'Published!',
+    config: t('blindDate.common.startBlindDate'),
+    questions: t('blindDate.create.round1Questions'),
+    success: t('blindDate.create.success.publishedTitle'),
   };
 
   const stepIdx = step === 'config' ? 0 : step === 'questions' ? 1 : 2;
@@ -825,7 +857,7 @@ export default function CreateBlindDateScreen() {
           onPress={() => (step === 'config' ? router.back() : setStep('config'))}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t('blindDate.common.back')}
           style={styles.headerBtn}
         >
           <Ionicons name={step === 'success' ? 'close' : 'chevron-back'} size={22} color={th.text} />
@@ -892,7 +924,7 @@ export default function CreateBlindDateScreen() {
         />
       )}
 
-      {/* Shared Blind Date nav — creation lives under the Hosted tab */}
+      {/* Shared Blind Date nav — creation lives under the Create tab */}
       <BlindDateBottomNav
         activeTab="mine"
         onHome={() => router.replace('/(app)/(tabs)' as never)}
@@ -909,6 +941,7 @@ export default function CreateBlindDateScreen() {
             params: { tab: 'participating' },
           })
         }
+        onMatches={() => router.push('/(app)/(tabs)/matches' as never)}
         onProfile={() => router.push('/(app)/(tabs)/profile' as never)}
       />
     </View>

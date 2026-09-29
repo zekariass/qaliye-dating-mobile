@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Platform,
     StyleSheet,
@@ -25,6 +26,7 @@ export interface SuperMessageRowProps {
 }
 
 function SuperMessageRowInner({ item, direction, isLast, onPress }: SuperMessageRowProps) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
 
@@ -33,10 +35,10 @@ function SuperMessageRowInner({ item, direction, isLast, onPress }: SuperMessage
 
   // For sent messages: show receiver info; for received: show sender info
   const otherParty = isSent ? item.receiver : item.sender;
-  const displayName = otherParty?.display_name ?? 'Unknown';
+  const displayName = otherParty?.display_name ?? t('chat.unknownUser');
   const photoUrl = otherParty?.photo_url ?? null;
 
-  const previewText = isSent ? `You: ${item.message}` : item.message;
+  const previewText = isSent ? t('chat.youSaid', { message: item.message }) : item.message;
 
   return (
     <TouchableOpacity
@@ -44,7 +46,7 @@ function SuperMessageRowInner({ item, direction, isLast, onPress }: SuperMessage
       onPress={() => onPress(item, direction)}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`${displayName}: ${previewText}`}
+      accessibilityLabel={t('chat.superMessageA11y', { name: displayName, preview: previewText })}
     >
       {/* Avatar — profile photo with star badge overlay */}
       <View style={styles.avatarWrap}>

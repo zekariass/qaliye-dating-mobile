@@ -1,0 +1,404 @@
+{
+  "billing": {
+    "unlimited": "Unlimited",
+    "alreadyVerified": "This payment was verified before. Please verify a new payment.",
+    "autoChecking": "We'll automatically check for updates.",
+    "checking": "Checking...",
+    "checkingStatus": "Checking status...",
+    "completePayment": "Complete payment",
+    "contactSupport": "Contact Support",
+    "creditsNotAvailable": "Credits are not available for your country",
+    "creditsNotAvailableBody": "Credit purchases are not supported in your region at this time.",
+    "creditsPurchaseConfirmedMsg": "Your credits have been added to your account. Enjoy!",
+    "creditsPurchaseConfirmedTitle": "Credits Added!",
+    "discount": "Discount",
+    "fieldInvalid": "{{label}} format is invalid",
+    "fieldRequired": "{{label}} is required",
+    "fieldTooLong": "{{label}} must be at most {{n}} characters",
+    "fieldTooShort": "{{label}} must be at least {{n}} characters",
+    "goBack": "Go Back",
+    "goToCreditsShop": "Go to Credits Shop",
+    "goToCreditsShopBody": "Buy credits to use for actions without premium.",
+    "goToPremium": "Go to Premium",
+    "goToPremiumBody": "Unlock for unlimited actions",
+    "loadingOffers": "Loading offers…",
+    "loadingOrder": "Loading order status...",
+    "noAccess": "No Access",
+    "noAccessMsg": "You do not have access to this payment. Please check your reference and try again.",
+    "noVerificationFields": "No additional details required for this payment method.",
+    "openingCheckout": "Complete your payment...",
+    "orderCreationFailed": "Could not create your order. Please try again.",
+    "orderExpiredMsg": "This order has expired. Please start a new order.",
+    "orderExpiredTitle": "Order Expired",
+    "orderExpiringSoon": "Your order expires soon. Please complete your payment quickly.",
+    "payFirstNote": "Complete your payment using the instructions above, then fill in the verification details below.",
+    "privacyPolicy": "Privacy",
+    "purchaseActivating": "Activating your purchase…",
+    "purchaseConfirmedMsg": "Your premium subscription is now active. Enjoy all the premium features!",
+    "purchaseConfirmedTitle": "Premium Active!",
+    "restoreError": "Restore Failed",
+    "restoreErrorMsg": "Something went wrong while restoring purchases. Please try again.",
+    "restoreNoPurchase": "No Purchases Found",
+    "restoreNoPurchaseMsg": "No active purchases were found to restore.",
+    "restoreSuccess": "Restore Complete",
+    "restoreSuccessMsg": "Your premium subscription has been restored.",
+    "startNewOrder": "Start a New Order",
+    "stopAndGoBack": "Stop verifying and go back",
+    "submitVerification": "Submit Verification",
+    "subscriptionNotAvailable": "Premium subscription is not available for your country",
+    "subscriptionNotAvailableBody": "Premium subscriptions are not supported in your region at this time.",
+    "subscriptionActivating": "Activating your subscription…",
+    "terms": "Terms",
+    "transactionUsedInAnotherApp": "This transaction was already used in another application. Please use a new transaction.",
+    "verifyFailed": "Verification failed",
+    "verifyPaymentTitle": "Verify Your Payment",
+    "verifyingPayment": "Verifying your payment...",
+    "yourCredits": "Your Credits",
+    "checkingAccount": "Checking your account…",
+    "limitExceeded": "Limit Exceeded",
+    "limitPeriod": "Period: {{period}}",
+    "tryAgainAt": "Try {{when}}",
+    "youNeed": "You need:",
+    "yourBalance": "Your balance:",
+    "notEnoughCredits": "You don't have enough credits for this action.",
+    "insufficientCreditTitle": "Insufficient Credits",
+    "insufficientCreditBody": "You have {{balance}} credits. {{action}} requires more credits. Buy more to continue.",
+    "credits": "credits",
+    "buyCredits": "Buy Credits",
+    "creditsCount_one": "{{count}} credit",
+    "creditsCount": "{{count}} credits",
+    "includedCredits": "Includes {{count}} credits",
+    "storeUnavailable": "Store unavailable",
+    "everyIntervalOne": "Every {{unit}}",
+    "everyInterval": "Every {{count}} {{unit}}s",
+    "purchaseOffer": "Purchase {{name}}",
+    "plan": "Plan",
+    "quantity": "Quantity",
+    "created": "Created",
+    "resumePayment": "Resume Payment",
+    "refreshStatus": "Refresh Status",
+    "orderA11y": "Order {{reference}} {{status}}",
+    "renews": "Renews",
+    "expires": "Expires",
+    "billingCycle": "Billing Cycle",
+    "renewal": "Renewal",
+    "renewsOn": "Renews {{date}}",
+    "autoRenew": "Auto-renews",
+    "localPaymentNote": "Paid using a local payment method.",
+    "loadingSubscription": "Loading subscription info…",
+    "errorTitle": "Something went wrong",
+    "unexpectedError": "An unexpected error occurred.",
+    "subscriptionExpired": "Subscription Expired",
+    "subscriptionExpiredBody": "Your premium subscription is no longer active.",
+    "viewPremiumPlans": "View Premium Plans",
+    "onFreePremium": "You are on Free Premium.",
+    "premiumUser": "You are a Premium user.",
+    "manageLinkUnavailable": "Unable to retrieve your subscription management link. Please try again later or contact support.",
+    "manageNotAvailable": "Subscription management is not available for this provider.",
+    "manageOpenFailed": "Unable to open the subscription management page.",
+    "manageError": "Something went wrong while opening subscription management.",
+    "providerLocal": "Local",
+    "providerBankTransfer": "Bank Transfer",
+    "providerPromotion": "Promotion",
+    "paymentType": "Payment Type",
+    "paymentMethodTitle": "Payment Method",
+    "choosePaymentType": "Choose how you want to pay",
+    "selectMethod": "Select a method to continue",
+    "loadingOptions": "Loading options…",
+    "noPaymentOptions": "No payment options available.\nPlease try again later.",
+    "noMethodsForChannel": "No payment methods available for this channel.",
+    "continueWith": "Continue with {{method}}",
+    "phoneNumber": "Phone Number",
+    "phonePromptBody": "Enter your phone number to receive a payment prompt",
+    "phoneInvalid": "Please enter a valid Ethiopian phone number starting with 09",
+    "endsInHours": "Ends in {{count}}h",
+    "endsInDays": "Ends in {{count}}d",
+    "endsOn": "Ends {{date}}",
+    "cycleInterval": "{{count}} {{unit}}",
+    "unit": {
+      "day_one": "day",
+      "day": "days",
+      "week_one": "week",
+      "week": "weeks",
+      "month_one": "month",
+      "month": "months",
+      "year_one": "year",
+      "year": "years"
+    },
+    "period": {
+      "DAY": "Daily",
+      "DAILY": "Daily",
+      "WEEK": "Weekly",
+      "WEEKLY": "Weekly",
+      "MONTH": "Monthly",
+      "MONTHLY": "Monthly",
+      "YEAR": "Yearly",
+      "YEARLY": "Yearly",
+      "BILLING_CYCLE": "Billing Cycle",
+      "BILLINGCYCLE": "Billing Cycle",
+      "LIFETIME": "Lifetime"
+    },
+    "tryAgainPeriod": {
+      "DAY": "tomorrow",
+      "DAILY": "tomorrow",
+      "WEEK": "next week",
+      "WEEKLY": "next week",
+      "MONTH": "next month",
+      "MONTHLY": "next month",
+      "YEAR": "next year",
+      "YEARLY": "next year",
+      "BILLING_CYCLE": "next billing cycle",
+      "BILLINGCYCLE": "next billing cycle"
+    },
+    "periodAdj": {
+      "DAY": "daily",
+      "DAILY": "daily",
+      "WEEK": "weekly",
+      "WEEKLY": "weekly",
+      "MONTH": "monthly",
+      "MONTHLY": "monthly",
+      "YEAR": "yearly",
+      "YEARLY": "yearly",
+      "BILLING_CYCLE": "billing cycle",
+      "BILLINGCYCLE": "billing cycle",
+      "LIFETIME": "lifetime"
+    },
+    "messages": {
+      "upgradeToUse": "Upgrade to use {{action}}.",
+      "limitReached": "Your {{period}} limit for {{action}} has been reached.",
+      "needCredits": "You need {{count}} credits to perform this action.",
+      "freeUsed": "Your free {{action}}s for this period have been used. Upgrade to {{action}} more."
+    },
+    "actions": {
+      "like": "Like",
+      "superLike": "Super Like",
+      "rewind": "Rewind",
+      "boost": "Boost",
+      "voiceMessage": "Voice Message",
+      "imageMessage": "Image Message",
+      "message": "Message",
+      "superMessage": "Before-Match Message",
+      "seeWhoLikedYou": "See Who Liked You",
+      "revealProfile": "Reveal Profile",
+      "revisitProfile": "Revisit Profile",
+      "incognitoMode": "Incognito Mode",
+      "changeAddress": "Change Address",
+      "thisAction": "This Action"
+    },
+    "actionLabels": {
+      "LIKE": "Likes",
+      "SUPER_LIKE": "Super Likes",
+      "REWIND": "Rewinds",
+      "BOOST": "Boosts",
+      "VOICE_MESSAGE": "Voice Messages",
+      "IMAGE_MESSAGE": "Image Messages",
+      "MESSAGE": "Messages",
+      "SUPER_MESSAGE": "Before-Match Messages",
+      "SEE_WHO_LIKED_YOU": "See Who Liked You"
+    },
+    "actionLabelsShort": {
+      "VOICE_MESSAGE": "Voice Msgs",
+      "IMAGE_MESSAGE": "Image Msgs"
+    },
+    "actionInfo": {
+      "LIKE": "Expressing interest in a profile to create a potential match.",
+      "SUPER_LIKE": "Highlighting your profile to let someone know you are extremely interested before they swipe.",
+      "REWIND": "Reversing your last swipe or action to undo an accidental pass or like.",
+      "BOOST": "Temporarily increasing your profile's visibility to get more views and matches.",
+      "VOICE_MESSAGE": "Sending an audio recording instead of text in a chat.",
+      "IMAGE_MESSAGE": "Sending a photo or picture within a chat conversation.",
+      "MESSAGE": "Sending a standard text communication to a matched user.",
+      "SUPER_MESSAGE": "Sending a message to someone prior to matching to grab their attention.",
+      "SEE_WHO_LIKED_YOU": "Viewing a list of users who have already liked your profile before you swipe on them."
+    },
+    "orderStatus": {
+      "CREATED": "Preparing payment",
+      "AWAITING_PAYMENT": "Payment required",
+      "VERIFICATION_PENDING": "Verifying payment",
+      "MANUAL_REVIEW": "Under review",
+      "ADMIN_REVIEW": "Admin review",
+      "REVIEW_REQUIRED": "Review required",
+      "RECEIPT_SUBMITTED": "Receipt submitted",
+      "VERIFIED": "Payment confirmed",
+      "FULFILLED": "Payment confirmed",
+      "REJECTED": "Payment declined",
+      "EXPIRED": "Order expired",
+      "CANCELLED": "Order cancelled"
+    },
+    "productType": {
+      "SUBSCRIPTION": "Subscription",
+      "CONSUMABLE": "Credits"
+    },
+    "statusBanner": {
+      "CREATED": {
+        "title": "Order Created",
+        "body": "Your order has been created. Please complete your payment."
+      },
+      "AWAITING_PAYMENT": {
+        "title": "Awaiting Payment",
+        "body": "Complete your payment using the instructions below."
+      },
+      "VERIFICATION_PENDING": {
+        "title": "Verifying Payment",
+        "body": "We are verifying your payment. This usually takes a few minutes."
+      },
+      "MANUAL_REVIEW": {
+        "title": "Under Review",
+        "body": "Your payment is being reviewed by our team. Premium or credits will activate after approval."
+      },
+      "ADMIN_REVIEW": {
+        "title": "Admin Review",
+        "body": "Your payment is under manual admin review. This may take up to 24 hours."
+      },
+      "REVIEW_REQUIRED": {
+        "title": "Review Required",
+        "body": "Additional review is required for your payment. Our team will process it shortly."
+      },
+      "RECEIPT_SUBMITTED": {
+        "title": "Receipt Submitted",
+        "body": "Your receipt has been submitted and is pending review."
+      },
+      "VERIFIED": {
+        "title": "Payment Confirmed",
+        "body": "Your payment has been completed. Enjoy the app!"
+      },
+      "FULFILLED": {
+        "title": "Purchase Complete",
+        "body": "Your payment has been completed. Enjoy the app!"
+      },
+      "REJECTED": {
+        "title": "Payment Could Not Be Confirmed",
+        "body": "We could not verify this payment. Please try again or contact support."
+      },
+      "EXPIRED": {
+        "title": "Order Expired",
+        "body": "This payment order has expired. Please start a new order."
+      },
+      "CANCELLED": {
+        "title": "Order Cancelled",
+        "body": "This order was cancelled. You can return to payment options."
+      }
+    },
+    "channels": {
+      "MANUAL_TRANSFER": "Bank transfer with manual verification",
+      "ONLINE": "Pay online with card or mobile",
+      "ONLINE_PAYMENT": "Pay online with card or mobile",
+      "CHAPA": "Online checkout via Chapa",
+      "DIRECT_TELEBIRR": "Pay directly through Telebirr",
+      "default": "Choose a payment method"
+    },
+    "verifyErrors": {
+      "access_denied": "This payment reference has already been used by another user. Please check your transaction number and try again.",
+      "invalid_reference": "The transaction reference you entered is invalid. Please verify and try again.",
+      "already_verified": "This payment has already been verified.",
+      "duplicate_submission": "A verification has already been submitted for this payment.",
+      "transaction_already_used": "This transaction has already been used for a payment. Please use a new transaction.",
+      "transaction_under_review": "This transaction is currently under review. Please wait for the review to complete or use a different transaction.",
+      "transaction_rejected": "This transaction was previously rejected. Please use a new transaction.",
+      "transaction_expired": "This transaction has expired. Please make a new payment and try again.",
+      "transaction_cancelled": "This transaction was previously cancelled. Please use a new transaction.",
+      "accessDeniedFallback": "Access denied. This payment reference may have been used by another user."
+    },
+    "steps": {
+      "instructions": "Instructions",
+      "verify": "Verify",
+      "status": "Status"
+    },
+    "limitAlert": {
+      "LIKES": {
+        "title": "No More Likes",
+        "body": "You've used all your {{period}} likes."
+      },
+      "SUPER_LIKE": {
+        "title": "No More Super Likes",
+        "body": "You've used all your {{period}} Super Likes."
+      },
+      "REWIND": {
+        "title": "No More Rewinds",
+        "body": "You've used all your {{period}} Rewinds."
+      },
+      "BOOST": {
+        "title": "No More Boosts",
+        "body": "You've used all your {{period}} Boosts."
+      },
+      "VOICE_MESSAGE": {
+        "title": "Voice Message Limit Reached",
+        "body": "You've used all your {{period}} voice messages."
+      },
+      "IMAGE_MESSAGE": {
+        "title": "Image Message Limit Reached",
+        "body": "You've used all your {{period}} image messages."
+      },
+      "SEE_WHO_LIKED_YOU": {
+        "title": "Reveal Limit Reached",
+        "body": "You've used all your {{period}} reveals."
+      },
+      "RETURN_PASSED_PROFILE": {
+        "title": "Revisit Limit Reached",
+        "body": "You've used all your {{period}} revisits."
+      },
+      "SUPER_MESSAGE": {
+        "title": "Before-Match Message Limit Reached",
+        "body": "You've used all your {{period}} before-match messages."
+      },
+      "default": {
+        "title": "Limit Reached",
+        "body": "You have reached your {{period}} limit."
+      }
+    },
+    "balances": {
+      "perRecipient": "per recipient",
+      "refresh": "Refresh balances",
+      "monthlyPlan": "Monthly plan",
+      "monthsPlan": "{{count}}-month plan",
+      "limitedFeatures": "Limited features",
+      "usageAndLimits": "Usage & Limits",
+      "buy": "Buy",
+      "creditsEach_one": "{{count}} credit each",
+      "creditsEach": "{{count}} credits each",
+      "creditsAfterLimit": "{{count}} cr after limit",
+      "resetsAtTime": "Resets at {{time}}",
+      "resetsOnDate": "Resets on {{date}}",
+      "resetsNextMonth": "Resets next month",
+      "resetsWithSubscription": "Resets with your subscription",
+      "limitReached": "Limit reached",
+      "left": {
+        "default": "{{count}} left",
+        "DAY": "{{count}} left today",
+        "WEEK": "{{count}} left this week",
+        "MONTH": "{{count}} left this month",
+        "BILLING_CYCLE": "{{count}} left this cycle",
+        "YEAR": "{{count}} left this year"
+      }
+    }
+  },
+  "promotion": {
+    "creditsReward": "{{count}} credits",
+    "claimSuccessWithCreditsBody": "Your free premium access is now active. You also received {{count}} credits!",
+    "creditsGrantedTitle": "Credits Received!",
+    "creditsGrantedBody": "You received {{count}} credits!",
+    "duration": {
+      "month_one": "1 month",
+      "month": "{{count}} months",
+      "week_one": "1 week",
+      "week": "{{count}} weeks",
+      "day_one": "1 day",
+      "day": "{{count}} days"
+    },
+    "errors": {
+      "promotion_not_found": "This promotion is no longer available.",
+      "promotion_not_claimable": "This promotion cannot be claimed at this time.",
+      "promotion_not_active": "This promotion is not currently active.",
+      "promotion_expired": "This promotion has expired.",
+      "promotion_not_eligible": "You are not eligible for this promotion.",
+      "promotion_capacity_exhausted": "This promotion has reached its claim limit.",
+      "promotion_already_redeemed": "You have already redeemed this promotion.",
+      "grant_failed": "We could not grant your reward at this time. Please try again later.",
+      "user_has_active_subscription": "You already have an active subscription."
+    }
+  },
+  "common": {
+    "clear": "Clear",
+    "copy": "Copy {{label}}"
+  }
+}

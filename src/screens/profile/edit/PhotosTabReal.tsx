@@ -11,6 +11,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { ImageCropModal, type CropRegion } from '@/components/common/ImageCropModal';
 import PhotoSourceModal, { type PhotoSource } from '@/components/common/PhotoSourceModal';
@@ -55,6 +56,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
   onDeletePhoto,
   isUploading = false,
 }: Props) {
+  const { t } = useTranslation();
   const [actionSheetTarget, setActionSheetTarget] = useState<string | null>(null);
   const [localLoading, setLocalLoading] = useState(false);
   const [cropAsset, setCropAsset] = useState<ImagePickerAsset | null>(null);
@@ -77,13 +79,13 @@ export const PhotosTabReal = memo(function PhotosTabReal({
     if (source === 'camera') {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        themedError('Permission required', 'Camera access is required to take photos.');
+        themedError(t('common.permissionRequired'), t('profile.photos.cameraPermissionDenied'));
         return;
       }
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        themedError('Permission required', 'Please allow photo library access to add photos.');
+        themedError(t('common.permissionRequired'), t('profile.photos.permissionDenied'));
         return;
       }
     }
@@ -99,7 +101,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
 
     setCropIsPrimary(photos.length === 0);
     setCropAsset(result.assets[0]);
-  }, [photos.length]);
+  }, [photos.length, t]);
 
   const handleCropConfirm = useCallback(async (crop: CropRegion) => {
     if (!cropAsset) return;
@@ -111,7 +113,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+      if (!session) throw new Error(t('profile.photos.notAuthenticated'));
 
       const userId = session.user.id;
       const storagePath = `${userId}/${processed.fileName}`;
@@ -137,7 +139,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       setCropProcessing(false);
       setCropAsset(null);
     }
-  }, [cropAsset, photos.length, onRegisterPhoto]);
+  }, [cropAsset, photos.length, onRegisterPhoto, t]);
 
   const handleMakePrimary = useCallback(async (id: string) => {
     setActionSheetTarget(null);
@@ -206,14 +208,14 @@ export const PhotosTabReal = memo(function PhotosTabReal({
 
   const handleRemovePhoto = useCallback((id: string) => {
     themedAlert({
-      title: 'Remove photo',
-      message: 'Are you sure you want to remove this photo?',
+      title: t('profile.photos.removeConfirmTitle'),
+      message: t('profile.photos.removeConfirmBody'),
       icon: 'trash-outline',
       iconColor: '#EF4444',
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('common.remove'),
           style: 'destructive',
           onPress: async () => {
             setActionSheetTarget(null);
@@ -230,7 +232,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
         },
       ],
     });
-  }, [onDeletePhoto]);
+  }, [onDeletePhoto, t]);
 
   const addSlotCount = Math.min(MAX_PHOTOS - photos.length, 2);
 
@@ -238,11 +240,11 @@ export const PhotosTabReal = memo(function PhotosTabReal({
     <View>
       <SectionCard sem={sem}>
         <View className="flex-row items-center justify-between mb-1">
-          <SectionTitle title="Manage Photos" sem={sem} />
+          <SectionTitle title={t('profile.photos.manage')} sem={sem} />
           {isBusy && <ActivityIndicator size="small" color={sem.accent} />}
         </View>
         <Text className="text-sm mb-4" style={{ color: sem.textSecondary }}>
-          Add up to {MAX_PHOTOS} photos. Your primary photo appears first on your profile.
+          {t('profile.photos.manageHint', { max: MAX_PHOTOS })}
         </Text>
 
         {/* Photo Grid */}
@@ -252,7 +254,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
               <View>
                 <Pressable
                   onPress={() => !isBusy && setActionSheetTarget(primaryPhoto.id)}
-                  accessibilityLabel="Primary photo, tap to edit"
+                  accessibilityLabel={t('profile.photos.editPrimary')}
                   accessibilityRole="button"
                   disabled={isBusy}
                 >
@@ -274,7 +276,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
                       style={{ backgroundColor: sem.accent }}
                     >
                       <Ionicons name="star" size={10} color="#fff" />
-                      <Text className="text-sm font-bold text-white ml-1">Primary</Text>
+                      <Text className="text-sm font-bold text-white ml-1">{t('profile.photos.primary')}</Text>
                     </View>
                     {primaryPhoto.moderation_status === 'PENDING' && (
                       <View
@@ -282,7 +284,7 @@ export const PhotosTabReal = memo(function PhotosTabReal({
                         style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
                       >
                         <ActivityIndicator size="small" color="#fff" />
-                        <Text className="text-xs font-semibold text-white mt-1">Processing…</Text>
+                        <Text className="text-xs font-semibold text-white mt-1">{t('profile.photos.processing')}</Text>
                       </View>
                     )}
                     {primaryPhoto.moderation_status === 'MANUAL_REVIEW' && (
@@ -290,13 +292,13 @@ export const PhotosTabReal = memo(function PhotosTabReal({
                         className="absolute top-2 left-2 px-2 py-0.5 rounded-full"
                         style={{ backgroundColor: '#6366F1' }}
                       >
-                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff' }}>Under review</Text>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff' }}>{t('profile.photos.underReview')}</Text>
                       </View>
                     )}
                   </View>
                 </Pressable>
                 <Text className="text-sm mt-2" style={{ color: sem.textMuted, width: PRIMARY_W }}>
-                  Primary photo shown first on your profile.
+                  {t('profile.photos.primaryFirst')}
                 </Text>
               </View>
             )}
@@ -341,14 +343,14 @@ export const PhotosTabReal = memo(function PhotosTabReal({
               height={PRIMARY_H}
             />
             <Text className="text-sm mt-3" style={{ color: sem.textMuted }}>
-              Add your first photo
+              {t('profile.photos.addFirst')}
             </Text>
           </View>
         )}
 
         {photos.length >= MAX_PHOTOS && (
           <Text className="text-sm text-center mb-3" style={{ color: sem.textMuted }}>
-            {MAX_PHOTOS} of {MAX_PHOTOS} photos added
+            {t('profile.photos.maxReached', { count: photos.length, max: MAX_PHOTOS })}
           </Text>
         )}
       </SectionCard>
@@ -361,10 +363,10 @@ export const PhotosTabReal = memo(function PhotosTabReal({
         <Ionicons name="bulb-outline" size={22} color={sem.accent} />
         <View className="flex-1">
           <Text className="text-base font-bold mb-0.5" style={{ color: sem.textPrimary }}>
-            Photo tips
+            {t('profile.photos.tips')}
           </Text>
           <Text className="text-sm leading-4" style={{ color: sem.textSecondary }}>
-            Use clear, well-lit photos that show your face. Avoid group photos as your primary photo.
+            {t('profile.photos.tipsBody')}
           </Text>
         </View>
       </View>
@@ -417,12 +419,13 @@ type SecondaryPhotoTileProps = {
 const SecondaryPhotoTile = memo(function SecondaryPhotoTile({
   photo, sem, onAction, width, height,
 }: SecondaryPhotoTileProps) {
+  const { t } = useTranslation();
   return (
     <Pressable
       onPress={onAction}
       className="rounded-xl overflow-hidden"
       style={{ width, height }}
-      accessibilityLabel="Photo, tap for options"
+      accessibilityLabel={t('profile.photos.photoOptions')}
       accessibilityRole="button"
     >
       <Image
@@ -444,7 +447,7 @@ const SecondaryPhotoTile = memo(function SecondaryPhotoTile({
           className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full"
           style={{ backgroundColor: '#6366F1' }}
         >
-          <Text style={{ fontSize: 9, fontWeight: '700', color: '#fff' }}>Under review</Text>
+          <Text style={{ fontSize: 9, fontWeight: '700', color: '#fff' }}>{t('profile.photos.underReview')}</Text>
         </View>
       )}
       <View
@@ -467,6 +470,7 @@ type AddPhotoTileProps = {
 };
 
 function AddPhotoTile({ sem, onPress, width, height }: AddPhotoTileProps) {
+  const { t } = useTranslation();
   return (
     <Pressable
       onPress={onPress}
@@ -478,7 +482,7 @@ function AddPhotoTile({ sem, onPress, width, height }: AddPhotoTileProps) {
         backgroundColor: onPress ? sem.accentSoft : sem.surfaceMuted,
         opacity: onPress ? 1 : 0.5,
       }}
-      accessibilityLabel="Add photo"
+      accessibilityLabel={t('profile.photos.addPhoto')}
       accessibilityRole="button"
       disabled={!onPress}
     >
@@ -486,7 +490,7 @@ function AddPhotoTile({ sem, onPress, width, height }: AddPhotoTileProps) {
         <View className="items-center" style={{ opacity: pressed ? 0.6 : 1 }}>
           <Ionicons name="add" size={24} color={sem.accent} />
           <Text className="text-sm font-medium mt-1" style={{ color: sem.accent }}>
-            Add photo
+            {t('profile.photos.addPhoto')}
           </Text>
         </View>
       )}
@@ -513,13 +517,14 @@ function ActionSheetModal({
   onMakePrimary, onRemove, onMoveUp, onMoveDown,
 }: ActionSheetProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   if (!targetId) return null;
 
   const actions = [
-    ...(!isPrimary ? [{ label: 'Make primary', icon: 'star-outline' as const, action: () => onMakePrimary(targetId) }] : []),
-    ...(!isPrimary ? [{ label: 'Move earlier', icon: 'arrow-up-outline' as const, action: () => onMoveUp(targetId) }] : []),
-    ...(!isPrimary ? [{ label: 'Move later', icon: 'arrow-down-outline' as const, action: () => onMoveDown(targetId) }] : []),
-    { label: 'Remove photo', icon: 'trash-outline' as const, action: () => onRemove(targetId), destructive: true },
+    ...(!isPrimary ? [{ label: t('profile.photos.makePrimary'), icon: 'star-outline' as const, action: () => onMakePrimary(targetId) }] : []),
+    ...(!isPrimary ? [{ label: t('profile.photos.moveEarlier'), icon: 'arrow-up-outline' as const, action: () => onMoveUp(targetId) }] : []),
+    ...(!isPrimary ? [{ label: t('profile.photos.moveLater'), icon: 'arrow-down-outline' as const, action: () => onMoveDown(targetId) }] : []),
+    { label: t('profile.photos.removePhoto'), icon: 'trash-outline' as const, action: () => onRemove(targetId), destructive: true },
   ];
 
   return (

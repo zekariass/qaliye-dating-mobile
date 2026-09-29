@@ -1,0 +1,74 @@
+{
+  "profile": {
+    "edit": {
+      "select": "Select",
+      "selectOption": "Select option",
+      "selectA11y": "{{label}}: {{value}}",
+      "selectDate": "Select date",
+      "confirm": "Confirm",
+      "mustBe18": "You must be 18 or older",
+      "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+      },
+      "monthsShort": {
+        "january": "Jan",
+        "february": "Feb",
+        "march": "Mar",
+        "april": "Apr",
+        "may": "May",
+        "june": "Jun",
+        "july": "Jul",
+        "august": "Aug",
+        "september": "Sep",
+        "october": "Oct",
+        "november": "Nov",
+        "december": "Dec"
+      }
+    },
+    "photos": {
+      "cameraPermissionDenied": "Camera access is required to take photos.",
+      "editPrimary": "Primary photo, tap to edit",
+      "photoOptions": "Photo, tap for options",
+      "notAuthenticated": "Not authenticated"
+    },
+    "other": {
+      "unsendLike": "Unsend Like",
+      "thisUser": "this user",
+      "thisUserCap": "This user",
+      "reportUser": "Report user",
+      "blockUser": "Block user",
+      "selectReportReason": "Select report reason",
+      "reportDescription": "Report description"
+    },
+    "header": {
+      "premiumStatus": "Premium status",
+      "viewBalances": "View Balances"
+    },
+    "prefsEdit": {
+      "minAgeA11y": "Minimum age: {{age}}",
+      "maxAgeA11y": "Maximum age: {{age}}",
+      "maxDistanceA11y": "Maximum distance: {{distance}} kilometers",
+      "resetA11y": "Reset preferences to defaults",
+      "enabled": "enabled",
+      "disabled": "disabled",
+      "toggleA11y": "{{label}}: {{state}}"
+    },
+    "verifyPrompt": {
+      "title": "Verify Your Identity",
+      "message": "Build trust and help keep {{appName}} safe by verifying your identity.",
+      "verifyNow": "Verify Now",
+      "maybeLater": "Maybe Later"
+    }
+  }
+}

@@ -3,6 +3,8 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
+import { translateProfileOption } from '@/utils/profileOptions';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
 interface PrefItem {
@@ -11,66 +13,59 @@ interface PrefItem {
   value: string;
 }
 
-function formatEnum(val: string): string {
-  return val
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 function buildPreferences(p: CurrentUserProfile): PrefItem[] {
   const items: PrefItem[] = [
     {
       icon: 'compass-outline',
-      label: 'Discovery Mode',
-      value: formatEnum(p.discoveryMode),
+      label: i18n.t('profile.preferencesView.discoveryMode'),
+      value: translateProfileOption(p.discoveryMode, i18n.t),
     },
     {
       icon: 'person-outline',
-      label: 'Interested In',
-      value: formatEnum(p.interestedInGender),
+      label: i18n.t('profile.preferencesView.interestedIn'),
+      value: translateProfileOption(p.interestedInGender, i18n.t),
     },
     {
       icon: 'options-outline',
-      label: 'Age Range',
+      label: i18n.t('profile.preferencesView.ageRange'),
       value: `${p.minAge} – ${p.maxAge}`,
     },
     {
       icon: 'navigate-outline',
-      label: 'Max Distance',
-      value: `${p.maxDistanceKm} km`,
+      label: i18n.t('profile.preferencesView.maxDistance'),
+      value: i18n.t('profile.preferencesView.distanceValue', { distance: p.maxDistanceKm }),
     },
     {
       icon: 'location-outline',
-      label: 'Discover Profiles From',
-      value: formatEnum(p.locationMode),
+      label: i18n.t('profile.preferencesView.discoverProfilesFrom'),
+      value: translateProfileOption(p.locationMode, i18n.t),
     },
     {
       icon: 'search-outline',
-      label: 'Expand Search When Limited',
-      value: p.expandSearchWhenLimited ? 'Yes' : 'No',
+      label: i18n.t('profile.preferencesView.expandSearchWhenLimited'),
+      value: p.expandSearchWhenLimited ? i18n.t('common.yes') : i18n.t('common.no'),
     },
     {
       icon: 'shield-checkmark-outline',
-      label: 'Verified Profiles Only',
-      value: p.showVerifiedOnly ? 'Yes' : 'No',
+      label: i18n.t('profile.preferencesView.verifiedProfilesOnly'),
+      value: p.showVerifiedOnly ? i18n.t('common.yes') : i18n.t('common.no'),
     },
   ];
 
   if (p.hasChildrenPreference) {
-    items.push({ icon: 'people-outline', label: 'Has Children Pref', value: formatEnum(p.hasChildrenPreference) });
+    items.push({ icon: 'people-outline', label: i18n.t('profile.preferencesView.hasChildrenPref'), value: translateProfileOption(p.hasChildrenPreference, i18n.t) });
   }
   if (p.wantsChildrenPreference) {
-    items.push({ icon: 'heart-outline', label: 'Wants Children Pref', value: formatEnum(p.wantsChildrenPreference) });
+    items.push({ icon: 'heart-outline', label: i18n.t('profile.preferencesView.wantsChildrenPref'), value: translateProfileOption(p.wantsChildrenPreference, i18n.t) });
   }
   if (p.religionPreferences?.length) {
-    items.push({ icon: 'mci:hands-pray', label: 'Religion Preferences', value: p.religionPreferences.join(', ') });
+    items.push({ icon: 'mci:hands-pray', label: i18n.t('profile.preferencesView.religionPreferences'), value: p.religionPreferences.map((r) => translateProfileOption(r, i18n.t)).join(', ') });
   }
   if (p.languagePreferences?.length) {
-    items.push({ icon: 'chatbubble-outline', label: 'Language Preferences', value: p.languagePreferences.map((l) => l.name).join(', ') });
+    items.push({ icon: 'chatbubble-outline', label: i18n.t('profile.preferencesView.languagePreferences'), value: p.languagePreferences.map((l) => l.name).join(', ') });
   }
   if (p.ethnicityPreferences?.length) {
-    items.push({ icon: 'globe-outline', label: 'Ethnicity Preferences', value: p.ethnicityPreferences.map((e) => e.name).join(', ') });
+    items.push({ icon: 'globe-outline', label: i18n.t('profile.preferencesView.ethnicityPreferences'), value: p.ethnicityPreferences.map((e) => e.name).join(', ') });
   }
 
   return items;

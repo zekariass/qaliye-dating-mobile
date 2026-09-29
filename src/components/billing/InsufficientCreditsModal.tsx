@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Modal,
@@ -49,6 +50,7 @@ import { formatPeriodType, formatTryAgainLabel, getActionCostSummary, getActionN
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function InsufficientCreditsModal() {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const router = useRouter();
   const { entitlements, refetch } = useEntitlements();
@@ -216,21 +218,21 @@ export function InsufficientCreditsModal() {
               <View style={styles.retryRow}>
                 <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={[styles.retryText, { color: th.textSecondary }]}>
-                  Checking your account…
+                  {t('billing.checkingAccount', 'Checking your account…')}
                 </Text>
               </View>
             ) : isLimitExceeded ? (
               <>
                 {/* Limit exceeded message */}
                 <Text style={styles.limitExceededMessage}>
-                  Limit Exceeded
+                  {t('billing.limitExceeded', 'Limit Exceeded')}
                 </Text>
                 <Text style={[styles.limitPeriod, { color: th.textSecondary }]}>
-                  Period: {formatPeriodType(summary.periodType)}
+                  {t('billing.limitPeriod', 'Period: {{period}}', { period: formatPeriodType(summary.periodType) })}
                 </Text>
                 {summary.periodType !== 'LIFETIME' && (
                   <Text style={[styles.limitTryAgain, { color: th.textMuted }]}>
-                    Try {formatTryAgainLabel(summary.periodType)}
+                    {t('billing.tryAgainAt', 'Try {{when}}', { when: formatTryAgainLabel(summary.periodType) })}
                   </Text>
                 )}
               </>
@@ -238,25 +240,25 @@ export function InsufficientCreditsModal() {
               <>
                 {/* Cost line — label + value, large and bold */}
                 <Text style={[styles.costLabel, { color: th.textSecondary }]}>
-                  You need:
+                  {t('billing.youNeed', 'You need:')}
                 </Text>
                 <Text style={styles.costValue}>
-                  {cost.toLocaleString()} Credits
+                  {t('billing.creditsCount', '{{count}} credits', { count: cost })}
                 </Text>
 
                 {/* Balance line — label + value, large and bold */}
                 <Text style={[styles.balanceLabel, { color: th.textSecondary }]}>
-                  Your balance:
+                  {t('billing.yourBalance', 'Your balance:')}
                 </Text>
                 <Text style={styles.balanceValue}>
-                  {balance.toLocaleString()} Credits
+                  {t('billing.creditsCount', '{{count}} credits', { count: balance })}
                 </Text>
               </>
             ) : (
               /* Fallback: server didn't provide needed/balance and client-side
                  lookup failed — show the server message only. */
               <Text style={[styles.costLabel, { color: th.textSecondary, marginBottom: 8 }]}>
-                {storeMessage || "You don't have enough credits for this action."}
+                {storeMessage || t('billing.notEnoughCredits', "You don't have enough credits for this action.")}
               </Text>
             )}
           </View>
@@ -277,7 +279,7 @@ export function InsufficientCreditsModal() {
                     style={styles.btnInner}
                   >
                     <Ionicons name="diamond" size={16} color="#fff" />
-                    <Text style={styles.btnTextWhite}>Go Premium</Text>
+                    <Text style={styles.btnTextWhite}>{t('common.goPremium', 'Go Premium')}</Text>
                   </LinearGradient>
                 </Pressable>
               )}
@@ -295,7 +297,7 @@ export function InsufficientCreditsModal() {
                     style={styles.btnInner}
                   >
                     <Ionicons name="add-circle-outline" size={16} color="#fff" />
-                    <Text style={styles.btnTextWhite}>Buy Credits</Text>
+                    <Text style={styles.btnTextWhite}>{t('common.buyCredits', 'Buy Credits')}</Text>
                   </LinearGradient>
                 </Pressable>
               )}
@@ -318,7 +320,7 @@ export function InsufficientCreditsModal() {
                       color={colors.danger}
                     />
                     <Text style={[styles.btnTextMuted, { color: colors.danger, opacity: p ? 0.7 : 1 }]}>
-                      Close
+                      {t('common.close', 'Close')}
                     </Text>
                   </View>
                 )}

@@ -198,7 +198,7 @@ export default function LocationStep({ onComplete, isCompleted }: Props) {
       <View style={styles.center}>
         <View style={[styles.locatingCard, { backgroundColor: th.surface, borderColor: th.border }]}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={[styles.loadingText, { color: th.textSecondary }]}>Getting your location…</Text>
+          <Text style={[styles.loadingText, { color: th.textSecondary }]}>{t('onboarding.location.locating')}</Text>
         </View>
       </View>
     );
@@ -243,7 +243,9 @@ export default function LocationStep({ onComplete, isCompleted }: Props) {
                       t('onboarding.location.locationSaved'))}
                   </Text>
                   <Text style={[styles.savedSource, { color: th.textMuted }]}>
-                    {savedLocation.location_source === 'GPS' ? '📍 GPS' : '🔍 Manual search'}
+                    {savedLocation.location_source === 'GPS'
+                      ? t('onboarding.location.sourceGps', '📍 GPS')
+                      : t('onboarding.location.sourceManual', '🔍 Manual search')}
                   </Text>
                 </View>
                 <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
@@ -373,12 +375,12 @@ export default function LocationStep({ onComplete, isCompleted }: Props) {
               disabled={!selectedPlace || isSubmitting}
               activeOpacity={0.85}
             >
-              {isSubmitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.btnText}>Continue</Text>}
+              {isSubmitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.btnText}>{t('onboarding.location.continue')}</Text>}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backLink} onPress={resetToChoice} activeOpacity={0.7}>
               <Ionicons name="arrow-back" size={14} color={th.textMuted} />
-              <Text style={[styles.backLinkText, { color: th.textMuted }]}>Back to location options</Text>
+              <Text style={[styles.backLinkText, { color: th.textMuted }]}>{t('onboarding.location.backToOptions', 'Back to location options')}</Text>
             </TouchableOpacity>
           </>
         )}

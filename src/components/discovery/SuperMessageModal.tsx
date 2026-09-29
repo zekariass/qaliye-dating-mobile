@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -40,6 +41,7 @@ export default function SuperMessageModal({
   onSend,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const inputRef = useRef<TextInput>(null);
@@ -102,18 +104,18 @@ export default function SuperMessageModal({
                 <View style={styles.titleRow}>
                   <Text style={{ fontSize: 15, marginRight: 4 }}>💌</Text>
                   <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#1A1A2E' }]}>
-                    Before-Match Message
+                    {t('discovery.superMessage.title')}
                   </Text>
                 </View>
                 <Text style={[styles.targetName, { color: th.textSecondary }]} numberOfLines={1}>
-                  to {target.displayName}
+                  {t('discovery.superMessage.to', { name: target.displayName })}
                 </Text>
               </View>
             </View>
             <TouchableOpacity
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel="Close"
+              accessibilityLabel={t('common.close')}
             >
               <Ionicons name="close" size={22} color={th.textSecondary} />
             </TouchableOpacity>
@@ -123,7 +125,7 @@ export default function SuperMessageModal({
           <View style={[styles.infoPill, { backgroundColor: isDark ? '#2E1A5A' : '#F3EEFF' }]}>
             <Ionicons name="information-circle-outline" size={14} color={colors.primary} />
             <Text style={[styles.infoText, { color: colors.primary }]}>
-              You can send one message to a user before matching.
+              {t('discovery.superMessage.info')}
             </Text>
           </View>
 
@@ -142,7 +144,7 @@ export default function SuperMessageModal({
                   : '#E0D4FB',
               },
             ]}
-            placeholder={`Write a heartfelt message to ${target.displayName}…`}
+            placeholder={t('discovery.superMessage.placeholder', { name: target.displayName })}
             placeholderTextColor={isDark ? '#7C6EA0' : '#A89AC8'}
             value={message}
             onChangeText={setMessage}
@@ -171,14 +173,14 @@ export default function SuperMessageModal({
               onPress={handleSend}
               disabled={!canSend}
               activeOpacity={0.8}
-              accessibilityLabel="Send super message"
+              accessibilityLabel={t('discovery.sendSuperMessage')}
             >
               {isSending ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
                   <Text style={{ fontSize: 15, marginRight: 6 }}>💌</Text>
-                  <Text style={styles.sendText}>Send</Text>
+                  <Text style={styles.sendText}>{t('discovery.superMessage.send')}</Text>
                 </>
               )}
             </TouchableOpacity>

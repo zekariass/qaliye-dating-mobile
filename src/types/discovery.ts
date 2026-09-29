@@ -64,6 +64,9 @@ export type DiscoveryFeedResponse = {
   cursorReset: boolean;
 };
 
+/** How a match was created — regular discovery swipe or a Blind Date session. */
+export type MatchSource = 'DISCOVERY' | 'BLIND_DATE';
+
 export type MatchedUserSummaryDto = {
   user_id: string;
   display_name: string;
@@ -72,6 +75,8 @@ export type MatchedUserSummaryDto = {
 
 export type MatchSummaryDto = {
   match_id: string;
+  // Additive field; absent on older backend versions (treat as 'DISCOVERY').
+  match_source?: MatchSource;
   matched_at: string;
   rewind_eligible_until: string;
   other_user: MatchedUserSummaryDto;
@@ -86,6 +91,10 @@ export type LikeActionVariantDto = {
   icon: string | null;
   credits: number;
   sort_order: number;
+  // True for the variant a "plain" like sends (tapping like without picking
+  // a variant). Additive field — absent on older backend versions / cached
+  // payloads; treat as false. Exactly one variant is flagged by the backend.
+  is_default?: boolean;
   // Per-period limit/usage for the current plan — additive fields; absent on
   // older backend versions. `limit: null` means unlimited.
   limit?: number | null;
@@ -182,6 +191,8 @@ export type UpdateDiscoveryPreferencesResponse = {
 
 export type MatchItemDto = {
   match_id: string;
+  // Additive field; absent on older backend versions (treat as 'DISCOVERY').
+  match_source?: MatchSource;
   user_id: string;
   display_name: string;
   age: number;

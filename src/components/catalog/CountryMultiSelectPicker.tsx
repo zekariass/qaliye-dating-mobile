@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     FlatList,
     Modal,
@@ -28,13 +29,14 @@ export function CountryMultiSelectPicker({
   selected,
   onChange,
   maxSelection = 50,
-  placeholder = 'Select countries…',
+  placeholder,
   accentColor = '#8A2CFF',
   textColor = '#1B1340',
   mutedColor = '#9CA3AF',
   borderColor = '#E9DDF8',
   surfaceColor = '#FFFFFF',
 }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const { top, bottom } = useSafeAreaInsets();
@@ -76,7 +78,7 @@ export function CountryMultiSelectPicker({
   const displayLabel =
     selectedCountries.length > 0
       ? selectedCountries.map((c) => c.name).join(', ')
-      : placeholder;
+      : (placeholder ?? t('catalog.selectCountries', 'Select Countries'));
 
   return (
     <>
@@ -84,7 +86,10 @@ export function CountryMultiSelectPicker({
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Countries: ${displayLabel}`}
+        accessibilityLabel={t('catalog.countriesLabel', {
+          defaultValue: 'Countries: {{label}}',
+          label: displayLabel,
+        })}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -128,7 +133,10 @@ export function CountryMultiSelectPicker({
               </Text>
               <Pressable
                 onPress={() => handleRemove(country.code)}
-                accessibilityLabel={`Remove ${country.name}`}
+                accessibilityLabel={t('common.removeItem', {
+                  defaultValue: 'Remove {{name}}',
+                  name: country.name,
+                })}
                 hitSlop={8}
               >
                 <Ionicons name="close-circle" size={14} color={accentColor} />
@@ -155,14 +163,14 @@ export function CountryMultiSelectPicker({
             }}
           >
             <Text style={{ flex: 1, fontSize: 17, fontWeight: '700', color: textColor }}>
-              Select Countries
+              {t('catalog.selectCountries', 'Select Countries')}
             </Text>
             {maxSelection < 50 && (
               <Text style={{ fontSize: 12, color: mutedColor }}>
                 {selected.length}/{maxSelection}
               </Text>
             )}
-            <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityLabel="Close">
+            <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityLabel={t('common.close', 'Close')}>
               <Ionicons name="checkmark-circle" size={28} color={accentColor} />
             </Pressable>
           </View>
@@ -184,7 +192,7 @@ export function CountryMultiSelectPicker({
             <Ionicons name="search-outline" size={16} color={mutedColor} />
             <TextInput
               style={{ flex: 1, paddingVertical: 10, fontSize: 14, color: textColor }}
-              placeholder="Search countries…"
+              placeholder={t('catalog.searchCountries', 'Search countries…')}
               placeholderTextColor={mutedColor}
               value={search}
               onChangeText={setSearch}
@@ -201,7 +209,7 @@ export function CountryMultiSelectPicker({
           {filtered.length === 0 ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <Ionicons name="globe-outline" size={40} color={mutedColor} />
-              <Text style={{ color: mutedColor, fontSize: 14 }}>No countries found</Text>
+              <Text style={{ color: mutedColor, fontSize: 14 }}>{t('catalog.noCountries', 'No countries found')}</Text>
             </View>
           ) : (
             <FlatList

@@ -2,6 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     FlatList,
@@ -109,6 +110,8 @@ function BrowseProfileCard({
   onLikeVariant,
   onPass,
   onSuperMessage,
+  onRewind,
+  canRewind,
   likeVariants,
   cardBg,
   borderColor,
@@ -120,12 +123,15 @@ function BrowseProfileCard({
   onLikeVariant: (userId: string, variantCode: string) => void;
   onPass: (userId: string) => void;
   onSuperMessage: (userId: string) => void;
+  onRewind: () => void;
+  canRewind: boolean;
   likeVariants: LikeActionVariantDto[];
   cardBg: string;
   borderColor: string;
   textColor: string;
   isActing: boolean;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const { data: myProfile } = useCurrentProfile();
@@ -311,7 +317,7 @@ function BrowseProfileCard({
       <View>
       <GestureDetector gesture={photoGesture}>
         <Animated.View
-          accessibilityLabel={`View ${item.display_name}'s profile`}
+          accessibilityLabel={t('discovery.viewProfile', { name: item.display_name })}
           accessibilityRole="button"
         >
           <View style={[styles.photoWrap, { height: CARD_H }]}>
@@ -386,7 +392,7 @@ function BrowseProfileCard({
             <Ionicons name="close" size={110} color="#FF3B30" />
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.superLikeStamp, superLikeStampStyle]} pointerEvents="none">
-            <Text style={styles.superLikeStampText}>💍 SUPER LIKE</Text>
+            <Text style={styles.superLikeStampText}>{t('discovery.superLikeStamp')}</Text>
           </Animated.View>
 
           {/* Like / super-like burst — big icon centered on the photo */}
@@ -442,8 +448,10 @@ function BrowseProfileCard({
       >
         <TopLeftActionButtons
           onPass={handlePass}
+          onRewind={onRewind}
           onSuperMessage={() => onSuperMessage(item.user_id)}
           disabled={animating || isActing}
+          rewindDisabled={!canRewind}
         />
       </View>
       </View>
@@ -544,7 +552,7 @@ function BrowseProfileCard({
           onPress={() => setShowVariantInfo((v) => !v)}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="Show like action descriptions"
+          accessibilityLabel={t('discovery.showLikeDescriptions')}
           accessibilityState={{ expanded: showVariantInfo }}
         >
           <Ionicons
@@ -567,7 +575,7 @@ function BrowseProfileCard({
                   {variant.name}
                   {variant.credits > 0 && (
                     <Text style={[styles.variantInfoCost, { fontSize: rs(11.5, scale) }]}>
-                      {` · ${variant.credits} Credit${variant.credits === 1 ? '' : 's'}`}
+                      {` · ${t('discovery.creditCount', { count: variant.credits })}`}
                     </Text>
                   )}
                   {variant.blocked ? (
@@ -576,7 +584,7 @@ function BrowseProfileCard({
                     </Text>
                   ) : variant.remaining != null && variant.remaining <= LOW_REMAINING_THRESHOLD ? (
                     <Text style={[styles.variantInfoLimit, { fontSize: rs(11.5, scale) }]}>
-                      {` · ${variant.remaining} left`}
+                      {` · ${t('discovery.remainingLeft', { count: variant.remaining })}`}
                     </Text>
                   ) : null}
                 </Text>
@@ -607,7 +615,6 @@ interface Props {
   canRewind: boolean;
   /** Configurable LIKE action variants — same list as the swipe-mode rail. */
   likeVariants: LikeActionVariantDto[];
-  rewindTrigger: number;
   swipedIds: Set<string>;
   onCardAction: (userId: string, swiped: boolean, card?: CardDto) => void;
   onSuperMessage?: (userId: string, displayName: string, photoUrl: string | null) => void;
@@ -627,12 +634,12 @@ export default function BrowseModeGrid({
   onRewind,
   canRewind,
   likeVariants,
-  rewindTrigger,
   swipedIds,
   onCardAction,
   onSuperMessage,
   onLikeSuccess,
 }: Props) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const { mutateAsync: swipeAction, isPending: isSwiping } = useSwipeAction();
@@ -729,7 +736,7 @@ export default function BrowseModeGrid({
 
   // ── Rewind: call API, show spinner, prepend restored card ──
   const handleBrowseRewind = useCallback(async () => {
-    if (isRewinding) return;
+    if (isRewinding || !canRewind) return;
     setIsRewinding(true);
     setSheetVisible(false);
     try {
@@ -765,16 +772,7 @@ export default function BrowseModeGrid({
     } finally {
       setIsRewinding(false);
     }
-  }, [isRewinding, rewindMutation, onRewind, onCardAction]);
-
-  // React to rewind trigger from header button
-  const lastRewindTriggerRef = useRef(rewindTrigger);
-  useEffect(() => {
-    if (rewindTrigger !== lastRewindTriggerRef.current) {
-      lastRewindTriggerRef.current = rewindTrigger;
-      handleBrowseRewind();
-    }
-  }, [rewindTrigger]);
+  }, [isRewinding, canRewind, rewindMutation, onRewind, onCardAction]);
 
   const handleLikeVariant = useCallback(
     (userId: string, variantCode: string) => handleSwipe('LIKE', userId, variantCode),
@@ -820,13 +818,13 @@ export default function BrowseModeGrid({
         <View style={[styles.stateIconCircle, { backgroundColor: skeletonBg }]}>
           <Ionicons name="cloud-offline-outline" size={44} color={colors.danger} />
         </View>
-        <Text style={[styles.stateTitle, { color: th.text }]}>Something went wrong</Text>
+        <Text style={[styles.stateTitle, { color: th.text }]}>{t('common.somethingWentWrong')}</Text>
         <Text style={[styles.stateSubtitle, { color: th.textSecondary }]}>
-          Check your connection and try again.
+          {t('discovery.checkConnectionRetry')}
         </Text>
         <TouchableOpacity style={styles.stateBtn} activeOpacity={0.85} onPress={onRefresh}>
           <Ionicons name="refresh-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
-          <Text style={styles.stateBtnText}>Retry</Text>
+          <Text style={styles.stateBtnText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -839,13 +837,13 @@ export default function BrowseModeGrid({
         <View style={[styles.stateIconCircle, { backgroundColor: skeletonBg }]}>
           <Ionicons name="heart-dislike-outline" size={44} color={colors.primary} />
         </View>
-        <Text style={[styles.stateTitle, { color: th.text }]}>No profiles to browse</Text>
+        <Text style={[styles.stateTitle, { color: th.text }]}>{t('discovery.noProfilesToBrowse')}</Text>
         <Text style={[styles.stateSubtitle, { color: th.textSecondary }]}>
-          Try expanding your preferences or check back later for new people.
+          {t('discovery.noProfilesToBrowseHint')}
         </Text>
         <TouchableOpacity style={styles.stateBtn} activeOpacity={0.85} onPress={onSwitchToSwipe}>
           <Ionicons name="card-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
-          <Text style={styles.stateBtnText}>Back to Swipe</Text>
+          <Text style={styles.stateBtnText}>{t('discovery.backToSwipe')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -881,6 +879,8 @@ export default function BrowseModeGrid({
             onLikeVariant={handleLikeVariant}
             onPass={handlePass}
             onSuperMessage={handleSuperMessage}
+            onRewind={handleBrowseRewind}
+            canRewind={canRewind}
             likeVariants={likeVariants}
             cardBg={cardBg}
             borderColor={th.border}
@@ -895,7 +895,7 @@ export default function BrowseModeGrid({
         <View style={styles.rewindOverlay} pointerEvents="none">
           <View style={[styles.rewindSpinnerWrap, { backgroundColor: isDark ? th.backgroundElement : th.surface }]}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Getting it back…</Text>
+            <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>{t('discovery.gettingItBack')}</Text>
           </View>
         </View>
       )}

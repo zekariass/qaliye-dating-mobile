@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { colors } from '@/constants/theme';
 import { useCountrySettings } from '@/hooks/billing/useCountrySettings';
@@ -12,6 +13,7 @@ import { useTheme } from '@/hooks/use-theme';
 import IdentityVerificationStep from '../onboarding/steps/IdentityVerificationStep';
 
 export default function VerifyIdentityScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { colors: th } = useTheme();
   const queryClient = useQueryClient();
@@ -42,12 +44,12 @@ export default function VerifyIdentityScreen() {
         <Pressable
           style={[styles.backBtn, { backgroundColor: th.backgroundElement }]}
           onPress={handleBack}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('profile.goBack')}
           accessibilityRole="button"
         >
           <Ionicons name="arrow-back" size={20} color={th.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: th.text }]}>Verify Identity</Text>
+        <Text style={[styles.headerTitle, { color: th.text }]}>{t('profile.verifyIdentity')}</Text>
         <View style={styles.headerRight} />
       </View>
 

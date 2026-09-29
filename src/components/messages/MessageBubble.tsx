@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ChatImageAttachment, isImageAttachment } from '@/components/messages/ChatImageAttachment';
@@ -62,6 +63,7 @@ function StatusIndicator({
   timeLabel: string;
   onRetry?: () => void;
 }) {
+  const { t } = useTranslation();
   const th = useBubbleTheme();
 
   let icon: React.ReactNode = null;
@@ -76,7 +78,7 @@ function StatusIndicator({
           onPress={onRetry}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
-          accessibilityLabel="Retry sending message"
+          accessibilityLabel={t('chat.retrySend')}
         >
           <Ionicons name="alert-circle" size={14} color={th.failedColor} style={deliveryStyles.icon} />
         </TouchableOpacity>
@@ -133,6 +135,7 @@ function IncomingBubble({
   activeVoiceId: string | null;
   onStopAllVoices: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const th = useBubbleTheme();
 
   const imageAttachments = (message.attachments ?? []).filter(isImageAttachment);
@@ -144,7 +147,7 @@ function IncomingBubble({
       <View style={styles.incomingContent}>
         <View
           style={[styles.bubble, styles.incomingBubble, { backgroundColor: th.incomingBg }]}
-          accessibilityLabel={`Incoming message: ${message.body}`}
+          accessibilityLabel={t('chat.incomingMessage', { body: message.body ?? '' })}
         >
           {hasBody && (
             <Text style={[styles.bubbleText, { color: th.incomingText }]}>
@@ -194,6 +197,7 @@ function OutgoingBubble({
   activeVoiceId: string | null;
   onStopAllVoices: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const th = useBubbleTheme();
   const visibleStatus = resolveVisibleStatus(
     message.localSendStatus,
@@ -215,7 +219,7 @@ function OutgoingBubble({
             styles.outgoingBubble,
             { backgroundColor: isFailed ? th.failedBg : th.outgoingBg },
           ]}
-          accessibilityLabel={`Your message: ${message.body}`}
+          accessibilityLabel={t('chat.yourMessage', { body: message.body ?? '' })}
         >
           {hasBody && (
             <Text
@@ -267,7 +271,7 @@ function OutgoingBubble({
               <Text style={{ color: isFailed ? th.failedColor : th.outgoingText, fontSize: 12 }}>
                 {message.pendingVoiceDurations?.filter((d): d is number => d != null)
                   .map((d) => `${Math.round(d / 1000)}s`)
-                  .join(', ') || 'Voice message'}
+                  .join(', ') || t('chat.voiceMessage')}
               </Text>
             </View>
           )}
@@ -284,11 +288,11 @@ function OutgoingBubble({
             onPress={onRetry}
             style={styles.retryRow}
             accessibilityRole="button"
-            accessibilityLabel="Tap to retry"
+            accessibilityLabel={t('chat.tapToRetry')}
           >
             <Ionicons name="refresh" size={12} color={th.failedColor} />
             <Text style={[styles.retryText, { color: th.failedColor }]}>
-              Tap to retry
+              {t('chat.tapToRetry')}
             </Text>
           </TouchableOpacity>
         )}

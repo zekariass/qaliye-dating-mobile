@@ -102,7 +102,8 @@ export default function ResetPasswordScreen() {
       setGeneralError(
         msg.includes('weak password') || msg.includes('at least')
           ? t('auth.passwordTooShort')
-          : (e as Error).message,
+          : (e as Error).message ||
+            t('auth.resetPasswordFailed', 'Could not reset your password. Please try again.'),
       );
     }
   }

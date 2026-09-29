@@ -42,25 +42,25 @@ import {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const LOCATION_MODES: { key: LocationMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name']; desc: string }[] = [
-  { key: 'nearby',             label: 'Near Me',   icon: 'locate-outline',  desc: 'Within a distance' },
-  { key: 'diaspora',           label: 'Diaspora',  icon: 'earth-outline',   desc: 'Abroad communities' },
-  { key: 'specific_countries', label: 'Specific',  icon: 'flag-outline',    desc: 'Choose countries' },
-  { key: 'anywhere',           label: 'Anywhere',  icon: 'globe-outline',   desc: 'No location filter' },
+const LOCATION_MODES: { key: LocationMode; labelKey: string; icon: React.ComponentProps<typeof Ionicons>['name']; descKey: string }[] = [
+  { key: 'nearby',             labelKey: 'discovery.preferences.locationNearby',     icon: 'locate-outline',  descKey: 'discovery.preferences.locationNearbyDesc' },
+  { key: 'diaspora',           labelKey: 'discovery.locationFilter.diaspora',        icon: 'earth-outline',   descKey: 'discovery.preferences.locationDiasporaDesc' },
+  { key: 'specific_countries', labelKey: 'discovery.preferences.locationSpecific',   icon: 'flag-outline',    descKey: 'discovery.preferences.locationSpecificDesc' },
+  { key: 'anywhere',           labelKey: 'discovery.locationFilter.anywhere',        icon: 'globe-outline',   descKey: 'discovery.preferences.locationAnywhereDesc' },
 ];
 
-const HAS_CHILDREN_OPTS: { key: HasChildrenPref; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-  { key: 'any', label: 'Any',          icon: 'remove-outline' },
-  { key: 'yes', label: 'Has kids',     icon: 'heart-outline' },
-  { key: 'no',  label: 'No kids',      icon: 'close-circle-outline' },
+const HAS_CHILDREN_OPTS: { key: HasChildrenPref; labelKey: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { key: 'any', labelKey: 'discovery.preferences.any',          icon: 'remove-outline' },
+  { key: 'yes', labelKey: 'discovery.preferences.hasKids',      icon: 'heart-outline' },
+  { key: 'no',  labelKey: 'discovery.preferences.noKids',       icon: 'close-circle-outline' },
 ];
 
-const WANTS_CHILDREN_OPTS: { key: WantsChildrenPref; label: string }[] = [
-  { key: 'any',                label: 'Any' },
-  { key: 'yes',                label: 'Wants kids' },
-  { key: 'no',                 label: "Doesn't want" },
-  { key: 'not_sure',           label: 'Not sure' },
-  { key: 'open_to_discussion', label: 'Open to discuss' },
+const WANTS_CHILDREN_OPTS: { key: WantsChildrenPref; labelKey: string }[] = [
+  { key: 'any',                labelKey: 'discovery.preferences.any' },
+  { key: 'yes',                labelKey: 'discovery.preferences.wantsKids' },
+  { key: 'no',                 labelKey: 'discovery.preferences.doesntWantKids' },
+  { key: 'not_sure',           labelKey: 'discovery.preferences.notSure' },
+  { key: 'open_to_discussion', labelKey: 'discovery.preferences.openToDiscuss' },
 ];
 
 const DEFAULT_PREFS: DiscoveryPrefDraft = {
@@ -284,7 +284,7 @@ export default function DiscoveryPreferencesScreen() {
         <Pressable style={styles.saveHeaderBtn} onPress={handleSave} disabled={isSaving}>
           {isSaving
             ? <ActivityIndicator size="small" color={colors.surface} />
-            : <Text style={styles.saveHeaderBtnText}>Save</Text>
+            : <Text style={styles.saveHeaderBtnText}>{t('common.save')}</Text>
           }
         </Pressable>
       </View>
@@ -297,10 +297,10 @@ export default function DiscoveryPreferencesScreen() {
       >
 
         {/* ── 1. Location ── */}
-        <Section icon="navigate-outline" label="Location">
-          <Text style={[styles.helperText, { color: th.textSecondary }]}>Where should we look for people?</Text>
+        <Section icon="navigate-outline" label={t('discovery.preferences.location')}>
+          <Text style={[styles.helperText, { color: th.textSecondary }]}>{t('discovery.preferences.locationHint')}</Text>
           <View style={styles.locationGrid}>
-            {LOCATION_MODES.map(({ key, label, icon, desc }) => {
+            {LOCATION_MODES.map(({ key, labelKey, icon, descKey }) => {
               const isActive = prefs.locationMode === key;
               return (
                 <Pressable
@@ -319,8 +319,8 @@ export default function DiscoveryPreferencesScreen() {
                   <View style={[styles.locationTileIcon, { backgroundColor: isActive ? colors.primary + '20' : th.backgroundElement }]}>
                     <Ionicons name={icon} size={20} color={isActive ? colors.primary : th.textSecondary} />
                   </View>
-                  <Text style={[styles.locationTileLabel, { color: isActive ? colors.primary : th.text }]}>{label}</Text>
-                  <Text style={[styles.locationTileDesc, { color: isActive ? colors.primary + 'AA' : th.textMuted }]}>{desc}</Text>
+                  <Text style={[styles.locationTileLabel, { color: isActive ? colors.primary : th.text }]}>{t(labelKey)}</Text>
+                  <Text style={[styles.locationTileDesc, { color: isActive ? colors.primary + 'AA' : th.textMuted }]}>{t(descKey)}</Text>
                   {isActive && (
                     <View style={styles.locationTileCheck}>
                       <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
@@ -346,23 +346,23 @@ export default function DiscoveryPreferencesScreen() {
         </Section>
 
         {/* ── 2. Age Range ── */}
-        <Section icon="calendar-outline" label="Age Range">
+        <Section icon="calendar-outline" label={t('discovery.preferences.ageRange')}>
           <View style={styles.ageDisplayRow}>
             <View style={styles.ageDisplayBox}>
               <Text style={[styles.ageDisplayNum, { color: colors.primary }]}>{prefs.minAge}</Text>
-              <Text style={[styles.ageDisplayUnit, { color: th.textMuted }]}>min</Text>
+              <Text style={[styles.ageDisplayUnit, { color: th.textMuted }]}>{t('discovery.preferences.min')}</Text>
             </View>
             <View style={[styles.ageDisplaySep, { backgroundColor: th.border }]} />
             <View style={styles.ageDisplayBox}>
               <Text style={[styles.ageDisplayNum, { color: colors.primary }]}>{prefs.maxAge}</Text>
-              <Text style={[styles.ageDisplayUnit, { color: th.textMuted }]}>max</Text>
+              <Text style={[styles.ageDisplayUnit, { color: th.textMuted }]}>{t('discovery.preferences.max')}</Text>
             </View>
           </View>
           <View style={styles.slidersRow}>
             <View style={styles.sliderCol}>
               <View style={styles.sliderLabelRow}>
                 <Ionicons name="remove-outline" size={14} color={th.textMuted} />
-                <Text style={[styles.sliderLabel, { color: th.textSecondary }]}>Minimum age</Text>
+                <Text style={[styles.sliderLabel, { color: th.textSecondary }]}>{t('discovery.preferences.minimumAge')}</Text>
               </View>
               <Slider
                 style={styles.slider}
@@ -379,7 +379,7 @@ export default function DiscoveryPreferencesScreen() {
             <View style={styles.sliderCol}>
               <View style={styles.sliderLabelRow}>
                 <Ionicons name="add-outline" size={14} color={th.textMuted} />
-                <Text style={[styles.sliderLabel, { color: th.textSecondary }]}>Maximum age</Text>
+                <Text style={[styles.sliderLabel, { color: th.textSecondary }]}>{t('discovery.preferences.maximumAge')}</Text>
               </View>
               <Slider
                 style={styles.slider}
@@ -398,13 +398,13 @@ export default function DiscoveryPreferencesScreen() {
 
         {/* ── 3. Max Distance (Nearby only) ── */}
         {prefs.locationMode === 'nearby' && (
-          <Section icon="compass-outline" label="Distance" accent={colors.secondary}>
+          <Section icon="compass-outline" label={t('discovery.preferences.distance')} accent={colors.secondary}>
             <View style={styles.distanceRow}>
               <View style={[styles.distanceBadge, { backgroundColor: colors.secondary + '14' }]}>
                 <Ionicons name="navigate-circle-outline" size={18} color={colors.secondary} />
-                <Text style={[styles.distanceValue, { color: colors.secondary }]}>{prefs.maximumDistanceKm} km</Text>
+                <Text style={[styles.distanceValue, { color: colors.secondary }]}>{t('discovery.preferences.km', { km: prefs.maximumDistanceKm })}</Text>
               </View>
-              <Text style={[styles.distanceHint, { color: th.textMuted }]}>radius from you</Text>
+              <Text style={[styles.distanceHint, { color: th.textMuted }]}>{t('discovery.preferences.radiusFromYou')}</Text>
             </View>
             <Slider
               style={styles.slider}
@@ -418,16 +418,16 @@ export default function DiscoveryPreferencesScreen() {
               thumbTintColor={colors.secondary}
             />
             <View style={styles.sliderEndRow}>
-              <Text style={[styles.sliderEndText, { color: th.textMuted }]}>1 km</Text>
-              <Text style={[styles.sliderEndText, { color: th.textMuted }]}>500 km</Text>
+              <Text style={[styles.sliderEndText, { color: th.textMuted }]}>{t('discovery.preferences.km', { km: 1 })}</Text>
+              <Text style={[styles.sliderEndText, { color: th.textMuted }]}>{t('discovery.preferences.km', { km: 500 })}</Text>
             </View>
           </Section>
         )}
 
         {/* ── 4. Quality Filters ── */}
-        <Section icon="shield-checkmark-outline" label="Quality Filters" accent="#2F80ED">
+        <Section icon="shield-checkmark-outline" label={t('discovery.preferences.qualityFilters')} accent="#2F80ED">
           <ToggleRow
-            label="Verified profiles only"
+            label={t('discovery.preferences.showVerifiedOnly')}
             desc={t('discovery.preferences.verifiedDesc')}
             iconName="shield-checkmark-outline"
             iconBg="#2F80ED"
@@ -438,8 +438,8 @@ export default function DiscoveryPreferencesScreen() {
             <>
               <CardDivider />
               <ToggleRow
-                label="Expand search when limited"
-                desc="Broaden discovery if few matches are found nearby"
+                label={t('discovery.preferences.expandSearch')}
+                desc={t('discovery.preferences.expandSearchDesc')}
                 iconName="search-outline"
                 iconBg="#F59E0B"
                 value={prefs.expandSearchWhenLimited}
@@ -450,13 +450,13 @@ export default function DiscoveryPreferencesScreen() {
         </Section>
 
         {/* ── 5. Family & Children ── */}
-        <Section icon="people-outline" label="Family & Children" accent="#22C55E">
-          <Text style={[styles.subLabel, { color: th.text }]}>Already has children?</Text>
+        <Section icon="people-outline" label={t('discovery.preferences.familyChildren')} accent="#22C55E">
+          <Text style={[styles.subLabel, { color: th.text }]}>{t('discovery.preferences.alreadyHasChildren')}</Text>
           <View style={styles.chipRow}>
-            {HAS_CHILDREN_OPTS.map(({ key, label, icon }) => (
+            {HAS_CHILDREN_OPTS.map(({ key, labelKey, icon }) => (
               <Chip
                 key={key}
-                label={label}
+                label={t(labelKey)}
                 icon={icon}
                 isActive={prefs.hasChildrenPreference === key}
                 onPress={() => update('hasChildrenPreference', key)}
@@ -465,12 +465,12 @@ export default function DiscoveryPreferencesScreen() {
             ))}
           </View>
           <CardDivider />
-          <Text style={[styles.subLabel, { color: th.text }]}>Wants children?</Text>
+          <Text style={[styles.subLabel, { color: th.text }]}>{t('discovery.preferences.wantsChildrenLabel')}</Text>
           <View style={styles.chipRow}>
-            {WANTS_CHILDREN_OPTS.map(({ key, label }) => (
+            {WANTS_CHILDREN_OPTS.map(({ key, labelKey }) => (
               <Chip
                 key={key}
-                label={label}
+                label={t(labelKey)}
                 isActive={prefs.wantsChildrenPreference === key}
                 onPress={() => update('wantsChildrenPreference', key)}
                 accent="#22C55E"
@@ -480,8 +480,8 @@ export default function DiscoveryPreferencesScreen() {
         </Section>
 
         {/* ── 6. Religion ── */}
-        <Section icon="prism-outline" label="Religion" accent="#A020F0">
-          <Text style={[styles.helperText, { color: th.textSecondary }]}>Leave empty to see all. Select one or more.</Text>
+        <Section icon="prism-outline" label={t('discovery.details.religion')} accent="#A020F0">
+          <Text style={[styles.helperText, { color: th.textSecondary }]}>{t('discovery.preferences.religionHint')}</Text>
           <View style={styles.chipRow}>
             {RELIGION_OPTIONS.map((r) => (
               <Chip
@@ -496,9 +496,9 @@ export default function DiscoveryPreferencesScreen() {
         </Section>
 
         {/* ── 7. Background & Culture ── */}
-        <Section icon="globe-outline" label="Background & Culture" accent="#FF4FA3">
-          <Text style={[styles.subLabel, { color: th.text }]}>Ethnicity</Text>
-          <Text style={[styles.helperText, { color: th.textSecondary }]}>Leave empty to see all backgrounds.</Text>
+        <Section icon="globe-outline" label={t('discovery.preferences.backgroundCulture')} accent="#FF4FA3">
+          <Text style={[styles.subLabel, { color: th.text }]}>{t('discovery.details.ethnicity')}</Text>
+          <Text style={[styles.helperText, { color: th.textSecondary }]}>{t('discovery.preferences.ethnicityHint')}</Text>
           <EthnicityMultiSelectPicker
             selected={prefs.ethnicityPreferences}
             onChange={(items: EthnicityOption[]) => update('ethnicityPreferences', items)}
@@ -509,8 +509,8 @@ export default function DiscoveryPreferencesScreen() {
             surfaceColor={th.surface}
           />
           <CardDivider />
-          <Text style={[styles.subLabel, { color: th.text }]}>Languages spoken</Text>
-          <Text style={[styles.helperText, { color: th.textSecondary }]}>Leave empty to see all languages.</Text>
+          <Text style={[styles.subLabel, { color: th.text }]}>{t('discovery.preferences.languagesSpoken')}</Text>
+          <Text style={[styles.helperText, { color: th.textSecondary }]}>{t('discovery.preferences.languagesHint')}</Text>
           <LanguageMultiSelectPicker
             selected={prefs.languagePreferences}
             onChange={(items: LanguageOption[]) => update('languagePreferences', items)}

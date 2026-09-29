@@ -15,27 +15,27 @@ function formatLabel(value: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-const SMOKING_API_TO_LABEL: Record<string, string> = {
-  NO: 'No',
-  YES: 'Yes',
-  OCCASIONALLY: 'Occasionally',
-  TRYING_TO_QUIT: 'Trying to quit',
+const SMOKING_API_TO_KEY: Record<string, string> = {
+  NO: 'discovery.details.no',
+  YES: 'discovery.details.yes',
+  OCCASIONALLY: 'discovery.details.occasionally',
+  TRYING_TO_QUIT: 'discovery.details.tryingToQuit',
 };
 
-const DRINKING_API_TO_LABEL: Record<string, string> = {
-  NO: 'No',
-  SOCIALLY: 'Socially',
-  OCCASIONALLY: 'Occasionally',
-  YES: 'Yes',
+const DRINKING_API_TO_KEY: Record<string, string> = {
+  NO: 'discovery.details.no',
+  SOCIALLY: 'discovery.details.socially',
+  OCCASIONALLY: 'discovery.details.occasionally',
+  YES: 'discovery.details.yes',
 };
 
-const ACTIVITY_API_TO_LABEL: Record<string, string> = {
-  VERY_ACTIVE: 'Active: Exercises 4+ times a week',
-  ACTIVE: 'Active: Exercises 4+ times a week',
-  MODERATE: 'Moderate: Exercises a few times a week',
-  LIGHT: 'Occasional: Exercises once in a while',
-  SEDENTARY: 'Rarely: Prefers non-physical activities',
-  PREFER_NOT_TO_SAY: 'Prefer not to say',
+const ACTIVITY_API_TO_KEY: Record<string, string> = {
+  VERY_ACTIVE: 'discovery.details.activityActive',
+  ACTIVE: 'discovery.details.activityActive',
+  MODERATE: 'discovery.details.activityModerate',
+  LIGHT: 'discovery.details.activityOccasional',
+  SEDENTARY: 'discovery.details.activityRarely',
+  PREFER_NOT_TO_SAY: 'discovery.details.preferNotToSay',
 };
 
 // ---------------------------------------------------------------------------
@@ -163,57 +163,66 @@ export default function ProfileDetailsSection({ card }: Props) {
   const mutedBorder   = isDark ? 'rgba(46,31,80,0.22)' : 'rgba(233,221,248,0.5)';
 
   const boolLabel = (v: boolean | undefined | null): string | null =>
-    v == null ? null : v ? 'Yes' : 'No';
+    v == null ? null : v ? t('discovery.details.yes') : t('discovery.details.no');
 
+  const smokingKey = card.smoking_detail
+    ? SMOKING_API_TO_KEY[card.smoking_detail.toUpperCase()]
+    : undefined;
   const smokingLabel = card.smoking_detail
-    ? (SMOKING_API_TO_LABEL[card.smoking_detail.toUpperCase()] ?? formatLabel(card.smoking_detail))
+    ? (smokingKey ? t(smokingKey) : formatLabel(card.smoking_detail))
     : boolLabel(card.smoking);
+  const drinkingKey = card.drinking_detail
+    ? DRINKING_API_TO_KEY[card.drinking_detail.toUpperCase()]
+    : undefined;
   const drinkingLabel = card.drinking_detail
-    ? (DRINKING_API_TO_LABEL[card.drinking_detail.toUpperCase()] ?? formatLabel(card.drinking_detail))
+    ? (drinkingKey ? t(drinkingKey) : formatLabel(card.drinking_detail))
     : boolLabel(card.drinking);
 
   // ── Groups ──
   const basicItems: DetailItem[] = [
-    card.gender    ? { icon: 'person-outline',  label: 'Gender',         value: formatLabel(card.gender) }                                              : null,
-    card.height_cm ? { icon: 'resize-outline',  label: 'Height',         value: `${card.height_cm} cm` }                                               : null,
-    card.residency_type ? { icon: 'home-outline', label: 'Residency',    value: formatLabel(card.residency_type) }                                      : null,
+    card.gender    ? { icon: 'person-outline',  label: t('discovery.details.gender'),         value: formatLabel(card.gender) }                                              : null,
+    card.height_cm ? { icon: 'resize-outline',  label: t('discovery.details.height'),         value: t('discovery.details.heightCm', { height: card.height_cm }) }           : null,
+    card.residency_type ? { icon: 'home-outline', label: t('discovery.details.residencyType'),    value: formatLabel(card.residency_type) }                                  : null,
   ].filter(Boolean) as DetailItem[];
 
   const heritageItems: DetailItem[] = [
-    (card.ethnicities && card.ethnicities.length > 0) ? { icon: 'people-outline',   label: 'Ethnicity',   value: card.ethnicities.map((e) => e.name).join(', ') } : null,
-    card.nationality                                  ? { icon: 'flag-outline',     label: 'Nationality', value: /^[A-Z]{2}$/.test(card.nationality) ? getCountryName(card.nationality) : formatLabel(card.nationality) }                   : null,
-    card.religion                                     ? { icon: 'mci:hands-pray',     label: 'Religion',    value: formatLabel(card.religion) }                      : null,
+    (card.ethnicities && card.ethnicities.length > 0) ? { icon: 'people-outline',   label: t('discovery.details.ethnicity'),   value: card.ethnicities.map((e) => e.name).join(', ') } : null,
+    card.nationality                                  ? { icon: 'flag-outline',     label: t('discovery.details.nationality'), value: /^[A-Z]{2}$/.test(card.nationality) ? getCountryName(card.nationality) : formatLabel(card.nationality) }                   : null,
+    card.religion                                     ? { icon: 'mci:hands-pray',     label: t('discovery.details.religion'),    value: formatLabel(card.religion) }                      : null,
   ].filter(Boolean) as DetailItem[];
 
   const workItems: DetailItem[] = [
-    card.education_level ? { icon: 'school-outline',    label: 'Education', value: formatLabel(card.education_level) } : null,
-    card.occupation      ? { icon: 'briefcase-outline', label: 'Work',      value: card.occupation }                   : null,
+    card.education_level ? { icon: 'school-outline',    label: t('discovery.details.educationLevel'), value: formatLabel(card.education_level) } : null,
+    card.occupation      ? { icon: 'briefcase-outline', label: t('discovery.details.occupation'),     value: card.occupation }                   : null,
   ].filter(Boolean) as DetailItem[];
 
   const relationshipItems: DetailItem[] = [
-    card.relationship_intention ? { icon: 'heart-outline',         label: 'Intention',      value: formatLabel(card.relationship_intention) }       : null,
-    card.marital_status         ? { icon: 'person-circle-outline', label: 'Marital status', value: formatLabel(card.marital_status) }                : null,
-    boolLabel(card.has_children)   ? { icon: 'people-circle-outline', label: 'Has children',   value: boolLabel(card.has_children)! }   : null,
-    boolLabel(card.wants_children) ? { icon: 'happy-outline',         label: 'Wants children', value: boolLabel(card.wants_children)! } : null,
+    card.relationship_intention ? { icon: 'heart-outline',         label: t('discovery.details.relationshipIntention'), value: formatLabel(card.relationship_intention) }       : null,
+    card.marital_status         ? { icon: 'person-circle-outline', label: t('discovery.details.maritalStatus'),         value: formatLabel(card.marital_status) }                : null,
+    boolLabel(card.has_children)   ? { icon: 'people-circle-outline', label: t('discovery.details.hasChildren'),   value: boolLabel(card.has_children)! }   : null,
+    boolLabel(card.wants_children) ? { icon: 'happy-outline',         label: t('discovery.details.wantsChildren'), value: boolLabel(card.wants_children)! } : null,
   ].filter(Boolean) as DetailItem[];
 
+  const activityKey = card.activity_level
+    ? ACTIVITY_API_TO_KEY[card.activity_level.toUpperCase()]
+    : undefined;
   const activityLabel = card.activity_level
-    ? (ACTIVITY_API_TO_LABEL[card.activity_level.toUpperCase()] ?? formatLabel(card.activity_level))
+    ? (activityKey ? t(activityKey) : formatLabel(card.activity_level))
     : null;
   const lifestyleItems: DetailItem[] = [
-    smokingLabel  ? { icon: 'ban-outline',           label: 'Smoking',         value: smokingLabel }  : null,
-    drinkingLabel ? { icon: 'wine-outline',          label: 'Drinking',        value: drinkingLabel } : null,
-    activityLabel ? { icon: 'fitness-outline',       label: 'Fitness',  value: activityLabel } : null,
-    (card.languages && card.languages.length > 0) ? { icon: 'language-outline', label: 'Languages', value: card.languages.map((l) => l.name).join(', ') } : null,
+    smokingLabel  ? { icon: 'ban-outline',           label: t('discovery.details.smoking'),         value: smokingLabel }  : null,
+    drinkingLabel ? { icon: 'wine-outline',          label: t('discovery.details.drinking'),        value: drinkingLabel } : null,
+    activityLabel ? { icon: 'fitness-outline',       label: t('discovery.details.fitness'),  value: activityLabel } : null,
+    (card.languages && card.languages.length > 0) ? { icon: 'language-outline', label: t('discovery.details.languages'), value: card.languages.map((l) => l.name).join(', ') } : null,
     (card.interests && card.interests.length > 0) ? { icon: 'color-palette-outline', label: 'Interests', value: '' } : null,
   ].filter(Boolean) as DetailItem[];
 
   const groups: DetailGroup[] = [
-    { title: 'Basic Information', items: basicItems },
-    { title: 'Heritage',          items: heritageItems },
-    { title: 'Education & Work',  items: workItems },
-    { title: 'Relationship',      items: relationshipItems },
-    { title: 'Lifestyle',         items: lifestyleItems },
+    { title: t('discovery.details.groupBasic'),         items: basicItems },
+    { title: t('discovery.details.groupHeritage'),      items: heritageItems },
+    { title: t('discovery.details.groupEducationWork'), items: workItems },
+    { title: t('discovery.details.groupRelationship'),  items: relationshipItems },
+    { title: t('discovery.details.groupLifestyle'),     items: lifestyleItems },
   ];
 
   return (

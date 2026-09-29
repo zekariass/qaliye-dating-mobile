@@ -1,5 +1,6 @@
 import { themedAlert } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
+import i18n from '@/i18n';
 import {
     getLimitExceededDetails,
     isInsufficientCreditsError,
@@ -78,13 +79,16 @@ const ACTION_CONFIGS: Record<string, ActionConfig> = {
   },
 };
 
-function getConfig(actionType: string | undefined): ActionConfig {
-  return ACTION_CONFIGS[actionType ?? ''] ?? {
-    icon: 'lock-closed-outline',
-    iconColor: colors.primary,
-    fallbackTitle: 'Limit Reached',
-    fallbackMessage: (p) => `You have reached your ${p} limit.`,
-  };
+const DEFAULT_CONFIG: ActionConfig = {
+  icon: 'lock-closed-outline',
+  iconColor: colors.primary,
+  fallbackTitle: 'Limit Reached',
+  fallbackMessage: (p) => `You have reached your ${p} limit.`,
+};
+
+function getConfig(actionType: string | undefined): { key: string; config: ActionConfig } {
+  const key = actionType && ACTION_CONFIGS[actionType] ? actionType : 'default';
+  return { key, config: ACTION_CONFIGS[key] ?? DEFAULT_CONFIG };
 }
 
 /**
@@ -116,25 +120,25 @@ export function showActionErrorAlert(
   if (isLimitExceededError(error)) {
     const details: LimitExceededError | null = getLimitExceededDetails(error);
     const actionType = details?.details.action_type ?? opts.actionTypeOverride ?? '';
-    const config = getConfig(actionType);
+    const { key, config } = getConfig(actionType);
 
     const periodLabel = periodTypeLabel(details?.details.period_type);
 
     themedAlert({
-      title: config.fallbackTitle,
-      message: config.fallbackMessage(periodLabel),
+      title: i18n.t(`billing.limitAlert.${key}.title`, { defaultValue: config.fallbackTitle }),
+      message: i18n.t(`billing.limitAlert.${key}.body`, { period: periodLabel, defaultValue: config.fallbackMessage(periodLabel) }),
       icon: config.icon,
       iconColor: config.iconColor,
       buttons: [
         ...(subscriptionEnabled ? [{
-          text: 'Go Premium',
+          text: i18n.t('common.goPremium', 'Go Premium'),
           style: 'default' as const,
           icon: 'crown',
           iconFamily: 'material' as const,
           iconColor: '#FFD700',
           onPress: () => router.push('/(app)/premium' as any),
         }] : []),
-        { text: 'OK', style: 'cancel' as const },
+        { text: i18n.t('common.ok', 'OK'), style: 'cancel' as const },
       ],
     });
     return;
@@ -144,12 +148,12 @@ export function showActionErrorAlert(
   const message =
     (error as any)?.response?.data?.error?.message ??
     (error as any)?.response?.data?.message ??
-    'Something went wrong. Please try again.';
+    i18n.t('common.somethingWentWrong', 'Something went wrong. Please try again.');
   themedAlert({
-    title: 'Error',
+    title: i18n.t('common.error', 'Error'),
     message,
     icon: 'alert-circle-outline',
     iconColor: colors.danger,
-    buttons: [{ text: 'OK', style: 'cancel' as const }],
+    buttons: [{ text: i18n.t('common.ok', 'OK'), style: 'cancel' as const }],
   });
 }

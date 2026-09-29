@@ -19,9 +19,11 @@ import type {
 
 const BASE = '/api/v1/discovery';
 
-// Default LIKE variant used when a call site doesn't (yet) let the user pick
-// a specific variant — keeps older call sites (browse mode, like-back, etc.)
-// working now that `action_variant_code` is required server-side.
+// Last-resort LIKE variant code used only when the like-actions catalog
+// hasn't loaded (or nothing is flagged). When the catalog is available, the
+// default is the variant with `is_default: true` — see
+// `defaultLikeVariant` in utils/likeVariants — so admin reconfiguration of
+// the default variant works without a client update.
 export const DEFAULT_LIKE_VARIANT_CODE = 'HEART';
 
 export async function fetchDiscoveryProfiles(
@@ -48,6 +50,7 @@ function normalizeLikeAction(raw: Record<string, unknown>): LikeActionVariantDto
     icon: (raw.icon ?? null) as string | null,
     credits: (raw.credits ?? 0) as number,
     sort_order: (raw.sort_order ?? raw.sortOrder ?? 0) as number,
+    is_default: (raw.is_default ?? raw.isDefault ?? false) as boolean,
     limit: raw.limit === undefined ? undefined : (raw.limit as number | null),
     used: raw.used === undefined ? undefined : (raw.used as number),
     remaining: raw.remaining === undefined ? undefined : (raw.remaining as number | null),

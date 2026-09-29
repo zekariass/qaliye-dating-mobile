@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
+import { BlindDateBadge } from '@/components/common/BlindDateBadge';
 import { colors, fontSize, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
@@ -17,6 +19,8 @@ export interface ChatHeaderProps {
   displayName: string;
   avatarUrl: string | null;
   isVerified: boolean;
+  /** True when the match came from a Blind Date session — shows the mask badge. */
+  isBlindDate?: boolean;
   activityStatus: ActivityStatus | null | undefined;
   onBack: () => void;
   /** Optional: tap avatar/name to view the contact's profile */
@@ -34,16 +38,27 @@ export function ChatHeader({
   displayName,
   avatarUrl,
   isVerified,
+  isBlindDate,
   activityStatus,
   onBack,
   onProfilePress,
   onMorePress,
 }: ChatHeaderProps) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
 
   const dividerColor = isDark ? th.border : '#EEE6FF';
   const onlineTextColor = isDark ? '#9CA3AF' : '#7C6EA0';
+
+  const contactA11yLabel = [
+    displayName,
+    isVerified ? t('profile.status.verified') : null,
+    isBlindDate ? t('blindDate.common.blindDate', { defaultValue: 'Blind Date' }) : null,
+    activityStatus === 'ONLINE' ? t('chat.online') : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <View
@@ -62,7 +77,7 @@ export function ChatHeader({
         onPress={onBack}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         accessibilityRole="button"
-        accessibilityLabel="Back to Messages"
+        accessibilityLabel={t('chat.backToMessages')}
       >
         <Ionicons name="chevron-back" size={26} color={colors.primary} />
       </TouchableOpacity>
@@ -74,7 +89,7 @@ export function ChatHeader({
         disabled={!onProfilePress}
         activeOpacity={onProfilePress ? 0.7 : 1}
         accessibilityRole={onProfilePress ? 'button' : 'none'}
-        accessibilityLabel={`${displayName}${isVerified ? ', Verified' : ''}${activityStatus === 'ONLINE' ? ', Online' : ''}`}
+        accessibilityLabel={contactA11yLabel}
       >
         {/* Avatar */}
         {avatarUrl ? (
@@ -109,6 +124,9 @@ export function ChatHeader({
                 accessibilityElementsHidden
               />
             )}
+            {isBlindDate && (
+              <BlindDateBadge size={15} style={styles.blindDateIcon} />
+            )}
           </View>
           <View style={styles.presenceRow}>
             <ActivityStatusIndicator
@@ -127,7 +145,7 @@ export function ChatHeader({
           onPress={onMorePress}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
-          accessibilityLabel="Conversation actions"
+          accessibilityLabel={t('chat.conversationActions')}
         >
           <Ionicons name="ellipsis-vertical" size={20} color={th.text} />
         </TouchableOpacity>
@@ -191,6 +209,10 @@ const styles = StyleSheet.create({
   },
   verifiedIcon: {
     marginLeft: 4,
+  },
+  blindDateIcon: {
+    marginLeft: 4,
+    flexShrink: 0,
   },
   presenceRow: {
     flexDirection: 'row',

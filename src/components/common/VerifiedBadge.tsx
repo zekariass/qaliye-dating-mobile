@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function VerifiedBadge({ size = 14, pill = false, dark = false }: Props) {
+  const { t } = useTranslation();
   if (pill) {
     return (
       <View style={[styles.pill, dark && styles.pillDark]}>
@@ -25,7 +27,7 @@ export default function VerifiedBadge({ size = 14, pill = false, dark = false }:
           size={12}
           color={dark ? '#FFFFFF' : colors.verifiedBlue}
         />
-        <Text style={[styles.pillText, dark && styles.pillTextDark]}>Verified</Text>
+        <Text style={[styles.pillText, dark && styles.pillTextDark]}>{t('common.verified', 'Verified')}</Text>
       </View>
     );
   }

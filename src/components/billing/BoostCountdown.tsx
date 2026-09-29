@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -17,6 +18,7 @@ function formatCountdown(seconds: number): string {
 }
 
 export function BoostCountdown({ activeBoost, onExpire }: Props) {
+  const { t } = useTranslation();
   const [remaining, setRemaining] = useState<number>(
     activeBoost?.remaining_seconds ?? 0,
   );
@@ -46,7 +48,7 @@ export function BoostCountdown({ activeBoost, onExpire }: Props) {
     <View style={styles.container}>
       <View style={styles.iconRow}>
         <Ionicons name="rocket" size={18} color="#fff" />
-        <Text style={styles.label}>Boost Active</Text>
+        <Text style={styles.label}>{t('billing.balances.boostActive', 'Boost Active')}</Text>
       </View>
       <Text style={styles.timer}>{formatCountdown(remaining)}</Text>
     </View>

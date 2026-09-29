@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Modal,
     Pressable,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
+import i18n from '@/i18n';
 
 // ─── Section Card ───────────────────────────────────────────────────────────────
 
@@ -149,6 +151,8 @@ type SelectFieldProps = {
   sem: SemanticTheme;
   leftIcon?: string;
   placeholder?: string;
+  // Optional display-only label transform; option values are unchanged.
+  getOptionLabel?: (opt: string) => string;
 };
 
 export const SelectField = memo(function SelectField({
@@ -158,8 +162,11 @@ export const SelectField = memo(function SelectField({
   sem,
   leftIcon,
   placeholder,
+  getOptionLabel,
 }: SelectFieldProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const displayLabel = (opt: string) => getOptionLabel?.(opt) ?? opt;
 
   const handleSelect = useCallback((opt: string) => {
     onSelect(opt);
@@ -176,7 +183,7 @@ export const SelectField = memo(function SelectField({
           borderColor: sem.border,
         }}
         accessibilityRole="button"
-        accessibilityLabel={placeholder ? `${placeholder}: ${value}` : value}
+        accessibilityLabel={placeholder ? t('profile.edit.selectA11y', { label: placeholder, value: value ? displayLabel(value) : value, defaultValue: '{{label}}: {{value}}' }) : (value ? displayLabel(value) : value)}
       >
         {leftIcon && (
           leftIcon.startsWith('mci:') ? (
@@ -192,7 +199,7 @@ export const SelectField = memo(function SelectField({
           style={{ color: value ? sem.textPrimary : sem.textMuted }}
           numberOfLines={1}
         >
-          {value || placeholder || 'Select'}
+          {value ? displayLabel(value) : placeholder || t('profile.edit.select', 'Select')}
         </Text>
         <Ionicons name="chevron-down" size={16} color={sem.textMuted} />
       </Pressable>
@@ -209,7 +216,7 @@ export const SelectField = memo(function SelectField({
               style={{ backgroundColor: sem.surface }}
             >
               <Text className="text-lg font-bold mb-4" style={{ color: sem.textPrimary }}>
-                {placeholder || 'Select option'}
+                {placeholder || t('profile.edit.selectOption', 'Select option')}
               </Text>
               <ScrollView showsVerticalScrollIndicator={false}>
                 {options.map((opt) => (
@@ -226,7 +233,7 @@ export const SelectField = memo(function SelectField({
                       className="text-base font-medium"
                       style={{ color: opt === value ? sem.accent : sem.textPrimary }}
                     >
-                      {opt}
+                      {displayLabel(opt)}
                     </Text>
                   </Pressable>
                 ))}
@@ -338,8 +345,20 @@ export const ChipSelector = memo(function ChipSelector({
 
 // ─── Date Picker Field ──────────────────────────────────────────────────────────
 
-const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+] as const;
+const MONTH_NAMES_EN = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+] as const;
+const MONTH_SHORT_EN = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+] as const;
+const MONTHS_FULL = MONTH_KEYS.map((m, i) => i18n.t(`profile.edit.months.${m}`, MONTH_NAMES_EN[i]));
+const MONTHS_SHORT = MONTH_KEYS.map((m, i) => i18n.t(`profile.edit.monthsShort.${m}`, MONTH_SHORT_EN[i]));
 
 function is18OrOlder(day: number, month: number, year: number): boolean {
   const now = new Date();
@@ -349,7 +368,7 @@ function is18OrOlder(day: number, month: number, year: number): boolean {
 }
 
 function parseDisplayDate(display: string): { day: number; month: number; year: number } | null {
-  const match = display.match(/^(\d{1,2})\s+(\w{3})\s+(\d{4})$/);
+  const match = display.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
   if (!match) return null;
   const day = parseInt(match[1], 10);
   const monthIdx = MONTHS_SHORT.indexOf(match[2]);
@@ -369,8 +388,10 @@ export const DatePickerField = memo(function DatePickerField({
   value,
   onSelect,
   sem,
-  placeholder = 'Select date',
+  placeholder,
 }: DatePickerFieldProps) {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('profile.edit.selectDate', 'Select date');
   const [open, setOpen] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null);
   const parsed = parseDisplayDate(value);
@@ -450,7 +471,7 @@ export const DatePickerField = memo(function DatePickerField({
   const handleConfirm = () => {
     const d = Math.min(day, daysInMonth);
     if (!is18OrOlder(d, month, year)) {
-      setDateError('You must be at least 18 years old to use Qal Dating.');
+      setDateError(t('profile.edit.underage'));
       return;
     }
     setDateError(null);
@@ -471,7 +492,7 @@ export const DatePickerField = memo(function DatePickerField({
           className="flex-1 text-base"
           style={{ color: value ? sem.textPrimary : sem.textMuted }}
         >
-          {value || placeholder}
+          {value || resolvedPlaceholder}
         </Text>
         <Ionicons name="chevron-down" size={16} color={sem.textMuted} />
       </Pressable>
@@ -484,8 +505,8 @@ export const DatePickerField = memo(function DatePickerField({
               <View style={dpStyles.headerIconWrap}>
                 <Ionicons name="calendar" size={22} color={sem.accent} />
               </View>
-              <Text style={[dpStyles.title, { color: sem.textPrimary }]}>Date of Birth</Text>
-              <Text style={[dpStyles.subtitle, { color: sem.textSecondary }]}>You must be 18 or older</Text>
+              <Text style={[dpStyles.title, { color: sem.textPrimary }]}>{t('profile.details.dateOfBirth')}</Text>
+              <Text style={[dpStyles.subtitle, { color: sem.textSecondary }]}>{t('profile.edit.mustBe18', 'You must be 18 or older')}</Text>
             </View>
 
             {/* Picker */}
@@ -563,13 +584,13 @@ export const DatePickerField = memo(function DatePickerField({
                 style={[dpStyles.buttonSecondary, { borderColor: sem.border }]}
                 onPress={() => setOpen(false)}
               >
-                <Text style={[dpStyles.buttonSecondaryText, { color: sem.textSecondary }]}>Cancel</Text>
+                <Text style={[dpStyles.buttonSecondaryText, { color: sem.textSecondary }]}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 style={[dpStyles.buttonPrimary, { backgroundColor: sem.accent }]}
                 onPress={handleConfirm}
               >
-                <Text style={dpStyles.buttonPrimaryText}>Confirm</Text>
+                <Text style={dpStyles.buttonPrimaryText}>{t('profile.edit.confirm', 'Confirm')}</Text>
               </Pressable>
             </View>
           </Pressable>

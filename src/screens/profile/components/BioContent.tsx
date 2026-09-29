@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -10,6 +11,7 @@ interface BioContentProps {
 }
 
 export default function BioContent({ bio, onAddBio }: BioContentProps) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const hasBio = bio?.trim().length > 0;
 
@@ -20,17 +22,17 @@ export default function BioContent({ bio, onAddBio }: BioContentProps) {
           <Text style={[styles.text, { color: th.text }]}>{bio}</Text>
         ) : (
           <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: th.textSecondary }]}>No bio</Text>
+            <Text style={[styles.emptyText, { color: th.textSecondary }]}>{t('profile.bio.empty')}</Text>
             {onAddBio && (
               <TouchableOpacity
                 style={[styles.addButton, { backgroundColor: colors.primary }]}
                 onPress={onAddBio}
                 activeOpacity={0.8}
-                accessibilityLabel="Add bio"
+                accessibilityLabel={t('profile.bio.addBio')}
                 accessibilityRole="button"
               >
                 <Ionicons name="pencil" size={16} color="#FFFFFF" />
-                <Text style={styles.addButtonText}>Add bio</Text>
+                <Text style={styles.addButtonText}>{t('profile.bio.addBio')}</Text>
               </TouchableOpacity>
             )}
           </View>

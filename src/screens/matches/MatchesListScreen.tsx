@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Dimensions,
@@ -12,22 +13,32 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+    Easing,
+    FadeInDown,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useQueryClient } from '@tanstack/react-query';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
+import { BlindDateBadge } from '@/components/common/BlindDateBadge';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
 import { useMatches } from '@/hooks/discovery/useMatches';
 import { inboxQueryKey } from '@/hooks/messages/useInbox';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { ActivityStatus } from '@/types/activity';
 import type { InboxItem } from '@/types/chat';
 import type { MatchItemDto } from '@/types/discovery';
 import { formatDistance } from '@/utils/formatDistance';
+import { isBlindDateMatch } from '@/utils/matchSource';
 import { rs, useTabletScale } from '@/utils/responsive';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -40,17 +51,17 @@ function formatLocation(item: MatchItemDto, myCountry: string): string | null {
 }
 
 function formatRelativeTime(iso: string | null | undefined): string {
-  if (!iso) return 'Recently';
+  if (!iso) return i18n.t('matches.recently');
   const date = new Date(iso);
-  if (isNaN(date.getTime())) return 'Recently';
+  if (isNaN(date.getTime())) return i18n.t('matches.recently');
   const diffMs  = Date.now() - date.getTime();
   const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1)  return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffMin < 1)  return i18n.t('matches.justNow');
+  if (diffMin < 60) return i18n.t('matches.minutesAgo', { minutes: diffMin });
   const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24)   return `${diffH}h ago`;
+  if (diffH < 24)   return i18n.t('matches.hoursAgo', { hours: diffH });
   const diffD = Math.floor(diffH / 24);
-  if (diffD < 7)    return `${diffD}d ago`;
+  if (diffD < 7)    return i18n.t('matches.daysAgo', { days: diffD });
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
@@ -93,23 +104,62 @@ const MSG_BTN_SHADOW = Platform.select({
 
 // ─── MatchesHeader ──────────────────────────────────────────────────────────
 
-function MatchesHeader({ count }: { count: number; }) {
+function MatchesHeader() {
+  const { t } = useTranslation();
+  const router = useRouter();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
+
+  // Same breathing glow as the discovery header's blind-date button
+  const glow = useSharedValue(0);
+  useEffect(() => {
+    glow.value = withRepeat(
+      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: 0.35 + glow.value * 0.55,
+    transform: [{ scale: 1 + glow.value * 0.12 }],
+    shadowOpacity: 0.25 + glow.value * 0.55,
+  }));
+
   return (
     <Animated.View entering={FadeInDown.duration(350)} style={headerStyles.container}>
       <View style={headerStyles.titleRow}>
-        <Ionicons name="heart-circle" size={30} color={colors.primary} />
-        <Text style={[headerStyles.title, { color: th.text }]}>Your Matches</Text>
-        <View
-          style={[
-            headerStyles.badge,
-            { backgroundColor: isDark ? '#2E1F50' : colors.backgroundLavender },
-          ]}
-        >
-          <Text style={[headerStyles.badgeText, { color: colors.primary }]}>
-            {count}
-          </Text>
+        <View style={headerStyles.titleGroup}>
+          <Ionicons name="heart-circle" size={26} color={colors.primary} />
+          <View>
+            <View style={headerStyles.titleInner}>
+              <Text style={[headerStyles.title, { color: colors.primary }]}>{t('matches.title')}</Text>
+            </View>
+            {/* Active-tab indicator — marks Matches as the current screen */}
+            <View style={headerStyles.activeIndicator} />
+          </View>
+        </View>
+        <View style={headerStyles.blindDateWrap}>
+          <Animated.View pointerEvents="none" style={[headerStyles.blindDateGlow, glowStyle]} />
+          <TouchableOpacity
+            style={[
+              headerStyles.blindDateBtn,
+              { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface },
+            ]}
+            onPress={() => router.push('/(app)/blind-date' as any)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
+          >
+            <Image
+              source={require('@/assets/images/blind-date-icon.png')}
+              style={headerStyles.blindDateIcon}
+              contentFit="contain"
+            />
+            <Text style={[headerStyles.blindDateText, { color: th.text }]}>
+              {t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Animated.View>
@@ -123,22 +173,67 @@ const headerStyles = StyleSheet.create({
   titleRow: {
     flexDirection:  'row',
     alignItems:     'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap:            8,
   },
-  title: {
-    fontSize:      26,
-    fontWeight:    '800',
-    letterSpacing: -0.5,
+  titleGroup: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           8,
   },
-  badge: {
-    borderRadius:      radius.full,
-    paddingHorizontal: 10,
-    paddingVertical:   3,
+  titleInner: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           8,
   },
-  badgeText: {
+  activeIndicator: {
+    height:          3,
+    borderRadius:    2,
+    backgroundColor: colors.primary,
+    marginTop:       3,
+  },
+  blindDateWrap: {
+    flex:         1,
+    borderRadius: 19,
+  },
+  blindDateGlow: {
+    position:          'absolute',
+    top:               -2,
+    left:              -2,
+    right:             -2,
+    bottom:            -2,
+    borderRadius:      21,
+    borderWidth:       1.5,
+    borderColor:       colors.primary,
+    backgroundColor:   colors.primary + '24',
+    shadowColor:       colors.primary,
+    shadowOpacity:     0,
+    shadowRadius:      10,
+    shadowOffset:      { width: 0, height: 0 },
+  },
+  blindDateBtn: {
+    flex:              1,
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'center',
+    gap:               6,
+    height:            38,
+    paddingHorizontal: 12,
+    borderRadius:      19,
+    borderWidth:       1.5,
+  },
+  blindDateIcon: {
+    width:  34,
+    height: 20,
+  },
+  blindDateText: {
     fontSize:   13,
     fontWeight: '700',
+  },
+  title: {
+    fontSize:      20,
+    fontWeight:    '800',
+    letterSpacing: -0.3,
   },
 });
 
@@ -163,6 +258,7 @@ const MatchCard = React.memo(function MatchCard({
   unreadCount,
   myCountry,
 }: MatchCardProps) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark    = mode === 'dark';
   const chipBg    = isDark ? '#2E1F50' : colors.backgroundLavender;
@@ -177,7 +273,7 @@ const MatchCard = React.memo(function MatchCard({
         onPress={onPress}
         activeOpacity={0.92}
         accessibilityRole="button"
-        accessibilityLabel={`View ${item.display_name}'s profile`}
+        accessibilityLabel={t('matches.viewProfileA11y', { name: item.display_name })}
       >
         {/* ── Portrait image ── */}
         <View style={styles.imageWrap}>
@@ -200,7 +296,7 @@ const MatchCard = React.memo(function MatchCard({
             onPress={onMessagePress}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel={`Message ${item.display_name}`}
+            accessibilityLabel={t('matches.messageA11y', { name: item.display_name })}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
             <Ionicons name="chatbubble-ellipses" size={15} color="#FFF" />
@@ -239,6 +335,9 @@ const MatchCard = React.memo(function MatchCard({
                 style={styles.verifiedIcon}
               />
             )}
+            {isBlindDateMatch(item) && (
+              <BlindDateBadge size={rs(14, scale)} style={styles.blindDateIcon} />
+            )}
           </View>
 
           {/* Location + distance */}
@@ -246,7 +345,7 @@ const MatchCard = React.memo(function MatchCard({
             <View style={styles.locationRow}>
               <Ionicons name="location" size={rs(13, scale)} color={colors.primary} />
               <Text style={[styles.locationText, { color: th.textSecondary, fontSize: rs(12, scale) }]} numberOfLines={1}>
-                {location ?? 'Location unknown'}
+                {location ?? t('matches.locationUnknown')}
               </Text>
               {item.distance_km !== null && (
                 <View
@@ -279,7 +378,7 @@ const MatchCard = React.memo(function MatchCard({
             <View style={[styles.chip, { backgroundColor: isDark ? '#1F3020' : '#E8F5E9' }]}>
               <Ionicons name="heart" size={11} color="#4CAF50" />
               <Text style={[styles.chipText, { color: '#4CAF50' }]} numberOfLines={1}>
-                New Match!
+                {t('matches.newMatch')}
               </Text>
             </View>
           ) : activityStatus && activityStatus !== 'HIDDEN' ? (
@@ -291,7 +390,7 @@ const MatchCard = React.memo(function MatchCard({
             />
           ) : (
             <Text style={[styles.chipText, { color: th.textSecondary, fontSize: 11 }]} numberOfLines={1}>
-              Offline now
+              {t('matches.offlineNow')}
             </Text>
           )}
 
@@ -304,6 +403,7 @@ const MatchCard = React.memo(function MatchCard({
 // ─── EmptyState ─────────────────────────────────────────────────────────────
 
 function EmptyState({ onRefresh }: { onRefresh: () => void }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   return (
@@ -316,14 +416,13 @@ function EmptyState({ onRefresh }: { onRefresh: () => void }) {
       >
         <Ionicons name="heart-dislike-outline" size={48} color={colors.primary} />
       </View>
-      <Text style={[emptyStyles.title, { color: th.text }]}>No matches yet</Text>
+      <Text style={[emptyStyles.title, { color: th.text }]}>{t('matches.emptyTitle')}</Text>
       <Text style={[emptyStyles.subtitle, { color: th.textSecondary }]}>
-        Keep swiping to find your perfect match.{'\n'}We'll notify you when
-        someone likes you back!
+        {t('matches.emptySubtitle')}
       </Text>
       <TouchableOpacity style={emptyStyles.refreshBtn} onPress={onRefresh} activeOpacity={0.8}>
         <Ionicons name="refresh-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
-        <Text style={emptyStyles.refreshText}>Refresh</Text>
+        <Text style={emptyStyles.refreshText}>{t('likes.refresh')}</Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -375,16 +474,17 @@ const emptyStyles = StyleSheet.create({
 // ─── ErrorState ──────────────────────────────────────────────────────────────
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   return (
     <Animated.View entering={FadeInDown.duration(400)} style={errorStyles.wrap}>
       <Ionicons name="alert-circle-outline" size={48} color={colors.primary} />
-      <Text style={[errorStyles.title, { color: th.text }]}>Something went wrong</Text>
+      <Text style={[errorStyles.title, { color: th.text }]}>{t('likes.errorTitle')}</Text>
       <Text style={[errorStyles.subtitle, { color: th.textSecondary }]}>
-        We couldn't load your matches. Pull down to retry.
+        {t('matches.errorBody')}
       </Text>
       <TouchableOpacity style={errorStyles.retryBtn} onPress={onRetry} activeOpacity={0.8}>
-        <Text style={errorStyles.retryText}>Retry</Text>
+        <Text style={errorStyles.retryText}>{t('likes.retry')}</Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -479,6 +579,7 @@ export default function MatchesListScreen() {
           displayName: item.display_name,
           avatarUrl:   item.primary_photo_url ?? '',
           isVerified:  item.is_verified ? '1' : '0',
+          ...(isBlindDateMatch(item) ? { matchSource: 'BLIND_DATE' } : {}),
         },
       });
     },
@@ -524,7 +625,7 @@ export default function MatchesListScreen() {
     );
   }, [isFetchingNextPage]);
 
-  const listHeader = <MatchesHeader count={totalElements} />;
+  const listHeader = <MatchesHeader />;
 
   // Initial loading
   if (isLoading && items.length === 0) {
@@ -666,6 +767,11 @@ const styles = StyleSheet.create({
   },
 
   verifiedIcon: {
+    marginLeft: 4,
+    flexShrink: 0,
+  },
+
+  blindDateIcon: {
     marginLeft: 4,
     flexShrink: 0,
   },

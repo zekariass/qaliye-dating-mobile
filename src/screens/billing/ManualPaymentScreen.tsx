@@ -27,6 +27,7 @@ import { useOrderStatus } from '@/hooks/billing/useOrderStatus';
 import { usePaymentOptions } from '@/hooks/billing/usePaymentOptions';
 import { useVerifyPayment } from '@/hooks/billing/useVerifyPayment';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { VerificationField } from '@/types/billing';
 
 type Step = 'form' | 'status';
@@ -58,18 +59,18 @@ function extractErrorMessage(e: unknown): string {
     ? (errObj.message ?? errObj.code)
     : (errObj ?? axiosErr?.response?.data?.message ?? axiosErr?.response?.data?.detail);
   if (backendMsg && ERROR_MESSAGES[backendMsg]) {
-    return ERROR_MESSAGES[backendMsg];
+    return i18n.t(`billing.verifyErrors.${backendMsg}`, ERROR_MESSAGES[backendMsg]);
   }
   if (reason && ERROR_MESSAGES[reason]) {
-    return ERROR_MESSAGES[reason];
+    return i18n.t(`billing.verifyErrors.${reason}`, ERROR_MESSAGES[reason]);
   }
   if (backendMsg) {
     return backendMsg;
   }
   if (axiosErr?.response?.status === 403) {
-    return 'Access denied. This payment reference may have been used by another user.';
+    return i18n.t('billing.verifyErrors.accessDeniedFallback', 'Access denied. This payment reference may have been used by another user.');
   }
-  return axiosErr?.message ?? 'Something went wrong. Please try again.';
+  return axiosErr?.message ?? i18n.t('common.somethingWentWrong', 'Something went wrong. Please try again.');
 }
 
 function isTerminalTransactionError(e: unknown): boolean {
@@ -467,7 +468,7 @@ export default function ManualPaymentScreen() {
                         <Pressable
                           onPress={() => handleFieldChange(field.name, '')}
                           accessibilityRole="button"
-                          accessibilityLabel="Clear"
+                          accessibilityLabel={t('common.clear', 'Clear')}
                           hitSlop={8}
                         >
                           <Ionicons name="close-circle" size={16} color={th.textMuted} />
@@ -680,13 +681,14 @@ function InstructionRow({
   secondaryColor: string;
   copied?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.instrRow}>
       <Text style={[styles.instrLabel, { color: secondaryColor }]}>{label}</Text>
       <View style={styles.instrValueRow}>
         <Text style={[styles.instrValue, { color: textColor }]}>{value}</Text>
         {onCopy && (
-          <Pressable onPress={() => onCopy(value)} accessibilityRole="button" accessibilityLabel={`Copy ${label}`} hitSlop={8}>
+          <Pressable onPress={() => onCopy(value)} accessibilityRole="button" accessibilityLabel={t('common.copy', 'Copy {{label}}', { label })} hitSlop={8}>
             <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={16} color={copied ? colors.success : secondaryColor} />
           </Pressable>
         )}
@@ -716,10 +718,11 @@ function StepIndicator({ currentStep, textColor, secondaryColor, surfaceColor, b
   surfaceColor: string;
   borderColor: string;
 }) {
+  const { t } = useTranslation();
   const steps = [
-    { label: 'Instructions', icon: 'document-text-outline' as const },
-    { label: 'Verify', icon: 'shield-checkmark-outline' as const },
-    { label: 'Status', icon: 'pulse-outline' as const },
+    { label: t('billing.steps.instructions', 'Instructions'), icon: 'document-text-outline' as const },
+    { label: t('billing.steps.verify', 'Verify'), icon: 'shield-checkmark-outline' as const },
+    { label: t('billing.steps.status', 'Status'), icon: 'pulse-outline' as const },
   ];
   return (
     <View style={[styles.stepIndicator, { backgroundColor: surfaceColor, borderColor }]}>

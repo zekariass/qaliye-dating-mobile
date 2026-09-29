@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Dimensions,
@@ -43,11 +44,13 @@ import {
 import { useMyParticipations } from '@/hooks/blindDate/useMyParticipations';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type {
     BlindDateMySessionDto,
     BlindDateSessionSummaryDto
 } from '@/types/blindDate';
 import { extractApiError } from '@/utils/apiError';
+import { blindDateErrorMessage } from '@/utils/blindDateErrors';
 import { getCostForAction, isInsufficientCreditsError } from '@/utils/entitlements';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
@@ -76,6 +79,8 @@ const TERMINAL_JOIN_ERRORS = new Set([
   'join_window_closed',
   'no_open_round',
   'session_not_found',
+  'blocked',
+  'creator_disabled_blind_date',
 ]);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,16 +89,16 @@ function formatRelativeTime(iso: string | null | undefined): string {
   if (!iso) return '';
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return i18n.t('blindDate.time.justNow');
+  if (mins < 60) return i18n.t('blindDate.time.minutesAgo', { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return i18n.t('blindDate.time.hoursAgo', { count: hrs });
   const days = Math.floor(hrs / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
+  return i18n.t('blindDate.time.daysAgo', { count: days });
 }
 
 function sessionTitle(session: BlindDateSessionSummaryDto): string {
-  return session.title?.trim() || 'Blind Date';
+  return session.title?.trim() || i18n.t('blindDate.common.blindDate');
 }
 
 const cardShadow = Platform.select({
@@ -110,6 +115,7 @@ const cardShadow = Platform.select({
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 function Header({ title, onHelp }: { title: string; onHelp: () => void }) {
+  const { t } = useTranslation();
   const { textPrimary, textMuted, card, border } = useBlindDateTheme();
   return (
     <View style={styles.headerWrap}>
@@ -126,7 +132,7 @@ function Header({ title, onHelp }: { title: string; onHelp: () => void }) {
           onPress={onHelp}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="How Blind Date works"
+          accessibilityLabel={t('blindDate.home.helpA11y')}
         >
           <Ionicons name="help-circle-outline" size={22} color={textPrimary} />
         </TouchableOpacity>
@@ -134,7 +140,7 @@ function Header({ title, onHelp }: { title: string; onHelp: () => void }) {
 
       {/* Subtitle */}
       <Text style={[styles.headerSub, { color: textMuted }]}>
-        Meet without seeing. Connect before revealing.
+        {t('blindDate.home.headerSubtitle')}
       </Text>
     </View>
   );
@@ -173,47 +179,47 @@ function sessionCardTone(session: BlindDateMySessionDto): SessionCardTone {
   switch (session.status) {
     case 'OPEN':
       return {
-        label: 'Active', fg: '#16A34A', bg: 'rgba(34,197,94,0.14)',
+        label: i18n.t('blindDate.status.active'), fg: '#16A34A', bg: 'rgba(34,197,94,0.14)',
         accent: bdColors.primary,
         blockBg: '#F2E7FF', blockBgDark: 'rgba(138,44,255,0.10)', icon: 'heart',
       };
     case 'REVEAL':
       return {
-        label: 'Reveal', fg: '#B45309', bg: 'rgba(245,158,11,0.16)',
+        label: i18n.t('blindDate.status.reveal'), fg: '#B45309', bg: 'rgba(245,158,11,0.16)',
         accent: bdColors.gold,
         blockBg: '#FDF0D3', blockBgDark: 'rgba(245,158,11,0.12)', icon: 'eye',
       };
     case 'COMPLETED':
       if (matched) {
         return {
-          label: 'Matched', fg: '#D92C85', bg: 'rgba(255,79,163,0.15)',
+          label: i18n.t('blindDate.status.matched'), fg: '#D92C85', bg: 'rgba(255,79,163,0.15)',
           accent: colors.secondary,
           blockBg: '#FFE4F3', blockBgDark: 'rgba(255,79,163,0.14)', icon: 'heart',
         };
       }
       if (outcome === 'EXPIRED') {
         return {
-          label: 'Expired', fg: '#B45309', bg: 'rgba(245,158,11,0.15)',
+          label: i18n.t('blindDate.status.expired'), fg: '#B45309', bg: 'rgba(245,158,11,0.15)',
           ...TONE_ENDED, icon: 'time-outline',
         };
       }
       return {
-        label: 'No Match', fg: '#6B7280', bg: 'rgba(107,114,128,0.15)',
+        label: i18n.t('blindDate.status.noMatch'), fg: '#6B7280', bg: 'rgba(107,114,128,0.15)',
         ...TONE_ENDED, icon: 'heart-dislike-outline',
       };
     case 'EXPIRED':
       return {
-        label: 'Expired', fg: '#B45309', bg: 'rgba(245,158,11,0.15)',
+        label: i18n.t('blindDate.status.expired'), fg: '#B45309', bg: 'rgba(245,158,11,0.15)',
         ...TONE_ENDED, icon: 'time-outline',
       };
     case 'CANCELLED':
       return {
-        label: 'Cancelled', fg: '#DC2626', bg: 'rgba(239,68,68,0.13)',
+        label: i18n.t('blindDate.status.cancelled'), fg: '#DC2626', bg: 'rgba(239,68,68,0.13)',
         ...TONE_ENDED, icon: 'close-circle-outline',
       };
     default:
       return {
-        label: 'Ended', fg: '#6B7280', bg: 'rgba(107,114,128,0.15)',
+        label: i18n.t('blindDate.status.ended'), fg: '#6B7280', bg: 'rgba(107,114,128,0.15)',
         ...TONE_ENDED, icon: 'flag-outline',
       };
   }
@@ -228,6 +234,7 @@ function MySessionCard({
   ownPhotoUrl: string | null;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   const { card, textPrimary, textMuted, border, isDark } = useBlindDateTheme();
   const tone = sessionCardTone(session);
   const awaiting = session.awaiting_review_count ?? null;
@@ -255,29 +262,31 @@ function MySessionCard({
   // Reference: filled rose CTA while the session is live, outlined otherwise.
   const { ctaLabel, ctaFilled } = isParticipant
     ? session.status === 'OPEN'
-      ? { ctaLabel: `Continue Round ${round}`, ctaFilled: true }
+      ? { ctaLabel: t('blindDate.home.continueRound', { number: round }), ctaFilled: true }
       : session.status === 'REVEAL'
-        ? { ctaLabel: 'View Reveal', ctaFilled: true }
-        : { ctaLabel: 'View Results', ctaFilled: false }
+        ? { ctaLabel: t('blindDate.home.viewReveal'), ctaFilled: true }
+        : { ctaLabel: t('blindDate.home.viewResults'), ctaFilled: false }
     : session.status === 'OPEN'
-      ? { ctaLabel: 'Manage', ctaFilled: true }
+      ? { ctaLabel: t('blindDate.home.manage'), ctaFilled: true }
       : session.status === 'REVEAL'
-        ? { ctaLabel: 'View Reveal', ctaFilled: true }
+        ? { ctaLabel: t('blindDate.home.viewReveal'), ctaFilled: true }
         : session.status === 'COMPLETED'
-          ? { ctaLabel: 'View Results', ctaFilled: false }
-          : { ctaLabel: 'View Details', ctaFilled: false };
+          ? { ctaLabel: t('blindDate.home.viewResults'), ctaFilled: false }
+          : { ctaLabel: t('blindDate.home.viewDetails'), ctaFilled: false };
 
-  const roundLabel = session.status === 'COMPLETED' ? 'Outcome' : 'Current Round';
+  const roundLabel = session.status === 'COMPLETED'
+    ? t('blindDate.home.outcome')
+    : t('blindDate.home.currentRound');
   const roundValue =
     session.status === 'REVEAL'
-      ? 'Final Reveal'
+      ? t('blindDate.home.finalReveal')
       : session.status === 'COMPLETED'
         ? matched
-          ? 'Matched'
+          ? t('blindDate.status.matched')
           : outcome === 'EXPIRED'
-            ? 'Expired'
-            : 'No Match'
-        : `Round ${round}`;
+            ? t('blindDate.status.expired')
+            : t('blindDate.status.noMatch')
+        : t('blindDate.common.round', { number: round });
 
   return (
     <TouchableOpacity
@@ -338,7 +347,7 @@ function MySessionCard({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             {isParticipant && (
               <View style={[styles.statusPill, { backgroundColor: isDark ? 'rgba(138,147,166,0.18)' : '#EEF1F6' }]}>
-                <Text style={[styles.statusPillText, { color: textMuted }]}>Joined</Text>
+                <Text style={[styles.statusPillText, { color: textMuted }]}>{t('blindDate.home.joinedBadge')}</Text>
               </View>
             )}
             <View style={[styles.statusPill, { backgroundColor: tone.bg }]}>
@@ -351,18 +360,18 @@ function MySessionCard({
         <View style={styles.myMetaRow}>
           <Ionicons name="people-outline" size={13} color={textMuted} />
           <Text style={[styles.myMetaText, { color: textMuted }]}>
-            {session.participant_count} participant{session.participant_count === 1 ? '' : 's'}
+            {t('blindDate.common.participants', { count: session.participant_count })}
           </Text>
           <Ionicons name="calendar-outline" size={13} color={textMuted} style={{ marginLeft: 10 }} />
           <Text style={[styles.myMetaText, { color: textMuted }]}>
-            Created {formatRelativeTime(session.created_at)}
+            {t('blindDate.home.createdAgo', { time: formatRelativeTime(session.created_at) })}
           </Text>
         </View>
         {!isParticipant && awaiting !== null && awaiting > 0 && (
           <View style={styles.myMetaRow}>
             <Ionicons name="hourglass-outline" size={12} color="#F59E0B" />
             <Text style={[styles.myMetaText, { color: '#F59E0B' }]}>
-              {awaiting} waiting for review
+              {t('blindDate.home.waitingForReview', { count: awaiting })}
             </Text>
           </View>
         )}
@@ -435,6 +444,7 @@ function MineToolsRow({
   onCreate: () => void;
   onManageQuestions: () => void;
 }) {
+  const { t } = useTranslation();
   const { isDark } = useBlindDateTheme();
   return (
     <View style={styles.mineTools}>
@@ -453,7 +463,7 @@ function MineToolsRow({
         accessibilityRole="button"
       >
         <Ionicons name="list" size={16} color={bdColors.primary} />
-        <Text style={[styles.mineToolText, { color: bdColors.primary }]}>Question Set</Text>
+        <Text style={[styles.mineToolText, { color: bdColors.primary }]}>{t('blindDate.home.questionSet')}</Text>
       </TouchableOpacity>
 
       {/* Create New — filled rose gradient (right) */}
@@ -470,7 +480,7 @@ function MineToolsRow({
           style={[StyleSheet.absoluteFill, { borderRadius: 14 }]}
         />
         <Ionicons name="add" size={18} color="#FFF" />
-        <Text style={styles.mineToolTextPrimary}>Create New</Text>
+        <Text style={styles.mineToolTextPrimary}>{t('blindDate.home.createNew')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -540,6 +550,7 @@ function FloatingArtwork() {
 
 /** Hosted-tab empty state — dramatic dark spotlight treatment for the gender artwork. */
 function HostedEmptyState({ onPrimary }: { onPrimary: () => void }) {
+  const { t } = useTranslation();
   const { data: myProfile } = useCurrentProfile();
   const gender = (myProfile?.gender as 'MALE' | 'FEMALE' | null) ?? null;
 
@@ -579,10 +590,10 @@ function HostedEmptyState({ onPrimary }: { onPrimary: () => void }) {
 
       {/* Bottom copy + CTA */}
       <View style={styles.hostedCopy}>
-        <Text style={styles.hostedEyebrow}>BLIND DATE</Text>
-        <Text style={styles.hostedTitle}>{"Find Someone\nWorth Knowing"}</Text>
+        <Text style={styles.hostedEyebrow}>{t('blindDate.home.emptyEyebrow')}</Text>
+        <Text style={styles.hostedTitle}>{t('blindDate.home.emptyHostedTitle')}</Text>
         <Text style={styles.hostedSub}>
-          Create a session, ask real questions, and let answers speak louder than looks.
+          {t('blindDate.home.emptyHostedSub')}
         </Text>
         <TouchableOpacity
           style={styles.hostedBtn}
@@ -597,7 +608,7 @@ function HostedEmptyState({ onPrimary }: { onPrimary: () => void }) {
             style={styles.hostedBtnInner}
           >
             <Ionicons name="add-circle-outline" size={17} color="#FFF" />
-            <Text style={styles.hostedBtnText}>Start a Blind Date</Text>
+            <Text style={styles.hostedBtnText}>{t('blindDate.common.startBlindDate')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -606,6 +617,7 @@ function HostedEmptyState({ onPrimary }: { onPrimary: () => void }) {
 }
 
 function EmptyState({ tab, onPrimary, onRefresh }: { tab: 'open' | 'mine'; onPrimary: () => void; onRefresh: () => void }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
 
@@ -622,15 +634,15 @@ function EmptyState({ tab, onPrimary, onRefresh }: { tab: 'open' | 'mine'; onPri
         />
         <FloatingArtwork />
         <View style={styles.emptyArtCopy}>
-          <Text style={styles.emptyEyebrow}>BLIND DATE</Text>
-          <Text style={[styles.emptyTitle, { color: th.text }]}>No Blind Dates available right now</Text>
+          <Text style={styles.emptyEyebrow}>{t('blindDate.home.emptyEyebrow')}</Text>
+          <Text style={[styles.emptyTitle, { color: th.text }]}>{t('blindDate.home.emptyOpenTitle')}</Text>
           <Text style={[styles.emptySubtitle, { color: th.textSecondary }]}>
-            New sessions appear as people create them. Check back soon.
+            {t('blindDate.home.emptyOpenSub')}
           </Text>
           <View style={styles.emptyBtnRow}>
             <TouchableOpacity
               style={styles.emptyBtnArt}
-              onPress={onRefresh}
+              onPress={onPrimary}
               activeOpacity={0.85}
               accessibilityRole="button"
             >
@@ -640,18 +652,18 @@ function EmptyState({ tab, onPrimary, onRefresh }: { tab: 'open' | 'mine'; onPri
                 end={{ x: 1, y: 1 }}
                 style={styles.emptyBtnArtInner}
               >
-                <Ionicons name="refresh" size={15} color="#FFF" />
-                <Text style={styles.emptyBtnText}>Refresh</Text>
+                <Ionicons name="add-circle-outline" size={15} color="#FFF" />
+                <Text style={styles.emptyBtnText} numberOfLines={1}>{t('blindDate.common.startBlindDate')}</Text>
               </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.emptyBtnSecondary, { borderColor: th.border }]}
-              onPress={onPrimary}
+              onPress={onRefresh}
               activeOpacity={0.85}
               accessibilityRole="button"
             >
-              <Ionicons name="add-circle-outline" size={15} color={th.text} />
-              <Text style={[styles.emptyBtnSecondaryText, { color: th.text }]}>Start a Blind Date</Text>
+              <Ionicons name="refresh" size={15} color={th.text} />
+              <Text style={[styles.emptyBtnSecondaryText, { color: th.text }]} numberOfLines={1}>{t('blindDate.common.refresh')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -663,16 +675,17 @@ function EmptyState({ tab, onPrimary, onRefresh }: { tab: 'open' | 'mine'; onPri
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   return (
     <View style={styles.emptyWrap}>
       <Ionicons name="alert-circle-outline" size={48} color={colors.primary} />
-      <Text style={[styles.errorTitle, { color: th.text }]}>Something went wrong</Text>
+      <Text style={[styles.errorTitle, { color: th.text }]}>{t('common.somethingWentWrong')}</Text>
       <Text style={[styles.emptySubtitle, { color: th.textSecondary }]}>
-        We couldn&rsquo;t load Blind Date sessions. Pull down to retry.
+        {t('blindDate.home.loadErrorSub')}
       </Text>
       <TouchableOpacity style={styles.emptyBtn} onPress={onRetry} activeOpacity={0.8} accessibilityRole="button">
-        <Text style={styles.emptyBtnText}>Retry</Text>
+        <Text style={styles.emptyBtnText}>{t('blindDate.common.retry')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -680,55 +693,56 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 
 // ─── How It Works modal ───────────────────────────────────────────────────────
 
-type HowStep = { icon: keyof typeof Ionicons.glyphMap; title: string; body: string };
+type HowStep = { icon: keyof typeof Ionicons.glyphMap; titleKey: string; bodyKey: string };
 
 const HOW_STEPS_PARTICIPANT: HowStep[] = [
   {
     icon: 'compass-outline',
-    title: 'Explore',
-    body: "Browse open Blind Date sessions and join one that speaks to you. The creator stays anonymous.",
+    titleKey: 'blindDate.howItWorks.participantSteps.step1Title',
+    bodyKey: 'blindDate.howItWorks.participantSteps.step1Body',
   },
   {
     icon: 'chatbubble-ellipses-outline',
-    title: 'Answer',
-    body: "Answer the creator's questions honestly — your answers are your first impression.",
+    titleKey: 'blindDate.howItWorks.participantSteps.step2Title',
+    bodyKey: 'blindDate.howItWorks.participantSteps.step2Body',
   },
   {
     icon: 'layers-outline',
-    title: 'Advance',
-    body: 'The creator reviews answers and selects who moves forward through each round.',
+    titleKey: 'blindDate.howItWorks.participantSteps.step3Title',
+    bodyKey: 'blindDate.howItWorks.participantSteps.step3Body',
   },
   {
     icon: 'heart-outline',
-    title: 'Reveal',
-    body: 'The finalist and creator see each other. A match happens only if both are interested.',
+    titleKey: 'blindDate.howItWorks.participantSteps.step4Title',
+    bodyKey: 'blindDate.howItWorks.participantSteps.step4Body',
   },
 ];
 
 const HOW_STEPS_CREATOR: HowStep[] = [
   {
     icon: 'create-outline',
-    title: 'Create',
-    body: 'Pick your questions, set the language and expiry, then publish your Blind Date.',
+    titleKey: 'blindDate.howItWorks.creatorSteps.step1Title',
+    bodyKey: 'blindDate.howItWorks.creatorSteps.step1Body',
   },
   {
     icon: 'eye-off-outline',
-    title: 'Review',
-    body: 'Participants answer anonymously — you read every answer without seeing who wrote it.',
+    titleKey: 'blindDate.howItWorks.creatorSteps.step2Title',
+    bodyKey: 'blindDate.howItWorks.creatorSteps.step2Body',
   },
   {
     icon: 'people-outline',
-    title: 'Select',
-    body: 'Advance your favorites round by round, then choose one finalist.',
+    titleKey: 'blindDate.howItWorks.creatorSteps.step3Title',
+    bodyKey: 'blindDate.howItWorks.creatorSteps.step3Body',
   },
   {
     icon: 'heart-outline',
-    title: 'Reveal',
-    body: 'You and the finalist see each other. A match happens only if you are both interested.',
+    titleKey: 'blindDate.howItWorks.creatorSteps.step4Title',
+    bodyKey: 'blindDate.howItWorks.creatorSteps.step4Body',
   },
 ];
 
 function HowItWorksModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
   const { sheetBg, textPrimary, textMuted, purple, chipBg } = useBlindDateTheme();
   const insets = useSafeAreaInsets();
   const maxHeight = Dimensions.get('window').height - insets.top - insets.bottom - 40;
@@ -747,7 +761,7 @@ function HowItWorksModal({ visible, onClose }: { visible: boolean; onClose: () =
             onPress={onClose}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t('blindDate.common.close')}
           >
             <Ionicons name="close" size={16} color={textMuted} />
           </TouchableOpacity>
@@ -775,18 +789,20 @@ function HowItWorksModal({ visible, onClose }: { visible: boolean; onClose: () =
             </LinearGradient>
           </View>
 
-          <Text style={[styles.joinTitle, { color: textPrimary }]}>How Blind Date Works</Text>
+          <Text style={[styles.joinTitle, { color: textPrimary }]}>{t('blindDate.howItWorks.title')}</Text>
           <Text style={[styles.joinSub, { color: textMuted }]}>
             {role === 'participant'
-              ? 'Four steps from mystery to match — no photos until the reveal.'
-              : 'Host your own Blind Date — you ask the questions and pick the finalist.'}
+              ? t('blindDate.howItWorks.subParticipant')
+              : t('blindDate.howItWorks.subCreator')}
           </Text>
 
           {/* Role toggle — Participant joins a session, Creator hosts one */}
           <View style={[styles.roleTabs, { backgroundColor: chipBg }]}>
             {(['participant', 'creator'] as const).map((r) => {
               const active = role === r;
-              const label = r === 'participant' ? 'Participant' : 'Creator';
+              const label = r === 'participant'
+                ? t('blindDate.howItWorks.participant')
+                : t('blindDate.howItWorks.creator');
               const icon = r === 'participant' ? 'person-outline' : 'sparkles-outline';
               return (
                 <TouchableOpacity
@@ -796,7 +812,7 @@ function HowItWorksModal({ visible, onClose }: { visible: boolean; onClose: () =
                   activeOpacity={0.85}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  accessibilityLabel={`${label} steps`}
+                  accessibilityLabel={t('blindDate.howItWorks.stepsA11y', { role: label })}
                 >
                   {active ? (
                     <LinearGradient colors={bdGradients.hero} style={styles.roleTabInner}>
@@ -816,7 +832,7 @@ function HowItWorksModal({ visible, onClose }: { visible: boolean; onClose: () =
 
           <View style={styles.howStepsWrap}>
             {steps.map((step, i) => (
-              <View key={step.title} style={styles.stepRow}>
+              <View key={step.titleKey} style={styles.stepRow}>
                 <View style={styles.stepIconCol}>
                   <LinearGradient colors={bdGradients.hero} style={styles.stepNumCircle}>
                     <Ionicons name={step.icon} size={17} color="#FFF" />
@@ -827,9 +843,9 @@ function HowItWorksModal({ visible, onClose }: { visible: boolean; onClose: () =
                 </View>
                 <View style={styles.stepTextCol}>
                   <Text style={[styles.stepTitle, { color: textPrimary }]}>
-                    {i + 1}. {step.title}
+                    {i + 1}. {t(step.titleKey)}
                   </Text>
-                  <Text style={[styles.stepBody, { color: textMuted }]}>{step.body}</Text>
+                  <Text style={[styles.stepBody, { color: textMuted }]}>{t(step.bodyKey)}</Text>
                 </View>
               </View>
             ))}
@@ -838,7 +854,7 @@ function HowItWorksModal({ visible, onClose }: { visible: boolean; onClose: () =
           <View style={[styles.joinPrivacyRow, { backgroundColor: chipBg }]}>
             <Ionicons name="lock-closed" size={15} color={purple} />
             <Text style={[styles.joinPrivacyText, { color: purple }]}>
-              Your photo and identity stay hidden until both sides choose to reveal.
+              {t('blindDate.howItWorks.privacy')}
             </Text>
           </View>
 
@@ -850,7 +866,7 @@ function HowItWorksModal({ visible, onClose }: { visible: boolean; onClose: () =
               style={styles.joinCtaInner}
             >
               <Ionicons name="checkmark-circle" size={19} color="#FFF" />
-              <Text style={styles.joinCtaText}>Got it</Text>
+              <Text style={styles.joinCtaText}>{t('blindDate.howItWorks.gotIt')}</Text>
             </LinearGradient>
           </TouchableOpacity>
           </ScrollView>
@@ -875,12 +891,13 @@ function JoinConfirmSheet({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const { sheetBg, textPrimary, textMuted, purple, chipBg } = useBlindDateTheme();
   const insets = useSafeAreaInsets();
   if (!session) return null;
 
   // Only surface a cost pill when joining actually costs credits.
-  const costLabel = cost != null && cost > 0 ? `${cost} credit${cost === 1 ? '' : 's'}` : null;
+  const costLabel = cost != null && cost > 0 ? t('blindDate.common.credits', { count: cost }) : null;
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
@@ -910,15 +927,15 @@ function JoinConfirmSheet({
             </LinearGradient>
           </View>
 
-          <Text style={[styles.joinTitle, { color: textPrimary }]}>Feeling Lucky?</Text>
+          <Text style={[styles.joinTitle, { color: textPrimary }]}>{t('blindDate.home.joinTitle')}</Text>
           <Text style={[styles.joinSub, { color: textMuted }]}>
-            Take a chance on a mystery match — one tap could change everything.
+            {t('blindDate.home.joinSub')}
           </Text>
 
           <View style={[styles.joinPrivacyRow, { backgroundColor: chipBg }]}>
             <Ionicons name="lock-closed" size={15} color={purple} />
             <Text style={[styles.joinPrivacyText, { color: purple }]}>
-              Your photo and identity remain hidden until the final reveal.
+              {t('blindDate.home.joinPrivacy')}
             </Text>
           </View>
 
@@ -940,7 +957,7 @@ function JoinConfirmSheet({
               ) : (
                 <>
                   <Ionicons name="heart" size={19} color="#FFF" />
-                  <Text style={styles.joinCtaText}>Join Now</Text>
+                  <Text style={styles.joinCtaText}>{t('blindDate.home.joinNow')}</Text>
                   {costLabel && (
                     <View style={styles.costPill}>
                       <Ionicons name="diamond" size={12} color="#FFF" />
@@ -959,7 +976,7 @@ function JoinConfirmSheet({
             activeOpacity={0.8}
             accessibilityRole="button"
           >
-            <Text style={[styles.cancelBtnText, { color: textMuted }]}>Not now</Text>
+            <Text style={[styles.cancelBtnText, { color: textMuted }]}>{t('blindDate.common.notNow')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -970,6 +987,7 @@ function JoinConfirmSheet({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function BlindDateHomeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { bg, card, border, textPrimary, textMuted } = useBlindDateTheme();
@@ -1090,26 +1108,19 @@ export default function BlindDateHomeScreen() {
         topCardRef.current?.reset();
         return;
       }
-      const { code, message } = extractApiError(err);
-      const friendly: Record<string, string> = {
-        already_joined: 'You already joined this session.',
-        session_full: 'This session just filled up.',
-        session_expired: 'This session has expired.',
-        session_not_open: 'This session is no longer open.',
-        creator_cannot_join: 'You cannot join your own session.',
-        join_window_closed: 'Joining is only allowed during Round 1.',
-      };
+      const { code } = extractApiError(err);
       // Unjoinable sessions are removed from the stack; everything else restores.
       if (TERMINAL_JOIN_ERRORS.has(code.toLowerCase())) {
         dismissSession(session.id);
       } else {
         topCardRef.current?.reset();
       }
-      themedError('Could not join', friendly[code.toLowerCase()] ?? message);
+      // error.message mirrors the machine code — show the localized mapping.
+      themedError(t('blindDate.home.joinErrorTitle'), blindDateErrorMessage(err));
     } finally {
       setJoining(false);
     }
-  }, [joinTarget, joinMutation, refreshEntitlements, dismissSession, openParticipantFlow]);
+  }, [joinTarget, joinMutation, refreshEntitlements, dismissSession, openParticipantFlow, t]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -1126,15 +1137,15 @@ export default function BlindDateHomeScreen() {
   const handleCreate = useCallback(() => {
     if (mySessions.activeSession) {
       themedAlert({
-        title: 'Active session exists',
-        message: 'You can only have one active Blind Date at a time. Manage it from My Sessions.',
+        title: t('blindDate.home.activeSessionTitle'),
+        message: t('blindDate.home.activeSessionMessage'),
         icon: 'information-circle-outline',
         iconColor: colors.primary,
       });
       return;
     }
     router.push('/(app)/blind-date-create' as never);
-  }, [mySessions.activeSession, router]);
+  }, [mySessions.activeSession, router, t]);
 
   // Disabled gate: leaving is the only way out besides opening Settings.
   const handleGateBack = useCallback(() => {
@@ -1222,7 +1233,7 @@ export default function BlindDateHomeScreen() {
 
   const joinCost = getCostForAction('BLIND_DATE_PARTICIPATE', entitlements);
   const joinCostLabel =
-    joinCost === null || joinCost === 0 ? '' : `${joinCost} credit${joinCost === 1 ? '' : 's'}`;
+    joinCost === null || joinCost === 0 ? '' : t('blindDate.common.credits', { count: joinCost });
   const listBottomPad = 16;
 
   /** The top-most visible session — drives the external Pass/Join buttons. */
@@ -1235,10 +1246,10 @@ export default function BlindDateHomeScreen() {
         <Header
           title={
             activeTab === 'mine'
-              ? 'My Blind Dates'
+              ? t('blindDate.home.titleMine')
               : activeTab === 'participating'
-                ? 'Joined Blind Dates'
-                : 'Blind Date'
+                ? t('blindDate.home.titleJoined')
+                : t('blindDate.common.blindDate')
           }
           onHelp={() => setHowVisible(true)}
         />
@@ -1293,11 +1304,11 @@ export default function BlindDateHomeScreen() {
                   onPress={() => topCardRef.current?.swipeOut('left')}
                   activeOpacity={0.8}
                   accessibilityRole="button"
-                  accessibilityLabel="Pass this session"
+                  accessibilityLabel={t('blindDate.home.passA11y')}
                 >
                   <Ionicons name="close" size={30} color={bdColors.primary} />
                 </TouchableOpacity>
-                <Text style={[styles.externalActionLabel, { color: textMuted }]}>Pass</Text>
+                <Text style={[styles.externalActionLabel, { color: textMuted }]}>{t('blindDate.home.pass')}</Text>
               </View>
 
               {/* Join button */}
@@ -1307,7 +1318,7 @@ export default function BlindDateHomeScreen() {
                   onPress={() => topCardRef.current?.swipeOut('right')}
                   activeOpacity={0.8}
                   accessibilityRole="button"
-                  accessibilityLabel="Join this session"
+                  accessibilityLabel={t('blindDate.home.joinA11y')}
                 >
                   <Ionicons name="heart" size={30} color="#FFF" />
                 </TouchableOpacity>
@@ -1316,7 +1327,7 @@ export default function BlindDateHomeScreen() {
                     {joinCostLabel}
                   </Text>
                 ) : (
-                  <Text style={[styles.externalActionLabel, { color: textMuted }]}>Join</Text>
+                  <Text style={[styles.externalActionLabel, { color: textMuted }]}>{t('blindDate.home.join')}</Text>
                 )}
               </View>
             </View>
@@ -1380,6 +1391,7 @@ export default function BlindDateHomeScreen() {
         onExplore={() => setActiveTab('open')}
         onMine={() => setActiveTab('mine')}
         onJoined={() => setActiveTab('participating')}
+        onMatches={() => router.push('/(app)/(tabs)/matches' as never)}
         onProfile={() => router.push('/(app)/(tabs)/profile' as never)}
       />
 
@@ -1406,17 +1418,17 @@ export default function BlindDateHomeScreen() {
               <Ionicons name="eye-off-outline" size={34} color="#FFF" />
             </LinearGradient>
             <Text style={[styles.gateTitle, { color: textPrimary }]}>
-              Blind Date is turned off
+              {t('blindDate.home.gateTitle')}
             </Text>
             <Text style={[styles.gateSub, { color: textMuted }]}>
-              Enable Blind Date in Settings to discover anonymous dates or host your own session.
+              {t('blindDate.home.gateSub')}
             </Text>
             <TouchableOpacity
               style={styles.gatePrimary}
               onPress={() => router.push('/(app)/settings' as never)}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Open Settings"
+              accessibilityLabel={t('blindDate.home.openSettings')}
             >
               <LinearGradient
                 colors={bdGradients.hero}
@@ -1425,7 +1437,7 @@ export default function BlindDateHomeScreen() {
                 style={styles.gatePrimaryInner}
               >
                 <Ionicons name="settings-outline" size={18} color="#FFF" />
-                <Text style={styles.gatePrimaryText}>Open Settings</Text>
+                <Text style={styles.gatePrimaryText}>{t('blindDate.home.openSettings')}</Text>
               </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1433,9 +1445,9 @@ export default function BlindDateHomeScreen() {
               onPress={handleGateBack}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel="Go back"
+              accessibilityLabel={t('blindDate.common.goBack')}
             >
-              <Text style={[styles.gateGhostText, { color: textMuted }]}>Go back</Text>
+              <Text style={[styles.gateGhostText, { color: textMuted }]}>{t('blindDate.common.goBack')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1682,7 +1694,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   emptyBtnArt: {
-    flex: 1,
+    flex: 1.6,
     borderRadius: 26,
     overflow: 'hidden',
     ...Platform.select({
@@ -1696,7 +1708,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    paddingHorizontal: 26,
+    paddingHorizontal: 14,
     paddingVertical: 12,
   },
   emptyBtnSecondary: {

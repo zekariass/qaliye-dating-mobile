@@ -245,7 +245,7 @@ export default function BrowseProfileDetailSheet({
             style={styles.closeBtn}
             onPress={onClose}
             activeOpacity={0.8}
-            accessibilityLabel="Close profile details"
+            accessibilityLabel={t('discovery.closeProfileDetails')}
             accessibilityRole="button"
           >
             <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
@@ -366,7 +366,7 @@ export default function BrowseProfileDetailSheet({
             <View style={styles.profileLoadingBar}>
               <ActivityIndicator size="small" color={colors.primary} />
               <Text style={[styles.profileLoadingText, { color: th.textSecondary }]}>
-                Loading details…
+                {t('discovery.loadingDetails')}
               </Text>
             </View>
           )}
@@ -413,7 +413,7 @@ export default function BrowseProfileDetailSheet({
             >
               <Ionicons name="heart" size={22} color={colors.heartPink} />
               <Text style={[styles.confirmationText, { color: th.text }]}>
-                You liked {card.display_name}
+                {t('discovery.youLiked', { name: card.display_name })}
               </Text>
             </Animated.View>
           )}

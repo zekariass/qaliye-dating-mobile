@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Dimensions,
@@ -34,6 +35,7 @@ import { useLikes } from '@/hooks/discovery/useLikes';
 import { useSwipeAction } from '@/hooks/discovery/useSwipeAction';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { ActivityStatus } from '@/types/activity';
 import type { LikeDirection, LikeItemDto } from '@/types/discovery';
 import { isInsufficientCreditsError } from '@/utils/entitlements';
@@ -76,7 +78,7 @@ function formatLocation(item: LikeItemDto, myCountry: string): string | null {
 // back to the plain LIKE/SUPERLIKE distinction when no variant is present.
 function getLikeTypeLabel(item: LikeItemDto): string {
   if (item.action_variant?.name) return item.action_variant.name;
-  return item.action_type === 'SUPERLIKE' ? 'Super Liked' : 'Liked';
+  return item.action_type === 'SUPERLIKE' ? i18n.t('likes.superLiked') : i18n.t('likes.liked');
 }
 
 function getLikeTypeEmoji(item: LikeItemDto): string {
@@ -164,6 +166,7 @@ interface SegmentedControlProps {
 }
 
 function SegmentedControl({ active, onChange, receivedCount, sentCount }: SegmentedControlProps) {
+  const { t } = useTranslation();
   const { textMuted, purple, segBg, segActiveBg, segBorder } = useLikesTheme();
 
   const isReceived = active === 'received';
@@ -179,7 +182,7 @@ function SegmentedControl({ active, onChange, receivedCount, sentCount }: Segmen
         activeOpacity={0.85}
         accessibilityRole="tab"
         accessibilityState={{ selected: isReceived }}
-        accessibilityLabel="Received Likes"
+        accessibilityLabel={t('likes.receivedLikes')}
       >
         <Ionicons
           name={isReceived ? 'heart' : 'heart-outline'}
@@ -187,7 +190,7 @@ function SegmentedControl({ active, onChange, receivedCount, sentCount }: Segmen
           color={isReceived ? purple : textMuted}
         />
         <Text style={[segStyles.tabText, { color: isReceived ? purple : textMuted }, isReceived && segStyles.tabTextActive]}>
-          Received Likes
+          {t('likes.receivedLikes')}
         </Text>
         {receivedCount > 0 && (
           <View style={[segStyles.countBadge, { backgroundColor: isReceived ? purple : textMuted }]}>
@@ -204,7 +207,7 @@ function SegmentedControl({ active, onChange, receivedCount, sentCount }: Segmen
         activeOpacity={0.85}
         accessibilityRole="tab"
         accessibilityState={{ selected: isSent }}
-        accessibilityLabel="Sent Likes"
+        accessibilityLabel={t('likes.sentLikes')}
       >
         <Ionicons
           name={isSent ? 'paper-plane' : 'paper-plane-outline'}
@@ -212,7 +215,7 @@ function SegmentedControl({ active, onChange, receivedCount, sentCount }: Segmen
           color={isSent ? purple : textMuted}
         />
         <Text style={[segStyles.tabText, { color: isSent ? purple : textMuted }, isSent && segStyles.tabTextActive]}>
-          Sent Likes
+          {t('likes.sentLikes')}
         </Text>
         {sentCount > 0 && (
           <View style={[segStyles.countBadge, { backgroundColor: isSent ? purple : textMuted }]}>
@@ -295,6 +298,7 @@ interface LikeCardProps {
 }
 
 function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack, isLikingBack, activityStatus, myCountry }: LikeCardProps) {
+  const { t } = useTranslation();
   const { card, textPrimary, textMuted, purple } = useLikesTheme();
   const location = formatLocation(item, myCountry);
   const scale = useTabletScale();
@@ -305,7 +309,7 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
       onPress={onPress}
       activeOpacity={0.88}
       accessibilityRole="button"
-      accessibilityLabel={`View ${item.display_name}'s profile`}
+      accessibilityLabel={t('likes.viewProfileA11y', { name: item.display_name })}
     >
 
       {/* ── Portrait image ── */}
@@ -337,7 +341,7 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
             disabled={isLikingBack}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel={`Like back ${item.display_name}`}
+            accessibilityLabel={t('likes.likeBackA11y', { name: item.display_name })}
             hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
           >
             {isLikingBack ? (
@@ -356,7 +360,7 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
             disabled={isUnsending}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel={`Unsend like ${item.display_name}`}
+            accessibilityLabel={t('likes.unsendLikeA11y', { name: item.display_name })}
             hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
           >
             {isUnsending ? (
@@ -394,7 +398,7 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={13} color={purple} />
             <Text style={[styles.locationText, { color: textMuted, fontSize: rs(11, scale) }]} numberOfLines={1}>
-              {location ?? 'Location unknown'}
+              {location ?? t('likes.locationUnknown')}
             </Text>
             {item.distance_km !== null && (
               <Text style={[styles.distanceText, { color: textMuted }]} numberOfLines={1}>
@@ -432,7 +436,7 @@ function LikeCard({ item, isReceived, onPress, onUnsend, isUnsending, onLikeBack
           />
         ) : (
           <Text style={[styles.chipText, { color: textMuted, fontSize: 11 }]} numberOfLines={1}>
-            Offline now
+            {t('likes.offlineNow')}
           </Text>
         )}
 
@@ -451,6 +455,7 @@ interface BlurredLikeCardProps {
 }
 
 function BlurredLikeCard({ item, onPress, onReveal, isRevealing }: BlurredLikeCardProps) {
+  const { t } = useTranslation();
   const { card, textPrimary, textMuted, purple } = useLikesTheme();
   const { colors: th } = useTheme();
   const isDark = th.background === '#0D0712';
@@ -461,7 +466,7 @@ function BlurredLikeCard({ item, onPress, onReveal, isRevealing }: BlurredLikeCa
       onPress={onPress}
       activeOpacity={0.88}
       accessibilityRole="button"
-      accessibilityLabel="View who liked you"
+      accessibilityLabel={t('likes.viewWhoLikedYou')}
     >
       <View style={styles.imageWrap}>
         {item.primary_photo_url ? (
@@ -491,14 +496,14 @@ function BlurredLikeCard({ item, onPress, onReveal, isRevealing }: BlurredLikeCa
             disabled={isRevealing}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel="View who liked you"
+            accessibilityLabel={t('likes.viewWhoLikedYou')}
           >
             {isRevealing ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
               <>
                 <Ionicons name="eye-outline" size={15} color="#FFF" />
-                <Text style={blurStyles.viewBtnText}>View</Text>
+                <Text style={blurStyles.viewBtnText}>{t('likes.view')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -509,12 +514,12 @@ function BlurredLikeCard({ item, onPress, onReveal, isRevealing }: BlurredLikeCa
         <View style={styles.nameRow}>
           <View style={styles.nameLeft}>
             <Text style={[styles.nameText, { color: textPrimary, fontSize: 14 }]} numberOfLines={1}>
-              Someone likes you
+              {t('likes.someoneLikesYou')}
             </Text>
           </View>
         </View>
         <Text style={[styles.locationText, { color: textMuted }]} numberOfLines={1}>
-          Tap View to reveal
+          {t('likes.tapViewToReveal')}
         </Text>
 
       </View>
@@ -559,12 +564,13 @@ const blurStyles = StyleSheet.create({
 // ─── EmptyState ───────────────────────────────────────────────────────────────
 
 function EmptyState({ tab, onRefresh }: { tab: Tab; onRefresh: () => void }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
-  const title    = tab === 'received' ? 'No likes yet' : 'No sent likes';
+  const title    = tab === 'received' ? t('likes.emptyTitleReceived') : t('likes.emptyTitleSent');
   const subtitle = tab === 'received'
-    ? "No one has liked you yet. Keep your profile active and we'll notify you when someone does!"
-    : "You haven't liked anyone yet. Start exploring and find your match!";
+    ? t('likes.emptySubtitleReceived')
+    : t('likes.emptySubtitleSent');
 
   return (
     <View style={emptyStyles.wrap}>
@@ -580,7 +586,7 @@ function EmptyState({ tab, onRefresh }: { tab: Tab; onRefresh: () => void }) {
       <Text style={[emptyStyles.subtitle, { color: th.textSecondary }]}>{subtitle}</Text>
       <TouchableOpacity style={emptyStyles.refreshBtn} onPress={onRefresh} activeOpacity={0.8}>
         <Ionicons name="refresh-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
-        <Text style={emptyStyles.refreshText}>Refresh</Text>
+        <Text style={emptyStyles.refreshText}>{t('likes.refresh')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -632,16 +638,17 @@ const emptyStyles = StyleSheet.create({
 // ─── ErrorState ───────────────────────────────────────────────────────────────
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   return (
     <View style={errorStyles.wrap}>
       <Ionicons name="alert-circle-outline" size={48} color={colors.primary} />
-      <Text style={[errorStyles.title, { color: th.text }]}>Something went wrong</Text>
+      <Text style={[errorStyles.title, { color: th.text }]}>{t('likes.errorTitle')}</Text>
       <Text style={[errorStyles.subtitle, { color: th.textSecondary }]}>
-        We couldn't load your likes. Pull down to retry.
+        {t('likes.errorBody')}
       </Text>
       <TouchableOpacity style={errorStyles.retryBtn} onPress={onRetry} activeOpacity={0.8}>
-        <Text style={errorStyles.retryText}>Retry</Text>
+        <Text style={errorStyles.retryText}>{t('likes.retry')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -688,22 +695,22 @@ function showRevealUpgradeModal(
 ) {
   if (!creditsEnabled && !subscriptionEnabled) {
     themedAlert({
-      title: 'Reveal Who Liked You',
-      message: 'You have no available allowance to reveal this profile.',
+      title: i18n.t('likes.revealTitle'),
+      message: i18n.t('likes.revealNoAllowance'),
       icon: 'eye-outline',
       iconColor: colors.primary,
-      buttons: [{ text: 'OK', style: 'cancel' }],
+      buttons: [{ text: i18n.t('common.ok'), style: 'cancel' }],
     });
     return;
   }
   themedAlert({
-    title: 'Reveal Who Liked You',
-    message: 'You have no available allowance or credits.',
+    title: i18n.t('likes.revealTitle'),
+    message: i18n.t('likes.revealNoAllowanceOrCredits'),
     icon: 'eye-outline',
     iconColor: colors.primary,
     buttons: [
       ...(subscriptionEnabled ? [{
-        text: 'Go Premium',
+        text: i18n.t('common.goPremium'),
         style: 'default' as const,
         icon: 'crown',
         iconFamily: 'material' as const,
@@ -711,14 +718,14 @@ function showRevealUpgradeModal(
         onPress: () => router.push('/(app)/premium' as any),
       }] : []),
       ...(creditsEnabled ? [{
-        text: 'Buy Credits',
+        text: i18n.t('common.buyCredits'),
         style: 'default' as const,
         icon: 'hand-coin-outline',
         iconFamily: 'material' as const,
         iconColor: '#F59E0B',
         onPress: () => router.push('/(app)/credits-shop' as any),
       }] : []),
-      { text: 'Not Now', style: 'cancel' as const },
+      { text: i18n.t('common.notNow'), style: 'cancel' as const },
     ],
   });
 }
@@ -726,6 +733,7 @@ function showRevealUpgradeModal(
 // ─── LikesListScreen ──────────────────────────────────────────────────────────
 
 export default function LikesListScreen() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('received');
   const insets    = useSafeAreaInsets();
   const { bg }    = useLikesTheme();
@@ -897,12 +905,12 @@ export default function LikesListScreen() {
       } else if (status === 404) {
         setRemovedReceivedIds((prev) => new Set(prev).add(item.action_id));
       } else {
-        themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not reveal this profile.');
+        themedError(t('common.error'), err?.response?.data?.message ?? err?.message ?? t('likes.revealError'));
       }
     } finally {
       setRevealingId(null);
     }
-  }, [refreshEntitlements, router, entitlements]);
+  }, [refreshEntitlements, router, entitlements, t]);
 
   const handleLikeBack = useCallback(async (item: LikeItemDto) => {
     setLikingBackId(item.action_id);
@@ -915,32 +923,32 @@ export default function LikesListScreen() {
         setMatchVisible(true);
       } else {
         themedAlert({
-          title: 'Like sent',
-          message: `Your like has been sent to ${item.display_name}.`,
+          title: t('likes.likeSentTitle'),
+          message: t('likes.likeSentBody', { name: item.display_name }),
           icon: 'heart-outline',
           iconColor: colors.primary,
-          buttons: [{ text: 'OK' }],
+          buttons: [{ text: t('common.ok') }],
         });
       }
       receivedRefetch();
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) return;
-      themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not complete action.');
+      themedError(t('common.error'), err?.response?.data?.message ?? err?.message ?? t('likes.couldNotComplete'));
     } finally {
       setLikingBackId(null);
     }
-  }, [swipeAction, receivedRefetch, router]);
+  }, [swipeAction, receivedRefetch, router, t]);
 
   const handleUnsend = useCallback((item: LikeItemDto) => {
     themedAlert({
-      title: 'Unsend Like?',
-      message: `Withdraw your like from ${item.display_name}?`,
+      title: t('likes.unsendLikeTitle'),
+      message: t('likes.unsendLikeBody', { name: item.display_name }),
       icon: 'heart-dislike-outline',
       iconColor: colors.danger,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Unsend Like',
+          text: t('likes.unsendLike'),
           style: 'destructive',
           onPress: async () => {
             setUnsendingId(item.action_id);
@@ -949,7 +957,7 @@ export default function LikesListScreen() {
               sentRefetch();
             } catch (err: any) {
               if (isInsufficientCreditsError(err)) return;
-              themedError('Error', err?.response?.data?.message ?? err?.message ?? 'Could not unsend like.');
+              themedError(t('common.error'), err?.response?.data?.message ?? err?.message ?? t('likes.unsendError'));
             } finally {
               setUnsendingId(null);
             }
@@ -957,7 +965,7 @@ export default function LikesListScreen() {
         },
       ],
     });
-  }, [swipeAction, sentRefetch]);
+  }, [swipeAction, sentRefetch, t]);
 
   const handleCardPress = useCallback((userId: string) => {
     router.push({ pathname: '/(app)/user-profile', params: { userId } } as any);

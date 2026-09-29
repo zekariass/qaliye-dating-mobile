@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import {
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { colors, fontSize, radius, spacing } from '@/constants/theme';
@@ -22,16 +22,16 @@ export default function DiscoveryModeDropdown({ visible, current, onSelect, onCl
   const { t } = useTranslation();
 
   const modes: { key: DiscoveryMode; label: string; icon: string }[] = [
-    { key: 'STANDARD', label: 'Standard', icon: '📍' },
-    { key: 'GLOBAL', label: 'Global', icon: '🌍' },
-    { key: 'INCOGNITO', label: 'Incognito', icon: '🕶' },
+    { key: 'STANDARD', label: t('discovery.preferences.standard'), icon: '📍' },
+    { key: 'GLOBAL', label: t('discovery.preferences.global'), icon: '🌍' },
+    { key: 'INCOGNITO', label: t('discovery.preferences.incognito'), icon: '🕶' },
   ];
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.overlay} onPress={onClose} activeOpacity={1}>
         <View style={styles.sheet}>
-          <Text style={styles.title}>Discovery Mode</Text>
+          <Text style={styles.title}>{t('discovery.preferences.discoveryMode')}</Text>
           {modes.map((m) => (
             <TouchableOpacity
               key={m.key}
@@ -45,7 +45,7 @@ export default function DiscoveryModeDropdown({ visible, current, onSelect, onCl
             </TouchableOpacity>
           ))}
           <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
-            <Text style={styles.closeText}>{t('auth.login')}</Text>
+            <Text style={styles.closeText}>{t('common.close')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>

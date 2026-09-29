@@ -3,6 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import type { ActivityStatus } from './activity';
+import type { MatchSource } from './discovery';
 
 // ── Message types ─────────────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ export interface ChatParticipant {
 export interface ChatThread {
   matchId: string;
   status: ThreadStatus;
+  matchSource?: MatchSource;
   participant: ChatParticipant;
   receiptState: ReceiptState;
 }
@@ -120,6 +122,7 @@ export interface InboxLastMessage {
 export interface InboxItem {
   matchId: string;
   status: 'ACTIVE';
+  matchSource?: MatchSource;
   participant: ChatParticipant;
   lastMessage: InboxLastMessage | null;
   unreadCount: number;
@@ -133,6 +136,8 @@ export interface InboxItem {
 export interface InboxItemDto {
   match_id: string;
   status: 'ACTIVE';
+  // Additive field; absent on older backend versions (treat as 'DISCOVERY').
+  match_source?: MatchSource;
   participant: {
     user_id: string;
     display_name: string;
@@ -162,6 +167,8 @@ export interface InboxResponse {
 export interface ChatThreadDto {
   match_id: string;
   status: 'ACTIVE' | 'ENDED';
+  // Additive field; absent on older backend versions (treat as 'DISCOVERY').
+  match_source?: MatchSource;
   participant: {
     user_id: string;
     display_name: string;

@@ -57,7 +57,7 @@ export default function LocationFilterDropdown({ visible, current, onSelect, onC
           <View style={[styles.handle, { backgroundColor: th.border }]} />
 
           <Text style={[styles.title, { color: th.text }]}>{t('discovery.locationFilter.title')}</Text>
-          <Text style={[styles.subtitle, { color: th.textSecondary }]}>Choose where you want to discover profiles</Text>
+          <Text style={[styles.subtitle, { color: th.textSecondary }]}>{t('discovery.locationFilter.subtitle')}</Text>
 
           <View style={styles.optionsList}>
             {options.map((opt) => {
@@ -105,7 +105,7 @@ export default function LocationFilterDropdown({ visible, current, onSelect, onC
 
           {/* Close button */}
           <TouchableOpacity style={styles.closePill} onPress={onClose} activeOpacity={0.8}>
-            <Text style={styles.closePillText}>Close</Text>
+            <Text style={styles.closePillText}>{t('common.close')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>

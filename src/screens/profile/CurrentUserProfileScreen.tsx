@@ -10,6 +10,7 @@ import {
     View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useTranslation } from 'react-i18next';
 import Animated, {
     Easing,
     runOnJS,
@@ -37,6 +38,7 @@ const SCREEN_W = Dimensions.get('window').width;
 const PAGE_COUNT = PROFILE_TABS.length;
 
 export default function CurrentUserProfileScreen() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<ProfileTab>('Details');
   const { colors: th } = useTheme();
   const router = useRouter();
@@ -114,7 +116,7 @@ export default function CurrentUserProfileScreen() {
     return (
       <View style={[styles.screen, styles.centered, { backgroundColor: th.background }]}>
         <Text style={[styles.errorText, { color: th.textSecondary }]}>
-          {(error as Error)?.message ?? 'Failed to load profile. Please try again.'}
+          {(error as Error)?.message ?? t('profile.loadError')}
         </Text>
       </View>
     );

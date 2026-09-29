@@ -42,6 +42,7 @@ function PhotoViewer({
   initialIndex: number;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const listRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
@@ -75,7 +76,7 @@ function PhotoViewer({
         {/* Header — close + counter */}
         <View style={[viewer.header, { paddingTop: safeTop + 8 }]}>
           <TouchableOpacity onPress={onClose} style={viewer.closeBtn} activeOpacity={0.8}
-            accessibilityLabel="Close photo viewer">
+            accessibilityLabel={t('discovery.closePhotoViewer')}>
             <Ionicons name="close" size={24} color="#FFF" />
           </TouchableOpacity>
           <View style={viewer.counterPill}>
@@ -218,7 +219,7 @@ export default function MorePhotosSection({ photos }: Props) {
           style={[styles.fullCell, { borderColor: th.border }]}
           activeOpacity={0.85}
           onPress={() => openViewer(1)}
-          accessibilityLabel="Photo 2"
+          accessibilityLabel={t('discovery.photo', { number: 2 })}
         >
           <Image
             source={{ uri: extraPhotos[0].image_url }}
@@ -259,7 +260,7 @@ export default function MorePhotosSection({ photos }: Props) {
               style={[styles.cell, { borderColor: th.border }]}
               activeOpacity={0.85}
               onPress={() => openViewer(leftIdx)}
-              accessibilityLabel={`Photo ${leftIdx + 1}`}
+              accessibilityLabel={t('discovery.photo', { number: leftIdx + 1 })}
             >
               <Image
                 source={{ uri: safePhotos[leftIdx].image_url }}
@@ -275,7 +276,7 @@ export default function MorePhotosSection({ photos }: Props) {
                 style={[styles.cell, { borderColor: th.border }]}
                 activeOpacity={0.85}
                 onPress={() => openViewer(rightIdx)}
-                accessibilityLabel={`Photo ${rightIdx + 1}`}
+                accessibilityLabel={t('discovery.photo', { number: rightIdx + 1 })}
               >
                 <Image
                   source={{ uri: safePhotos[rightIdx].image_url }}

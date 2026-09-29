@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createRef, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Modal,
@@ -64,6 +65,7 @@ export function themedError(title: string, message?: string): void {
 // Component
 // ---------------------------------------------------------------------------
 export function ThemedAlert() {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const [visible, setVisible] = useState(false);
   const [opts, setOpts] = useState<ThemedAlertOptions>({});
@@ -110,7 +112,7 @@ export function ThemedAlert() {
     return () => clearTimeout(timer);
   }, [visible, opts.autoDismissMs, countdown, hide]);
 
-  const buttons = opts.buttons ?? [{ text: 'OK', style: 'default' }];
+  const buttons = opts.buttons ?? [{ text: t('common.ok', 'OK'), style: 'default' }];
 
   const handlePress = (btn: ThemedAlertButton) => {
     setVisible(false);

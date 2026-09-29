@@ -15,6 +15,7 @@ import {
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const GALLERY_H = Math.round(SCREEN_H * 0.46);
@@ -35,6 +36,7 @@ interface Props {
 }
 
 function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
+  const { t } = useTranslation();
   const [activeIdx, setActiveIdx] = useState(0);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -93,7 +95,7 @@ function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
       <Pressable
         style={[styles.circleBtn, styles.backBtn, { top: safeTop + 14 }, BTN_SHADOW]}
         onPress={onBack}
-        accessibilityLabel="Go back"
+        accessibilityLabel={t('profile.goBack')}
         accessibilityRole="button"
         android_ripple={{ color: 'rgba(255,255,255,0.15)', borderless: true }}
       >
@@ -104,7 +106,7 @@ function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
       <Pressable
         style={[styles.circleBtn, styles.moreBtn, { top: safeTop + 14 }, BTN_SHADOW]}
         onPress={onMore}
-        accessibilityLabel="More profile options"
+        accessibilityLabel={t('profile.moreOptions')}
         accessibilityRole="button"
         android_ripple={{ color: 'rgba(255,255,255,0.15)', borderless: true }}
       >
@@ -140,7 +142,7 @@ function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
             <Pressable
               style={styles.viewerCloseBtn}
               onPress={closeViewer}
-              accessibilityLabel="Close"
+              accessibilityLabel={t('common.close')}
               accessibilityRole="button"
             >
               <Ionicons name="close" size={26} color="#FFFFFF" />
@@ -186,7 +188,7 @@ function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
               style={[styles.viewerNavBtn, viewerIndex === null || viewerIndex <= 0 ? styles.viewerNavBtnDisabled : null]}
               onPress={() => viewerIndex !== null && viewerIndex > 0 && goToIndex(viewerIndex - 1)}
               disabled={viewerIndex === null || viewerIndex <= 0}
-              accessibilityLabel="Previous photo"
+              accessibilityLabel={t('profile.photos.previous')}
               accessibilityRole="button"
             >
               <Ionicons name="chevron-back" size={28} color={viewerIndex !== null && viewerIndex > 0 ? '#FFFFFFCC' : '#FFFFFF33'} />
@@ -196,7 +198,7 @@ function ProfileHeroGallery({ images, safeTop, onBack, onMore }: Props) {
               style={[styles.viewerNavBtn, viewerIndex === null || viewerIndex >= images.length - 1 ? styles.viewerNavBtnDisabled : null]}
               onPress={() => viewerIndex !== null && viewerIndex < images.length - 1 && goToIndex(viewerIndex + 1)}
               disabled={viewerIndex === null || viewerIndex >= images.length - 1}
-              accessibilityLabel="Next photo"
+              accessibilityLabel={t('profile.photos.next')}
               accessibilityRole="button"
             >
               <Ionicons name="chevron-forward" size={28} color={viewerIndex !== null && viewerIndex < images.length - 1 ? '#FFFFFFCC' : '#FFFFFF33'} />

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Dimensions,
@@ -26,6 +27,7 @@ const CARD_W = (SCREEN_W - H_PAD * 2 - COL_GAP) / 2;
 const PHOTO_H = Math.round(CARD_W * 1.3);
 
 export default function BlockedUsersScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
   const { colors: th } = useTheme();
@@ -39,18 +41,24 @@ export default function BlockedUsersScreen() {
 
   const handleUnblock = (item: BlockedUserItem) => {
     themedAlert({
-      title: 'Unblock user?',
-      message: `${item.blocked_user.display_name} will be able to appear in your discovery again.`,
+      title: t('settings.unblockConfirmTitle', 'Unblock user?'),
+      message: t('settings.unblockConfirmBody', {
+        name: item.blocked_user.display_name,
+        defaultValue: '{{name}} will be able to appear in your discovery again.',
+      }),
       icon: 'checkmark-circle-outline',
       iconColor: colors.success,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Unblock',
+          text: t('settings.unblock', 'Unblock'),
           onPress: () =>
             unblock(item.blocked_user.id, {
               onError: () =>
-                themedError('Failed', 'Could not unblock. Please try again.'),
+                themedError(
+                  t('settings.unblockFailedTitle', 'Failed'),
+                  t('settings.unblockFailedBody', 'Could not unblock. Please try again.'),
+                ),
             }),
         },
       ],
@@ -87,7 +95,7 @@ export default function BlockedUsersScreen() {
             style={styles.unblockBtn}
             onPress={() => handleUnblock(item)}
             accessibilityRole="button"
-            accessibilityLabel={`Unblock ${user.display_name}`}
+            accessibilityLabel={t('settings.unblockUser', { name: user.display_name, defaultValue: 'Unblock {{name}}' })}
             hitSlop={8}
           >
             <Ionicons name="close" size={14} color="#FFF" />
@@ -124,12 +132,12 @@ export default function BlockedUsersScreen() {
         <Pressable
           style={[styles.circleBtn, { backgroundColor: th.surface }]}
           onPress={() => router.back()}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back', 'Back')}
           accessibilityRole="button"
         >
           <Ionicons name="chevron-back" size={22} color={th.text} />
         </Pressable>
-        <Text style={[styles.title, { color: th.text }]}>Blocked Users</Text>
+        <Text style={[styles.title, { color: th.text }]}>{t('settings.blockedUsers', 'Blocked Users')}</Text>
         <View style={styles.circleBtn} />
       </View>
 
@@ -141,18 +149,18 @@ export default function BlockedUsersScreen() {
       ) : isError ? (
         <View style={styles.centered}>
           <Text style={[styles.emptyText, { color: th.textMuted }]}>
-            Failed to load blocked users.
+            {t('settings.blockedLoadError', 'Failed to load blocked users.')}
           </Text>
           <Pressable style={styles.retryBtn} onPress={() => refetch()}>
-            <Text style={styles.retryLabel}>Retry</Text>
+            <Text style={styles.retryLabel}>{t('common.retry', 'Try again')}</Text>
           </Pressable>
         </View>
       ) : items.length === 0 ? (
         <View style={styles.centered}>
           <Ionicons name="ban-outline" size={52} color={th.textMuted} />
-          <Text style={[styles.emptyTitle, { color: th.text }]}>No blocked users</Text>
+          <Text style={[styles.emptyTitle, { color: th.text }]}>{t('settings.noBlockedUsers', 'No blocked users')}</Text>
           <Text style={[styles.emptyText, { color: th.textMuted }]}>
-            Users you block will appear here.
+            {t('settings.noBlockedUsersBody', 'Users you block will appear here.')}
           </Text>
         </View>
       ) : (

@@ -15,6 +15,7 @@ import {
 import { colors, radius, spacing } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import { getRevenueCatManagementURL } from '@/services/billing/revenueCatService';
 import {
     isActiveSubscription,
@@ -25,15 +26,15 @@ import {
 type ModalState = 'loading' | 'ready' | 'error';
 
 function formatProviderName(provider?: SubscriptionProvider): string {
-  if (!provider) return 'Local';
+  if (!provider) return i18n.t('billing.providerLocal', 'Local');
   const names: Record<string, string> = {
     TELEBIRR: 'Telebirr',
     CBE_BIRR: 'CBE Birr',
     CHAPA: 'Chapa',
     ARIFPAY: 'ArifPay',
-    BANK_TRANSFER: 'Bank Transfer',
+    BANK_TRANSFER: i18n.t('billing.providerBankTransfer', 'Bank Transfer'),
     STRIPE: 'Stripe',
-    PROMOTION: 'Promotion',
+    PROMOTION: i18n.t('billing.providerPromotion', 'Promotion'),
   };
   return names[provider] ?? provider.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 }
@@ -112,7 +113,7 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
         if (!url) {
           setState('error');
           setErrorMessage(
-            'Unable to retrieve your subscription management link. Please try again later or contact support.',
+            t('billing.manageLinkUnavailable', 'Unable to retrieve your subscription management link. Please try again later or contact support.'),
           );
           setIsNavigating(false);
           return;
@@ -121,7 +122,7 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
 
       if (!url) {
         setState('error');
-        setErrorMessage('Subscription management is not available for this provider.');
+        setErrorMessage(t('billing.manageNotAvailable', 'Subscription management is not available for this provider.'));
         setIsNavigating(false);
         return;
       }
@@ -129,7 +130,7 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
       const canOpen = await Linking.canOpenURL(url);
       if (!canOpen) {
         setState('error');
-        setErrorMessage('Unable to open the subscription management page.');
+        setErrorMessage(t('billing.manageOpenFailed', 'Unable to open the subscription management page.'));
         setIsNavigating(false);
         return;
       }
@@ -138,11 +139,11 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
       await Linking.openURL(url);
     } catch {
       setState('error');
-      setErrorMessage('Something went wrong while opening subscription management.');
+      setErrorMessage(t('billing.manageError', 'Something went wrong while opening subscription management.'));
     } finally {
       setIsNavigating(false);
     }
-  }, [provider, isNavigating, onClose]);
+  }, [provider, isNavigating, onClose, t]);
 
   const handleViewPremiumPlans = useCallback(() => {
     if (isNavigating) return;
@@ -178,7 +179,7 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: th.textSecondary }]}>
-                Loading subscription info…
+                {t('billing.loadingSubscription', 'Loading subscription info…')}
               </Text>
             </View>
           ) : state === 'error' ? (
@@ -186,9 +187,9 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
               <View style={[styles.iconCircle, { backgroundColor: colors.danger + '20' }]}>
                 <Ionicons name="alert-circle" size={28} color={colors.danger} />
               </View>
-              <Text style={[styles.title, { color: th.text }]}>Something went wrong</Text>
+              <Text style={[styles.title, { color: th.text }]}>{t('billing.errorTitle', 'Something went wrong')}</Text>
               <Text style={[styles.message, { color: th.textSecondary }]}>
-                {errorMessage ?? 'An unexpected error occurred.'}
+                {errorMessage ?? t('billing.unexpectedError', 'An unexpected error occurred.')}
               </Text>
               <Pressable
                 style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
@@ -198,7 +199,7 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
                   refreshEntitlements();
                 }}
               >
-                <Text style={styles.primaryBtnText}>Try Again</Text>
+                <Text style={styles.primaryBtnText}>{t('common.retry', 'Try Again')}</Text>
               </Pressable>
             </View>
           ) : !isActive && !isFreePremium ? (
@@ -206,9 +207,9 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
               <View style={[styles.iconCircle, { backgroundColor: colors.warning + '20' }]}>
                 <Ionicons name="time-outline" size={28} color={colors.warning} />
               </View>
-              <Text style={[styles.title, { color: th.text }]}>Subscription Expired</Text>
+              <Text style={[styles.title, { color: th.text }]}>{t('billing.subscriptionExpired', 'Subscription Expired')}</Text>
               <Text style={[styles.message, { color: th.textSecondary }]}>
-                Your premium subscription is no longer active.
+                {t('billing.subscriptionExpiredBody', 'Your premium subscription is no longer active.')}
               </Text>
               <Pressable
                 style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
@@ -218,7 +219,7 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
                 {isNavigating ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.primaryBtnText}>View Premium Plans</Text>
+                  <Text style={styles.primaryBtnText}>{t('billing.viewPremiumPlans', 'View Premium Plans')}</Text>
                 )}
               </Pressable>
             </View>
@@ -227,9 +228,9 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
               <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
                 <Ionicons name="gift-outline" size={28} color={colors.primary} />
               </View>
-              <Text style={[styles.title, { color: th.text }]}>Free Premium</Text>
+              <Text style={[styles.title, { color: th.text }]}>{t('billing.freePremiumActive', 'Free Premium')}</Text>
               <Text style={[styles.message, { color: th.textSecondary }]}>
-                You are on Free Premium.
+                {t('billing.onFreePremium', 'You are on Free Premium.')}
               </Text>
               <Pressable
                 style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
@@ -241,7 +242,7 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
                 ) : (
                   <>
                     <Ionicons name="diamond" size={16} color="#FFFFFF" />
-                    <Text style={styles.primaryBtnText}>View Premium Plans</Text>
+                    <Text style={styles.primaryBtnText}>{t('billing.viewPremiumPlans', 'View Premium Plans')}</Text>
                   </>
                 )}
               </Pressable>
@@ -251,9 +252,9 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
               <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
                 <Ionicons name="diamond" size={28} color={colors.primary} />
               </View>
-              <Text style={[styles.title, { color: th.text }]}>Premium</Text>
+              <Text style={[styles.title, { color: th.text }]}>{t('billing.premiumActive', 'Premium')}</Text>
               <Text style={[styles.message, { color: th.textSecondary }]}>
-                You are a Premium user.
+                {t('billing.premiumUser', 'You are a Premium user.')}
               </Text>
               <Pressable
                 style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
@@ -265,7 +266,7 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
                 ) : (
                   <>
                     <Ionicons name="settings-outline" size={16} color="#FFFFFF" />
-                    <Text style={styles.primaryBtnText}>Manage Subscription</Text>
+                    <Text style={styles.primaryBtnText}>{t('billing.manageSubscription', 'Manage Subscription')}</Text>
                   </>
                 )}
               </Pressable>
@@ -275,9 +276,9 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
               <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
                 <Ionicons name="diamond" size={28} color={colors.primary} />
               </View>
-              <Text style={[styles.title, { color: th.text }]}>Premium</Text>
+              <Text style={[styles.title, { color: th.text }]}>{t('billing.premiumActive', 'Premium')}</Text>
               <Text style={[styles.message, { color: th.textSecondary }]}>
-                You are a Premium user.
+                {t('billing.premiumUser', 'You are a Premium user.')}
               </Text>
 
               <View style={[styles.localInfoCard, { backgroundColor: th.background, borderColor: th.border }]}>
@@ -298,7 +299,13 @@ export default function PremiumBadgeModal({ visible, onClose }: PremiumBadgeModa
                       {t('billing.billingCycle', 'Billing Cycle')}
                     </Text>
                     <Text style={[styles.localInfoValue, { color: th.text }]}>
-                      {subscription.billing_interval_count} {subscription.billing_interval_unit.toLowerCase()}{subscription.billing_interval_count > 1 ? 's' : ''}
+                      {t('billing.cycleInterval', '{{count}} {{unit}}', {
+                        count: subscription.billing_interval_count,
+                        unit: t(`billing.unit.${subscription.billing_interval_unit.toLowerCase()}`, {
+                          count: subscription.billing_interval_count,
+                          defaultValue: `${subscription.billing_interval_unit.toLowerCase()}${subscription.billing_interval_count > 1 ? 's' : ''}`,
+                        }),
+                      })}
                     </Text>
                   </View>
                 ) : null}

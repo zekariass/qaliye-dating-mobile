@@ -4,7 +4,9 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import { getInterestEmoji, sanitizeInterests, translateInterest } from '@/utils/interests';
+import { translateProfileOption } from '@/utils/profileOptions';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -17,14 +19,14 @@ interface LifestyleItem {
 
 function buildLifestyleItems(p: CurrentUserProfile): LifestyleItem[] {
   const items: LifestyleItem[] = [
-    { icon: 'ban-outline', label: 'Smoking', value: p.smokingDetail ?? (p.smoking ? 'Yes' : 'No') },
-    { icon: 'wine-outline', label: 'Drinking', value: p.drinkingDetail ?? (p.drinking ? 'Yes' : 'No') },
+    { icon: 'ban-outline', label: i18n.t('profile.edit.smoking'), value: p.smokingDetail ? translateProfileOption(p.smokingDetail, i18n.t) : (p.smoking ? i18n.t('common.yes') : i18n.t('common.no')) },
+    { icon: 'wine-outline', label: i18n.t('profile.edit.drinking'), value: p.drinkingDetail ? translateProfileOption(p.drinkingDetail, i18n.t) : (p.drinking ? i18n.t('common.yes') : i18n.t('common.no')) },
   ];
   if (p.languages && p.languages.length > 0) {
-    items.push({ icon: 'language-outline', label: 'Languages', value: p.languages.map((l) => l.name).join(', ') });
+    items.push({ icon: 'language-outline', label: i18n.t('profile.edit.languages'), value: p.languages.map((l) => l.name).join(', ') });
   }
   if (p.activityLevel) {
-    items.push({ icon: 'fitness-outline', label: 'Fitness', value: p.activityLevel });
+    items.push({ icon: 'fitness-outline', label: i18n.t('profile.edit.fitness'), value: translateProfileOption(p.activityLevel, i18n.t) });
   }
   return items;
 }

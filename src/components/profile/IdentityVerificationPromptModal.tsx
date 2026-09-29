@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function IdentityVerificationPromptModal({ visible, onVerifyNow, onDismiss }: Props) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
 
   return (
@@ -37,10 +39,10 @@ export function IdentityVerificationPromptModal({ visible, onVerifyNow, onDismis
           </LinearGradient>
 
           {/* Content */}
-          <Text style={[styles.title, { color: th.text }]}>Verify Your Identity</Text>
+          <Text style={[styles.title, { color: th.text }]}>{t('profile.verifyPrompt.title')}</Text>
 
           <Text style={[styles.message, { color: th.textSecondary }]}>
-            Build trust and help keep Qal Dating safe by verifying your identity.
+            {t('profile.verifyPrompt.message', { appName: t('app.name') })}
           </Text>
 
           {/* Primary CTA */}
@@ -60,7 +62,7 @@ export function IdentityVerificationPromptModal({ visible, onVerifyNow, onDismis
                 color="#FFFFFF"
                 style={{ marginRight: 8 }}
               />
-              <Text style={styles.primaryBtnText}>Verify Now</Text>
+              <Text style={styles.primaryBtnText}>{t('profile.verifyPrompt.verifyNow')}</Text>
             </LinearGradient>
           </Pressable>
 
@@ -73,7 +75,7 @@ export function IdentityVerificationPromptModal({ visible, onVerifyNow, onDismis
             onPress={onDismiss}
           >
             <Text style={[styles.secondaryBtnText, { color: th.textSecondary }]}>
-              Maybe Later
+              {t('profile.verifyPrompt.maybeLater')}
             </Text>
           </Pressable>
         </View>

@@ -192,9 +192,14 @@ apiClient.interceptors.response.use(
       return Promise.reject(tagged);
     }
 
-    // 429 LIMIT_EXCEEDED: free-quota exhausted — show the same modal so the user can upgrade/buy credits.
+    // 429 LIMIT_EXCEEDED / ActionLimitExceededException: free-quota exhausted —
+    // show the same modal so the user can upgrade/buy credits.
     // EXCEPT for LIFETIME limits, which never reset and cannot be extended with credits.
-    if (status === 429 && normalizedCode === 'limit_exceeded' && !isRetryGuarded) {
+    if (
+      status === 429 &&
+      (normalizedCode === 'limit_exceeded' || normalizedCode === 'actionlimitexceededexception') &&
+      !isRetryGuarded
+    ) {
       const errObj = typeof rawError === 'object' && rawError !== null
         ? rawError as { message?: string; details?: { action_type?: string; period_type?: string } }
         : null;

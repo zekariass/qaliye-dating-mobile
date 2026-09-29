@@ -31,6 +31,7 @@ import { useSupportConversation } from '@/hooks/support/useSupportConversation';
 import { useSupportMessages } from '@/hooks/support/useSupportMessages';
 import { useVoiceRecorder } from '@/hooks/support/useVoiceRecorder';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type {
     SupportAttachment,
     SupportConversationStatus,
@@ -64,11 +65,22 @@ type SupportListItem =
 // Helpers
 // ---------------------------------------------------------------------------
 
+const MONTH_KEYS_SHORT = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const;
+const MONTHS_SHORT_EN = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+] as const;
+
 function formatTime(iso: string): string {
   const d = new Date(iso);
   const h = d.getHours();
   const m = d.getMinutes().toString().padStart(2, '0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
+  const ampm = h >= 12
+    ? i18n.t('chat.timePm', 'PM')
+    : i18n.t('chat.timeAm', 'AM');
   return `${h % 12 || 12}:${m} ${ampm}`;
 }
 
@@ -78,10 +90,15 @@ function formatDateLabel(iso: string): string {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diffDays = Math.floor((today.getTime() - msgDay.getTime()) / 86_400_000);
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  if (diffDays === 0) return i18n.t('chat.today', 'Today');
+  if (diffDays === 1) return i18n.t('chat.yesterday', 'Yesterday');
+  const monthIdx = d.getMonth();
+  return i18n.t('chat.dateLabel', {
+    month: i18n.t(`chat.months.${MONTH_KEYS_SHORT[monthIdx]}`, MONTHS_SHORT_EN[monthIdx]),
+    day: d.getDate(),
+    year: d.getFullYear(),
+    defaultValue: '{{month}} {{day}}, {{year}}',
+  });
 }
 
 function buildListData(
@@ -127,6 +144,7 @@ function AttachmentChip({
   isOpening: boolean;
 }) {
   const { colors: th } = useTheme();
+  const { t } = useTranslation();
 
   if (isVoiceAttachment(attachment)) {
     return null;
@@ -142,7 +160,7 @@ function AttachmentChip({
       onPress={() => onOpen(attachment.id)}
       disabled={isOpening}
       accessibilityRole="button"
-      accessibilityLabel={`Open attachment: ${attachment.file_name}`}
+      accessibilityLabel={t('support.openAttachment', { name: attachment.file_name, defaultValue: 'Open attachment: {{name}}' })}
     >
       {isOpening ? (
         <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 4 }} />
@@ -183,6 +201,7 @@ function SupportBubble({
   activeVoiceId: string | null;
   onStopAllVoices: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const isMine = msg.sender_type === 'USER';
@@ -209,7 +228,7 @@ function SupportBubble({
       <View style={bubbleStyles.content}>
         {!isMine && (
           <Text style={[bubbleStyles.senderLabel, { color: colors.primary }]}>
-            {msg.sender_display_name || 'Support'}
+            {msg.sender_display_name || t('support.fallbackSender', 'Support')}
           </Text>
         )}
         <View style={[bubbleStyles.bubble, { backgroundColor: bubbleBg }]}>
@@ -271,6 +290,7 @@ function PendingBubble({
   onRetry: (pm: SupportPendingMessage) => void;
   onDismiss: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const isFailed = pm.localSendStatus === 'FAILED';
 
@@ -283,7 +303,7 @@ function PendingBubble({
           ) : null}
           {pm.files.length > 0 && (
             <Text style={{ color: isFailed ? '#DC2626' : '#FFFFFF', fontSize: 12, marginTop: 2 }}>
-              {pm.files.length} file{pm.files.length > 1 ? 's' : ''}
+              {t('support.fileCount', { count: pm.files.length, defaultValue: pm.files.length === 1 ? '{{count}} file' : '{{count}} files' })}
             </Text>
           )}
           {pm.voiceDurationsMs && pm.voiceDurationsMs.length > 0 && (
@@ -302,17 +322,17 @@ function PendingBubble({
         ) : null}
         {isFailed ? (
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 3 }}>
-            <TouchableOpacity onPress={() => onRetry(pm)} accessibilityRole="button" accessibilityLabel="Retry sending">
-              <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>Retry</Text>
+            <TouchableOpacity onPress={() => onRetry(pm)} accessibilityRole="button" accessibilityLabel={t('chat.retrySend', 'Retry sending')}>
+              <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>{t('common.retry')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => onDismiss(pm.clientMessageId)} accessibilityRole="button" accessibilityLabel="Dismiss failed message">
-              <Text style={{ color: th.textMuted, fontSize: 12 }}>Dismiss</Text>
+            <TouchableOpacity onPress={() => onDismiss(pm.clientMessageId)} accessibilityRole="button" accessibilityLabel={t('support.dismissFailed', 'Dismiss failed message')}>
+              <Text style={{ color: th.textMuted, fontSize: 12 }}>{t('support.dismiss', 'Dismiss')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
             <ActivityIndicator size="small" color={th.textMuted} style={{ transform: [{ scale: 0.7 }] }} />
-            <Text style={{ color: th.textMuted, fontSize: 11, marginLeft: 4 }}>Sending…</Text>
+            <Text style={{ color: th.textMuted, fontSize: 11, marginLeft: 4 }}>{t('support.sending', 'Sending…')}</Text>
           </View>
         )}
       </View>
@@ -332,6 +352,7 @@ function AttachmentPreviewStrip({
   onRemove: (idx: number) => void;
 }) {
   const { colors: th } = useTheme();
+  const { t } = useTranslation();
   if (files.length === 0) return null;
   return (
     <View style={previewStyles.strip}>
@@ -343,7 +364,7 @@ function AttachmentPreviewStrip({
             onPress={() => onRemove(i)}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessibilityRole="button"
-            accessibilityLabel={`Remove ${f.name}`}
+            accessibilityLabel={t('common.removeItem', { name: f.name, defaultValue: 'Remove {{name}}' })}
           >
             <Ionicons name="close-circle" size={16} color={th.textMuted} />
           </TouchableOpacity>
@@ -567,7 +588,7 @@ function VoicePreviewBar({
         onPress={handlePlayPause}
         style={[pvStyles.playBtn, { backgroundColor: '#F59E0B' }]}
         accessibilityRole="button"
-        accessibilityLabel={isPlaying ? 'Pause' : 'Play preview'}
+        accessibilityLabel={isPlaying ? t('chat.pausePreview', 'Pause preview') : t('chat.playPreview', 'Play preview')}
       >
         {isBuffering
           ? <ActivityIndicator size="small" color="#FFF" />
@@ -740,7 +761,7 @@ function SupportComposer({
                 maxLength={4000}
                 returnKeyType="default"
                 blurOnSubmit={false}
-                accessibilityLabel="Message input"
+                accessibilityLabel={t('chat.messageInput', 'Message input')}
               />
             </View>
             <TouchableOpacity
@@ -786,7 +807,7 @@ function SupportComposer({
                 maxLength={4000}
                 returnKeyType="default"
                 blurOnSubmit={false}
-                accessibilityLabel="Message input"
+                accessibilityLabel={t('chat.messageInput', 'Message input')}
               />
             </View>
             <TouchableOpacity

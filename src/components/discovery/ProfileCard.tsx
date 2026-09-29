@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     StyleSheet,
     Text,
@@ -23,10 +24,13 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
+import { FALLBACK_VARIANT, VariantIcon } from '@/components/discovery/LikeVariantButtons';
 import { colors, spacing } from '@/constants/theme';
+import { useLikeActions } from '@/hooks/discovery/useLikeActions';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import type { ActivityStatus } from '@/types/activity';
 import { formatDistance } from '@/utils/formatDistance';
+import { defaultLikeVariant } from '@/utils/likeVariants';
 import { getSwipeCardWidth, rs, useTabletScale } from '@/utils/responsive';
 
 const SWIPE_THRESHOLD = 120;
@@ -94,12 +98,17 @@ interface Props {
 
 const ProfileCard = forwardRef<ProfileCardHandle, Props>(
   function ProfileCard({ card, isTop, onSwipe, animateIn = false as const, actions, rightActions, scrollY }, ref) {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isTablet = width >= 500;
   const tabletCardW = isTablet ? getSwipeCardWidth(width) : undefined;
   const scale = useTabletScale();
   const { data: myProfile } = useCurrentProfile();
   const myCountry = myProfile?.address?.country_name ?? '';
+
+  // LIKE stamp mirrors the catalog's default like variant (is_default).
+  const { variants: likeVariants } = useLikeActions();
+  const likeStampVariant = defaultLikeVariant(likeVariants) ?? FALLBACK_VARIANT;
 
   const [photoIndex, setPhotoIndex] = useState(0);
   // Measurements pinning the fixed actions overlay where the actions row
@@ -235,7 +244,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
               contentFit="cover"
               transition={200}
               cachePolicy="memory-disk"
-              accessibilityLabel={`Profile photo of ${card.display_name}`}
+              accessibilityLabel={t('discovery.profilePhotoOf', { name: card.display_name })}
             />
           ) : (
             <View style={[styles.photo, styles.photoPlaceholder]}>
@@ -274,7 +283,7 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
 
           {/* Swipe stamps — Tinder-style icons */}
           <Animated.View style={[styles.stamp, styles.likeStamp, likeStampStyle]}>
-            <Text style={{ fontSize: 90 }}>🌹</Text>
+            <VariantIcon variant={likeStampVariant} size={96} />
           </Animated.View>
           <Animated.View style={[styles.stamp, styles.passStamp, passStampStyle]}>
             <Ionicons name="close" size={110} color="#FF3B30" />

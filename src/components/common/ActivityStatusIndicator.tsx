@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -22,12 +23,6 @@ const DOT_COLOR: Partial<Record<ActivityStatus, string>> = {
   OFFLINE: '#9CA3AF',
 };
 
-const STATUS_LABEL: Partial<Record<ActivityStatus, string>> = {
-  ONLINE: 'Online',
-  RECENTLY_ACTIVE: 'Recently online',
-  OFFLINE: 'Offline now',
-};
-
 export function ActivityStatusIndicator({
   status,
   showLabel = false,
@@ -36,10 +31,17 @@ export function ActivityStatusIndicator({
   labelFontSize = 12,
   style,
 }: Props) {
+  const { t } = useTranslation();
   if (!status || status === 'HIDDEN') return null;
 
+  const statusLabel: Partial<Record<ActivityStatus, string>> = {
+    ONLINE: t('common.online', 'Online'),
+    RECENTLY_ACTIVE: t('common.recentlyOnline', 'Recently online'),
+    OFFLINE: t('common.offlineNow', 'Offline now'),
+  };
+
   const dotColor = DOT_COLOR[status];
-  const label = showLabel ? STATUS_LABEL[status] : undefined;
+  const label = showLabel ? statusLabel[status] : undefined;
 
   if (!dotColor && !label) return null;
 

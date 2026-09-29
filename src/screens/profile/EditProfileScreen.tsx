@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Keyboard,
@@ -46,6 +47,7 @@ import {
 const PROFILE_SAVE_TABS: readonly TabKey[] = ['bio', 'details', 'lifestyle', 'visibility'];
 
 export default function EditProfileScreen() {
+  const { t } = useTranslation();
   const { sem } = useSemanticTheme();
   const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
   const { entitlements } = useEntitlements();
@@ -199,9 +201,12 @@ export default function EditProfileScreen() {
     // Validate user is 18 or older
     const dob = draft.basics.dateOfBirth;
     if (dob) {
-      const match = dob.match(/^(\d{1,2})\s+(\w{3})\s+(\d{4})$/);
+      const match = dob.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
       if (match) {
-        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const months = [
+          'january', 'february', 'march', 'april', 'may', 'june',
+          'july', 'august', 'september', 'october', 'november', 'december',
+        ].map((m) => t(`profile.edit.monthsShort.${m}`));
         const day = parseInt(match[1], 10);
         const monthIdx = months.indexOf(match[2]);
         const year = parseInt(match[3], 10);
@@ -211,11 +216,11 @@ export default function EditProfileScreen() {
           const eighteenthBirthday = new Date(year + 18, monthIdx, day);
           if (eighteenthBirthday > today) {
             themedAlert({
-              title: 'Invalid Date of Birth',
-              message: 'You must be at least 18 years old to use Qal Dating.',
+              title: t('profile.edit.invalidDob'),
+              message: t('profile.edit.underage'),
               icon: 'alert-circle',
               iconColor: '#EF4444',
-              buttons: [{ text: 'OK', style: 'default' }],
+              buttons: [{ text: t('common.ok'), style: 'default' }],
             });
             return false;
           }
@@ -231,14 +236,14 @@ export default function EditProfileScreen() {
       }
       await updateProfileMutation.mutateAsync(payload);
       setDraftVersion((v) => v + 1);
-      themedSuccess('Saved', 'Your profile has been updated.');
+      themedSuccess(t('profile.edit.saved'), t('profile.edit.profileSaved'));
       return true;
     } catch (err: unknown) {
       if (isInsufficientCreditsError(err)) return false;
-      themedError('Error', (err as Error)?.message ?? 'Failed to save profile.');
+      themedError(t('common.error'), (err as Error)?.message ?? t('profile.edit.saveError'));
       return false;
     }
-  }, [draft, prefs, updateProfileMutation]);
+  }, [draft, prefs, updateProfileMutation, t]);
 
   // ─── Save preferences ─────────────────────────────────────────────────
   const handleSavePrefs = useCallback(async () => {
@@ -253,12 +258,12 @@ export default function EditProfileScreen() {
         // non-fatal: preferences were saved successfully
       }
       setDraftVersion((v) => v + 1);
-      themedSuccess('Saved', 'Your preferences have been updated.');
+      themedSuccess(t('profile.edit.saved'), t('profile.edit.preferencesSaved'));
     } catch (err: unknown) {
       if (isInsufficientCreditsError(err)) return;
-      themedError('Error', (err as Error)?.message ?? 'Failed to save preferences.');
+      themedError(t('common.error'), (err as Error)?.message ?? t('profile.edit.savePrefsError'));
     }
-  }, [prefs, updatePrefsMutation, updateProfileMutation]);
+  }, [prefs, updatePrefsMutation, updateProfileMutation, t]);
 
   // ─── Photo operations ─────────────────────────────────────────────────
   const handleRegisterPhoto = useCallback(
@@ -298,13 +303,13 @@ export default function EditProfileScreen() {
       try {
         await updateLocationMutation.mutateAsync(payload);
         setDraftVersion((v) => v + 1);
-        themedSuccess('Saved', 'Your location has been updated.');
+        themedSuccess(t('profile.edit.saved'), t('profile.edit.locationSaved'));
       } catch (err: unknown) {
         if (isInsufficientCreditsError(err)) return;
-        themedError('Error', (err as Error)?.message ?? 'Failed to save location.');
+        themedError(t('common.error'), (err as Error)?.message ?? t('profile.edit.saveLocationError'));
       }
     },
-    [updateLocationMutation],
+    [updateLocationMutation, t],
   );
 
   // ─── Dirty-state detection ────────────────────────────────────────────
@@ -336,13 +341,13 @@ export default function EditProfileScreen() {
     }
 
     themedAlert({
-      title: 'Unsaved Changes',
-      message: 'You have unsaved changes in this tab. What would you like to do?',
+      title: t('profile.edit.unsavedChanges'),
+      message: t('profile.edit.unsavedChangesBody'),
       icon: 'alert-circle-outline',
       iconColor: '#F59E0B',
       buttons: [
         {
-          text: 'Save',
+          text: t('common.save'),
           style: 'default',
           onPress: () => {
             void handleSave().then((saved) => {
@@ -351,7 +356,7 @@ export default function EditProfileScreen() {
           },
         },
         {
-          text: 'Discard',
+          text: t('common.discard'),
           style: 'destructive',
           onPress: () => {
             if (savedDraftRef.current) {
@@ -364,12 +369,12 @@ export default function EditProfileScreen() {
           },
         },
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
       ],
     });
-  }, [activeTab, isDraftDirty, handleSave]);
+  }, [activeTab, isDraftDirty, handleSave, t]);
 
   const isSavingProfile = updateProfileMutation.isPending;
   const showSaveButton = PROFILE_SAVE_TABS.includes(activeTab);
@@ -397,7 +402,7 @@ export default function EditProfileScreen() {
         style={{ backgroundColor: sem.bg, paddingTop: safeTop }}
       >
         <Text className="text-base text-center" style={{ color: sem.textSecondary }}>
-          {(error as Error)?.message ?? 'Failed to load profile. Please try again.'}
+          {(error as Error)?.message ?? t('profile.loadError')}
         </Text>
       </View>
     );
@@ -528,7 +533,7 @@ export default function EditProfileScreen() {
               { backgroundColor: sem.accent, opacity: isSavingProfile ? 0.75 : 1 },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Save changes"
+            accessibilityLabel={t('common.saveChanges')}
           >
             {({ pressed }: { pressed: boolean }) =>
               isSavingProfile ? (
@@ -537,7 +542,7 @@ export default function EditProfileScreen() {
                 <Text
                   style={[saveStyles.buttonText, { opacity: pressed ? 0.8 : 1 }]}
                 >
-                  Save Changes
+                  {t('common.saveChanges')}
                 </Text>
               )
             }

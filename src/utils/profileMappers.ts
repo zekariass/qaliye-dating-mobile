@@ -1,4 +1,5 @@
 import { getCountryName } from '@/constants/countries';
+import i18n from '@/i18n';
 import type { CurrentUserProfile } from '@/screens/profile/mockCurrentUserProfile';
 import type {
     DiscoveryPrefDraft,
@@ -13,6 +14,7 @@ import type {
     ProfileUpdateRequest,
 } from '@/types/profile';
 import { sanitizeInterests } from '@/utils/interests';
+import { translateProfileOption } from '@/utils/profileOptions';
 
 // ─── Enum → Display Label ──────────────────────────────────────────────────────
 
@@ -141,11 +143,16 @@ export const ACTIVITY_LABEL_TO_API = invertMap(ACTIVITY_API_TO_LABEL);
 // ─── Helper: format ISO date → 'DD MMM YYYY' ──────────────────────────────────
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_I18N_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
 
 export function formatIsoToDisplay(iso: string): string {
   const d = new Date(iso + 'T00:00:00');
   if (isNaN(d.getTime())) return iso;
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const month = i18n.t(`profile.edit.monthsShort.${MONTH_I18N_KEYS[d.getMonth()]}`, { defaultValue: MONTHS[d.getMonth()] });
+  return `${d.getDate()} ${month} ${d.getFullYear()}`;
 }
 
 // ─── Helper: parse 'DD MMM YYYY' or 'YYYY-MM-DD' → ISO 'YYYY-MM-DD' ──────────
@@ -153,11 +160,17 @@ export function formatIsoToDisplay(iso: string): string {
 export function parseDisplayToIso(display: string): string {
   // Already ISO
   if (/^\d{4}-\d{2}-\d{2}$/.test(display)) return display;
-  // Try DD MMM YYYY
+  // Try DD MMM YYYY — accept both English and localized month abbreviations
   const parts = display.trim().split(/\s+/);
   if (parts.length === 3) {
     const day = parts[0].padStart(2, '0');
-    const monthIdx = MONTHS.findIndex((m) => m.toLowerCase() === parts[1].toLowerCase());
+    const monthToken = parts[1].toLowerCase();
+    let monthIdx = MONTHS.findIndex((m) => m.toLowerCase() === monthToken);
+    if (monthIdx < 0) {
+      monthIdx = MONTH_I18N_KEYS.findIndex(
+        (k) => i18n.t(`profile.edit.monthsShort.${k}`).toLowerCase() === monthToken,
+      );
+    }
     if (monthIdx >= 0) {
       return `${parts[2]}-${String(monthIdx + 1).padStart(2, '0')}-${day}`;
     }
@@ -453,43 +466,43 @@ function buildOtherUserDetails(dto: OtherUserProfileDto): OtherUserDetailItem[] 
   const items: OtherUserDetailItem[] = [];
 
   if (dto.gender) {
-    items.push({ id: 'gender', label: 'Gender', icon: 'person-outline', value: GENDER_API_TO_LABEL[dto.gender] ?? dto.gender });
+    items.push({ id: 'gender', label: i18n.t('profile.details.gender'), icon: 'person-outline', value: translateProfileOption(dto.gender, i18n.t) });
   }
   if (dto.height_cm != null) {
-    items.push({ id: 'height', label: 'Height', icon: 'resize-outline', value: `${dto.height_cm} cm` });
+    items.push({ id: 'height', label: i18n.t('profile.details.height'), icon: 'resize-outline', value: i18n.t('profile.details.heightValue', { height: dto.height_cm }) });
   }
   if (dto.residency_type) {
-    items.push({ id: 'residency', label: 'Residency Type', icon: 'home-outline', value: RESIDENCY_API_TO_LABEL[dto.residency_type] ?? dto.residency_type });
+    items.push({ id: 'residency', label: i18n.t('profile.details.residencyType'), icon: 'home-outline', value: translateProfileOption(RESIDENCY_API_TO_LABEL[dto.residency_type] ?? dto.residency_type, i18n.t) });
   }
   if (dto.ethnicities && dto.ethnicities.length > 0) {
-    items.push({ id: 'ethnicity', label: 'Ethnicity', icon: 'people-outline', value: dto.ethnicities.map((e) => e.name).join(', ') });
+    items.push({ id: 'ethnicity', label: i18n.t('profile.details.ethnicity'), icon: 'people-outline', value: dto.ethnicities.map((e) => e.name).join(', ') });
   }
   if (dto.nationality) {
-    items.push({ id: 'nation', label: 'Nationality', icon: 'flag-outline', value: nationalityToDisplay(dto.nationality) ?? dto.nationality });
+    items.push({ id: 'nation', label: i18n.t('profile.details.nationality'), icon: 'flag-outline', value: translateProfileOption(nationalityToDisplay(dto.nationality) ?? dto.nationality, i18n.t) });
   }
   if (dto.religion) {
-    items.push({ id: 'religion', label: 'Religion', icon: 'leaf-outline', value: RELIGION_API_TO_LABEL[dto.religion] ?? dto.religion });
+    items.push({ id: 'religion', label: i18n.t('profile.details.religion'), icon: 'leaf-outline', value: translateProfileOption(RELIGION_API_TO_LABEL[dto.religion] ?? dto.religion, i18n.t) });
   }
   if (dto.education_level) {
-    items.push({ id: 'edu', label: 'Education Level', icon: 'school-outline', value: EDUCATION_API_TO_LABEL[dto.education_level] ?? dto.education_level });
+    items.push({ id: 'edu', label: i18n.t('profile.details.educationLevel'), icon: 'school-outline', value: translateProfileOption(EDUCATION_API_TO_LABEL[dto.education_level] ?? dto.education_level, i18n.t) });
   }
   if (dto.occupation) {
-    items.push({ id: 'occ', label: 'Occupation', icon: 'briefcase-outline', value: dto.occupation });
+    items.push({ id: 'occ', label: i18n.t('profile.details.occupation'), icon: 'briefcase-outline', value: dto.occupation });
   }
   if (dto.relationship_intention) {
-    items.push({ id: 'rel', label: 'Relationship Goal', icon: 'heart-outline', value: RELATIONSHIP_API_TO_LABEL[dto.relationship_intention] ?? dto.relationship_intention });
+    items.push({ id: 'rel', label: i18n.t('profile.details.relationshipIntention'), icon: 'heart-outline', value: translateProfileOption(RELATIONSHIP_API_TO_LABEL[dto.relationship_intention] ?? dto.relationship_intention, i18n.t) });
   }
   if (dto.marital_status) {
-    items.push({ id: 'marital', label: 'Marital Status', icon: 'person-circle-outline', value: MARITAL_API_TO_LABEL[dto.marital_status] ?? dto.marital_status });
+    items.push({ id: 'marital', label: i18n.t('profile.details.maritalStatus'), icon: 'person-circle-outline', value: translateProfileOption(MARITAL_API_TO_LABEL[dto.marital_status] ?? dto.marital_status, i18n.t) });
   }
   if (dto.has_children != null) {
-    items.push({ id: 'children', label: 'Has Children', icon: 'people-circle-outline', value: dto.has_children ? 'Yes' : 'No' });
+    items.push({ id: 'children', label: i18n.t('profile.details.hasChildren'), icon: 'people-circle-outline', value: i18n.t(dto.has_children ? 'common.yes' : 'common.no') });
   }
   if (dto.wants_children != null) {
-    items.push({ id: 'wchildren', label: 'Wants Children', icon: 'happy-outline', value: dto.wants_children ? 'Yes' : 'No' });
+    items.push({ id: 'wchildren', label: i18n.t('profile.details.wantsChildren'), icon: 'happy-outline', value: i18n.t(dto.wants_children ? 'common.yes' : 'common.no') });
   }
   if (dto.activity_level) {
-    items.push({ id: 'activity', label: 'Fitness', icon: 'walk-outline', value: ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level });
+    items.push({ id: 'activity', label: i18n.t('profile.edit.fitness'), icon: 'walk-outline', value: translateProfileOption(ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level, i18n.t) });
   }
 
   return items;
@@ -499,44 +512,44 @@ function buildOtherUserDetailGroups(dto: OtherUserProfileDto): OtherUserDetailGr
   const groups: OtherUserDetailGroup[] = [];
 
   const basic: OtherUserDetailItem[] = [];
-  if (dto.gender)        basic.push({ id: 'gender',    label: 'Gender',    icon: 'person-outline',  value: GENDER_API_TO_LABEL[dto.gender] ?? dto.gender });
-  if (dto.height_cm != null) basic.push({ id: 'height', label: 'Height',  icon: 'resize-outline',  value: `${dto.height_cm} cm` });
-  if (dto.residency_type) basic.push({ id: 'residency', label: 'Residency', icon: 'home-outline',  value: RESIDENCY_API_TO_LABEL[dto.residency_type] ?? dto.residency_type });
-  if (basic.length > 0) groups.push({ title: 'Basic Information', items: basic });
+  if (dto.gender)        basic.push({ id: 'gender',    label: i18n.t('profile.details.gender'),        icon: 'person-outline', value: translateProfileOption(dto.gender, i18n.t) });
+  if (dto.height_cm != null) basic.push({ id: 'height', label: i18n.t('profile.details.height'),       icon: 'resize-outline', value: i18n.t('profile.details.heightValue', { height: dto.height_cm }) });
+  if (dto.residency_type) basic.push({ id: 'residency', label: i18n.t('profile.details.residencyType'), icon: 'home-outline',  value: translateProfileOption(RESIDENCY_API_TO_LABEL[dto.residency_type] ?? dto.residency_type, i18n.t) });
+  if (basic.length > 0) groups.push({ title: i18n.t('profile.edit.basicInformation'), items: basic });
 
   const heritage: OtherUserDetailItem[] = [];
   if (dto.ethnicities && dto.ethnicities.length > 0)
-    heritage.push({ id: 'ethnicity', label: 'Ethnicity',   icon: 'people-outline',   value: dto.ethnicities.map((e) => e.name).join(', ') });
+    heritage.push({ id: 'ethnicity', label: i18n.t('profile.details.ethnicity'),   icon: 'people-outline',   value: dto.ethnicities.map((e) => e.name).join(', ') });
   if (dto.nationality)
-    heritage.push({ id: 'nation',    label: 'Nationality', icon: 'flag-outline',     value: nationalityToDisplay(dto.nationality) ?? dto.nationality });
+    heritage.push({ id: 'nation',    label: i18n.t('profile.details.nationality'), icon: 'flag-outline',     value: translateProfileOption(nationalityToDisplay(dto.nationality) ?? dto.nationality, i18n.t) });
   if (dto.languages && dto.languages.length > 0)
-    heritage.push({ id: 'languages', label: 'Languages',   icon: 'language-outline', value: dto.languages.map((l) => l.name).join(', ') });
+    heritage.push({ id: 'languages', label: i18n.t('profile.edit.languages'),      icon: 'language-outline', value: dto.languages.map((l) => l.name).join(', ') });
   if (dto.religion)
-    heritage.push({ id: 'religion',  label: 'Religion',    icon: 'leaf-outline',     value: RELIGION_API_TO_LABEL[dto.religion] ?? dto.religion });
-  if (heritage.length > 0) groups.push({ title: 'Heritage', items: heritage });
+    heritage.push({ id: 'religion',  label: i18n.t('profile.details.religion'),    icon: 'leaf-outline',     value: translateProfileOption(RELIGION_API_TO_LABEL[dto.religion] ?? dto.religion, i18n.t) });
+  if (heritage.length > 0) groups.push({ title: i18n.t('profile.edit.heritage'), items: heritage });
 
   const work: OtherUserDetailItem[] = [];
-  if (dto.education_level) work.push({ id: 'edu', label: 'Education', icon: 'school-outline',    value: EDUCATION_API_TO_LABEL[dto.education_level] ?? dto.education_level });
-  if (dto.occupation)      work.push({ id: 'occ', label: 'Work',      icon: 'briefcase-outline', value: dto.occupation });
-  if (work.length > 0) groups.push({ title: 'Education & Work', items: work });
+  if (dto.education_level) work.push({ id: 'edu', label: i18n.t('profile.details.educationLevel'), icon: 'school-outline',    value: translateProfileOption(EDUCATION_API_TO_LABEL[dto.education_level] ?? dto.education_level, i18n.t) });
+  if (dto.occupation)      work.push({ id: 'occ', label: i18n.t('profile.details.occupation'),     icon: 'briefcase-outline', value: dto.occupation });
+  if (work.length > 0) groups.push({ title: i18n.t('profile.edit.educationWork'), items: work });
 
   const rel: OtherUserDetailItem[] = [];
   if (dto.relationship_intention)
-    rel.push({ id: 'rel',      label: 'Intention',      icon: 'heart-outline',          value: RELATIONSHIP_API_TO_LABEL[dto.relationship_intention] ?? dto.relationship_intention });
+    rel.push({ id: 'rel',      label: i18n.t('profile.details.relationshipIntention'), icon: 'heart-outline',         value: translateProfileOption(RELATIONSHIP_API_TO_LABEL[dto.relationship_intention] ?? dto.relationship_intention, i18n.t) });
   if (dto.marital_status)
-    rel.push({ id: 'marital',  label: 'Marital status', icon: 'person-circle-outline',  value: MARITAL_API_TO_LABEL[dto.marital_status] ?? dto.marital_status });
+    rel.push({ id: 'marital',  label: i18n.t('profile.details.maritalStatus'),         icon: 'person-circle-outline', value: translateProfileOption(MARITAL_API_TO_LABEL[dto.marital_status] ?? dto.marital_status, i18n.t) });
   if (dto.has_children != null)
-    rel.push({ id: 'children', label: 'Has children',   icon: 'people-circle-outline',  value: dto.has_children ? 'Yes' : 'No' });
+    rel.push({ id: 'children', label: i18n.t('profile.details.hasChildren'),           icon: 'people-circle-outline', value: i18n.t(dto.has_children ? 'common.yes' : 'common.no') });
   if (dto.wants_children != null)
-    rel.push({ id: 'wchildren',label: 'Wants children', icon: 'happy-outline',          value: dto.wants_children ? 'Yes' : 'No' });
-  if (rel.length > 0) groups.push({ title: 'Relationship', items: rel });
+    rel.push({ id: 'wchildren',label: i18n.t('profile.details.wantsChildren'),         icon: 'happy-outline',         value: i18n.t(dto.wants_children ? 'common.yes' : 'common.no') });
+  if (rel.length > 0) groups.push({ title: i18n.t('profile.edit.relationship'), items: rel });
 
   const lifestyle: OtherUserDetailItem[] = [];
   if (dto.activity_level)
-    lifestyle.push({ id: 'activity',  label: 'Fitness', icon: 'fitness-outline',       value: ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level });
+    lifestyle.push({ id: 'activity',  label: i18n.t('profile.edit.fitness'), icon: 'fitness-outline',       value: translateProfileOption(ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level, i18n.t) });
   if (dto.interests && dto.interests.length > 0)
-    lifestyle.push({ id: 'interests', label: 'Interests',      icon: 'color-palette-outline', value: '' });
-  if (lifestyle.length > 0) groups.push({ title: 'Lifestyle', items: lifestyle });
+    lifestyle.push({ id: 'interests', label: i18n.t('interests.label'),      icon: 'color-palette-outline', value: '' });
+  if (lifestyle.length > 0) groups.push({ title: i18n.t('profile.details.lifestyleTitle', { defaultValue: 'Lifestyle' }), items: lifestyle });
 
   return groups;
 }

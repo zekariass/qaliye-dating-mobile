@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import PremiumBadgeModal from '@/components/billing/PremiumBadgeModal';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
@@ -36,11 +37,12 @@ export default function ProfileHeader({
 }: ProfileHeaderProps) {
   const { top: safeTop } = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const [badgeModalVisible, setBadgeModalVisible] = useState(false);
 
   const showPremium = isPremiumPlan(plan);
-  const premiumLabel = isFreePremiumPlan(plan) ? 'Free Premium' : 'Premium';
+  const premiumLabel = isFreePremiumPlan(plan) ? t('billing.freePremiumActive') : t('billing.premiumActive');
 
   // Country settings control which purchase buttons are visible
   const subscriptionEnabled = countrySettings?.subscription_enabled ?? true;
@@ -58,7 +60,7 @@ export default function ProfileHeader({
                 <Pressable
                   style={[styles.premiumBadge, { backgroundColor: colors.primary }]}
                   onPress={() => setBadgeModalVisible(true)}
-                  accessibilityLabel="Premium status"
+                  accessibilityLabel={t('profile.header.premiumStatus')}
                   accessibilityRole="button"
                 >
                   <Ionicons name="diamond" size={16} color="#FFFFFF" />
@@ -69,11 +71,11 @@ export default function ProfileHeader({
                 <Pressable
                   style={[styles.linkBtn, { backgroundColor: '#FFD700' }]}
                   onPress={() => router.push('/(app)/credits-shop' as any)}
-                  accessibilityLabel="Buy Credits"
+                  accessibilityLabel={t('common.buyCredits')}
                   accessibilityRole="button"
                 >
                   <Ionicons name="sparkles" size={14} color="#5B4500" />
-                  <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>Buy Credits</Text>
+                  <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>{t('common.buyCredits')}</Text>
                 </Pressable>
               )}
             </View>
@@ -83,22 +85,22 @@ export default function ProfileHeader({
                 <Pressable
                   style={[styles.linkBtn, { backgroundColor: colors.primary }]}
                   onPress={() => router.push('/(app)/premium' as any)}
-                  accessibilityLabel="Go Premium"
+                  accessibilityLabel={t('common.goPremium')}
                   accessibilityRole="button"
                 >
                   <Ionicons name="diamond" size={14} color="#FFFFFF" />
-                  <Text style={styles.linkBtnText}>Go Premium</Text>
+                  <Text style={styles.linkBtnText}>{t('common.goPremium')}</Text>
                 </Pressable>
               )}
               {creditsEnabled && (
                 <Pressable
                   style={[styles.linkBtn, { backgroundColor: '#FFD700' }]}
                   onPress={() => router.push('/(app)/credits-shop' as any)}
-                  accessibilityLabel="Buy Credits"
+                  accessibilityLabel={t('common.buyCredits')}
                   accessibilityRole="button"
                 >
                   <Ionicons name="sparkles" size={14} color="#5B4500" />
-                  <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>Buy Credits</Text>
+                  <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>{t('common.buyCredits')}</Text>
                 </Pressable>
               )}
             </View>
@@ -108,11 +110,11 @@ export default function ProfileHeader({
         <Pressable
           style={[styles.balancesBtn, { backgroundColor: colors.primary }]}
           onPress={() => router.push('/(app)/balances' as any)}
-          accessibilityLabel="View Balances"
+          accessibilityLabel={t('profile.header.viewBalances')}
           accessibilityRole="button"
         >
           <Ionicons name="wallet-outline" size={15} color="#FFFFFF" />
-          <Text style={[styles.balancesBtnText, { color: '#FFFFFF' }]}>Balances</Text>
+          <Text style={[styles.balancesBtnText, { color: '#FFFFFF' }]}>{t('billing.balances.title')}</Text>
         </Pressable>
       </View>
 
@@ -139,7 +141,7 @@ export default function ProfileHeader({
             {isIncognito && (
               <View style={[styles.incognitoBadge, { backgroundColor: th.backgroundSelected }]}>
                 <Ionicons name="eye-off" size={12} color={colors.primary} />
-                <Text style={[styles.incognitoText, { color: colors.primary }]}>Private mode</Text>
+                <Text style={[styles.incognitoText, { color: colors.primary }]}>{t('profile.header.privateMode')}</Text>
               </View>
             )}
           </View>
@@ -147,20 +149,20 @@ export default function ProfileHeader({
             <Pressable
               style={[styles.actionBtn, { borderColor: th.border, borderWidth: 1.5 }]}
               onPress={() => router.push('/(app)/edit-profile' as any)}
-              accessibilityLabel="Edit Profile"
+              accessibilityLabel={t('profile.editTitle')}
               accessibilityRole="button"
             >
               <Ionicons name="pencil" size={14} color={th.text} />
-              <Text style={[styles.actionBtnText, { color: th.text }]}>Edit</Text>
+              <Text style={[styles.actionBtnText, { color: th.text }]}>{t('profile.header.edit')}</Text>
             </Pressable>
             <Pressable
               style={[styles.actionBtn, { borderColor: th.border, borderWidth: 1.5 }]}
               onPress={() => router.push('/(app)/settings' as any)}
-              accessibilityLabel="Settings"
+              accessibilityLabel={t('profile.header.settings')}
               accessibilityRole="button"
             >
               <Ionicons name="settings" size={14} color={th.text} />
-              <Text style={[styles.actionBtnText, { color: th.text }]}>Settings</Text>
+              <Text style={[styles.actionBtnText, { color: th.text }]}>{t('profile.header.settings')}</Text>
             </Pressable>
             {isVerified ? (
               <VerifiedBadge pill />
@@ -168,21 +170,21 @@ export default function ProfileHeader({
               <Pressable
                 style={[styles.actionBtn, { backgroundColor: colors.primary, borderColor: colors.primary, borderWidth: 1 }]}
                 onPress={() => router.push('/(app)/verify-identity' as any)}
-                accessibilityLabel="Verify Identity"
+                accessibilityLabel={t('profile.verifyIdentity')}
                 accessibilityRole="button"
               >
                 <Ionicons name="shield-checkmark-outline" size={14} color="#FFFFFF" />
-                <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Verify</Text>
+                <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>{t('profile.header.verify')}</Text>
               </Pressable>
             )}
             <Pressable
               style={[styles.actionBtn, { borderColor: th.border, borderWidth: 1.5 }]}
               onPress={() => router.push('/(app)/help' as any)}
-              accessibilityLabel="Help"
+              accessibilityLabel={t('help.title')}
               accessibilityRole="button"
             >
               <Ionicons name="help-circle-outline" size={14} color={th.text} />
-              <Text style={[styles.actionBtnText, { color: th.text }]}>Help</Text>
+              <Text style={[styles.actionBtnText, { color: th.text }]}>{t('help.title')}</Text>
             </Pressable>
           </View>
         </View>

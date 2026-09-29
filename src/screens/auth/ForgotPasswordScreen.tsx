@@ -61,7 +61,7 @@ export default function ForgotPasswordScreen() {
     } catch (e) {
       const msg = (e as Error).message.toLowerCase();
       if (msg.includes('rate limit')) {
-        setGeneralError('Too many requests. Please wait a moment and try again.');
+        setGeneralError(t('auth.forgotPasswordRateLimit', 'Too many requests. Please wait a moment and try again.'));
       } else {
         setGeneralError(t('auth.forgotPasswordError'));
       }

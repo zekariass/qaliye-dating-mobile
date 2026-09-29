@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -58,7 +59,11 @@ export function OrderCard({
   surfaceColor,
   borderColor,
 }: Props) {
+  const { t } = useTranslation();
   const statusColor = STATUS_COLORS[order.status] ?? secondaryColor;
+  const statusLabel = STATUS_LABELS[order.status]
+    ? t(`billing.orderStatus.${order.status}`, STATUS_LABELS[order.status])
+    : order.status;
 
   return (
     <Pressable
@@ -68,7 +73,7 @@ export function OrderCard({
       ]}
       onPress={() => onAction('detail', order)}
       accessibilityRole="button"
-      accessibilityLabel={`Order ${order.order_reference} ${order.status}`}
+      accessibilityLabel={t('billing.orderA11y', 'Order {{reference}} {{status}}', { reference: order.order_reference, status: statusLabel })}
     >
       <View style={styles.header}>
         <View style={styles.left}>
@@ -76,7 +81,9 @@ export function OrderCard({
             {order.display_name}
           </Text>
           <Text style={[styles.productType, { color: secondaryColor }]}>
-            {order.product_type === 'SUBSCRIPTION' ? 'Subscription' : 'Credits'}
+            {order.product_type === 'SUBSCRIPTION'
+              ? t('billing.productType.SUBSCRIPTION', 'Subscription')
+              : t('billing.productType.CONSUMABLE', 'Credits')}
           </Text>
         </View>
         <View style={styles.right}>
@@ -87,24 +94,24 @@ export function OrderCard({
       <View style={[styles.statusRow, { backgroundColor: statusColor + '12' }]}>
         <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
         <Text style={[styles.statusLabel, { color: statusColor }]}>
-          {STATUS_LABELS[order.status] ?? order.status}
+          {statusLabel}
         </Text>
       </View>
 
       <View style={styles.metaGrid}>
-        <Meta label="Reference" value={order.order_reference} textColor={textColor} secondaryColor={secondaryColor} />
-        <Meta label="Method" value={order.payment_method_display_name} textColor={textColor} secondaryColor={secondaryColor} />
+        <Meta label={t('billing.orderReference', 'Reference')} value={order.order_reference} textColor={textColor} secondaryColor={secondaryColor} />
+        <Meta label={t('billing.paymentMethod', 'Method')} value={order.payment_method_display_name} textColor={textColor} secondaryColor={secondaryColor} />
         {order.expires_at && (
-          <Meta label="Expires" value={formatDate(order.expires_at)} textColor={textColor} secondaryColor={secondaryColor} />
+          <Meta label={t('billing.orderExpires', 'Expires')} value={formatDate(order.expires_at)} textColor={textColor} secondaryColor={secondaryColor} />
         )}
-        <Meta label="Created" value={formatDate(order.created_at)} textColor={textColor} secondaryColor={secondaryColor} />
+        <Meta label={t('billing.created', 'Created')} value={formatDate(order.created_at)} textColor={textColor} secondaryColor={secondaryColor} />
       </View>
 
       <View style={styles.actions}>
         {order.can_resume_payment && (
           <ActionButton
             icon="open-outline"
-            label="Resume Payment"
+            label={t('billing.resumePayment', 'Resume Payment')}
             onPress={() => onAction('resume', order)}
             primary
           />
@@ -112,21 +119,21 @@ export function OrderCard({
         {(order.status === 'VERIFICATION_PENDING' || order.status === 'MANUAL_REVIEW' || order.status === 'ADMIN_REVIEW' || order.status === 'REVIEW_REQUIRED') && (
           <ActionButton
             icon="refresh-outline"
-            label="Refresh Status"
+            label={t('billing.refreshStatus', 'Refresh Status')}
             onPress={() => onAction('refresh', order)}
           />
         )}
         {order.can_create_new_order && (
           <ActionButton
             icon="cart-outline"
-            label="Try Again"
+            label={t('common.retry', 'Try Again')}
             onPress={() => onAction('retry', order)}
           />
         )}
         {order.status === 'VERIFIED' || order.status === 'FULFILLED' ? (
           <ActionButton
             icon="checkmark-circle"
-            label="Payment confirmed"
+            label={t('billing.orderStatus.VERIFIED', 'Payment confirmed')}
             disabled
           />
         ) : null}

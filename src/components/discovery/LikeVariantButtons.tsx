@@ -2,11 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { DEFAULT_LIKE_VARIANT_CODE } from '@/api/discovery/discoveryApi';
 import { themedAlert } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { LikeActionVariantDto } from '@/types/discovery';
 import {
     likeVariantResetHint,
@@ -20,11 +23,12 @@ const BTN = 44;
 // keeps the LIKE gesture usable at all times.
 export const FALLBACK_VARIANT: LikeActionVariantDto = {
   code: DEFAULT_LIKE_VARIANT_CODE,
-  name: 'Like',
-  description: 'Send a like',
+  name: i18n.t('discovery.like'),
+  description: i18n.t('discovery.sendALike'),
   icon: null,
   credits: 0,
   sort_order: 0,
+  is_default: true,
 };
 
 interface Props {
@@ -43,14 +47,15 @@ export default function LikeVariantButtons({ variants, onSelect, disabled, horiz
 
   return (
     <View style={[styles.container, horizontal && styles.containerHorizontal]}>
-      {list.map((variant, index) => (
+      {list.map((variant) => (
         <VariantButton
           key={variant.code}
           variant={variant}
-          isPrimary={index === 0}
+          isPrimary={variant.is_default === true}
           size={btnStyle}
           iconSize={rs(28, scale)}
           disabled={disabled}
+          horizontal={horizontal}
           onPress={() => onSelect(variant.code)}
         />
       ))}
@@ -92,6 +97,7 @@ function VariantButton({
   size,
   iconSize,
   disabled,
+  horizontal,
   onPress,
 }: {
   variant: LikeActionVariantDto;
@@ -99,16 +105,28 @@ function VariantButton({
   size: { width: number; height: number; borderRadius: number };
   iconSize: number;
   disabled?: boolean;
+  /** Row layout sits on the card/sheet surface — theme it instead of the
+   *  dark overlay used by the vertical rail over photos. */
+  horizontal?: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
   const blocked = variant.blocked === true;
   const showRemaining = showLikeVariantRemaining(variant);
+
+  const gradientColors: [string, string] = horizontal
+    ? isDark
+      ? [th.backgroundElement, th.backgroundSelected]
+      : [th.surface, '#F3EEFF']
+    : ['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.7)'];
 
   const handlePress = () => {
     if (blocked) {
       // Limit exhausted and credits can't cover it — explain instead of firing.
       themedAlert({
-        title: `${variant.name || 'Like'} limit reached`,
+        title: t('discovery.variantLimitReached', { name: variant.name || t('discovery.like') }),
         message: likeVariantResetHint(variant),
         icon: 'lock-closed-outline',
         iconColor: colors.warning,
@@ -125,6 +143,7 @@ function VariantButton({
           styles.button,
           size,
           isPrimary ? styles.buttonSecondary : styles.buttonSecondary,
+          horizontal && { borderColor: th.border },
           blocked && styles.buttonBlocked,
         ]}
         onPress={handlePress}
@@ -132,13 +151,13 @@ function VariantButton({
         activeOpacity={0.75}
         accessibilityLabel={
           blocked
-            ? `${variant.name || 'Like'} limit reached`
-            : variant.name ? `Send ${variant.name}` : 'Send like'
+            ? t('discovery.variantLimitReached', { name: variant.name || t('discovery.like') })
+            : variant.name ? t('discovery.sendVariant', { name: variant.name }) : t('discovery.sendLike')
         }
         accessibilityState={{ disabled: disabled || blocked }}
       >
         <LinearGradient
-          colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.7)']}
+          colors={gradientColors}
           start={{ x: 0.2, y: 0 }}
           end={{ x: 0.8, y: 1 }}
           style={StyleSheet.absoluteFill}
@@ -154,7 +173,7 @@ function VariantButton({
       )}
       {showRemaining && (
         <View style={[styles.badge, styles.badgeRemaining]}>
-          <Text style={styles.badgeText}>{variant.remaining} left</Text>
+          <Text style={styles.badgeText}>{t('discovery.remainingLeft', { count: variant.remaining })}</Text>
         </View>
       )}
     </View>

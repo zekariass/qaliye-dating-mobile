@@ -92,7 +92,9 @@ export default function EmailOtpScreen({ email, mode = 'signup' }: Props) {
       setSuccessMessage(t('auth.emailOtpResendSuccess'));
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (e) {
-      setGeneralError((e as Error).message);
+      setGeneralError(
+        (e as Error).message || t('auth.emailOtpResendFailed', 'Could not resend the code. Please try again.'),
+      );
     }
   }
 

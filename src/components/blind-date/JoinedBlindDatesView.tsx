@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     FlatList,
@@ -24,12 +25,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurredPortraitFallback } from '@/components/blind-date/SessionSwipeCard';
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type {
     BlindDateParticipationDto,
     BlindDateSessionSummaryDto,
 } from '@/types/blindDate';
 import { formatDate, formatDecisionDeadline, formatTimeLeft } from '@/utils/blindDateFormat';
 import { RELATIONSHIP_API_TO_LABEL, RELIGION_API_TO_LABEL } from '@/utils/profileMappers';
+import { translateProfileOption } from '@/utils/profileOptions';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -78,6 +81,7 @@ const GREEN = '#22C55E';
 const BLUE = '#3B82F6';
 const GREY = '#8A93A6';
 const PINK = '#FF4FA3';
+const RED = '#EF4444';
 
 /** Two-tone CTA gradient matched to the card's status color, so the whole
  *  card — border, badge, and primary action — tells one consistent story. */
@@ -85,6 +89,7 @@ const CTA_GRADIENTS: Record<string, readonly [string, string]> = {
   [GREEN]: ['#16A34A', '#22C55E'],
   [BLUE]: ['#2563EB', '#3B82F6'],
   [PINK]: ['#D92C85', '#FF4FA3'],
+  [RED]: ['#DC2626', '#EF4444'],
 };
 function ctaGradientFor(badgeColor: string): readonly [string, string] {
   return CTA_GRADIENTS[badgeColor] ?? ['#6D35FF', '#A53FFF'];
@@ -97,12 +102,12 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
   switch (item.status) {
     case 'ELIMINATED':
       return {
-        badge: 'Not advanced',
-        badgeColor: GREY,
+        badge: i18n.t('blindDate.joined.badgeNotSelected'),
+        badgeColor: RED,
         badgeIcon: 'close-circle-outline',
-        heading: "You didn't advance",
+        heading: i18n.t('blindDate.joined.notAdvancedHeading'),
         subtext: '',
-        cta: 'View Details',
+        cta: i18n.t('blindDate.joined.viewDetails'),
         primaryCta: false,
         showRound: false,
         ended: true,
@@ -110,12 +115,12 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
       };
     case 'WITHDRAWN':
       return {
-        badge: 'Withdrawn',
+        badge: i18n.t('blindDate.joined.badgeWithdrawn'),
         badgeColor: GREY,
         badgeIcon: 'exit-outline',
-        heading: 'You left this Blind Date',
+        heading: i18n.t('blindDate.joined.withdrawnHeading'),
         subtext: '',
-        cta: 'View Details',
+        cta: i18n.t('blindDate.joined.viewDetails'),
         primaryCta: false,
         showRound: false,
         ended: true,
@@ -131,13 +136,13 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
   if (inReveal) {
     if (fd?.outcome === 'MATCHED' || fd?.outcome === 'ALREADY_MATCHED') {
       return {
-        badge: 'Matched',
+        badge: i18n.t('blindDate.joined.badgeMatched'),
         badgeColor: PINK,
         badgeIcon: 'heart',
-        heading: "It's a match!",
+        heading: i18n.t('blindDate.joined.matchedHeading'),
         subtext:
-          fd.outcome === 'MATCHED' ? 'Say hello.' : 'Continue the conversation.',
-        cta: 'View Match',
+          fd.outcome === 'MATCHED' ? i18n.t('blindDate.joined.matchedSayHello') : i18n.t('blindDate.joined.matchedContinue'),
+        cta: i18n.t('blindDate.joined.viewMatch'),
         primaryCta: true,
         showRound: false,
         ended: false,
@@ -146,12 +151,12 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
     }
     if (fd?.outcome === 'NO_MATCH' || fd?.outcome === 'EXPIRED') {
       return {
-        badge: fd.outcome === 'EXPIRED' ? 'Expired' : 'No match',
+        badge: fd.outcome === 'EXPIRED' ? i18n.t('blindDate.joined.badgeExpired') : i18n.t('blindDate.joined.badgeNoMatch'),
         badgeColor: GREY,
         badgeIcon: fd.outcome === 'EXPIRED' ? 'time-outline' : 'heart-dislike-outline',
-        heading: 'No match this time',
-        subtext: fd.outcome === 'EXPIRED' ? 'Decision window closed.' : '',
-        cta: 'View Details',
+        heading: i18n.t('blindDate.joined.noMatchHeading'),
+        subtext: fd.outcome === 'EXPIRED' ? i18n.t('blindDate.joined.windowClosed') : '',
+        cta: i18n.t('blindDate.joined.viewDetails'),
         primaryCta: false,
         showRound: false,
         ended: true,
@@ -160,13 +165,13 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
     }
     if (fd && (fd.my_decision === 'PENDING' || fd.my_decision == null)) {
       return {
-        badge: 'Revealed',
+        badge: i18n.t('blindDate.joined.badgeRevealed'),
         badgeColor: PINK,
         badgeIcon: 'eye',
-        heading: "It's time to meet",
+        heading: i18n.t('blindDate.joined.timeToMeetHeading'),
         subtext:
-          formatDecisionDeadline(fd.decision_deadline_at) ?? 'Decide if you are interested.',
-        cta: 'Reveal Blind Date',
+          formatDecisionDeadline(fd.decision_deadline_at) ?? i18n.t('blindDate.joined.decideIfInterested'),
+        cta: i18n.t('blindDate.joined.revealBlindDate'),
         primaryCta: true,
         showRound: true,
         ended: false,
@@ -176,12 +181,12 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
     if (fd) {
       // Caller already decided; outcome not resolved yet.
       return {
-        badge: 'Awaiting',
+        badge: i18n.t('blindDate.joined.badgeAwaiting'),
         badgeColor: BLUE,
         badgeIcon: 'hourglass-outline',
-        heading: 'Waiting for their decision',
-        subtext: fd.other_party_decided ? 'Result is being finalized.' : 'Your decision is in.',
-        cta: 'View Details',
+        heading: i18n.t('blindDate.joined.waitingDecisionHeading'),
+        subtext: fd.other_party_decided ? i18n.t('blindDate.joined.resultFinalizing') : i18n.t('blindDate.joined.decisionIsIn'),
+        cta: i18n.t('blindDate.joined.viewDetails'),
         primaryCta: false,
         showRound: true,
         ended: false,
@@ -190,12 +195,12 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
     }
     if (item.status === 'FINALIST') {
       return {
-        badge: 'Finalist',
+        badge: i18n.t('blindDate.joined.badgeFinalist'),
         badgeColor: PINK,
         badgeIcon: 'star',
-        heading: "You've been selected!",
+        heading: i18n.t('blindDate.joined.selectedHeading'),
         subtext: '',
-        cta: 'Continue',
+        cta: i18n.t('blindDate.common.continue'),
         primaryCta: true,
         showRound: true,
         ended: false,
@@ -203,12 +208,12 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
       };
     }
     return {
-      badge: 'Revealed',
+      badge: i18n.t('blindDate.joined.badgeRevealed'),
       badgeColor: PINK,
       badgeIcon: 'eye',
-      heading: "It's time to meet",
+      heading: i18n.t('blindDate.joined.timeToMeetHeading'),
       subtext: '',
-      cta: 'Reveal Blind Date',
+      cta: i18n.t('blindDate.joined.revealBlindDate'),
       primaryCta: true,
       showRound: true,
       ended: false,
@@ -218,12 +223,12 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
 
   if (isSessionEnded(session)) {
     return {
-      badge: 'Completed',
+      badge: i18n.t('blindDate.joined.badgeCompleted'),
       badgeColor: GREY,
       badgeIcon: 'flag-outline',
-      heading: 'Blind Date completed',
+      heading: i18n.t('blindDate.joined.completedHeading'),
       subtext: '',
-      cta: 'View Details',
+      cta: i18n.t('blindDate.joined.viewDetails'),
       primaryCta: false,
       showRound: false,
       ended: true,
@@ -239,12 +244,12 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
 
   if (item.status === 'ADVANCED' && pending === 0) {
     return {
-      badge: 'Advanced',
+      badge: i18n.t('blindDate.joined.badgeAdvanced'),
       badgeColor: GREEN,
       badgeIcon: 'trending-up',
-      heading: 'You advanced!',
-      subtext: 'Next round is being set up.',
-      cta: 'View Details',
+      heading: i18n.t('blindDate.joined.advancedHeading'),
+      subtext: i18n.t('blindDate.joined.advancedSubtext'),
+      cta: i18n.t('blindDate.joined.viewDetails'),
       primaryCta: false,
       showRound: true,
       ended: false,
@@ -254,12 +259,12 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
 
   if (item.answers_submitted === true || pending === 0) {
     return {
-      badge: 'Awaiting',
+      badge: i18n.t('blindDate.joined.badgeAwaiting'),
       badgeColor: BLUE,
       badgeIcon: 'hourglass-outline',
-      heading: 'Waiting for host',
-      subtext: 'Host is reviewing your answers.',
-      cta: 'View Details',
+      heading: i18n.t('blindDate.joined.waitingHostHeading'),
+      subtext: i18n.t('blindDate.joined.waitingHostSubtext'),
+      cta: i18n.t('blindDate.joined.viewDetails'),
       primaryCta: false,
       showRound: true,
       ended: false,
@@ -268,15 +273,15 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
   }
 
   return {
-    badge: 'Active',
+    badge: i18n.t('blindDate.joined.badgeActive'),
     badgeColor: GREEN,
     badgeIcon: 'create-outline',
-    heading: 'Your turn to answer',
+    heading: i18n.t('blindDate.joined.yourTurnHeading'),
     subtext:
       pending != null && pending > 0
-        ? `${pending} question${pending === 1 ? '' : 's'} to answer`
+        ? i18n.t('blindDate.joined.questionsToAnswer', { count: pending })
         : '',
-    cta: 'Answer Questions',
+    cta: i18n.t('blindDate.joined.answerQuestions'),
     primaryCta: true,
     showRound: true,
     ended: false,
@@ -288,11 +293,11 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
 
 type JoinedSort = 'active' | 'recent' | 'closing' | 'updated';
 
-const SORT_OPTIONS: { key: JoinedSort; label: string }[] = [
-  { key: 'active', label: 'Active first' },
-  { key: 'recent', label: 'Recently joined' },
-  { key: 'closing', label: 'Closing soon' },
-  { key: 'updated', label: 'Recently updated' },
+const SORT_OPTIONS: { key: JoinedSort; labelKey: string }[] = [
+  { key: 'active', labelKey: 'blindDate.joined.sort.active' },
+  { key: 'recent', labelKey: 'blindDate.joined.sort.recent' },
+  { key: 'closing', labelKey: 'blindDate.joined.sort.closing' },
+  { key: 'updated', labelKey: 'blindDate.joined.sort.updated' },
 ];
 
 function latestActivity(item: BlindDateParticipationDto): number {
@@ -344,6 +349,7 @@ function sortParticipations(
 // ─── Sort dropdown ────────────────────────────────────────────────────────────
 
 function SortControl({ value, onChange }: { value: JoinedSort; onChange: (s: JoinedSort) => void }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const [open, setOpen] = useState(false);
@@ -359,10 +365,10 @@ function SortControl({ value, onChange }: { value: JoinedSort; onChange: (s: Joi
         onPress={() => setOpen(true)}
         activeOpacity={0.75}
         accessibilityRole="button"
-        accessibilityLabel={`Sort joined Blind Dates, currently ${current.label}`}
+        accessibilityLabel={t('blindDate.joined.sortA11y', { current: t(current.labelKey) })}
       >
         <Ionicons name="swap-vertical-outline" size={12} color={th.textSecondary} />
-        <Text style={[styles.sortBtnText, { color: th.textSecondary }]}>{current.label}</Text>
+        <Text style={[styles.sortBtnText, { color: th.textSecondary }]}>{t(current.labelKey)}</Text>
         <Ionicons name="chevron-down" size={12} color={th.textSecondary} />
       </TouchableOpacity>
 
@@ -401,7 +407,7 @@ function SortControl({ value, onChange }: { value: JoinedSort; onChange: (s: Joi
                       selected && { fontWeight: '700' },
                     ]}
                   >
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </Text>
                   {selected && <Ionicons name="checkmark" size={16} color={colors.primary} />}
                 </TouchableOpacity>
@@ -427,6 +433,7 @@ function JoinedSessionCard({
   languageName: string | null;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const state = deriveCardState(item);
@@ -439,29 +446,31 @@ function JoinedSessionCard({
   // instead of card chips so the card stays uncluttered.
   const details: DetailRow[] = [];
   if (creator?.age != null) {
-    details.push({ icon: 'person-outline', label: 'Age', value: `${creator.age}` });
+    details.push({ icon: 'person-outline', label: t('blindDate.joined.detailAge'), value: `${creator.age}` });
   }
   if (creator?.country) {
-    details.push({ icon: 'location-outline', label: 'Location', value: creator.country });
+    details.push({ icon: 'location-outline', label: t('blindDate.joined.detailLocation'), value: creator.country });
   }
   if (creator?.relationship_intention) {
     details.push({
       icon: 'heart-outline',
-      label: 'Looking for',
-      value:
+      label: t('blindDate.joined.detailLookingFor'),
+      value: translateProfileOption(
         RELATIONSHIP_API_TO_LABEL[creator.relationship_intention] ??
-        toTitleCase(creator.relationship_intention),
+          toTitleCase(creator.relationship_intention),
+        t,
+      ),
     });
   }
   if (creator?.religion) {
     details.push({
       icon: 'flower-outline',
-      label: 'Religion',
-      value: RELIGION_API_TO_LABEL[creator.religion] ?? toTitleCase(creator.religion),
+      label: t('blindDate.joined.detailReligion'),
+      value: translateProfileOption(RELIGION_API_TO_LABEL[creator.religion] ?? toTitleCase(creator.religion), t),
     });
   }
   if (languageName) {
-    details.push({ icon: 'globe-outline', label: 'Language', value: languageName });
+    details.push({ icon: 'globe-outline', label: t('blindDate.joined.detailLanguage'), value: languageName });
   }
 
   const ended = state.ended || isSessionEnded(session);
@@ -469,8 +478,8 @@ function JoinedSessionCard({
   // Keep it short — the details column is narrow in the side-by-side layout.
   const expiryText = ended
     ? expiryDate
-      ? `Ended ${expiryDate}`
-      : 'Session ended'
+      ? t('blindDate.joined.endedOn', { date: expiryDate })
+      : t('blindDate.joined.sessionEnded')
     : [formatTimeLeft(session?.expires_at), expiryDate].filter(Boolean).join(' · ');
 
   const reachedFinal = item.status === 'FINALIST' || item.status === 'REVEALED';
@@ -516,6 +525,8 @@ function JoinedSessionCard({
             </View>
           </View>
 
+          {/* Right column — details + CTA; photo spans the full card height */}
+          <View style={styles.cardBody}>
           {/* Details column */}
           <View style={styles.cardInfo}>
             {/* Status + current round + "about them" — one tidy row */}
@@ -533,7 +544,7 @@ function JoinedSessionCard({
               </View>
               {state.showRound && (
                 <Text style={[styles.roundMetaText, { color: th.textSecondary }]} numberOfLines={1}>
-                  {reachedFinal ? 'Final round' : `Round ${item.current_round_number ?? 1}`}
+                  {reachedFinal ? t('blindDate.joined.finalRound') : t('blindDate.joined.roundN', { round: item.current_round_number ?? 1 })}
                 </Text>
               )}
               <View style={{ flex: 1 }} />
@@ -542,7 +553,7 @@ function JoinedSessionCard({
                 activeOpacity={0.7}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel="About this person"
+                accessibilityLabel={t('blindDate.joined.aboutA11y')}
               >
                 <Ionicons name="information-circle-outline" size={19} color={th.textSecondary} />
               </TouchableOpacity>
@@ -576,7 +587,6 @@ function JoinedSessionCard({
               </Text>
             </View>
           </View>
-        </View>
 
         {/* ── Full-width CTA — color-matched to the card's status ── */}
         {state.primaryCta ? (
@@ -601,6 +611,8 @@ function JoinedSessionCard({
             <Ionicons name="chevron-forward" size={16} color={state.badgeColor} />
           </View>
         )}
+          </View>
+        </View>
       </TouchableOpacity>
 
       <CreatorDetailsSheet
@@ -629,6 +641,7 @@ function CreatorDetailsSheet({
   rows: DetailRow[];
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const { bottom } = useSafeAreaInsets();
@@ -652,7 +665,7 @@ function CreatorDetailsSheet({
           />
 
           <View style={styles.sheetHeader}>
-            <Text style={[styles.sheetTitle, { color: th.text }]}>About them</Text>
+            <Text style={[styles.sheetTitle, { color: th.text }]}>{t('blindDate.joined.aboutTitle')}</Text>
             <TouchableOpacity
               style={[
                 styles.sheetClose,
@@ -661,7 +674,7 @@ function CreatorDetailsSheet({
               onPress={onClose}
               activeOpacity={0.75}
               accessibilityRole="button"
-              accessibilityLabel="Close details"
+              accessibilityLabel={t('blindDate.joined.closeDetailsA11y')}
             >
               <Ionicons name="close" size={17} color={th.textSecondary} />
             </TouchableOpacity>
@@ -670,13 +683,13 @@ function CreatorDetailsSheet({
           <View style={styles.sheetNoteRow}>
             <Ionicons name="lock-closed" size={11} color={th.textSecondary} />
             <Text style={[styles.sheetNote, { color: th.textSecondary }]}>
-              Identity stays hidden until reveal.
+              {t('blindDate.joined.identityHidden')}
             </Text>
           </View>
 
           {rows.length === 0 ? (
             <Text style={[styles.sheetEmpty, { color: th.textSecondary }]}>
-              No details shared yet.
+              {t('blindDate.joined.noDetails')}
             </Text>
           ) : (
             rows.map((row, i) => (
@@ -738,19 +751,22 @@ function JoinedSkeleton() {
     >
       <View style={styles.cardRow}>
         <View style={[styles.photoThumb, skel]} />
-        <View style={styles.cardInfo}>
-          <View style={[styles.skelLine, skel, { width: '48%', height: 16, marginTop: 0 }]} />
-          <View style={[styles.skelLine, skel, { width: '82%', height: 18 }]} />
-          <View style={[styles.skelLine, skel, { width: '64%', height: 12 }]} />
-          <View style={[styles.skelLine, skel, { width: '72%', height: 12 }]} />
+        <View style={styles.cardBody}>
+          <View style={styles.cardInfo}>
+            <View style={[styles.skelLine, skel, { width: '48%', height: 16, marginTop: 0 }]} />
+            <View style={[styles.skelLine, skel, { width: '82%', height: 18 }]} />
+            <View style={[styles.skelLine, skel, { width: '64%', height: 12 }]} />
+            <View style={[styles.skelLine, skel, { width: '72%', height: 12 }]} />
+          </View>
+          <View style={[styles.skelButton, skel]} />
         </View>
       </View>
-      <View style={[styles.skelButton, skel]} />
     </Animated.View>
   );
 }
 
 function JoinedEmpty({ onExplore }: { onExplore: () => void }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   return (
@@ -766,9 +782,9 @@ function JoinedEmpty({ onExplore }: { onExplore: () => void }) {
       >
         <Ionicons name="bookmark-outline" size={42} color={colors.primary} />
       </View>
-      <Text style={[styles.emptyTitle, { color: th.text }]}>No joined Blind Dates yet</Text>
+      <Text style={[styles.emptyTitle, { color: th.text }]}>{t('blindDate.joined.emptyTitle')}</Text>
       <Text style={[styles.emptySubtitle, { color: th.textSecondary }]}>
-        Join a Blind Date and it will show up here.
+        {t('blindDate.joined.emptySubtitle')}
       </Text>
       <TouchableOpacity
         style={[styles.emptyBtn, styles.ctaBtnPrimary]}
@@ -776,7 +792,7 @@ function JoinedEmpty({ onExplore }: { onExplore: () => void }) {
         activeOpacity={0.85}
         accessibilityRole="button"
       >
-        <Text style={styles.emptyBtnText}>Explore Blind Dates</Text>
+        <Text style={styles.emptyBtnText}>{t('blindDate.joined.exploreCta')}</Text>
         <Ionicons name="arrow-forward" size={15} color="#FFF" />
       </TouchableOpacity>
     </Animated.View>
@@ -784,13 +800,14 @@ function JoinedEmpty({ onExplore }: { onExplore: () => void }) {
 }
 
 function JoinedError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   return (
     <Animated.View entering={FadeInDown.duration(400)} style={styles.emptyWrap}>
       <Ionicons name="alert-circle-outline" size={48} color={colors.primary} />
-      <Text style={[styles.emptyTitle, { color: th.text }]}>Something went wrong</Text>
+      <Text style={[styles.emptyTitle, { color: th.text }]}>{t('blindDate.joined.errorTitle')}</Text>
       <Text style={[styles.emptySubtitle, { color: th.textSecondary }]}>
-        {"Couldn't load your Blind Dates. Pull down to retry."}
+        {t('blindDate.joined.errorSubtitle')}
       </Text>
       <TouchableOpacity
         style={[styles.emptyBtn, styles.ctaBtnPrimary]}
@@ -798,7 +815,7 @@ function JoinedError({ onRetry }: { onRetry: () => void }) {
         activeOpacity={0.85}
         accessibilityRole="button"
       >
-        <Text style={styles.emptyBtnText}>Try again</Text>
+        <Text style={styles.emptyBtnText}>{t('blindDate.joined.tryAgain')}</Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -835,6 +852,7 @@ export default function JoinedBlindDatesView({
   onOpen,
   onExplore,
 }: JoinedBlindDatesViewProps) {
+  const { t } = useTranslation();
   const { mode } = useTheme();
   const isDark = mode === 'dark';
   const [sort, setSort] = useState<JoinedSort>('active');
@@ -883,7 +901,7 @@ export default function JoinedBlindDatesView({
               >
                 <Ionicons name="sparkles" size={12} color={colors.primary} />
                 <Text style={[styles.attentionChipText, { color: colors.primary }]}>
-                  {attentionCount} need{attentionCount === 1 ? 's' : ''} your attention
+                  {t('blindDate.joined.attention', { count: attentionCount })}
                 </Text>
               </View>
             )}
@@ -1023,6 +1041,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cardBody: { flex: 1 },
   cardInfo: {
     flex: 1,
     paddingHorizontal: 14,

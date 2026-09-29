@@ -242,7 +242,7 @@ export default function AuthScreen() {
         <SafeAreaView edges={['top']} style={s.heroContent}>
           {/* Logo */}
           <View style={s.logoWrap}>
-            <Text style={s.logoText}>Qal Dating</Text>
+            <Text style={s.logoText}>{t('auth.brandName')}</Text>
           </View>
 
           {/* Tagline — replace first 'o' in each highlight with a pulsing heart */}
@@ -323,13 +323,13 @@ export default function AuthScreen() {
                 onPress={handleGoogle}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                accessibilityLabel="Continue with Google"
+                accessibilityLabel={t('auth.continueWithGoogle', 'Continue with Google')}
               >
                 <View style={s.socialIconWrap}>
                   <Ionicons name="logo-google" size={20} color="#4285F4" />
                 </View>
                 <Text style={[s.socialLabel, { color: isDark ? '#F0EAFF' : '#2D1560' }]}>
-                  Continue with Google
+                  {t('auth.continueWithGoogle', 'Continue with Google')}
                 </Text>
                 <View style={s.socialChevron}>
                   <Ionicons name="chevron-forward" size={16} color={isDark ? '#7B5EA7' : '#B09DD8'} />
@@ -348,13 +348,13 @@ export default function AuthScreen() {
                   onPress={handleApple}
                   activeOpacity={0.8}
                   accessibilityRole="button"
-                  accessibilityLabel="Continue with Apple"
+                  accessibilityLabel={t('auth.continueWithApple', 'Continue with Apple')}
                 >
                   <View style={s.socialIconWrap}>
                     <Ionicons name="logo-apple" size={22} color={isDark ? '#000000' : '#FFFFFF'} />
                   </View>
                   <Text style={[s.socialLabel, { color: isDark ? '#000000' : '#FFFFFF' }]}>
-                    Continue with Apple
+                    {t('auth.continueWithApple', 'Continue with Apple')}
                   </Text>
                   <View style={s.socialChevron}>
                     <Ionicons name="chevron-forward" size={16} color={isDark ? '#55555588' : '#FFFFFF88'} />
@@ -414,7 +414,7 @@ export default function AuthScreen() {
               >
                 <Ionicons name="mail-outline" size={20} color={colors.primary} />
                 <Text style={[s.altBtnLabel, { color: colors.primary }]}>
-                  Continue with Email
+                  {t('auth.continueWithEmail', 'Continue with Email')}
                 </Text>
               </TouchableOpacity>
             ) : (

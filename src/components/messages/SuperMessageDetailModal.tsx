@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Modal,
@@ -18,6 +19,7 @@ import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { useAcceptSuperMessage, usePassSuperMessage } from '@/hooks/discovery/useSuperMessageActions';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { SuperMessageDto } from '@/types/superMessage';
 import { isInsufficientCreditsError } from '@/utils/entitlements';
 import { showActionErrorAlert } from '@/utils/limitExceededAlert';
@@ -25,6 +27,11 @@ import { showActionErrorAlert } from '@/utils/limitExceededAlert';
 // ---------------------------------------------------------------------------
 // Timestamp
 // ---------------------------------------------------------------------------
+const MONTH_KEYS = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const;
+
 function formatTimestamp(isoString: string | null | undefined): string {
   if (!isoString) return '';
   const date = new Date(isoString);
@@ -33,8 +40,8 @@ function formatTimestamp(isoString: string | null | undefined): string {
   const diffMs = now.getTime() - date.getTime();
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  if (diffMinutes < 60) return `${Math.max(diffMinutes, 1)}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffMinutes < 60) return i18n.t('matches.minutesAgo', { minutes: Math.max(diffMinutes, 1) });
+  if (diffHours < 24) return i18n.t('matches.hoursAgo', { hours: diffHours });
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   if (
@@ -42,10 +49,12 @@ function formatTimestamp(isoString: string | null | undefined): string {
     date.getMonth() === yesterday.getMonth() &&
     date.getFullYear() === yesterday.getFullYear()
   ) {
-    return 'Yesterday';
+    return i18n.t('chat.yesterday');
   }
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[date.getMonth()]} ${date.getDate()}`;
+  return i18n.t('chat.dateLabelShort', {
+    month: i18n.t(`chat.months.${MONTH_KEYS[date.getMonth()]}`),
+    day: date.getDate(),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -65,6 +74,7 @@ export default function SuperMessageDetailModal({
   direction,
   onClose,
 }: SuperMessageDetailModalProps) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const router = useRouter();
@@ -135,14 +145,14 @@ export default function SuperMessageDetailModal({
   const alreadyResponded = item.status === 'ACCEPTED' || item.status === 'PASSED';
   const showActions = isReceived && !alreadyResponded;
   const otherParty = isSent ? item.receiver : item.sender;
-  const displayName = otherParty?.display_name ?? 'Unknown';
+  const displayName = otherParty?.display_name ?? t('chat.unknownUser');
   const photoUrl = otherParty?.photo_url ?? null;
   const timestampLabel = formatTimestamp(item.created_at);
   const statusLabel = isSent
-    ? item.match_id ? 'Matched!' : 'Awaiting reply'
-    : item.status === 'ACCEPTED' ? 'Accepted'
-    : item.status === 'PASSED' ? 'Passed'
-    : item.viewed_at ? 'Viewed' : 'New';
+    ? item.match_id ? t('chat.superMessageMatched') : t('chat.superMessageAwaitingReply')
+    : item.status === 'ACCEPTED' ? t('chat.superMessageAccepted')
+    : item.status === 'PASSED' ? t('chat.superMessagePassed')
+    : item.viewed_at ? t('chat.superMessageViewed') : t('chat.superMessageNew');
 
   return (
     <Modal
@@ -179,18 +189,20 @@ export default function SuperMessageDetailModal({
                 <View style={styles.titleRow}>
                   <Text style={{ fontSize: 14, marginRight: 4 }}>💌</Text>
                   <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#1A1A2E' }]}>
-                    Before-Match Message
+                    {t('help.actions.super_message.title')}
                   </Text>
                 </View>
                 <Text style={[styles.targetName, { color: th.textSecondary }]} numberOfLines={1}>
-                  {isSent ? `to ${displayName}` : `from ${displayName}`}
+                  {isSent
+                    ? t('chat.superMessageTo', { name: displayName })
+                    : t('chat.superMessageFrom', { name: displayName })}
                 </Text>
               </View>
             </View>
             <TouchableOpacity
               onPress={handleClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel="Close"
+              accessibilityLabel={t('common.close')}
             >
               <Ionicons name="close" size={22} color={th.textSecondary} />
             </TouchableOpacity>
@@ -243,7 +255,7 @@ export default function SuperMessageDetailModal({
                   {passMutation.isPending ? (
                     <ActivityIndicator size="small" color={th.textSecondary} />
                   ) : (
-                    <Text style={[styles.passBtnText, { color: th.textSecondary }]}>Pass</Text>
+                    <Text style={[styles.passBtnText, { color: th.textSecondary }]}>{t('discovery.pass')}</Text>
                   )}
                 </TouchableOpacity>
                 {/* Accept button */}
@@ -256,7 +268,7 @@ export default function SuperMessageDetailModal({
                   {acceptMutation.isPending ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
-                    <Text style={styles.acceptBtnText}>Accept</Text>
+                    <Text style={styles.acceptBtnText}>{t('chat.accept')}</Text>
                   )}
                 </TouchableOpacity>
               </>
@@ -266,7 +278,7 @@ export default function SuperMessageDetailModal({
                 onPress={handleClose}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.closeBtnText, { color: th.textSecondary }]}>Close</Text>
+                <Text style={[styles.closeBtnText, { color: th.textSecondary }]}>{t('common.close')}</Text>
               </TouchableOpacity>
             )}
           </View>

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     FlatList,
@@ -52,13 +53,14 @@ type Props = {
 export function EthnicityMultiSelectPicker({
   selected,
   onChange,
-  placeholder = 'Select ethnicities…',
+  placeholder,
   accentColor = '#8A2CFF',
   textColor = '#1B1340',
   mutedColor = '#9CA3AF',
   borderColor = '#E9DDF8',
   surfaceColor = '#FFFFFF',
 }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [countryFilter, setCountryFilter] = useState<string | null>(null);
@@ -122,7 +124,7 @@ export function EthnicityMultiSelectPicker({
 
   const displayLabel = selected.length > 0
     ? selected.map((s) => s.name).join(', ')
-    : placeholder;
+    : (placeholder ?? t('catalog.selectEthnicities', 'Select Ethnicities'));
 
   const inputBg = `${accentColor}12`;
   const isPickerDisabled = countryFilter === null;
@@ -173,8 +175,8 @@ export function EthnicityMultiSelectPicker({
           <Ionicons name="globe-outline" size={13} color={mutedColor} />
           <Text style={{ fontSize: 12, fontWeight: '600', color: mutedColor }}>
             {(countryFilter && !QUICK_COUNTRIES.some((c) => c.code === countryFilter))
-              ? (COUNTRIES.find((c) => c.code === countryFilter)?.name ?? 'Other')
-              : 'Other…'}
+              ? (COUNTRIES.find((c) => c.code === countryFilter)?.name ?? t('catalog.otherCountry', 'Other'))
+              : t('catalog.other', 'Other…')}
           </Text>
         </Pressable>
       </View>
@@ -183,7 +185,10 @@ export function EthnicityMultiSelectPicker({
       <Pressable
         onPress={() => !isPickerDisabled && setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Ethnicities: ${displayLabel}`}
+        accessibilityLabel={t('catalog.ethnicitiesLabel', {
+          defaultValue: 'Ethnicities: {{label}}',
+          label: displayLabel,
+        })}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -199,7 +204,7 @@ export function EthnicityMultiSelectPicker({
       >
         <Ionicons name="people-outline" size={16} color={accentColor} />
         <Text style={{ flex: 1, fontSize: 14, color: selected.length > 0 ? textColor : mutedColor }} numberOfLines={1}>
-          {isPickerDisabled ? 'Select a country first' : displayLabel}
+          {isPickerDisabled ? t('catalog.selectCountryFirst', 'Select a country first') : displayLabel}
         </Text>
         <Ionicons name="chevron-down" size={14} color={mutedColor} />
       </Pressable>
@@ -221,7 +226,7 @@ export function EthnicityMultiSelectPicker({
               }}
             >
               <Text style={{ fontSize: 12, fontWeight: '600', color: accentColor }}>{item.name}</Text>
-              <Pressable onPress={() => handleRemove(item.id)} accessibilityLabel={`Remove ${item.name}`} hitSlop={8}>
+              <Pressable onPress={() => handleRemove(item.id)} accessibilityLabel={t('common.removeItem', { defaultValue: 'Remove {{name}}', name: item.name })} hitSlop={8}>
                 <Ionicons name="close-circle" size={14} color={accentColor} />
               </Pressable>
             </View>
@@ -235,13 +240,13 @@ export function EthnicityMultiSelectPicker({
           {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: borderColor, gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: textColor }}>Select Ethnicities</Text>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: textColor }}>{t('catalog.selectEthnicities', 'Select Ethnicities')}</Text>
               {selectedCountryName && (
                 <Text style={{ fontSize: 12, color: mutedColor, marginTop: 2 }}>{selectedCountryName}</Text>
               )}
             </View>
             <Text style={{ fontSize: 12, color: mutedColor }}>{selected.length}/{MAX_ETHNICITIES}</Text>
-            <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityLabel="Close">
+            <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityLabel={t('common.close', 'Close')}>
               <Ionicons name="checkmark-circle" size={28} color={accentColor} />
             </Pressable>
           </View>
@@ -251,7 +256,7 @@ export function EthnicityMultiSelectPicker({
             <Ionicons name="search-outline" size={16} color={mutedColor} />
             <TextInput
               style={{ flex: 1, paddingVertical: 10, fontSize: 14, color: textColor }}
-              placeholder="Search ethnicities…"
+              placeholder={t('catalog.searchEthnicities', 'Search ethnicities…')}
               placeholderTextColor={mutedColor}
               value={search}
               onChangeText={setSearch}
@@ -272,7 +277,7 @@ export function EthnicityMultiSelectPicker({
           ) : rawItems.length === 0 ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <Ionicons name="people-outline" size={40} color={mutedColor} />
-              <Text style={{ color: mutedColor, fontSize: 14 }}>No ethnicities found</Text>
+              <Text style={{ color: mutedColor, fontSize: 14 }}>{t('catalog.noEthnicities', 'No ethnicities found')}</Text>
             </View>
           ) : (
             <FlatList
@@ -284,7 +289,7 @@ export function EthnicityMultiSelectPicker({
                   return (
                     <View style={{ paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: borderColor }}>
                       <Text style={{ fontSize: 11, fontWeight: '700', color: mutedColor, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-                        Other Countries
+                        {t('catalog.otherCountries', 'Other Countries')}
                       </Text>
                     </View>
                   );
@@ -318,7 +323,7 @@ export function EthnicityMultiSelectPicker({
       <Modal visible={countryModalOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setCountryModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: surfaceColor, paddingTop: top }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: borderColor, gap: 12 }}>
-            <Text style={{ flex: 1, fontSize: 17, fontWeight: '700', color: textColor }}>Select Country</Text>
+            <Text style={{ flex: 1, fontSize: 17, fontWeight: '700', color: textColor }}>{t('catalog.selectCountry', 'Select Country')}</Text>
             <Pressable onPress={() => setCountryModalOpen(false)} hitSlop={8}>
               <Ionicons name="close-circle" size={28} color={mutedColor} />
             </Pressable>
@@ -327,7 +332,7 @@ export function EthnicityMultiSelectPicker({
             <Ionicons name="search-outline" size={16} color={mutedColor} />
             <TextInput
               style={{ flex: 1, paddingVertical: 10, fontSize: 14, color: textColor }}
-              placeholder="Search countries…"
+              placeholder={t('catalog.searchCountries', 'Search countries…')}
               placeholderTextColor={mutedColor}
               value={countrySearch}
               onChangeText={setCountrySearch}

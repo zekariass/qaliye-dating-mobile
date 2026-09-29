@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,6 +27,7 @@ function getTypeIcon(intent: ValidatedNavIntent | null): React.ComponentProps<ty
 }
 
 export function NotificationBanner() {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const { top } = useSafeAreaInsets();
   const router = useRouter();
@@ -136,7 +138,7 @@ export function NotificationBanner() {
           onPress={dismiss}
           style={styles.closeBtn}
           hitSlop={8}
-          accessibilityLabel="Dismiss notification"
+          accessibilityLabel={t('notifications.dismissBanner', 'Dismiss notification')}
         >
           <Ionicons name="close" size={18} color={th.textMuted} />
         </Pressable>

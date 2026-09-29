@@ -10,11 +10,13 @@ import {
 } from '@/api/blindDate/blindDateApi';
 import { BLIND_DATE_MY_SESSIONS_KEY } from '@/hooks/blindDate/useMyBlindDateSessions';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
+import i18n from '@/i18n';
 import type {
     BlindDateRosterParticipantDto,
     BlindDateSelectionDecision,
 } from '@/types/blindDate';
 import { extractApiError } from '@/utils/apiError';
+import { blindDateErrorCode, blindDateErrorMessage } from '@/utils/blindDateErrors';
 
 export const BLIND_DATE_SESSION_KEY = (id: string) => ['blindDate', 'session', id] as const;
 export const BLIND_DATE_ROSTER_KEY = (id: string) => ['blindDate', 'roster', id] as const;
@@ -118,34 +120,23 @@ export function useSessionManageMutations(sessionId: string | null) {
     onSuccess: invalidate,
   });
 
-  /** Map documented error codes to user-facing copy. */
+  /** Map documented error codes to localized, user-facing copy. */
   const friendlyError = (err: unknown, maxRoundQuestions?: number): string => {
-    const { code, message } = extractApiError(err);
-    switch (code.toLowerCase()) {
-      case 'not_session_creator':
-        return 'Only the session creator can do this.';
-      case 'session_not_open':
-        return 'This session is no longer open.';
-      case 'no_open_round':
-        return 'There is no open round right now.';
-      case 'round_still_open':
-        return 'Close the current round before starting the next one.';
-      case 'max_rounds_reached':
-        return 'This session has reached the maximum number of rounds — pick a finalist instead.';
-      case 'invalid_question_count':
-        return maxRoundQuestions != null
-          ? `Select between 1 and ${maxRoundQuestions} questions.`
-          : 'Please select a valid number of questions.';
-      case 'participant_not_in_session':
-      case 'participant_not_in_round':
-      case 'participant_not_active':
-        void invalidate();
-        return 'That participant is no longer in this round — the list was refreshed.';
-      case 'invalid_decision':
-        return 'That selection is not allowed right now.';
-      default:
-        return message;
+    const code = blindDateErrorCode(err);
+    // Stale roster — the participant left mid-action; resync before showing.
+    if (
+      code === 'participant_not_in_session' ||
+      code === 'participant_not_in_round' ||
+      code === 'participant_not_active'
+    ) {
+      void invalidate();
     }
+    if (code === 'invalid_question_count' && maxRoundQuestions != null) {
+      return i18n.t('blindDate.create.errors.invalidQuestionCount', {
+        max: maxRoundQuestions,
+      });
+    }
+    return blindDateErrorMessage(err);
   };
 
   return { select, closeRound, nextRound, closeSession, invalidate, friendlyError };

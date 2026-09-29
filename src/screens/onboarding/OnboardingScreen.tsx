@@ -241,7 +241,11 @@ export default function OnboardingScreen() {
                 </Text>
                 <Text style={[styles.stepSep, { color: th.border }]}>·</Text>
                 <Text style={[styles.stepCounter, { color: th.textMuted }]}>
-                  {clampedProgressIdx + 1} of {PROGRESS_STEPS.length}
+                  {t('onboarding.stepOf', {
+                    current: clampedProgressIdx + 1,
+                    total: PROGRESS_STEPS.length,
+                    defaultValue: '{{current}} of {{total}}',
+                  })}
                 </Text>
               </View>
 

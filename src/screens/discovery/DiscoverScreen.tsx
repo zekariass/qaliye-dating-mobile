@@ -1,27 +1,27 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    AppState,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  AppState,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, {
-    Easing,
-    useAnimatedScrollHandler,
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withRepeat,
-    withSequence,
-    withTiming
+  Easing,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -62,13 +62,15 @@ import { useDiscoveryStore } from '@/stores/discovery-store';
 import { usePromotionStore } from '@/stores/promotion-store';
 import type { EligiblePromotionDto } from '@/types/billing';
 import {
-    canRewind as checkCanRewind,
-    getBoostStatus,
-    getQuotaErrorType,
-    isInsufficientCreditsError,
-    isLimitExceededError
+  canRewind as checkCanRewind,
+  getBoostStatus,
+  getQuotaErrorType,
+  isInsufficientCreditsError,
+  isLimitExceededError
 } from '@/utils/entitlements';
+import { defaultLikeVariant } from '@/utils/likeVariants';
 import { showActionErrorAlert } from '@/utils/limitExceededAlert';
+import { isBlindDateMatch } from '@/utils/matchSource';
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -139,6 +141,7 @@ function FindingMatchesAnimation({ accentColor, textColor, subtitleColor, gender
   subtitleColor: string;
   gender?: string;
 }) {
+  const { t } = useTranslation();
   const loaderIcon = !gender || (gender !== 'MALE' && gender !== 'FEMALE')
     ? require('@/assets/images/loader/loader-icon-male-and-female.webp')
     : gender === 'MALE'
@@ -167,10 +170,10 @@ function FindingMatchesAnimation({ accentColor, textColor, subtitleColor, gender
         </View>
       </View>
       <Text style={{ color: textColor, fontSize: 18, fontWeight: '700', marginTop: 8, textAlign: 'center', letterSpacing: -0.3 }}>
-        Finding your matches…
+        {t('discovery.findingMatches')}
       </Text>
       <Text style={{ color: subtitleColor, fontSize: 13, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>
-        Looking for amazing people near you
+        {t('discovery.findingMatchesSubtitle')}
       </Text>
     </View>
   );
@@ -203,6 +206,60 @@ function ScrollHint({ color }: { color: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Blind date button — breathing glow halo behind the pill
+// ---------------------------------------------------------------------------
+type BlindDateButtonProps = {
+  borderColor: string;
+  backgroundColor: string;
+  textColor: string;
+  label: string;
+  onPress: () => void;
+  /** Browse mode header is denser — shrink the icon to leave room. */
+  compact?: boolean;
+};
+
+function BlindDateButton({ borderColor, backgroundColor, textColor, label, onPress, compact }: BlindDateButtonProps) {
+  const glow = useSharedValue(0);
+
+  useEffect(() => {
+    glow.value = withRepeat(
+      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: 0.35 + glow.value * 0.55,
+    transform: [{ scale: 1 + glow.value * 0.12 }],
+    shadowOpacity: 0.25 + glow.value * 0.55,
+  }));
+
+  return (
+    <View style={styles.blindDateWrap}>
+      <Animated.View pointerEvents="none" style={[styles.blindDateGlow, glowStyle]} />
+      <TouchableOpacity
+        style={[styles.blindDateBtn, { borderColor, backgroundColor }]}
+        onPress={onPress}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+      >
+        <Image
+          source={require('@/assets/images/blind-date-icon.png')}
+          style={[styles.blindDateIcon, compact && styles.blindDateIconCompact]}
+          resizeMode="contain"
+        />
+        <Text style={[styles.blindDateText, { color: textColor }]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Boost control (center of header)
 // ---------------------------------------------------------------------------
 type BoostControlProps = {
@@ -216,6 +273,7 @@ type BoostControlProps = {
 };
 
 function BoostControl({ boostStatus, isActivating, onActivate, onShowStatus, themeColors, isDark }: BoostControlProps) {
+  const { t } = useTranslation();
   if (boostStatus.isActive) {
     // Icon-only badge — a labelled pill here overflows the header row and
     // clips off the left edge on narrower screens. Tappable: opens the
@@ -226,8 +284,8 @@ function BoostControl({ boostStatus, isActivating, onActivate, onShowStatus, the
         activeOpacity={0.8}
         style={boostStyles.boostedBadge}
         accessibilityRole="button"
-        accessibilityLabel="Boost active"
-        accessibilityHint="Shows your active boost details"
+        accessibilityLabel={t('discovery.boost.activeLabel')}
+        accessibilityHint={t('discovery.boost.activeHint')}
       >
         <Ionicons name="rocket" size={20} color="#FFF" />
       </TouchableOpacity>
@@ -248,7 +306,7 @@ function BoostControl({ boostStatus, isActivating, onActivate, onShowStatus, the
         },
       ]}
       accessibilityRole="button"
-      accessibilityLabel="Activate Boost"
+      accessibilityLabel={t('discovery.boost.activateTitle')}
     >
       {isActivating ? (
         <ActivityIndicator size="small" color={colors.primary} />
@@ -308,7 +366,9 @@ export default function DiscoverScreen() {
     onScroll: (e) => { scrollY.value = e.contentOffset.y; },
   });
   const isRewindingRef        = useRef(false);
-  const pendingLikeVariantRef = useRef<string>(DEFAULT_LIKE_VARIANT_CODE);
+  // Holds the variant code explicitly picked via the rail; null = send the
+  // catalog's default variant (resolved at swipe time via `is_default`).
+  const pendingLikeVariantRef = useRef<string | null>(null);
   const shownIdsRef           = useRef<Set<string>>(new Set());
   const lastSwipedCardRef     = useRef<CardDto | null>(null);
   const lastSwipedDirRef      = useRef<'LIKE' | 'PASS'>('LIKE');
@@ -316,12 +376,12 @@ export default function DiscoverScreen() {
 
   const [displayQueue, setDisplayQueue] = useState<CardDto[]>([]);
   const [rewindIncoming, setRewindIncoming] = useState<'LIKE' | 'PASS' | false>(false);
-  const [browseRewindTrigger, setBrowseRewindTrigger] = useState(0);
   const [swipedIds, setSwipedIds] = useState<Set<string>>(new Set());
   const [matchVisible, setMatchVisible] = useState(false);
   const [matchName, setMatchName] = useState('');
   const [matchPhoto, setMatchPhoto] = useState<string | undefined>(undefined);
   const [matchId, setMatchId] = useState<string | null>(null);
+  const [matchIsBlindDate, setMatchIsBlindDate] = useState(false);
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const [syncingCards, setSyncingCards] = useState(false);
   const [isRewinding, setIsRewinding] = useState(false);
@@ -342,12 +402,14 @@ export default function DiscoverScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetchNextPageError,
     cursorReset,
     isRefetching,
   } = useDiscoveryProfiles();
 
   const { mutate: swipe } = useSwipeAction();
   const { variants: likeVariants } = useLikeActions();
+  const defaultLikeCode = defaultLikeVariant(likeVariants)?.code ?? DEFAULT_LIKE_VARIANT_CODE;
   const sendSuperMessage = useSendSuperMessage();
   const { onMatch: onReviewMatch } = useReviewPrompt();
   const notifPrompt = useNotificationPrompt();
@@ -515,29 +577,29 @@ export default function DiscoverScreen() {
 
     // Always attempt — if no credits the server returns 402 and the global modal fires
     themedAlert({
-      title: 'Activate Boost',
-      message: `Boost will make your profile appear more frequently to others for ${boostStatus.durationMinutes} minutes. Ready to stand out?`,
+      title: t('discovery.boost.activateTitle'),
+      message: t('discovery.boost.confirmMessage', { minutes: boostStatus.durationMinutes }),
       icon: 'rocket',
       iconColor: colors.primary,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Activate',
+          text: t('discovery.boost.activate'),
           style: 'default',
           onPress: () => {
             themedAlert({
-              title: 'Activating Boost…',
+              title: t('discovery.boost.activating'),
               loading: true,
               buttons: [],
             });
             activateBoost.mutate(undefined, {
               onSuccess: () => {
                 themedAlert({
-                  title: 'Boost Active!',
-                  message: 'Your profile is now being shown to more people. Enjoy the spotlight!',
+                  title: t('discovery.boost.activeSuccessTitle'),
+                  message: t('discovery.boost.activeSuccessMessage'),
                   icon: 'checkmark-circle',
                   iconColor: colors.success,
-                  buttons: [{ text: 'OK' }],
+                  buttons: [{ text: t('common.ok') }],
                 });
                 refreshEntitlements();
               },
@@ -549,19 +611,19 @@ export default function DiscoverScreen() {
                 }
                 if (err.code === 'BOOST_ALREADY_ACTIVE') {
                   themedAlert({
-                    title: 'Already Boosted',
-                    message: 'A boost is already active. Enjoy the spotlight!',
+                    title: t('discovery.boost.alreadyActiveTitle'),
+                    message: t('discovery.boost.alreadyActiveMessage'),
                     icon: 'rocket',
                     iconColor: colors.primary,
-                    buttons: [{ text: 'OK' }],
+                    buttons: [{ text: t('common.ok') }],
                   });
                 } else {
                   themedAlert({
-                    title: 'Boost Failed',
-                    message: err.message || 'Could not activate boost. Please try again.',
+                    title: t('discovery.boost.failedTitle'),
+                    message: err.message || t('discovery.boost.failedMessage'),
                     icon: 'alert-circle',
                     iconColor: colors.danger,
-                    buttons: [{ text: 'OK' }],
+                    buttons: [{ text: t('common.ok') }],
                   });
                 }
                 refreshEntitlements();
@@ -571,19 +633,19 @@ export default function DiscoverScreen() {
         },
       ],
     });
-  }, [activateBoost, boostStatus, refreshEntitlements]);
+  }, [activateBoost, boostStatus, refreshEntitlements, t]);
 
   // Tapping the active boost badge → status modal with remaining time.
   const handleBoostStatusPress = useCallback(() => {
     const mins = Math.max(1, Math.ceil(boostStatus.remainingSeconds / 60));
     themedAlert({
-      title: 'Boost Active',
-      message: `Your profile is being shown to more people right now. About ${mins} minute${mins === 1 ? '' : 's'} remaining.`,
+      title: t('discovery.boost.statusTitle'),
+      message: t('discovery.boost.statusMessage', { count: mins }),
       icon: 'rocket',
       iconColor: colors.primary,
-      buttons: [{ text: 'OK' }],
+      buttons: [{ text: t('common.ok') }],
     });
-  }, [boostStatus]);
+  }, [boostStatus, t]);
 
   // ── Queue management ───────────────────────────────────────────────────────
 
@@ -634,12 +696,15 @@ export default function DiscoverScreen() {
   }, [isLoading]);
 
 
-  // Pre-fetch next page when queue is running low
+  // Pre-fetch next page when queue is running low. The isFetchNextPageError
+  // guard stops this effect from re-firing after every failed attempt —
+  // isFetchingNextPage flipping false would otherwise retrigger fetchNextPage
+  // in an unbounded loop while the queue stays <= 3.
   useEffect(() => {
-    if (displayQueue.length <= 3 && hasNextPage && !isFetchingNextPage) {
+    if (displayQueue.length <= 3 && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
       fetchNextPage();
     }
-  }, [displayQueue.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [displayQueue.length, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
 
   // ── Layout constants ────────────────────────────────────────────────────────
   const TOTAL_TAB = TAB_BAR_PADDING + TAB_BAR_H + Math.max(safeBottom, 12);
@@ -687,8 +752,8 @@ export default function DiscoverScreen() {
   // ── Swipe handler ───────────────────────────────────────────────────────────
   const handleSwipe = useCallback(
     (direction: 'LIKE' | 'PASS', card: CardDto) => {
-      const likeVariantCode = pendingLikeVariantRef.current;
-      pendingLikeVariantRef.current = DEFAULT_LIKE_VARIANT_CODE;
+      const likeVariantCode = pendingLikeVariantRef.current ?? defaultLikeCode;
+      pendingLikeVariantRef.current = null;
       lastSwipedCardRef.current = card;
       lastSwipedDirRef.current  = direction;
       setDisplayQueue((prev) => prev.filter((c) => c.user_id !== card.user_id));
@@ -713,6 +778,7 @@ export default function DiscoverScreen() {
               setMatchName(response.match.other_user.display_name);
               setMatchPhoto(response.match.other_user.primary_photo_url ?? undefined);
               setMatchId(response.match.match_id);
+              setMatchIsBlindDate(isBlindDateMatch(response.match));
               setMatchVisible(true);
               if (!hasTriggeredMatchPromotionRef.current) {
                 hasTriggeredMatchPromotionRef.current = true;
@@ -758,7 +824,7 @@ export default function DiscoverScreen() {
         },
       );
     },
-    [swipe, router, onReviewMatch, handleTryShowPromotion, entitlements, notifPrompt, idVerifPrompt],
+    [swipe, router, onReviewMatch, handleTryShowPromotion, entitlements, notifPrompt, idVerifPrompt, defaultLikeCode],
   );
 
   // ── Rewind handler ──────────────────────────────────────────────────────────
@@ -857,12 +923,11 @@ export default function DiscoverScreen() {
             const apiCode = err?.response?.data?.error?.code;
             if (apiCode === 'DUPLICATE_ACTIVE_ACTION') {
               themedAlert({
-                title: 'Message Already Sent',
-                message:
-                  "You've already sent a Before-Match Message to this person. You can only send one message before matching.",
+                title: t('discovery.superMessage.alreadySentTitle'),
+                message: t('discovery.superMessage.alreadySentMessage'),
                 icon: 'chatbubble-ellipses',
                 iconColor: colors.primary,
-                buttons: [{ text: 'OK' }],
+                buttons: [{ text: t('common.ok') }],
               });
               return;
             }
@@ -878,16 +943,24 @@ export default function DiscoverScreen() {
     [sendSuperMessage, router, entitlements],
   );
 
-  // Keep the suspense loader visible while we are fetching or while the API
-  // has already returned cards but they have not yet been synced into the
-  // display queue. This prevents the "no more profiles" empty state from
-  // flickering for one frame before the first cards render.
+  // Cards the API has returned but the sync effect hasn't moved into the
+  // display queue yet (one-frame gap between apiCards changing and the effect
+  // running). Prevents the "no more profiles" state from flickering on render.
+  // Cards that are all already in shownIdsRef don't count — that's the real
+  // end of the feed, not a pending sync.
+  const pendingSyncCards =
+    displayQueue.length === 0 &&
+    apiCards.some((c) => !shownIdsRef.current.has(c.user_id));
+  // Keep the suspense loader visible while fetching, while a sync is pending,
+  // or while the queue is empty but a next page exists. Note: apiCards.length
+  // must not be used here — it accumulates every fetched card and never
+  // shrinks, so it can't tell an empty deck mid-feed from an exhausted one.
   const showAnimation =
-    (isLoading || syncingCards || (displayQueue.length === 0 && apiCards.length > 0)) &&
+    (isLoading || syncingCards || pendingSyncCards || (displayQueue.length === 0 && hasNextPage)) &&
     !loadingTimedOut &&
     !isError;
   const isEmpty =
-    !isLoading && !isError && !syncingCards && displayQueue.length === 0 && apiCards.length === 0;
+    !isLoading && !isError && !syncingCards && displayQueue.length === 0 && !hasNextPage && !isFetchingNextPage;
 
   const errorInfo = isError
     ? (() => {
@@ -897,15 +970,15 @@ export default function DiscoverScreen() {
         if (code === 'DISCOVERY_ACTOR_INELIGIBLE') {
           return {
             icon: 'person-circle-outline' as const,
-            title: 'Account not ready',
-            subtitle: 'Your account is not eligible to use discovery yet. Please complete your profile to start matching.',
+            title: t('discovery.errorAccountNotReady'),
+            subtitle: t('discovery.errorAccountNotReadySubtitle'),
           };
         }
         if (err?.response?.status === 403) {
           return {
             icon: 'lock-closed-outline' as const,
-            title: 'Access restricted',
-            subtitle: backendMsg ?? 'You do not have permission to access discovery.',
+            title: t('discovery.errorAccessRestricted'),
+            subtitle: backendMsg ?? t('discovery.errorAccessRestrictedSubtitle'),
           };
         }
         return {
@@ -932,7 +1005,7 @@ export default function DiscoverScreen() {
             }}
             disabled={modeSwitching}
             activeOpacity={0.7}
-            accessibilityLabel={viewMode === 'swipe' ? 'Switch to browse mode' : 'Switch to swipe mode'}
+            accessibilityLabel={viewMode === 'swipe' ? t('discovery.switchToBrowse') : t('discovery.switchToSwipe')}
             accessibilityRole="button"
           >
             {viewMode === 'swipe' ? (
@@ -942,44 +1015,18 @@ export default function DiscoverScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Rewind — browse mode only */}
-          {viewMode === 'browse' && (
-            <TouchableOpacity
-              style={[styles.settingsBtn, { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
-              onPress={() => setBrowseRewindTrigger((n) => n + 1)}
-              activeOpacity={0.7}
-              disabled={!checkCanRewind(entitlements)}
-              accessibilityLabel="Rewind last action"
-              accessibilityRole="button"
-            >
-              <MaterialCommunityIcons
-                name="undo"
-                size={22}
-                color={checkCanRewind(entitlements) ? '#FBBF24' : th.textSecondary}
-              />
-            </TouchableOpacity>
-          )}
+        </View>
 
-          {/* Blind date button */}
-          <TouchableOpacity
-            style={[
-              styles.blindDateBtn,
-              { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface },
-            ]}
+        {/* Blind date button — centered between the mode toggle and the right cluster */}
+        <View style={styles.blindDateCenterWrap}>
+          <BlindDateButton
+            borderColor={th.border}
+            backgroundColor={isDark ? th.backgroundElement : th.surface}
+            textColor={th.text}
+            label={t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
             onPress={() => router.push('/(app)/blind-date' as any)}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
-          >
-            <Image
-              source={require('@/assets/images/blind-date-logo.png')}
-              style={styles.blindDateIcon}
-              resizeMode="contain"
-            />
-            <Text style={[styles.blindDateText, { color: th.text }]}>
-              {t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
-            </Text>
-          </TouchableOpacity>
+            compact={viewMode === 'browse'}
+          />
         </View>
 
         <View style={styles.headerRight}>
@@ -987,7 +1034,7 @@ export default function DiscoverScreen() {
           {isIncognito ? (
             <View style={styles.incognitoIndicator}>
               <Ionicons name="eye-off" size={12} color={th.textSecondary} />
-              <Text style={[styles.incognitoText, { color: th.textSecondary }]}>Private mode</Text>
+              <Text style={[styles.incognitoText, { color: th.textSecondary }]}>{t('discovery.privateMode')}</Text>
             </View>
           ) : (
             <BoostControl
@@ -1040,6 +1087,7 @@ export default function DiscoverScreen() {
                 setMatchName(response.match.other_user.display_name);
                 setMatchPhoto(response.match.other_user.primary_photo_url ?? undefined);
                 setMatchId(response.match.match_id);
+                setMatchIsBlindDate(isBlindDateMatch(response.match));
                 setMatchVisible(true);
                 if (!hasTriggeredMatchPromotionRef.current) {
                   hasTriggeredMatchPromotionRef.current = true;
@@ -1051,7 +1099,6 @@ export default function DiscoverScreen() {
             canRewind={checkCanRewind(entitlements)}
             likeVariants={likeVariants}
             onSuperMessage={handleOpenSuperMessage}
-            rewindTrigger={browseRewindTrigger}
             swipedIds={swipedIds}
             onCardAction={(userId, swiped, card) => {
               setSwipedIds((prev) => {
@@ -1120,7 +1167,7 @@ export default function DiscoverScreen() {
                   <Text style={styles.emptyBtnText}>{t('discovery.adjustPreferences')}</Text>
                 </TouchableOpacity>
               </View>
-            ) : isError && errorInfo ? (
+            ) : isError && errorInfo && displayQueue.length === 0 ? (
               <View style={styles.emptyWrap}>
                 <View style={[styles.emptyIconCircle, { backgroundColor: isDark ? th.backgroundElement : colors.backgroundLavender }]}>
                   <Ionicons name={errorInfo.icon} size={48} color={colors.danger} />
@@ -1164,7 +1211,7 @@ export default function DiscoverScreen() {
               <View style={styles.rewindOverlay} pointerEvents="none">
                 <View style={[styles.rewindSpinnerWrap, { backgroundColor: isDark ? th.backgroundElement : th.surface }]}>
                   <ActivityIndicator size="large" color={colors.primary} />
-                  <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Getting it back…</Text>
+                  <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>{t('discovery.gettingItBack')}</Text>
                 </View>
               </View>
             )}
@@ -1195,7 +1242,7 @@ export default function DiscoverScreen() {
         <View style={styles.modeSwitchOverlay} pointerEvents="none">
           <View style={[styles.rewindSpinnerWrap, { backgroundColor: isDark ? th.backgroundElement : th.surface }]}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>Switching…</Text>
+            <Text style={[styles.rewindSpinnerText, { color: th.textSecondary }]}>{t('discovery.switching')}</Text>
           </View>
         </View>
       )}
@@ -1206,13 +1253,18 @@ export default function DiscoverScreen() {
         name={matchName}
         photoUrl={matchPhoto}
         myPhotoUrl={profileDto?.primary_photo_url ?? undefined}
+        isBlindDate={matchIsBlindDate}
         onSendMessage={() => {
           setMatchVisible(false);
           onReviewMatch();
           if (matchId) {
             router.push({
               pathname: '/(app)/chat' as any,
-              params: { matchId, displayName: matchName },
+              params: {
+                matchId,
+                displayName: matchName,
+                ...(matchIsBlindDate ? { matchSource: 'BLIND_DATE' } : {}),
+              },
             });
           }
         }}
@@ -1289,6 +1341,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  blindDateCenterWrap: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  blindDateWrap: {
+    borderRadius: 21,
+  },
+  blindDateGlow: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    right: -2,
+    bottom: -2,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '24',
+    shadowColor: colors.primary,
+    shadowOpacity: 0,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+  },
   blindDateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1304,8 +1378,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   blindDateIcon: {
-    width: 28,
+    width: 48,
     height: 28,
+  },
+  blindDateIconCompact: {
+    width: 36,
+    height: 21,
   },
   blindDateText: {
     fontSize: 14,

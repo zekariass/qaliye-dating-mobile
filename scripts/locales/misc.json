@@ -1,0 +1,205 @@
+{
+  "app": {},
+  "splash": {
+    "version": "v{{version}}"
+  },
+  "common": {
+    "all": "All"
+  },
+  "auth": {
+    "continueWithGoogle": "Continue with Google",
+    "continueWithApple": "Continue with Apple",
+    "continueWithEmail": "Continue with Email",
+    "signingIn": "Signing in…",
+    "forgotPasswordRateLimit": "Too many requests. Please wait a moment and try again.",
+    "authenticationFailed": "Authentication failed",
+    "emailOtpResendFailed": "Could not resend the code. Please try again.",
+    "resetPasswordFailed": "Could not reset your password. Please try again."
+  },
+  "chat": {
+    "filterUnread": "Unread",
+    "yourConversations": "Your Conversations",
+    "emptyTitle": "No conversations yet",
+    "emptyBody": "Start liking profiles and when you match, your conversations will appear here.",
+    "emptyUnreadTitle": "All caught up!",
+    "emptyUnreadBody": "You have no unread messages. You're all caught up!",
+    "loadErrorBody": "We couldn't load your conversations."
+  },
+  "support": {
+    "openAttachment": "Open attachment: {{name}}",
+    "fallbackSender": "Support",
+    "fallbackUser": "User {{id}}",
+    "fileCount_one": "{{count}} file",
+    "fileCount": "{{count}} files",
+    "dismissFailed": "Dismiss failed message",
+    "dismiss": "Dismiss",
+    "sending": "Sending…",
+    "minutesAgo_one": "{{count}}m ago",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo_one": "{{count}}h ago",
+    "hoursAgo": "{{count}}h ago",
+    "loadMore": "Load more",
+    "assigned": "Assigned",
+    "unassigned": "Unassigned",
+    "priorityN": "Priority {{priority}}",
+    "priorityShort": "P{{priority}}",
+    "prioritySection": "PRIORITY",
+    "allPriorities": "All P",
+    "unknownStaff": "Unknown staff",
+    "notesTitle": "Internal Notes",
+    "closeNotes": "Close notes",
+    "notesEmpty": "No internal notes yet",
+    "notesEmptyBody": "Notes are only visible to staff",
+    "noteSaveFailed": "Failed to save note. Try again.",
+    "notePlaceholder": "Write an internal note...",
+    "convStatus": {
+      "idle": "Idle",
+      "waitingStaff": "Waiting for staff reply",
+      "active": "Active",
+      "waitingUser": "Waiting for user reply",
+      "closed": "Closed"
+    },
+    "filterWaitingStaff": "Waiting Staff",
+    "filterWaitingUser": "Waiting User"
+  },
+  "settings": {
+    "title": "Settings",
+    "signOut": "Sign Out",
+    "signOutTitle": "Sign Out",
+    "signOutConfirm": "Are you sure you want to sign out?",
+    "signingOutTitle": "Signing out…",
+    "signingOutSubtitle": "Please wait a moment.",
+    "account": "Account",
+    "appearance": "Appearance",
+    "themeSubtitle": "Choose how the app looks to you.",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "privacy": "Privacy",
+    "privacySubtitle": "Control what others can see about you.",
+    "activityStatus": "Online Status",
+    "activityStatusSub": "Show others when you're online",
+    "blockedUsersSub": "Manage users you've blocked",
+    "unblockUser": "Unblock {{name}}",
+    "blindDate": "Blind Date",
+    "blindDateEnabled": "Blind Date enabled",
+    "blindDateEnabledSub": "Join and host anonymous Blind Date sessions",
+    "blindDateToggleError": "Could not update Blind Date",
+    "unblockConfirmTitle": "Unblock user?",
+    "unblockConfirmBody": "{{name}} will be able to appear in your discovery again.",
+    "unblock": "Unblock",
+    "unblockFailedTitle": "Failed",
+    "unblockFailedBody": "Could not unblock. Please try again.",
+    "blockedLoadError": "Failed to load blocked users.",
+    "noBlockedUsers": "No blocked users",
+    "noBlockedUsersBody": "Users you block will appear here.",
+    "signOutCountdown": "{{seconds}}s",
+    "language": "Language",
+    "languageSubtitle": "Choose your preferred language.",
+    "selectLanguage": "Select Language",
+    "help": "Help",
+    "helpSub": "Get support and answers"
+  },
+  "billing": {
+    "creditsSection": "Credits",
+    "creditBalance_one": "{{formatted}} credit",
+    "creditBalance": "{{formatted}} credits",
+    "restoreSuccess": "Restore Complete",
+    "restoreSuccessMsg": "Your premium subscription has been restored.",
+    "restoreNoPurchase": "No Purchases Found",
+    "restoreNoPurchaseMsg": "No active purchases were found to restore.",
+    "restoreError": "Restore Failed",
+    "restoreErrorMsg": "Something went wrong while restoring purchases. Please try again."
+  },
+  "onboarding": {
+    "stepOf": "{{current}} of {{total}}",
+    "preferences": {
+      "distanceKm": "{{distance}} km"
+    },
+    "basicProfile": {
+      "errors": {
+        "displayNameRequired": "Display name is required.",
+        "displayNameTooLong": "Must be 50 characters or less.",
+        "genderRequired": "Please select your gender.",
+        "dobRequired": "Date of birth is required.",
+        "dobInvalid": "Please select a valid date.",
+        "dobInvalidDate": "Invalid date.",
+        "under18": "You must be at least 18 years old.",
+        "intentionRequired": "Please select what you are looking for.",
+        "religionRequired": "Please select your religion.",
+        "smokingRequired": "Please select whether you smoke.",
+        "drinkingRequired": "Please select whether you drink.",
+        "activityRequired": "Please select your activity level.",
+        "occupationTooLong": "Must be 100 characters or less."
+      },
+      "options": {
+        "other": "Other",
+        "preferNotToSay": "Prefer not to say",
+        "occasionally": "Occasionally",
+        "tryingToQuit": "Trying to quit",
+        "socially": "Socially",
+        "religion": {
+          "orthodoxChristian": "Orthodox Christian",
+          "protestant": "Protestant",
+          "catholic": "Catholic",
+          "muslim": "Muslim",
+          "traditional": "Traditional"
+        },
+        "activity": {
+          "active": "Active: Exercises 4+ times a week",
+          "moderate": "Moderate: Exercises a few times a week",
+          "occasional": "Occasional: Exercises once in a while",
+          "rarely": "Rarely: Prefers non-physical activities",
+          "preferNotToSay": "Prefer not to say"
+        },
+        "education": {
+          "highSchool": "High School",
+          "diploma": "Diploma",
+          "bachelors": "Bachelor's Degree",
+          "masters": "Master's Degree",
+          "doctorate": "Doctorate",
+          "other": "Other"
+        }
+      }
+    },
+    "location": {
+      "sourceGps": "📍 GPS",
+      "sourceManual": "🔍 Manual search",
+      "backToOptions": "Back to location options"
+    },
+    "photo": {
+      "capturePhoto": "Capture photo",
+      "flipCamera": "Flip camera",
+      "closeCamera": "Close camera",
+      "cameraPermission": "Camera access is required to take photos.",
+      "libraryPermission": "Photo library access is required.",
+      "imageTooSmallPrimary": "Image too small. Upload at least 720 × 900 px for your profile avatar.",
+      "imageTooSmallCard": "Image too small. Upload at least 720 × 960 px for card photos.",
+      "deleteFailed": "Failed to delete photo.",
+      "primaryRequired": "A profile photo is required.",
+      "primaryRejected": "Your profile photo was rejected. Please delete it and upload a new one.",
+      "minCardsRequired": "At least two discovery card photos are required.",
+      "cardMeta": "3:4 · min 720×960 px · WebP 1080×1440 · tap empty slot to add",
+      "primaryMeta": "4:5 · min 720×900 px · WebP 1080×1350",
+      "uploadErrorsHint": "Some photos failed to upload. Tap the photo to retry, choose another, or remove it.",
+      "notApproved": "Photo not approved",
+      "uploadFailed": "Upload failed",
+      "chooseAnother": "Choose Another Photo",
+      "removePhoto": "Remove Photo",
+      "notAuthenticated": "Not authenticated",
+      "statusApproved": "Approved",
+      "statusUnderReview": "Under review",
+      "statusRejected": "Rejected"
+    },
+    "identity": {
+      "captureSelfie": "Capture selfie",
+      "closeCamera": "Close camera",
+      "captureRequired": "Please capture a selfie first."
+    },
+    "completion": {
+      "verifyError": "Could not verify your profile. Please try again.",
+      "completeError": "Could not complete onboarding. Please try again.",
+      "pendingBadge": "ALMOST THERE"
+    }
+  }
+}

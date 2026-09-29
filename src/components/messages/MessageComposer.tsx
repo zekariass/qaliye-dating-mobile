@@ -91,6 +91,7 @@ function AttachmentPreviewStrip({
   files: ChatFileAttachment[];
   onRemove: (idx: number) => void;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   if (files.length === 0) return null;
   return (
@@ -103,7 +104,7 @@ function AttachmentPreviewStrip({
             onPress={() => onRemove(i)}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessibilityRole="button"
-            accessibilityLabel={`Remove ${f.name}`}
+            accessibilityLabel={t('chat.removeAttachment', { name: f.name })}
           >
             <Ionicons name="close-circle" size={16} color={th.textMuted} />
           </TouchableOpacity>
@@ -348,7 +349,7 @@ function VoicePreviewBar({
         onPress={handlePlayPause}
         style={[voicePreviewStyles.playBtn, { backgroundColor: '#F59E0B' }]}
         accessibilityRole="button"
-        accessibilityLabel={isPlaying ? 'Pause preview' : 'Play preview'}
+        accessibilityLabel={isPlaying ? t('chat.pausePreview') : t('chat.playPreview')}
       >
         {isBuffering
           ? <ActivityIndicator size="small" color="#FFF" />
@@ -579,7 +580,7 @@ export function MessageComposer({
                 maxLength={2000}
                 returnKeyType="default"
                 blurOnSubmit={false}
-                accessibilityLabel="Message input"
+                accessibilityLabel={t('chat.messageInput')}
               />
             </View>
             <TouchableOpacity
@@ -644,8 +645,8 @@ export function MessageComposer({
                 maxLength={2000}
                 returnKeyType="default"
                 blurOnSubmit={false}
-                accessibilityLabel="Message input"
-                accessibilityHint="Type your message here"
+                accessibilityLabel={t('chat.messageInput')}
+                accessibilityHint={t('chat.messageInputHint')}
               />
             </View>
 

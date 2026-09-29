@@ -23,6 +23,7 @@ import { colors, radius, spacing } from '@/constants/theme';
 import { useNotificationPermission } from '@/hooks/notifications/useNotificationPermission';
 import { NOTIFICATION_PROMPT_SHOWN_KEY } from '@/hooks/notifications/useNotificationPrompt';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import { useMeStore } from '@/stores/me-store';
 
 export default function CompletionStep() {
@@ -123,7 +124,7 @@ export default function CompletionStep() {
       setBlockingReasons(status.blocking_reasons);
       setAlreadyOnboarded(status.is_onboarded);
     } catch {
-      setError('Could not verify your profile. Please try again.');
+      setError(i18n.t('onboarding.completion.verifyError', 'Could not verify your profile. Please try again.'));
     } finally {
       setIsChecking(false);
     }
@@ -146,7 +147,7 @@ export default function CompletionStep() {
       }
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setError(err?.response?.data?.message ?? 'Could not complete onboarding. Please try again.');
+      setError(err?.response?.data?.message ?? i18n.t('onboarding.completion.completeError', 'Could not complete onboarding. Please try again.'));
     } finally {
       setIsCompleting(false);
     }
@@ -180,7 +181,7 @@ export default function CompletionStep() {
 
         <Animated.View style={{ opacity: fadeAnim, alignItems: 'center', width: '100%' }}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>ALMOST THERE</Text>
+            <Text style={styles.badgeText}>{t('onboarding.completion.pendingBadge', 'ALMOST THERE')}</Text>
           </View>
           <Text style={[styles.title, { color: th.text }]}>{t('onboarding.completion.almostThere')}</Text>
           <Text style={[styles.subtitle, { color: th.textSecondary }]}>

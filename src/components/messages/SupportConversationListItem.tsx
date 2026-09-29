@@ -11,11 +11,17 @@ import {
 
 import { colors, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { SupportConversationStatus } from '@/types/support';
 
 // ---------------------------------------------------------------------------
 // Timestamp formatting (same as ConversationRow)
 // ---------------------------------------------------------------------------
+
+const MONTH_KEYS = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const;
 
 function formatTimestamp(isoString: string | null): string {
   if (!isoString) return '';
@@ -25,8 +31,8 @@ function formatTimestamp(isoString: string | null): string {
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
-  if (diffMinutes < 60) return `${Math.max(diffMinutes, 1)}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffMinutes < 60) return i18n.t('matches.minutesAgo', { minutes: Math.max(diffMinutes, 1) });
+  if (diffHours < 24) return i18n.t('matches.hoursAgo', { hours: diffHours });
 
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -35,10 +41,12 @@ function formatTimestamp(isoString: string | null): string {
     date.getMonth() === yesterday.getMonth() &&
     date.getFullYear() === yesterday.getFullYear()
   ) {
-    return 'Yesterday';
+    return i18n.t('chat.yesterday');
   }
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[date.getMonth()]} ${date.getDate()}`;
+  return i18n.t('chat.dateLabelShort', {
+    month: i18n.t(`chat.months.${MONTH_KEYS[date.getMonth()]}`),
+    day: date.getDate(),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -46,10 +54,11 @@ function formatTimestamp(isoString: string | null): string {
 // ---------------------------------------------------------------------------
 
 function UnreadBadge({ count }: { count: number }) {
+  const { t } = useTranslation();
   const display = count > 99 ? '99+' : String(count);
   return (
     <View style={[badgeStyles.wrap, count > 9 && badgeStyles.wrapWide]}>
-      <Text style={badgeStyles.text} accessibilityLabel={`${count} unread messages`}>
+      <Text style={badgeStyles.text} accessibilityLabel={t('support.unreadMessages', { count })}>
         {display}
       </Text>
     </View>
@@ -153,7 +162,7 @@ function SupportConversationListItemInner({
     t('support.officialSupport'),
     subtitle,
     timestampLabel,
-    unreadCount > 0 ? `${unreadCount} unread` : null,
+    unreadCount > 0 ? t('chat.unread', { count: unreadCount }) : null,
   ]
     .filter(Boolean)
     .join('. ');

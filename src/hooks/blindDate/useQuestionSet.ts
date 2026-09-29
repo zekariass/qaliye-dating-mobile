@@ -19,6 +19,7 @@ import type {
     BlindDateSetQuestionDto,
 } from '@/types/blindDate';
 import { extractApiError } from '@/utils/apiError';
+import { blindDateErrorMessage } from '@/utils/blindDateErrors';
 
 export const BLIND_DATE_QUESTION_SET_KEY = ['blindDate', 'questionSet'] as const;
 
@@ -56,12 +57,13 @@ export function useQuestionSetMutations() {
 
   /** Shared onError: "not found" → the list is stale, refetch silently. */
   const onMutationError = (err: unknown, fallback: (msg: string) => void) => {
-    const { code, message } = extractApiError(err);
+    const { code } = extractApiError(err);
     if (GONE_CODES.has(code.toLowerCase())) {
       void invalidate();
       return;
     }
-    fallback(message);
+    // error.message mirrors the machine code — show the localized mapping.
+    fallback(blindDateErrorMessage(err));
   };
 
   const addQuestion = useMutation({

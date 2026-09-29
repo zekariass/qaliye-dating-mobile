@@ -1,13 +1,14 @@
 import { memo } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import { type EditProfileDraft } from '../mockEditProfile';
 import {
-  LabeledField,
-  SectionCard,
-  SectionTitle,
-  TextAreaField,
+    LabeledField,
+    SectionCard,
+    SectionTitle,
+    TextAreaField,
 } from './FormComponents';
 
 type Props = {
@@ -17,20 +18,21 @@ type Props = {
 };
 
 export const EditBioTab = memo(function EditBioTab({ draft, onChange, sem }: Props) {
+  const { t } = useTranslation();
   const { personal } = draft;
 
   return (
     <View>
       <SectionCard sem={sem}>
-        <SectionTitle title="About You" sem={sem} />
+        <SectionTitle title={t('profile.bio.aboutYou')} sem={sem} />
 
-        <LabeledField label="Bio" sem={sem} flex={false}>
+        <LabeledField label={t('profile.tabs.bio')} sem={sem} flex={false}>
           <TextAreaField
             value={personal.bio}
             onChangeText={(v) => onChange('personal.bio', v)}
             sem={sem}
             maxLength={500}
-            placeholder="Tell others about yourself..."
+            placeholder={t('profile.bio.placeholder')}
           />
         </LabeledField>
       </SectionCard>

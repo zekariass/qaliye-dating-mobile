@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     RefreshControl,
@@ -19,6 +20,7 @@ import { FlowBackdrop } from '@/components/blind-date/FlowBackdrop';
 import { bdColors, bdGradients } from '@/constants/blindDateTheme';
 import { useSessionResults } from '@/hooks/blindDate/useSessionResults';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type {
     BlindDateFinalOutcome,
     BlindDateSessionWinnerDto,
@@ -29,6 +31,7 @@ import {
     RELATIONSHIP_API_TO_LABEL,
     RELIGION_API_TO_LABEL,
 } from '@/utils/profileMappers';
+import { translateProfileOption } from '@/utils/profileOptions';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -65,13 +68,13 @@ function statusPillTone(
 function noFinalistCopy(status: string | undefined): string {
   switch (status) {
     case 'CANCELLED':
-      return 'This Blind Date was cancelled before a finalist was chosen.';
+      return i18n.t('blindDate.results.noFinalist.cancelled');
     case 'CLOSED':
-      return 'You closed this Blind Date before choosing a finalist.';
+      return i18n.t('blindDate.results.noFinalist.closed');
     case 'EXPIRED':
-      return 'This Blind Date expired before a finalist was chosen.';
+      return i18n.t('blindDate.results.noFinalist.expired');
     default:
-      return 'This Blind Date ended before a finalist was chosen.';
+      return i18n.t('blindDate.results.noFinalist.ended');
   }
 }
 
@@ -85,29 +88,29 @@ function outcomeMeta(outcome: BlindDateFinalOutcome | null | undefined, status: 
     case 'MATCHED':
       return {
         icon: 'heart',
-        title: "It's a Match!",
-        sub: 'You both said yes — say hello.',
+        title: i18n.t('blindDate.results.outcome.matched.title'),
+        sub: i18n.t('blindDate.results.outcome.matched.sub'),
         matched: true,
       };
     case 'ALREADY_MATCHED':
       return {
         icon: 'heart',
-        title: "You're already connected",
-        sub: 'You two had already matched — pick up the chat where you left off.',
+        title: i18n.t('blindDate.results.outcome.alreadyMatched.title'),
+        sub: i18n.t('blindDate.results.outcome.alreadyMatched.sub'),
         matched: true,
       };
     case 'NO_MATCH':
       return {
         icon: 'heart-dislike-outline',
-        title: 'No match this time',
-        sub: 'The final reveal ended without a match.',
+        title: i18n.t('blindDate.results.outcome.noMatch.title'),
+        sub: i18n.t('blindDate.results.outcome.noMatch.sub'),
         matched: false,
       };
     case 'EXPIRED':
       return {
         icon: 'time-outline',
-        title: 'Decision window expired',
-        sub: 'The final decision window closed before both sides responded.',
+        title: i18n.t('blindDate.results.outcome.expired.title'),
+        sub: i18n.t('blindDate.results.outcome.expired.sub'),
         matched: false,
       };
     default:
@@ -118,43 +121,43 @@ function outcomeMeta(outcome: BlindDateFinalOutcome | null | undefined, status: 
         case 'REVEAL':
           return {
             icon: 'hourglass-outline',
-            title: 'Awaiting final decisions',
-            sub: 'The reveal happened — the outcome appears here once both sides decide.',
+            title: i18n.t('blindDate.results.outcome.awaiting.title'),
+            sub: i18n.t('blindDate.results.outcome.awaiting.sub'),
             matched: false,
           };
         case 'CLOSED':
           return {
             icon: 'power-outline',
-            title: 'You closed this Blind Date',
-            sub: 'It ended early, before a finalist was chosen.',
+            title: i18n.t('blindDate.results.outcome.closed.title'),
+            sub: i18n.t('blindDate.results.outcome.closed.sub'),
             matched: false,
           };
         case 'CANCELLED':
           return {
             icon: 'close-circle-outline',
-            title: 'This Blind Date was cancelled',
-            sub: "It didn't move forward.",
+            title: i18n.t('blindDate.results.outcome.cancelled.title'),
+            sub: i18n.t('blindDate.results.outcome.cancelled.sub'),
             matched: false,
           };
         case 'EXPIRED':
           return {
             icon: 'time-outline',
-            title: 'This Blind Date expired',
-            sub: 'It reached its expiry date before a finalist was chosen.',
+            title: i18n.t('blindDate.results.outcome.expiredSession.title'),
+            sub: i18n.t('blindDate.results.outcome.expiredSession.sub'),
             matched: false,
           };
         case 'OPEN':
           return {
             icon: 'flash-outline',
-            title: 'Still in progress',
-            sub: "You'll see the outcome here once a finalist is chosen and revealed.",
+            title: i18n.t('blindDate.results.outcome.inProgress.title'),
+            sub: i18n.t('blindDate.results.outcome.inProgress.sub'),
             matched: false,
           };
         default:
           return {
             icon: 'flag-outline',
-            title: 'This Blind Date ended',
-            sub: 'It ended before a finalist was chosen.',
+            title: i18n.t('blindDate.results.outcome.ended.title'),
+            sub: i18n.t('blindDate.results.outcome.ended.sub'),
             matched: false,
           };
       }
@@ -173,9 +176,10 @@ function OutcomeHero({
   status: string | undefined;
   winnerName: string | null;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const meta = outcomeMeta(outcome, status);
-  const sub = winnerName && meta.matched ? `${meta.sub} It's ${winnerName}.` : meta.sub;
+  const sub = winnerName && meta.matched ? `${meta.sub} ${t('blindDate.results.itsName', { name: winnerName })}` : meta.sub;
 
   if (!meta.matched) {
     return (
@@ -231,10 +235,11 @@ function InfoChip({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label
 
 /** Winner card — revealed finalist identity. */
 function WinnerCard({ winner, onPress }: { winner: BlindDateSessionWinnerDto; onPress?: () => void }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const profile = winner.profile;
   const photo = profile?.primary_photo?.signed_url;
-  const name = profile?.display_name ?? 'Your winner';
+  const name = profile?.display_name ?? t('blindDate.results.yourWinner');
   const location = [profile?.city, profile?.country].filter(Boolean).join(', ');
 
   const inner = (
@@ -263,7 +268,7 @@ function WinnerCard({ winner, onPress }: { winner: BlindDateSessionWinnerDto; on
           </Text>
           <View style={[styles.winnerPill, { backgroundColor: `${bdColors.gold}22`, borderColor: `${bdColors.gold}66` }]}>
             <Ionicons name="trophy" size={10} color={bdColors.gold} />
-            <Text style={[styles.winnerPillText, { color: '#B45309' }]}>Winner</Text>
+            <Text style={[styles.winnerPillText, { color: '#B45309' }]}>{t('blindDate.results.winnerPill')}</Text>
           </View>
         </View>
         {location ? (
@@ -275,19 +280,20 @@ function WinnerCard({ winner, onPress }: { winner: BlindDateSessionWinnerDto; on
             {profile.relationship_intention && (
               <InfoChip
                 icon="heart-outline"
-                label={
+                label={translateProfileOption(
                   RELATIONSHIP_API_TO_LABEL[profile.relationship_intention] ??
-                  toTitleCase(profile.relationship_intention)
-                }
+                    toTitleCase(profile.relationship_intention),
+                  t,
+                )}
               />
             )}
             {profile.religion && (
               <InfoChip
                 icon="flower-outline"
-                label={RELIGION_API_TO_LABEL[profile.religion] ?? toTitleCase(profile.religion)}
+                label={translateProfileOption(RELIGION_API_TO_LABEL[profile.religion] ?? toTitleCase(profile.religion), t)}
               />
             )}
-            {profile.gender && <InfoChip icon="person-outline" label={toTitleCase(profile.gender)} />}
+            {profile.gender && <InfoChip icon="person-outline" label={translateProfileOption(toTitleCase(profile.gender), t)} />}
           </View>
         )}
       </View>
@@ -313,6 +319,7 @@ function WinnerCard({ winner, onPress }: { winner: BlindDateSessionWinnerDto; on
 
 /** One round's Q&A list for the winner. */
 function WinnerRoundSection({ round }: { round: BlindDateWinnerRoundDto }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const answered = round.answers.filter((a) => a.submitted_at != null);
@@ -327,16 +334,16 @@ function WinnerRoundSection({ round }: { round: BlindDateWinnerRoundDto }) {
           style={styles.roundBadge}
         >
           <Ionicons name="albums-outline" size={12} color="#FFF" />
-          <Text style={styles.roundBadgeText}>Round {round.round_number}</Text>
+          <Text style={styles.roundBadgeText}>{t('blindDate.results.roundBadge', { round: round.round_number })}</Text>
         </LinearGradient>
         <Text style={[styles.roundCount, { color: th.textSecondary }]}>
-          {answered.length}/{round.answers.length} answered
+          {t('blindDate.results.answeredCount', { answered: answered.length, total: round.answers.length })}
         </Text>
       </View>
 
       {round.answers.length === 0 ? (
         <Text style={[styles.answerEmpty, { color: th.textSecondary }]}>
-          No answers in this round.
+          {t('blindDate.results.noAnswersInRound')}
         </Text>
       ) : (
         round.answers.map((a, i) => (
@@ -363,7 +370,7 @@ function WinnerRoundSection({ round }: { round: BlindDateWinnerRoundDto }) {
                   !a.submitted_at && styles.answerPending,
                 ]}
               >
-                {a.submitted_at ? a.answer : 'Not answered'}
+                {a.submitted_at ? a.answer : t('blindDate.results.notAnswered')}
               </Text>
             </View>
           </View>
@@ -376,6 +383,7 @@ function WinnerRoundSection({ round }: { round: BlindDateWinnerRoundDto }) {
 // ─── Root Screen ─────────────────────────────────────────────────────────────
 
 export default function SessionResultsScreen() {
+  const { t } = useTranslation();
   const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -401,14 +409,14 @@ export default function SessionResultsScreen() {
   const winnerName = winner?.profile?.display_name ?? null;
 
   const statusLabel = session
-    ? ({
-        OPEN: 'LIVE',
-        REVEAL: 'REVEAL',
-        COMPLETED: 'ENDED',
-        CLOSED: 'CLOSED',
-        CANCELLED: 'CANCELLED',
-        EXPIRED: 'EXPIRED',
-      } as Record<string, string>)[session.status] ?? session.status
+    ? (({
+        OPEN: t('blindDate.status.live'),
+        REVEAL: t('blindDate.status.reveal'),
+        COMPLETED: t('blindDate.status.ended'),
+        CLOSED: t('blindDate.status.closed'),
+        CANCELLED: t('blindDate.status.cancelled'),
+        EXPIRED: t('blindDate.status.expired'),
+      } as Record<string, string>)[session.status] ?? session.status).toUpperCase()
     : '';
   const pillTone = statusPillTone(session?.status, outcome);
 
@@ -429,6 +437,7 @@ export default function SessionResultsScreen() {
           params: { tab: 'participating' },
         })
       }
+      onMatches={() => router.push('/(app)/(tabs)/matches' as never)}
       onProfile={() => router.push('/(app)/(tabs)/profile' as never)}
     />
   );
@@ -450,10 +459,10 @@ export default function SessionResultsScreen() {
         <View style={styles.centerFill}>
           <Ionicons name="cloud-offline-outline" size={48} color={bdColors.primary} />
           <Text style={[styles.emptyTitle, { color: th.text, marginTop: 12 }]}>
-            Couldn&rsquo;t load the results
+            {t('blindDate.results.loadError')}
           </Text>
           <TouchableOpacity onPress={refetch} accessibilityRole="button">
-            <Text style={{ color: bdColors.primary, fontWeight: '700', marginTop: 8 }}>Retry</Text>
+            <Text style={{ color: bdColors.primary, fontWeight: '700', marginTop: 8 }}>{t('blindDate.common.retry')}</Text>
           </TouchableOpacity>
         </View>
         {bottomNav}
@@ -474,12 +483,12 @@ export default function SessionResultsScreen() {
           onPress={() => router.back()}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t('blindDate.common.back')}
         >
           <Ionicons name="chevron-back" size={22} color={th.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: th.text }]}>
-          {session.status === 'COMPLETED' ? 'Blind Date Results' : 'Blind Date'}
+          {session.status === 'COMPLETED' ? t('blindDate.results.titleResults') : t('blindDate.results.title')}
         </Text>
         <View style={[styles.statusPill, { backgroundColor: pillTone.bg }]}>
           <Text style={[styles.statusPillText, { color: pillTone.fg }]}>{statusLabel}</Text>
@@ -498,25 +507,25 @@ export default function SessionResultsScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatChip icon="people" value={`${participantCount}`} label="joined" />
-          <StatChip icon="albums-outline" value={`${roundCount}`} label={`round${roundCount === 1 ? '' : 's'}`} />
-          {dateLabel && <StatChip icon="calendar-outline" value={dateLabel} label="started" />}
+          <StatChip icon="people" value={`${participantCount}`} label={t('blindDate.manage.statJoined')} />
+          <StatChip icon="albums-outline" value={`${roundCount}`} label={roundCount === 1 ? t('blindDate.results.statRound') : t('blindDate.manage.statRounds')} />
+          {dateLabel && <StatChip icon="calendar-outline" value={dateLabel} label={t('blindDate.results.statStarted')} />}
         </View>
 
         {/* Winner — only headed "The winner" when there's actually one to
             show (or a load failure to retry); a plain "no finalist" card
             speaks for itself otherwise. */}
         {(winner || resultsFailed) && (
-          <Text style={[styles.sectionTitle, { color: th.text }]}>The winner</Text>
+          <Text style={[styles.sectionTitle, { color: th.text }]}>{t('blindDate.results.theWinner')}</Text>
         )}
         {resultsFailed ? (
           <View style={[styles.emptyCard, { borderColor: th.border, backgroundColor: th.surface }]}>
             <Ionicons name="cloud-offline-outline" size={30} color={bdColors.primary} />
             <Text style={[styles.emptySub, { color: th.textSecondary }]}>
-              Winner details aren&rsquo;t available right now.
+              {t('blindDate.results.winnerUnavailable')}
             </Text>
             <TouchableOpacity onPress={refetchResults} accessibilityRole="button">
-              <Text style={{ color: bdColors.primary, fontWeight: '700' }}>Retry</Text>
+              <Text style={{ color: bdColors.primary, fontWeight: '700' }}>{t('blindDate.common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : winner ? (
@@ -538,7 +547,7 @@ export default function SessionResultsScreen() {
         ) : (
           <View style={[styles.emptyCard, { borderColor: th.border, backgroundColor: th.surface }]}>
             <Ionicons name="star-outline" size={30} color={bdColors.gold} />
-            <Text style={[styles.emptyTitle, { color: th.text }]}>No finalist</Text>
+            <Text style={[styles.emptyTitle, { color: th.text }]}>{t('blindDate.results.noFinalistTitle')}</Text>
             <Text style={[styles.emptySub, { color: th.textSecondary }]}>
               {noFinalistCopy(session.status)}
             </Text>
@@ -549,7 +558,7 @@ export default function SessionResultsScreen() {
         {winner && (winner.rounds?.length ?? 0) > 0 && (
           <>
             <Text style={[styles.sectionTitle, { color: th.text }]}>
-              {winnerName ? `${winnerName}’s answers` : 'Winning answers'}
+              {winnerName ? t('blindDate.results.winnerAnswers', { name: winnerName }) : t('blindDate.results.winningAnswers')}
             </Text>
             {winner.rounds.map((r) => (
               <WinnerRoundSection key={r.round_id} round={r} />
@@ -560,7 +569,7 @@ export default function SessionResultsScreen() {
           <View style={[styles.emptyCard, { borderColor: th.border, backgroundColor: th.surface }]}>
             <Ionicons name="chatbubble-ellipses-outline" size={28} color={bdColors.primary} />
             <Text style={[styles.emptySub, { color: th.textSecondary }]}>
-              The winner didn&rsquo;t submit any answers.
+              {t('blindDate.results.winnerNoAnswers')}
             </Text>
           </View>
         )}
@@ -570,13 +579,13 @@ export default function SessionResultsScreen() {
           <TouchableOpacity
             style={[styles.chatBtn, { backgroundColor: bdColors.primary }]}
             onPress={() =>
-              router.push({ pathname: '/(app)/chat' as never, params: { matchId } })
+              router.push({ pathname: '/(app)/chat' as never, params: { matchId, matchSource: 'BLIND_DATE' } })
             }
             activeOpacity={0.85}
             accessibilityRole="button"
           >
             <Ionicons name="chatbubble-ellipses" size={18} color="#FFF" />
-            <Text style={styles.chatBtnText}>Open chat</Text>
+            <Text style={styles.chatBtnText}>{t('blindDate.results.openChat')}</Text>
           </TouchableOpacity>
         )}
 

@@ -11,6 +11,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -30,11 +31,12 @@ const PhotoCard = memo(function PhotoCard({
   photo: ProfilePhoto;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Pressable
       style={styles.photoCard}
       onPress={onPress}
-      accessibilityLabel={`View photo ${photo.order + 1}`}
+      accessibilityLabel={t('profile.photos.viewPhoto', { index: photo.order + 1 })}
       accessibilityRole="button"
     >
       <Image
@@ -47,7 +49,7 @@ const PhotoCard = memo(function PhotoCard({
       {photo.isPrimary && (
         <View style={styles.primaryBadge}>
           <Ionicons name="star" size={10} color="#fff" />
-          <Text style={styles.primaryBadgeText}>Primary</Text>
+          <Text style={styles.primaryBadgeText}>{t('profile.photos.primary')}</Text>
         </View>
       )}
     </Pressable>
@@ -59,6 +61,7 @@ interface PhotoContentProps {
 }
 
 export default function PhotoContent({ photos }: PhotoContentProps) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const { top, bottom } = useSafeAreaInsets();
@@ -77,11 +80,11 @@ export default function PhotoContent({ photos }: PhotoContentProps) {
   return (
     <View style={styles.container}>
       <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
-        <Text style={[styles.heading, { color: th.text }]}>My Photos</Text>
+        <Text style={[styles.heading, { color: th.text }]}>{t('profile.photos.title')}</Text>
         <Text style={[styles.subtext, { color: th.textSecondary }]}>
           {photos.length > 0
-            ? `${photos.length} photo${photos.length > 1 ? 's' : ''}. Tap a photo to view full screen.`
-            : 'No photos yet. Add photos from the edit profile screen.'}
+            ? t(photos.length === 1 ? 'profile.photos.countOne' : 'profile.photos.count', { count: photos.length })
+            : t('profile.photos.emptyHint')}
         </Text>
 
         {sortedPhotos.length > 0 ? (
@@ -98,7 +101,7 @@ export default function PhotoContent({ photos }: PhotoContentProps) {
           <View style={styles.emptyState}>
             <Ionicons name="images-outline" size={40} color={th.textMuted} />
             <Text style={[styles.emptyText, { color: th.textMuted }]}>
-              No photos yet
+              {t('profile.photos.empty')}
             </Text>
           </View>
         )}
@@ -123,7 +126,7 @@ export default function PhotoContent({ photos }: PhotoContentProps) {
             <Pressable
               style={styles.viewerCloseBtn}
               onPress={closeViewer}
-              accessibilityLabel="Close"
+              accessibilityLabel={t('common.close')}
               accessibilityRole="button"
             >
               <Ionicons name="close" size={26} color="#FFFFFF" />
@@ -170,7 +173,7 @@ export default function PhotoContent({ photos }: PhotoContentProps) {
               style={[styles.viewerNavBtn, viewerIndex === null || viewerIndex <= 0 ? styles.viewerNavBtnDisabled : null]}
               onPress={() => viewerIndex !== null && viewerIndex > 0 && goToIndex(viewerIndex - 1)}
               disabled={viewerIndex === null || viewerIndex <= 0}
-              accessibilityLabel="Previous photo"
+              accessibilityLabel={t('profile.photos.previous')}
               accessibilityRole="button"
             >
               <Ionicons name="chevron-back" size={28} color={viewerIndex !== null && viewerIndex > 0 ? '#FFFFFFCC' : '#FFFFFF33'} />
@@ -180,7 +183,7 @@ export default function PhotoContent({ photos }: PhotoContentProps) {
             {viewerIndex !== null && sortedPhotos[viewerIndex]?.isPrimary && (
               <View style={styles.viewerPrimaryBadge}>
                 <Ionicons name="star" size={12} color="#fff" />
-                <Text style={styles.viewerPrimaryText}>Primary Photo</Text>
+                <Text style={styles.viewerPrimaryText}>{t('profile.photos.primaryPhoto')}</Text>
               </View>
             )}
 
@@ -189,7 +192,7 @@ export default function PhotoContent({ photos }: PhotoContentProps) {
               style={[styles.viewerNavBtn, viewerIndex === null || viewerIndex >= sortedPhotos.length - 1 ? styles.viewerNavBtnDisabled : null]}
               onPress={() => viewerIndex !== null && viewerIndex < sortedPhotos.length - 1 && goToIndex(viewerIndex + 1)}
               disabled={viewerIndex === null || viewerIndex >= sortedPhotos.length - 1}
-              accessibilityLabel="Next photo"
+              accessibilityLabel={t('profile.photos.next')}
               accessibilityRole="button"
             >
               <Ionicons name="chevron-forward" size={28} color={viewerIndex !== null && viewerIndex < sortedPhotos.length - 1 ? '#FFFFFFCC' : '#FFFFFF33'} />

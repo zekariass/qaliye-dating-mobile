@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import { SectionCard, SectionTitle } from './FormComponents';
@@ -16,9 +17,10 @@ export const AccountStatusCard = memo(function AccountStatusCard({
   isOnboarded = false,
   isVerified = false,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <SectionCard sem={sem}>
-      <SectionTitle title="Account Status" sem={sem} />
+      <SectionTitle title={t('profile.accountStatus.title')} sem={sem} />
 
       {/* Onboarded row */}
       <View className="flex-row items-center py-3">
@@ -34,22 +36,22 @@ export const AccountStatusCard = memo(function AccountStatusCard({
         </View>
         <View className="flex-1">
           <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
-            Onboarded
+            {t('profile.accountStatus.onboarded')}
           </Text>
           <Text className="text-sm" style={{ color: sem.textMuted }}>
-            {isOnboarded ? 'Onboarding completed' : 'Onboarding in progress'}
+            {isOnboarded ? t('profile.accountStatus.onboardingCompleted') : t('profile.accountStatus.onboardingInProgress')}
           </Text>
         </View>
         <View
           className="px-3 py-1 rounded-full"
           style={{ backgroundColor: isOnboarded ? `${sem.success}18` : `${sem.textMuted}18` }}
-          accessibilityLabel={isOnboarded ? 'Completed' : 'In progress'}
+          accessibilityLabel={isOnboarded ? t('profile.accountStatus.completed') : t('profile.accountStatus.inProgress')}
         >
           <Text
             className="text-sm font-bold"
             style={{ color: isOnboarded ? sem.success : sem.textMuted }}
           >
-            {isOnboarded ? 'Completed' : 'In Progress'}
+            {isOnboarded ? t('profile.accountStatus.completed') : t('profile.accountStatus.inProgress')}
           </Text>
         </View>
       </View>
@@ -71,22 +73,22 @@ export const AccountStatusCard = memo(function AccountStatusCard({
         </View>
         <View className="flex-1">
           <Text className="text-base font-semibold" style={{ color: sem.textPrimary }}>
-            Verified identity
+            {t('profile.accountStatus.verifiedIdentity')}
           </Text>
           <Text className="text-sm" style={{ color: sem.textMuted }}>
-            {isVerified ? 'Your identity has been verified' : 'Identity not yet verified'}
+            {isVerified ? t('profile.accountStatus.identityVerified') : t('profile.accountStatus.identityNotVerified')}
           </Text>
         </View>
         <View
           className="px-3 py-1 rounded-full"
           style={{ backgroundColor: isVerified ? `${sem.info}18` : `${sem.textMuted}18` }}
-          accessibilityLabel={isVerified ? 'Verified' : 'Not verified'}
+          accessibilityLabel={isVerified ? t('profile.accountStatus.verified') : t('profile.accountStatus.notVerified')}
         >
           <Text
             className="text-sm font-bold"
             style={{ color: isVerified ? sem.info : sem.textMuted }}
           >
-            {isVerified ? 'Verified' : 'Not Verified'}
+            {isVerified ? t('profile.accountStatus.verified') : t('profile.accountStatus.notVerified')}
           </Text>
         </View>
       </View>
@@ -95,7 +97,7 @@ export const AccountStatusCard = memo(function AccountStatusCard({
       <View className="flex-row items-center mt-4 pt-3" style={{ borderTopWidth: 1, borderTopColor: sem.border }}>
         <Ionicons name="lock-closed" size={13} color={sem.textMuted} style={{ marginRight: 6 }} />
         <Text className="text-sm flex-1" style={{ color: sem.textMuted }}>
-          These fields are read-only and cannot be changed.
+          {t('profile.accountStatus.readOnly')}
         </Text>
       </View>
     </SectionCard>

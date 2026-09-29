@@ -1,8 +1,9 @@
+import i18n from '@/i18n';
 import type { ActionLimitAndCost, EntitlementResponse, PlanLimits } from '@/types/billing';
 import { ACTION_CODES } from '@/types/billing';
 
 export function formatLimit(value: number | null | undefined): string {
-  if (value === null || value === undefined) return 'Unlimited';
+  if (value === null || value === undefined) return i18n.t('billing.unlimited', 'Unlimited');
   return value.toString();
 }
 
@@ -23,12 +24,12 @@ export function getPlanLimitDisplays(entitlements: EntitlementResponse | null): 
   const voiceLimit = pl?.VOICE_CHAT_MSGS ?? lac?.[ACTION_CODES.VOICE_MESSAGE]?.limit ?? null;
   const imageLimit = pl?.IMAGE_CHAT_MSGS ?? lac?.[ACTION_CODES.IMAGE_MESSAGE]?.limit ?? null;
   return [
-    { label: 'Likes', icon: 'heart', value: pl?.LIKES ?? null, formatted: formatLimit(pl?.LIKES) },
-    { label: 'Super Likes', icon: 'star', value: pl?.SUPERLIKES ?? null, formatted: formatLimit(pl?.SUPERLIKES) },
-    { label: 'Rewinds', icon: 'arrow-undo', value: pl?.REWINDS ?? null, formatted: formatLimit(pl?.REWINDS) },
-    { label: 'Boosts', icon: 'rocket', value: pl?.BOOSTS ?? null, formatted: formatLimit(pl?.BOOSTS) },
-    { label: 'Voice messages', icon: 'mic', value: voiceLimit, formatted: formatLimit(voiceLimit) },
-    { label: 'Image messages', icon: 'image', value: imageLimit, formatted: formatLimit(imageLimit) },
+    { label: i18n.t('billing.actionLabels.LIKE', 'Likes'), icon: 'heart', value: pl?.LIKES ?? null, formatted: formatLimit(pl?.LIKES) },
+    { label: i18n.t('billing.actionLabels.SUPER_LIKE', 'Super Likes'), icon: 'star', value: pl?.SUPERLIKES ?? null, formatted: formatLimit(pl?.SUPERLIKES) },
+    { label: i18n.t('billing.actionLabels.REWIND', 'Rewinds'), icon: 'arrow-undo', value: pl?.REWINDS ?? null, formatted: formatLimit(pl?.REWINDS) },
+    { label: i18n.t('billing.actionLabels.BOOST', 'Boosts'), icon: 'rocket', value: pl?.BOOSTS ?? null, formatted: formatLimit(pl?.BOOSTS) },
+    { label: i18n.t('billing.actionLabels.VOICE_MESSAGE', 'Voice messages'), icon: 'mic', value: voiceLimit, formatted: formatLimit(voiceLimit) },
+    { label: i18n.t('billing.actionLabels.IMAGE_MESSAGE', 'Image messages'), icon: 'image', value: imageLimit, formatted: formatLimit(imageLimit) },
   ];
 }
 
@@ -235,14 +236,14 @@ export type PeriodType = 'DAY' | 'MONTH' | 'BILLING_CYCLE' | 'LIFETIME';
 export function periodTypeLabel(periodType: string | undefined | null): string {
   switch (periodType) {
     case 'MONTH':
-      return 'monthly';
+      return i18n.t('billing.periodAdj.MONTH', 'monthly');
     case 'BILLING_CYCLE':
-      return 'billing cycle';
+      return i18n.t('billing.periodAdj.BILLING_CYCLE', 'billing cycle');
     case 'LIFETIME':
-      return 'lifetime';
+      return i18n.t('billing.periodAdj.LIFETIME', 'lifetime');
     case 'DAY':
     default:
-      return 'daily';
+      return i18n.t('billing.periodAdj.DAY', 'daily');
   }
 }
 
@@ -360,59 +361,60 @@ export type ActionCostSummary = {
 
 /** Map backend period_type values to user-friendly labels. */
 export function formatPeriodType(periodType: string | null | undefined): string {
-  if (!periodType) return 'Billing Cycle';
+  if (!periodType) return i18n.t('billing.period.BILLING_CYCLE', 'Billing Cycle');
   const map: Record<string, string> = {
-    DAY: 'Daily',
-    DAILY: 'Daily',
-    WEEK: 'Weekly',
-    WEEKLY: 'Weekly',
-    MONTH: 'Monthly',
-    MONTHLY: 'Monthly',
-    YEAR: 'Yearly',
-    YEARLY: 'Yearly',
-    BILLING_CYCLE: 'Billing Cycle',
-    BILLINGCYCLE: 'Billing Cycle',
-    LIFETIME: 'Lifetime',
+    DAY: i18n.t('billing.period.DAY', 'Daily'),
+    DAILY: i18n.t('billing.period.DAILY', 'Daily'),
+    WEEK: i18n.t('billing.period.WEEK', 'Weekly'),
+    WEEKLY: i18n.t('billing.period.WEEKLY', 'Weekly'),
+    MONTH: i18n.t('billing.period.MONTH', 'Monthly'),
+    MONTHLY: i18n.t('billing.period.MONTHLY', 'Monthly'),
+    YEAR: i18n.t('billing.period.YEAR', 'Yearly'),
+    YEARLY: i18n.t('billing.period.YEARLY', 'Yearly'),
+    BILLING_CYCLE: i18n.t('billing.period.BILLING_CYCLE', 'Billing Cycle'),
+    BILLINGCYCLE: i18n.t('billing.period.BILLINGCYCLE', 'Billing Cycle'),
+    LIFETIME: i18n.t('billing.period.LIFETIME', 'Lifetime'),
   };
   return map[periodType.toUpperCase()] ?? periodType;
 }
 
 /** Map backend period_type values to a "try again" label. */
 export function formatTryAgainLabel(periodType: string | null | undefined): string {
-  if (!periodType) return 'next billing cycle';
+  if (!periodType) return i18n.t('billing.tryAgainPeriod.BILLING_CYCLE', 'next billing cycle');
   const map: Record<string, string> = {
-    DAY: 'tomorrow',
-    DAILY: 'tomorrow',
-    WEEK: 'next week',
-    WEEKLY: 'next week',
-    MONTH: 'next month',
-    MONTHLY: 'next month',
-    YEAR: 'next year',
-    YEARLY: 'next year',
-    BILLING_CYCLE: 'next billing cycle',
-    BILLINGCYCLE: 'next billing cycle',
+    DAY: i18n.t('billing.tryAgainPeriod.DAY', 'tomorrow'),
+    DAILY: i18n.t('billing.tryAgainPeriod.DAILY', 'tomorrow'),
+    WEEK: i18n.t('billing.tryAgainPeriod.WEEK', 'next week'),
+    WEEKLY: i18n.t('billing.tryAgainPeriod.WEEKLY', 'next week'),
+    MONTH: i18n.t('billing.tryAgainPeriod.MONTH', 'next month'),
+    MONTHLY: i18n.t('billing.tryAgainPeriod.MONTHLY', 'next month'),
+    YEAR: i18n.t('billing.tryAgainPeriod.YEAR', 'next year'),
+    YEARLY: i18n.t('billing.tryAgainPeriod.YEARLY', 'next year'),
+    BILLING_CYCLE: i18n.t('billing.tryAgainPeriod.BILLING_CYCLE', 'next billing cycle'),
+    BILLINGCYCLE: i18n.t('billing.tryAgainPeriod.BILLINGCYCLE', 'next billing cycle'),
   };
-  return map[periodType.toUpperCase()] ?? 'next billing cycle';
+  return map[periodType.toUpperCase()] ?? i18n.t('billing.tryAgainPeriod.BILLING_CYCLE', 'next billing cycle');
 }
 
 export function getActionName(actionCode: string | null | undefined): string {
-  if (!actionCode) return 'This Action';
+  if (!actionCode) return i18n.t('billing.actions.thisAction', 'This Action');
   const map: Record<string, string> = {
-    LIKE: 'Like',
-    LIKES: 'Like',
-    SUPER_LIKE: 'Super Like',
-    SUPERLIKES: 'Super Like',
-    REWIND: 'Rewind',
-    REWINDS: 'Rewind',
-    BOOST: 'Boost',
-    BOOSTS: 'Boost',
-    VOICE_MESSAGE: 'Voice Message',
-    IMAGE_MESSAGE: 'Image Message',
-    SEE_WHO_LIKED_YOU: 'Reveal Profile',
-    RETURN_PASSED_PROFILE: 'Revisit Profile',
-    SUPER_MESSAGE: 'Before-Match Message',
-    INCOGNITO_MODE: 'Incognito Mode',
-    CHANGE_ADDRESS: 'Change Address',
+    LIKE: i18n.t('billing.actions.like', 'Like'),
+    LIKES: i18n.t('billing.actions.like', 'Like'),
+    SUPER_LIKE: i18n.t('billing.actions.superLike', 'Super Like'),
+    SUPERLIKES: i18n.t('billing.actions.superLike', 'Super Like'),
+    REWIND: i18n.t('billing.actions.rewind', 'Rewind'),
+    REWINDS: i18n.t('billing.actions.rewind', 'Rewind'),
+    BOOST: i18n.t('billing.actions.boost', 'Boost'),
+    BOOSTS: i18n.t('billing.actions.boost', 'Boost'),
+    VOICE_MESSAGE: i18n.t('billing.actions.voiceMessage', 'Voice Message'),
+    IMAGE_MESSAGE: i18n.t('billing.actions.imageMessage', 'Image Message'),
+    MESSAGE: i18n.t('billing.actions.message', 'Message'),
+    SEE_WHO_LIKED_YOU: i18n.t('billing.actions.revealProfile', 'Reveal Profile'),
+    RETURN_PASSED_PROFILE: i18n.t('billing.actions.revisitProfile', 'Revisit Profile'),
+    SUPER_MESSAGE: i18n.t('billing.actions.superMessage', 'Before-Match Message'),
+    INCOGNITO_MODE: i18n.t('billing.actions.incognitoMode', 'Incognito Mode'),
+    CHANGE_ADDRESS: i18n.t('billing.actions.changeAddress', 'Change Address'),
   };
   return map[actionCode] ?? actionCode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -436,7 +438,7 @@ export function getActionCostSummary(
       isStale: false,
       isLimitExceeded: false,
       periodType: null,
-      message: `Upgrade to use ${actionName.toLowerCase()}.`,
+      message: i18n.t('billing.messages.upgradeToUse', 'Upgrade to use {{action}}.', { action: actionName.toLowerCase() }),
     };
   }
 
@@ -487,7 +489,7 @@ export function getActionCostSummary(
       isStale: false,
       isLimitExceeded: true,
       periodType,
-      message: `Your ${formatPeriodType(periodType).toLowerCase()} limit for ${actionName.toLowerCase()} has been reached.`,
+      message: i18n.t('billing.messages.limitReached', 'Your {{period}} limit for {{action}} has been reached.', { period: formatPeriodType(periodType).toLowerCase(), action: actionName.toLowerCase() }),
     };
   }
 
@@ -500,7 +502,7 @@ export function getActionCostSummary(
       isStale,
       isLimitExceeded: false,
       periodType,
-      message: `You need ${cost} credits to perform this action.`,
+      message: i18n.t('billing.messages.needCredits', 'You need {{count}} credits to perform this action.', { count: cost }),
     };
   }
 
@@ -512,7 +514,7 @@ export function getActionCostSummary(
     isStale,
     isLimitExceeded: false,
     periodType,
-    message: `Your free ${actionName.toLowerCase()}s for this period have been used. Upgrade to ${actionName.toLowerCase()} more.`,
+    message: i18n.t('billing.messages.freeUsed', 'Your free {{action}}s for this period have been used. Upgrade to {{action}} more.', { action: actionName.toLowerCase() }),
   };
 }
 

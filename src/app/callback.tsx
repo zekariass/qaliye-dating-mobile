@@ -3,6 +3,7 @@ import { Redirect, useGlobalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
+import i18n from '@/i18n';
 import { supabase } from '@/lib/supabase';
 
 export default function OAuthCallback() {
@@ -68,7 +69,7 @@ export default function OAuthCallback() {
         setStatus('success');
       } catch (e: any) {
         setStatus('error');
-        setErrorMsg(e.message || 'Authentication failed');
+        setErrorMsg(e.message || i18n.t('auth.authenticationFailed', 'Authentication failed'));
       }
     };
 

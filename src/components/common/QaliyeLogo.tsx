@@ -1,14 +1,16 @@
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function QaliyeLogo() {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
 
   return (
-    <View style={styles.logo} accessibilityLabel="Qal Dating" accessibilityRole="image">
+    <View style={styles.logo} accessibilityLabel={t('app.name', 'Qal Dating')} accessibilityRole="image">
       <View style={styles.logoQWrap}>
         <Text style={[styles.logoQ, { color: isDark ? '#A78BFA' : colors.primary }]}>Q</Text>
         <View style={[styles.logoDot, { backgroundColor: isDark ? '#A78BFA' : colors.primary }]} />

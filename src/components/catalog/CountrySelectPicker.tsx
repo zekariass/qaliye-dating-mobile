@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     FlatList,
     Modal,
@@ -27,7 +28,7 @@ type Props = {
 export function CountrySelectPicker({
   value,
   onChange,
-  placeholder = 'Select country…',
+  placeholder,
   accentColor = '#8A2CFF',
   textColor = '#1B1340',
   mutedColor = '#9CA3AF',
@@ -35,6 +36,7 @@ export function CountrySelectPicker({
   surfaceColor = '#FFFFFF',
   surfaceMutedColor = '#F5F0FA',
 }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const { top, bottom } = useSafeAreaInsets();
@@ -50,7 +52,7 @@ export function CountrySelectPicker({
     );
   }, [search]);
 
-  const displayLabel = value ? getCountryName(value) : placeholder;
+  const displayLabel = value ? getCountryName(value) : (placeholder ?? t('catalog.selectCountry', 'Select Country'));
   const hasValue = !!value;
 
   const handleSelect = useCallback(
@@ -68,7 +70,10 @@ export function CountrySelectPicker({
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Nationality: ${displayLabel}`}
+        accessibilityLabel={t('catalog.nationalityLabel', {
+          defaultValue: 'Nationality: {{label}}',
+          label: displayLabel,
+        })}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -108,9 +113,9 @@ export function CountrySelectPicker({
             }}
           >
             <Text style={{ flex: 1, fontSize: 17, fontWeight: '700', color: textColor }}>
-              Select Nationality
+              {t('catalog.selectNationality', 'Select Nationality')}
             </Text>
-            <Pressable onPress={() => { setOpen(false); setSearch(''); }} hitSlop={8} accessibilityLabel="Close">
+            <Pressable onPress={() => { setOpen(false); setSearch(''); }} hitSlop={8} accessibilityLabel={t('common.close', 'Close')}>
               <Ionicons name="checkmark-circle" size={28} color={accentColor} />
             </Pressable>
           </View>
@@ -132,7 +137,7 @@ export function CountrySelectPicker({
             <Ionicons name="search-outline" size={16} color={mutedColor} />
             <TextInput
               style={{ flex: 1, paddingVertical: 10, fontSize: 14, color: textColor }}
-              placeholder="Search countries…"
+              placeholder={t('catalog.searchCountries', 'Search countries…')}
               placeholderTextColor={mutedColor}
               value={search}
               onChangeText={setSearch}
@@ -150,7 +155,7 @@ export function CountrySelectPicker({
           {filtered.length === 0 ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <Ionicons name="globe-outline" size={40} color={mutedColor} />
-              <Text style={{ color: mutedColor, fontSize: 14 }}>No countries found</Text>
+              <Text style={{ color: mutedColor, fontSize: 14 }}>{t('catalog.noCountries', 'No countries found')}</Text>
             </View>
           ) : (
             <FlatList

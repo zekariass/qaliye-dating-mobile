@@ -4,6 +4,7 @@ import { joinBlindDateSession } from '@/api/blindDate/blindDateApi';
 import { BLIND_DATE_DISCOVER_KEY } from '@/hooks/blindDate/useDiscoverSessions';
 import { BLIND_DATE_PARTICIPATIONS_KEY } from '@/hooks/blindDate/useMyParticipations';
 import type { BlindDateJoinResponseDto } from '@/types/blindDate';
+import { blindDateErrorCode } from '@/utils/blindDateErrors';
 import { generateUUID } from '@/utils/uuid';
 
 /**
@@ -15,7 +16,14 @@ export function useJoinSession() {
   const queryClient = useQueryClient();
 
   return useMutation<BlindDateJoinResponseDto, unknown, { sessionId: string }>({
-    mutationFn: ({ sessionId }) => joinBlindDateSession(sessionId, generateUUID()),
+    // Per the API contract, idempotency_key_in_use is safe to retry once with
+    // a freshly generated key.
+    mutationFn: ({ sessionId }) =>
+      joinBlindDateSession(sessionId, generateUUID()).catch((err) =>
+        blindDateErrorCode(err) === 'idempotency_key_in_use'
+          ? joinBlindDateSession(sessionId, generateUUID())
+          : Promise.reject(err),
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: BLIND_DATE_DISCOVER_KEY });
       queryClient.invalidateQueries({ queryKey: BLIND_DATE_PARTICIPATIONS_KEY });

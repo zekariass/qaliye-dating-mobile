@@ -941,6 +941,7 @@
       "tipsBody": "Use clear, well-lit photos that show your face. Avoid group photos as your primary photo."
     },
     "details": {
+      "email": "Email",
       "address": "Address",
       "gender": "Gender",
       "dateOfBirth": "Date of Birth",

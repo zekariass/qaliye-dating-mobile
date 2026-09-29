@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Platform,
     StyleSheet,
@@ -10,14 +11,22 @@ import {
 } from 'react-native';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
+import { BlindDateBadge } from '@/components/common/BlindDateBadge';
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { ActivityStatus } from '@/types/activity';
 import type { InboxItem } from '@/types/chat';
+import { isBlindDateMatch } from '@/utils/matchSource';
 
 // ---------------------------------------------------------------------------
 // Timestamp formatting
 // ---------------------------------------------------------------------------
+
+const MONTH_KEYS = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const;
 
 function formatTimestamp(isoString: string | null): {
   label: string;
@@ -31,10 +40,13 @@ function formatTimestamp(isoString: string | null): {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
   if (diffMinutes < 60) {
-    return { label: `${Math.max(diffMinutes, 1)}m ago`, isRecent: true };
+    return {
+      label: i18n.t('matches.minutesAgo', { minutes: Math.max(diffMinutes, 1) }),
+      isRecent: true,
+    };
   }
   if (diffHours < 24) {
-    return { label: `${diffHours}h ago`, isRecent: true };
+    return { label: i18n.t('matches.hoursAgo', { hours: diffHours }), isRecent: true };
   }
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -43,14 +55,13 @@ function formatTimestamp(isoString: string | null): {
     date.getMonth() === yesterday.getMonth() &&
     date.getFullYear() === yesterday.getFullYear()
   ) {
-    return { label: 'Yesterday', isRecent: false };
+    return { label: i18n.t('chat.yesterday'), isRecent: false };
   }
-  const monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
   return {
-    label: `${monthNames[date.getMonth()]} ${date.getDate()}`,
+    label: i18n.t('chat.dateLabelShort', {
+      month: i18n.t(`chat.months.${MONTH_KEYS[date.getMonth()]}`),
+      day: date.getDate(),
+    }),
     isRecent: false,
   };
 }
@@ -197,22 +208,25 @@ interface ConversationRowProps {
 }
 
 function ConversationRowInner({ item, onPress, isLast, activityStatus }: ConversationRowProps) {
+  const { t } = useTranslation();
   const th = useRowTheme();
   const { label: timestampLabel, isRecent } = formatTimestamp(
     item.lastMessageAt ?? item.matchedAt,
   );
   const timestampColor = isRecent ? th.recentTimestamp : th.oldTimestamp;
 
-  const preview = item.lastMessage?.preview ?? 'New match! Say hello';
+  const preview = item.lastMessage?.preview ?? t('chat.newMatchPreview');
   const isMuted =
     item.mutedUntil != null && new Date(item.mutedUntil) > new Date();
+  const isBlindDate = isBlindDateMatch(item);
 
   const accessibilityLabel = [
     item.participant.displayName,
-    item.participant.isVerified ? 'Verified' : null,
-    `Last message: ${preview}`,
+    item.participant.isVerified ? t('profile.status.verified') : null,
+    isBlindDate ? t('blindDate.common.blindDate', { defaultValue: 'Blind Date' }) : null,
+    t('chat.lastMessage', { preview }),
     timestampLabel,
-    item.unreadCount > 0 ? `${item.unreadCount} unread` : null,
+    item.unreadCount > 0 ? t('chat.unread', { count: item.unreadCount }) : null,
   ]
     .filter(Boolean)
     .join('. ');
@@ -246,6 +260,9 @@ function ConversationRowInner({ item, onPress, isLast, activityStatus }: Convers
                 color={th.verifiedColor}
                 style={styles.verifiedIcon}
               />
+            )}
+            {isBlindDate && (
+              <BlindDateBadge size={14} style={styles.blindDateIcon} />
             )}
           </View>
           <Text style={[styles.timestamp, { color: timestampColor }]}>
@@ -318,6 +335,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   verifiedIcon: {
+    marginLeft: 4,
+    flexShrink: 0,
+  },
+  blindDateIcon: {
     marginLeft: 4,
     flexShrink: 0,
   },

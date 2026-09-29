@@ -16,6 +16,7 @@ import { themedError, themedSuccess } from '@/components/common/ThemedAlert';
 import { colors } from '@/constants/theme';
 import { useRedeemPromotion } from '@/hooks/billing/useRedeemPromotion';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
 import type { EligiblePromotionDto } from '@/types/billing';
 import { extractApiError } from '@/utils/apiError';
 
@@ -26,7 +27,7 @@ type Props = {
   onSuccess: (campaignKey: string) => void;
 };
 
-const PROMOTION_ERROR_MESSAGES: Record<string, string> = {
+const PROMOTION_ERROR_DEFAULTS: Record<string, string> = {
   promotion_not_found: 'This promotion is no longer available.',
   promotion_not_claimable: 'This promotion cannot be claimed at this time.',
   promotion_not_active: 'This promotion is not currently active.',
@@ -38,17 +39,23 @@ const PROMOTION_ERROR_MESSAGES: Record<string, string> = {
   user_has_active_subscription: 'You already have an active subscription.',
 };
 
+function promotionErrorMessage(code: string): string | undefined {
+  const defaultValue = PROMOTION_ERROR_DEFAULTS[code];
+  if (defaultValue == null) return undefined;
+  return i18n.t(`promotion.errors.${code}`, defaultValue);
+}
+
 function formatDurationDays(days: number | null): string | null {
   if (days == null) return null;
   if (days % 30 === 0 && days >= 30) {
     const months = days / 30;
-    return months === 1 ? '1 month' : `${months} months`;
+    return i18n.t('promotion.duration.month', { count: months, defaultValue: months === 1 ? '1 month' : '{{count}} months' });
   }
   if (days % 7 === 0) {
     const weeks = days / 7;
-    return weeks === 1 ? '1 week' : `${weeks} weeks`;
+    return i18n.t('promotion.duration.week', { count: weeks, defaultValue: weeks === 1 ? '1 week' : '{{count}} weeks' });
   }
-  return days === 1 ? '1 day' : `${days} days`;
+  return i18n.t('promotion.duration.day', { count: days, defaultValue: days === 1 ? '1 day' : '{{count}} days' });
 }
 
 function formatEndDate(endsAt: string | null): string | null {
@@ -140,7 +147,7 @@ export function PromotionAlert({ promotion, onExplicitDismiss, onProgrammaticClo
         setIsClaiming(false);
         const detail = extractApiError(err);
         const errorMsg =
-          PROMOTION_ERROR_MESSAGES[detail.code.toLowerCase()] ??
+          promotionErrorMessage(detail.code.toLowerCase()) ??
           t('promotion.claimError', 'Something went wrong. Please try again.');
         themedError(
           t('promotion.claimErrorTitle', 'Claim Failed'),

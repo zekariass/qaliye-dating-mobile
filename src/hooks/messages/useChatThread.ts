@@ -12,6 +12,7 @@ function mapChatThreadDto(dto: import('@/types/chat').ChatThreadDto): ChatThread
   return {
     matchId: dto.match_id,
     status: dto.status,
+    matchSource: dto.match_source,
     participant: {
       userId: dto.participant.user_id,
       displayName: dto.participant.display_name,

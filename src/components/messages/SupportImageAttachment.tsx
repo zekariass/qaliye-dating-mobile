@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -26,6 +27,7 @@ export function SupportImageAttachment({
   attachment: SupportAttachment;
   isOutgoing: boolean;
 }) {
+  const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
   const [modalVisible, setModalVisible] = useState(false);
@@ -41,7 +43,7 @@ export function SupportImageAttachment({
         onPress={() => setModalVisible(true)}
         activeOpacity={0.9}
         accessibilityRole="imagebutton"
-        accessibilityLabel={`Image: ${attachment.file_name}`}
+        accessibilityLabel={t('chat.imageLabel', { name: attachment.file_name })}
       >
         <View style={[styles.thumbnailWrap, { borderColor: isOutgoing ? 'rgba(255,255,255,0.2)' : isDark ? th.border : '#E4D9F7' }]}>
           {!loaded && !error && (
@@ -52,7 +54,7 @@ export function SupportImageAttachment({
           {error ? (
             <View style={styles.errorOverlay}>
               <Text style={[styles.errorText, { color: isOutgoing ? '#FFD0D0' : colors.danger }]}>
-                Failed to load image
+                {t('chat.imageLoadFailed')}
               </Text>
             </View>
           ) : (
@@ -80,7 +82,7 @@ export function SupportImageAttachment({
             style={styles.modalCloseBtn}
             onPress={() => setModalVisible(false)}
             accessibilityRole="button"
-            accessibilityLabel="Close image"
+            accessibilityLabel={t('chat.closeImage')}
           >
             <Text style={styles.modalCloseText}>✕</Text>
           </TouchableOpacity>

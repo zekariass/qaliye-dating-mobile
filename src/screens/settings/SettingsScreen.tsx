@@ -11,6 +11,7 @@ import {
     StyleSheet,
     Switch,
     Text,
+    TouchableOpacity,
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,16 +32,17 @@ import { useSignOutWithDeactivation } from '@/hooks/notifications/useSignOutWith
 import { useTheme } from '@/hooks/use-theme';
 import { useAppLink } from '@/hooks/useAppLink';
 import { useRateUs } from '@/hooks/useRateUs';
+import i18n from '@/i18n';
 import { supabase } from '@/lib/supabase';
-import { useLanguageStore } from '@/stores/language-store';
+import { LANGUAGE_LABELS, LANGUAGE_LIST, useLanguageStore } from '@/stores/language-store';
 import { ThemeMode, useThemeStore } from '@/stores/theme-store';
 import { isActiveSubscription, isFreePremiumPlan, isPremiumPlan } from '@/types/billing';
 import { extractApiError, getApiErrorTitle } from '@/utils/apiError';
 
-const THEME_OPTIONS: { key: ThemeMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-  { key: 'light', label: 'Light', icon: 'sunny-outline' },
-  { key: 'dark', label: 'Dark', icon: 'moon-outline' },
-  { key: 'system', label: 'System', icon: 'contrast-outline' },
+const THEME_OPTIONS: { key: ThemeMode; labelKey: string; labelFallback: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { key: 'light', labelKey: 'settings.themeLight', labelFallback: 'Light', icon: 'sunny-outline' },
+  { key: 'dark', labelKey: 'settings.themeDark', labelFallback: 'Dark', icon: 'moon-outline' },
+  { key: 'system', labelKey: 'settings.themeSystem', labelFallback: 'System', icon: 'contrast-outline' },
 ];
 
 export default function SettingsScreen() {
@@ -197,7 +199,7 @@ export default function SettingsScreen() {
         <Pressable
           style={[styles.circleBtn, { backgroundColor: th.surface }]}
           onPress={handleBack}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back', 'Back')}
           accessibilityRole="button"
         >
           <Ionicons name="chevron-back" size={22} color={th.text} />
@@ -287,7 +289,11 @@ export default function SettingsScreen() {
                 </Text>
                 {entitlements && (
                   <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                    {`${entitlements.credits.credit_balance.toLocaleString()} credits`}
+                    {t('billing.creditBalance', {
+                      count: entitlements.credits.credit_balance,
+                      formatted: entitlements.credits.credit_balance.toLocaleString(),
+                      defaultValue: entitlements.credits.credit_balance === 1 ? '{{formatted}} credit' : '{{formatted}} credits',
+                    })}
                   </Text>
                 )}
               </View>
@@ -413,7 +419,6 @@ export default function SettingsScreen() {
         />
 
         {/* ── Language ── */}
-        {/* Language switcher temporarily disabled — will be re-enabled in the future.
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
           <Text style={[styles.sectionTitle, { color: th.text }]}>
             {t('settings.language', 'Language')}
@@ -441,7 +446,6 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
           </Pressable>
         </View>
-        */}
 
         {/* ── Appearance ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
@@ -464,12 +468,12 @@ export default function SettingsScreen() {
                 onPress={() => setMode(option.key)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: isActive }}
-                accessibilityLabel={option.label}
+                accessibilityLabel={t(option.labelKey, option.labelFallback)}
               >
                 <View style={[styles.iconCircle, { backgroundColor: th.backgroundSelected }]}>
                   <Ionicons name={option.icon} size={18} color={th.text} />
                 </View>
-                <Text style={[styles.optionLabel, { color: th.text }]}>{option.label}</Text>
+                <Text style={[styles.optionLabel, { color: th.text }]}>{t(option.labelKey, option.labelFallback)}</Text>
                 <View
                   style={[
                     styles.radio,
@@ -516,15 +520,15 @@ export default function SettingsScreen() {
             style={[styles.optionRow, { borderTopWidth: 1, borderTopColor: th.border }]}
             onPress={() => router.push('/(app)/blocked-users' as any)}
             accessibilityRole="button"
-            accessibilityLabel="Blocked users"
+            accessibilityLabel={t('settings.blockedUsers', 'Blocked Users')}
           >
             <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="ban-outline" size={18} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.optionLabel, { color: th.text }]}>Blocked Users</Text>
+              <Text style={[styles.optionLabel, { color: th.text }]}>{t('settings.blockedUsers', 'Blocked Users')}</Text>
               <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
-                Manage users you&apos;ve blocked
+                {t('settings.blockedUsersSub', "Manage users you've blocked")}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
@@ -722,7 +726,6 @@ export default function SettingsScreen() {
       </Modal>
 
       {/* ── Language picker modal ── */}
-      {/* Language switcher temporarily disabled — will be re-enabled in the future.
       <Modal
         visible={langOpen}
         transparent
@@ -762,7 +765,6 @@ export default function SettingsScreen() {
           </View>
         </Pressable>
       </Modal>
-      */}
 
       {/* ── Sign-out loading overlay ── */}
       <Modal

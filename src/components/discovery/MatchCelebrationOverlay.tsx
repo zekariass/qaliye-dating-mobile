@@ -29,6 +29,8 @@ interface Props {
   name: string;
   photoUrl?: string;
   myPhotoUrl?: string;
+  /** True when the match came from a Blind Date session. */
+  isBlindDate?: boolean;
   onSendMessage: () => void;
   onKeepSwiping: () => void;
 }
@@ -62,7 +64,7 @@ const slideUpKeyframe = new Keyframe({
   100: { opacity: 1, translateY: 0 },
 });
 
-export default function MatchCelebrationOverlay({ visible, name, photoUrl, myPhotoUrl, onSendMessage, onKeepSwiping }: Props) {
+export default function MatchCelebrationOverlay({ visible, name, photoUrl, myPhotoUrl, isBlindDate, onSendMessage, onKeepSwiping }: Props) {
   const { t } = useTranslation();
   const pulse = useSharedValue(1);
 
@@ -116,6 +118,14 @@ export default function MatchCelebrationOverlay({ visible, name, photoUrl, myPho
             <Animated.View entering={popKeyframe.delay(100).duration(500)} style={styles.badge}>
               <Ionicons name="heart-circle" size={14} color="#FFD06B" />
               <Text style={styles.badgeText}>{t('discovery.newMatch', 'New Match')}</Text>
+              {isBlindDate && (
+                <Image
+                  source={require('@/assets/images/blind-date-icon.png')}
+                  style={styles.badgeBlindIcon}
+                  contentFit="contain"
+                  accessibilityElementsHidden
+                />
+              )}
             </Animated.View>
 
             {/* Two photos with interlinked hearts between them */}
@@ -229,6 +239,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
+  },
+  badgeBlindIcon: {
+    width: 24,
+    height: 12,
   },
   photosRow: {
     flexDirection: 'row',

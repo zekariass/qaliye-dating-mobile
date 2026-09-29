@@ -1,8 +1,12 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import i18n from '@/i18n';
+import { supabase } from '@/lib/supabase';
+import { translateProfileOption } from '@/utils/profileOptions';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
 interface DetailItem {
@@ -11,19 +15,12 @@ interface DetailItem {
   value: string;
 }
 
-function formatEnum(val: string): string {
-  return val
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
+    'january', 'february', 'march', 'april', 'may', 'june',
+    'july', 'august', 'september', 'october', 'november', 'december',
+  ].map((m) => i18n.t(`profile.edit.monthsShort.${m}`));
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
@@ -36,44 +33,47 @@ function calcAge(dateStr: string): number {
   return age;
 }
 
-function buildDetails(p: CurrentUserProfile): DetailItem[] {
+function buildDetails(p: CurrentUserProfile, email: string | null): DetailItem[] {
   const items: DetailItem[] = [];
 
-  items.push({ icon: 'map-outline', label: 'Address', value: p.address });
-  items.push({ icon: 'person-outline', label: 'Gender', value: formatEnum(p.gender) });
+  if (email) {
+    items.push({ icon: 'mail-outline', label: i18n.t('profile.details.email'), value: email });
+  }
+  items.push({ icon: 'map-outline', label: i18n.t('profile.details.address'), value: p.address });
+  items.push({ icon: 'person-outline', label: i18n.t('profile.details.gender'), value: translateProfileOption(p.gender, i18n.t) });
   items.push({
     icon: 'calendar-outline',
-    label: 'Date of Birth',
-    value: `${formatDate(p.dateOfBirth)} (${calcAge(p.dateOfBirth)})`,
+    label: i18n.t('profile.details.dateOfBirth'),
+    value: `${formatDate(p.dateOfBirth)} ${i18n.t('profile.details.ageValue', { age: calcAge(p.dateOfBirth) })}`,
   });
   if (p.heightCm != null) {
-    items.push({ icon: 'resize-outline', label: 'Height', value: `${p.heightCm} cm` });
+    items.push({ icon: 'resize-outline', label: i18n.t('profile.details.height'), value: i18n.t('profile.details.heightValue', { height: p.heightCm }) });
   }
-  items.push({ icon: 'home-outline', label: 'Residency Type', value: formatEnum(p.residencyType) });
+  items.push({ icon: 'home-outline', label: i18n.t('profile.details.residencyType'), value: translateProfileOption(p.residencyType, i18n.t) });
   if (p.ethnicities && p.ethnicities.length > 0) {
-    items.push({ icon: 'people-outline', label: 'Ethnicity', value: p.ethnicities.map((e) => e.name).join(', ') });
+    items.push({ icon: 'people-outline', label: i18n.t('profile.details.ethnicity'), value: p.ethnicities.map((e) => e.name).join(', ') });
   }
-  if (p.nationality) items.push({ icon: 'globe-outline', label: 'Nationality', value: p.nationality });
-  if (p.religion) items.push({ icon: 'mci:hands-pray', label: 'Religion', value: p.religion });
-  if (p.educationLevel) items.push({ icon: 'school-outline', label: 'Education Level', value: p.educationLevel });
-  if (p.occupation) items.push({ icon: 'briefcase-outline', label: 'Occupation', value: p.occupation });
+  if (p.nationality) items.push({ icon: 'globe-outline', label: i18n.t('profile.details.nationality'), value: translateProfileOption(p.nationality, i18n.t) });
+  if (p.religion) items.push({ icon: 'mci:hands-pray', label: i18n.t('profile.details.religion'), value: translateProfileOption(p.religion, i18n.t) });
+  if (p.educationLevel) items.push({ icon: 'school-outline', label: i18n.t('profile.details.educationLevel'), value: translateProfileOption(p.educationLevel, i18n.t) });
+  if (p.occupation) items.push({ icon: 'briefcase-outline', label: i18n.t('profile.details.occupation'), value: p.occupation });
   items.push({
     icon: 'heart-outline',
-    label: 'Relationship Intention',
-    value: formatEnum(p.relationshipIntention),
+    label: i18n.t('profile.details.relationshipIntention'),
+    value: translateProfileOption(p.relationshipIntention, i18n.t),
   });
   if (p.maritalStatus) {
-    items.push({ icon: 'person-circle-outline', label: 'Marital Status', value: p.maritalStatus });
+    items.push({ icon: 'person-circle-outline', label: i18n.t('profile.details.maritalStatus'), value: translateProfileOption(p.maritalStatus, i18n.t) });
   }
   items.push({
     icon: 'people-circle-outline',
-    label: 'Has Children',
-    value: p.hasChildren ? 'Yes' : 'No',
+    label: i18n.t('profile.details.hasChildren'),
+    value: p.hasChildren ? i18n.t('common.yes') : i18n.t('common.no'),
   });
   items.push({
     icon: 'happy-outline',
-    label: 'Wants Children',
-    value: p.wantsChildren == null ? 'Not specified' : p.wantsChildren ? 'Yes' : 'No',
+    label: i18n.t('profile.details.wantsChildren'),
+    value: p.wantsChildren == null ? i18n.t('profile.details.notSpecified') : p.wantsChildren ? i18n.t('common.yes') : i18n.t('common.no'),
   });
 
   return items;
@@ -86,7 +86,23 @@ interface DetailsContentProps {
 export default function DetailsContent({ profile }: DetailsContentProps) {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
-  const details = buildDetails(profile);
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setEmail(session?.user?.email ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setEmail(session?.user?.email ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const details = buildDetails(profile, email);
 
   const surfaceBg = th.surface;
   const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';

@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import type { PermissionResponse } from '@/utils/expoAudio';
 import {
     AudioModule,
@@ -73,8 +74,8 @@ export function useVoiceRecorder() {
     if (!isAudioAvailable) {
       const message =
         Platform.OS === 'web'
-          ? 'Voice recording is not supported on the web.'
-          : 'Voice recording requires the Qal Dating development build (expo run) or the production app. Please install the latest build and try again.';
+          ? i18n.t('chat.voiceNotSupportedWeb')
+          : i18n.t('chat.voiceRequiresBuild');
 
       const unavailableError: VoiceRecorderError = {
         code: 'RECORDING_UNAVAILABLE',
@@ -83,7 +84,7 @@ export function useVoiceRecorder() {
 
       setError(unavailableError);
       setStatus('error');
-      Alert.alert('Voice recording unavailable', message);
+      Alert.alert(i18n.t('chat.voiceUnavailable'), message);
       return false;
     }
 
@@ -101,15 +102,15 @@ export function useVoiceRecorder() {
         setStatus('idle');
 
         Alert.alert(
-          'Microphone Permission',
+          i18n.t('chat.microphonePermissionTitle'),
           canAskAgain
-            ? 'This app needs microphone access to record voice messages. Please allow microphone permission.'
-            : 'Microphone access was denied. Please enable it in Settings to record voice messages.',
+            ? i18n.t('chat.microphonePermissionBody')
+            : i18n.t('chat.microphonePermissionDenied'),
           [
             ...(canAskAgain
               ? [
                   {
-                    text: 'Allow',
+                    text: i18n.t('common.allow'),
                     onPress: () => {
                       requestPermission().catch(() => {});
                     },
@@ -117,12 +118,12 @@ export function useVoiceRecorder() {
                 ]
               : []),
             {
-              text: 'Open Settings',
+              text: i18n.t('chat.openSettings'),
               onPress: () => {
                 Linking.openSettings().catch(() => {});
               },
             },
-            { text: 'Cancel', style: 'cancel' as const },
+            { text: i18n.t('common.cancel'), style: 'cancel' as const },
           ],
         );
         return false;
@@ -133,7 +134,7 @@ export function useVoiceRecorder() {
     } catch {
       setError({
         code: 'RECORDING_UNAVAILABLE',
-        message: 'Recording is not available on this device.',
+        message: i18n.t('chat.recordingNotAvailable'),
       });
       setStatus('error');
       return false;

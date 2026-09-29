@@ -3,6 +3,7 @@ import { useQueries } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Modal,
@@ -37,6 +38,7 @@ import type {
     BlindDateRosterParticipantDto,
     BlindDateSelectionDecision
 } from '@/types/blindDate';
+import { isRetryableBlindDateError } from '@/utils/blindDateErrors';
 import { formatDecisionDeadline, formatTimeLeft } from '@/utils/blindDateFormat';
 
 // ─── Chapter model ────────────────────────────────────────────────────────────
@@ -57,6 +59,7 @@ function SessionHero({
   maxParticipants: number | null;
   participantsCount: number;
 }) {
+  const { t } = useTranslation();
   const openRound = session.rounds?.find((r) => r.status === 'OPEN') ?? null;
   const hasAnyRound = (session.rounds?.length ?? 0) > 0;
   const round = session.current_round_number;
@@ -64,45 +67,55 @@ function SessionHero({
 
   return (
     <LinearGradient
-      colors={bdGradients.hero as unknown as [string, string, string]}
+      // Final round swaps the violet hero for gold — an unmistakable visual
+      // cue that the creator is now picking a finalist, not advancing a round.
+      colors={
+        (isFinalRound && session.status === 'OPEN'
+          ? bdGradients.gold
+          : bdGradients.hero) as unknown as [string, string, string]
+      }
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.hero}
     >
       <View style={styles.heroTopRow}>
         <View>
-          <Text style={styles.heroKicker}>BLIND DATE</Text>
+          <Text style={styles.heroKicker}>{t('blindDate.manage.heroKicker')}</Text>
           <Text style={styles.heroTitle}>
-            {!hasAnyRound
-              ? 'Not started'
+            {(!hasAnyRound
+              ? t('blindDate.manage.heroNotStarted')
               : isFinalRound
-                ? 'Final Round'
-                : `Round ${round}`}
-            {openRound ? ' is live' : hasAnyRound && session.status === 'OPEN' ? ' closed' : ''}
+                ? t('blindDate.manage.heroFinalRound')
+                : t('blindDate.manage.heroRound', { round })) +
+              (openRound
+                ? t('blindDate.manage.heroLiveSuffix')
+                : hasAnyRound && session.status === 'OPEN'
+                  ? t('blindDate.manage.heroClosedSuffix')
+                  : '')}
           </Text>
           <Text style={styles.heroSub}>
             {session.status === 'REVEAL'
-              ? 'Awaiting final decisions'
+              ? t('blindDate.manage.heroAwaitingDecisions')
               : session.status === 'OPEN'
                 ? hasAnyRound
-                  ? 'Review answers, select who advances'
-                  : 'Pick questions to start Round 1'
-                : `Session ${session.status.toLowerCase()}`}
+                  ? t('blindDate.manage.heroReview')
+                  : t('blindDate.manage.heroPickQuestions')
+                : t('blindDate.manage.heroStatusFallback', { status: session.status.toLowerCase() })}
           </Text>
         </View>
         {isFinalRound && session.status === 'OPEN' && (
           <View style={styles.finalBadge}>
             <Ionicons name="star" size={14} color="#FFF" />
-            <Text style={styles.finalBadgeText}>Final</Text>
+            <Text style={styles.finalBadgeText}>{t('blindDate.manage.finalBadge')}</Text>
           </View>
         )}
       </View>
 
       <View style={styles.heroStats}>
         {[
-          { icon: 'people' as const,      value: maxParticipants != null ? `${participantsCount}/${maxParticipants}` : `${participantsCount}`, label: 'joined' },
-          { icon: 'albums-outline' as const, value: maxRounds != null ? `${round}/${maxRounds}` : `${round}`,                label: 'rounds' },
-          { icon: 'time-outline' as const,   value: session.expires_at ? formatTimeLeft(session.expires_at) : 'No expiry', label: session.expires_at ? 'remaining' : 'closing' },
+          { icon: 'people' as const,      value: maxParticipants != null ? `${participantsCount}/${maxParticipants}` : `${participantsCount}`, label: t('blindDate.manage.statJoined') },
+          { icon: 'albums-outline' as const, value: maxRounds != null ? `${round}/${maxRounds}` : `${round}`,                label: t('blindDate.manage.statRounds') },
+          { icon: 'time-outline' as const,   value: session.expires_at ? formatTimeLeft(session.expires_at) : t('blindDate.manage.noExpiry'), label: session.expires_at ? t('blindDate.manage.statRemaining') : t('blindDate.manage.statClosing') },
         ].map((s) => (
           <View key={s.icon} style={styles.heroStat}>
             <Ionicons name={s.icon} size={14} color="rgba(255,255,255,0.85)" />
@@ -129,15 +142,17 @@ function ReviewRoster({
   pendingId: string | null;
   onSelect: (p: BlindDateRosterParticipantDto, d: BlindDateSelectionDecision) => void;
 }) {
-  const { colors: th } = useTheme();
+  const { t } = useTranslation();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
 
   if (participants.length === 0) {
     return (
       <View style={[styles.emptyCard, { borderColor: th.border, backgroundColor: th.surface }]}>
         <Ionicons name="people-outline" size={36} color={bdColors.primary} />
-        <Text style={[styles.emptyTitle, { color: th.text }]}>No participants yet</Text>
+        <Text style={[styles.emptyTitle, { color: th.text }]}>{t('blindDate.manage.roster.emptyTitle')}</Text>
         <Text style={[styles.emptySub, { color: th.textSecondary }]}>
-          Your Blind Date is live — participants appear here once they join and answer.
+          {t('blindDate.manage.roster.emptySub')}
         </Text>
       </View>
     );
@@ -146,14 +161,17 @@ function ReviewRoster({
   return (
     <View>
       <View style={styles.rosterHead}>
-        <Text style={[styles.rosterTitle, { color: th.text }]}>
-          Who moves forward?
+        {isFinalRound && (
+          <Ionicons name="star" size={16} color={bdColors.gold} />
+        )}
+        <Text style={[styles.rosterTitle, { color: isFinalRound ? (isDark ? bdColors.gold : '#B45309') : th.text }]}>
+          {t('blindDate.manage.roster.title')}
         </Text>
         <Text style={[styles.rosterCount, { color: th.textSecondary }]}>
-          {participants.filter((p) => p.status === 'ACTIVE' || p.status === 'ADVANCED').length} active
+          {t('blindDate.manage.roster.activeCount', { count: participants.filter((p) => p.status === 'ACTIVE' || p.status === 'ADVANCED').length })}
           {(() => {
             const marked = participants.filter((p) => p.decision === 'ADVANCE').length;
-            return marked > 0 ? `  ·  ${marked} selected` : '';
+            return marked > 0 ? `  ·  ${t('blindDate.manage.roster.selectedCount', { count: marked })}` : '';
           })()}
         </Text>
       </View>
@@ -175,6 +193,7 @@ function ReviewRoster({
 
 /** Reveal banner shown when session is in REVEAL state. */
 function RevealBanner({ session }: { session: NonNullable<ReturnType<typeof useSessionManage>['session']> }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const fd = session.final_decision;
   const deadline = formatDecisionDeadline(fd?.decision_deadline_at);
@@ -184,10 +203,10 @@ function RevealBanner({ session }: { session: NonNullable<ReturnType<typeof useS
     <View style={[styles.revealBanner, { backgroundColor: `${bdColors.primary}12`, borderColor: `${bdColors.primary}40` }]}>
       <Ionicons name="eye" size={20} color={bdColors.primary} />
       <View style={{ flex: 1 }}>
-        <Text style={[styles.revealBannerTitle, { color: th.text }]}>Reveal stage</Text>
+        <Text style={[styles.revealBannerTitle, { color: th.text }]}>{t('blindDate.manage.reveal.title')}</Text>
         <Text style={[styles.revealBannerSub, { color: th.textSecondary }]}>
-          {deadline ?? 'Both sides are deciding…'}
-          {decided ? ' · They have decided' : ''}
+          {deadline ?? t('blindDate.manage.reveal.deciding')}
+          {decided ? ` · ${t('blindDate.manage.reveal.theyDecided')}` : ''}
         </Text>
       </View>
     </View>
@@ -204,6 +223,7 @@ function CreatorDecisionPanel({
   onDecide: (d: 'INTERESTED' | 'NOT_INTERESTED') => void;
   deciding: boolean;
 }) {
+  const { t } = useTranslation();
   const { colors: th } = useTheme();
   const fd = session.final_decision;
   if (!fd) return null;
@@ -212,11 +232,11 @@ function CreatorDecisionPanel({
     return (
       <View style={[styles.outcomeCard, { backgroundColor: `${colors.success}10`, borderColor: colors.success }]}>
         <Ionicons name="heart" size={24} color={colors.success} />
-        <Text style={[styles.outcomeTitle, { color: colors.success }]}>It&rsquo;s a Match!</Text>
+        <Text style={[styles.outcomeTitle, { color: colors.success }]}>{t('blindDate.manage.decision.matchTitle')}</Text>
         <Text style={[styles.outcomeSub, { color: th.textSecondary }]}>
           {fd.outcome === 'MATCHED'
-            ? "You're both interested — say hello."
-            : "You're already connected."}
+            ? t('blindDate.manage.decision.matchSub')
+            : t('blindDate.manage.decision.alreadyConnectedSub')}
         </Text>
       </View>
     );
@@ -227,12 +247,12 @@ function CreatorDecisionPanel({
       <View style={[styles.outcomeCard, { backgroundColor: th.surface, borderColor: th.border }]}>
         <Ionicons name="heart-dislike-outline" size={24} color={bdColors.slate} />
         <Text style={[styles.outcomeTitle, { color: th.text }]}>
-          {fd.outcome === 'EXPIRED' ? 'Window expired' : 'No match this time'}
+          {fd.outcome === 'EXPIRED' ? t('blindDate.manage.decision.expiredTitle') : t('blindDate.manage.decision.noMatchTitle')}
         </Text>
         <Text style={[styles.outcomeSub, { color: th.textSecondary }]}>
           {fd.outcome === 'EXPIRED'
-            ? 'The decision window closed before both sides responded.'
-            : 'The final reveal ended without a match.'}
+            ? t('blindDate.manage.decision.expiredSub')
+            : t('blindDate.manage.decision.noMatchSub')}
         </Text>
       </View>
     );
@@ -242,10 +262,12 @@ function CreatorDecisionPanel({
     return (
       <View style={[styles.outcomeCard, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}30` }]}>
         <Ionicons name="hourglass-outline" size={22} color={colors.primary} />
-        <Text style={[styles.outcomeTitle, { color: th.text }]}>Waiting for their decision</Text>
+        <Text style={[styles.outcomeTitle, { color: th.text }]}>{t('blindDate.manage.decision.waitingTitle')}</Text>
         <Text style={[styles.outcomeSub, { color: th.textSecondary }]}>
-          You chose &ldquo;{fd.my_decision === 'INTERESTED' ? 'Interested' : 'Not Interested'}&rdquo;
-          {fd.other_party_decided ? ' — they have decided' : ' — waiting for them'}
+          {t('blindDate.manage.decision.youChose', {
+            choice: fd.my_decision === 'INTERESTED' ? t('blindDate.manage.decision.choiceInterested') : t('blindDate.manage.decision.choiceNotInterested'),
+          })}
+          {fd.other_party_decided ? t('blindDate.manage.decision.suffixTheyDecided') : t('blindDate.manage.decision.suffixWaiting')}
         </Text>
       </View>
     );
@@ -253,9 +275,9 @@ function CreatorDecisionPanel({
 
   return (
     <View style={[styles.decisionCard, { backgroundColor: th.surface, borderColor: th.border }]}>
-      <Text style={[styles.decisionTitle, { color: th.text }]}>Your final decision</Text>
+      <Text style={[styles.decisionTitle, { color: th.text }]}>{t('blindDate.manage.decision.yourDecision')}</Text>
       <Text style={[styles.decisionSub, { color: th.textSecondary }]}>
-        Would you like to get to know this person?
+        {t('blindDate.manage.decision.subtitle')}
       </Text>
       <View style={styles.decisionBtnRow}>
         <TouchableOpacity
@@ -270,7 +292,7 @@ function CreatorDecisionPanel({
           ) : (
             <>
               <Ionicons name="heart" size={18} color="#FFF" />
-              <Text style={styles.decisionBtnText}>I&rsquo;m Interested</Text>
+              <Text style={styles.decisionBtnText}>{t('blindDate.manage.decision.interested')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -282,7 +304,7 @@ function CreatorDecisionPanel({
           accessibilityRole="button"
         >
           <Ionicons name="close" size={18} color={th.textSecondary} />
-          <Text style={[styles.decisionBtnText, { color: th.textSecondary }]}>Not for me</Text>
+          <Text style={[styles.decisionBtnText, { color: th.textSecondary }]}>{t('blindDate.manage.decision.notForMe')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -292,6 +314,7 @@ function CreatorDecisionPanel({
 // ─── Root Screen ─────────────────────────────────────────────────────────────
 
 export default function SessionManageScreen() {
+  const { t } = useTranslation();
   const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -327,6 +350,11 @@ export default function SessionManageScreen() {
     [session],
   );
   const sessionOpen = session?.status === 'OPEN';
+  // REVEAL waits on both final decisions; while the outcome is still pending
+  // the creator may end the session early (e.g. an unresponsive finalist)
+  // instead of waiting out the decision deadline.
+  const revealPending =
+    session?.status === 'REVEAL' && session.final_decision?.outcome == null;
   // null → limit not exposed (older backend); show uncapped UI and let the
   // server enforce (max_rounds_reached / session_full error codes).
   const maxRounds = configuration?.limits?.max_rounds ?? null;
@@ -345,6 +373,25 @@ export default function SessionManageScreen() {
   // participant submits. Advancing with zero submissions is meaningless.
   const anyCurrentRoundAnswers = participants.some((p) =>
     (p.answers ?? []).some((a) => a.submitted_at != null),
+  );
+
+  // Eliminated participants belong to the round that eliminated them — the
+  // backend leaves `current_round_id` pointing at it (only advancement moves
+  // it). The roster shows the open round, or the latest round while a new
+  // one hasn't started yet, so drop eliminations from earlier rounds.
+  const rosterRoundId =
+    openRound?.id ??
+    (session?.rounds ?? []).reduce<{ id: string; round_number: number } | null>(
+      (latest, r) => (latest == null || r.round_number > latest.round_number ? r : latest),
+      null,
+    )?.id ??
+    null;
+  const rosterParticipants = participants.filter(
+    (p) =>
+      p.status !== 'ELIMINATED' ||
+      p.current_round_id == null ||
+      rosterRoundId == null ||
+      p.current_round_id === rosterRoundId,
   );
 
   // Collect question texts already snapshotted into earlier rounds (§12.1).
@@ -373,10 +420,10 @@ export default function SessionManageScreen() {
       { participantId: p.participant_id, decision },
       {
         onSettled: () => setPendingSelectId(null),
-        onError: (e) => themedError('Selection failed', friendlyError(e)),
+        onError: (e) => themedError(t('blindDate.manage.errors.selectFailed'), friendlyError(e)),
         onSuccess: () => {
           if (decision === 'SELECT_FINALIST') {
-            themedSuccess('Finalist chosen', 'The session moved to the reveal stage.');
+            themedSuccess(t('blindDate.manage.success.finalistTitle'), t('blindDate.manage.success.finalistMessage'));
           }
         },
       },
@@ -390,26 +437,25 @@ export default function SessionManageScreen() {
     }
     if (decision === 'ELIMINATE') {
       themedAlert({
-        title: 'Pass on this participant?',
-        message: 'They will be removed from this Blind Date and notified. This cannot be undone.',
+        title: t('blindDate.manage.alerts.passTitle'),
+        message: t('blindDate.manage.alerts.passMessage'),
         icon: 'person-remove-outline',
         iconColor: colors.danger,
         buttons: [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Pass', style: 'destructive', onPress: () => doSelect(p, decision) },
+          { text: t('blindDate.common.cancel'), style: 'cancel' },
+          { text: t('blindDate.manage.alerts.passButton'), style: 'destructive', onPress: () => doSelect(p, decision) },
         ],
       });
       return;
     }
     themedAlert({
-      title: 'Select as finalist?',
-      message:
-        'This ends the selection stage — the session moves to reveal and everyone else is eliminated.',
+      title: t('blindDate.manage.alerts.finalistTitle'),
+      message: t('blindDate.manage.alerts.finalistMessage'),
       icon: 'star',
       iconColor: bdColors.gold,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Select Finalist', onPress: () => doSelect(p, decision) },
+        { text: t('blindDate.common.cancel'), style: 'cancel' },
+        { text: t('blindDate.manage.alerts.finalistButton'), onPress: () => doSelect(p, decision) },
       ],
     });
   };
@@ -417,21 +463,23 @@ export default function SessionManageScreen() {
   const handleAdvanceToNextRound = () => {
     const selectedCount = participants.filter((p) => p.decision === 'ADVANCE').length;
     themedAlert({
-      title: `Start Round ${currentRound + 1}?`,
+      title: t('blindDate.manage.alerts.startRoundTitle', { round: currentRound + 1 }),
       message:
         selectedCount === 0
-          ? 'You haven\'t selected anyone — every participant will be eliminated.'
-          : `Your ${selectedCount} selected participant${selectedCount === 1 ? '' : 's'} move${selectedCount === 1 ? 's' : ''} on — everyone else is eliminated. Pick the next round's questions right after.`,
+          ? t('blindDate.manage.alerts.startRoundMessageNone')
+          : selectedCount === 1
+            ? t('blindDate.manage.alerts.startRoundMessageOne')
+            : t('blindDate.manage.alerts.startRoundMessageMany', { count: selectedCount }),
       icon: 'arrow-forward-circle-outline',
       iconColor: bdColors.primary,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('blindDate.common.cancel'), style: 'cancel' },
         {
-          text: 'Continue',
+          text: t('blindDate.common.continue'),
           onPress: () =>
             closeRound.mutate(undefined, {
               onSuccess: () => setRoundPickerOpen(true),
-              onError: (e) => themedError('Could not close round', friendlyError(e)),
+              onError: (e) => themedError(t('blindDate.manage.errors.closeRound'), friendlyError(e)),
             }),
         },
       ],
@@ -440,23 +488,25 @@ export default function SessionManageScreen() {
 
   const handleCloseSession = () =>
     themedAlert({
-      title: 'End this Blind Date?',
+      title: t('blindDate.manage.alerts.endTitle'),
       message:
-        'The session closes permanently. Open rounds end and remaining participants are eliminated. No refunds are issued.',
+        session?.status === 'REVEAL'
+          ? t('blindDate.manage.alerts.endRevealMessage')
+          : t('blindDate.manage.alerts.endMessage'),
       icon: 'power',
       iconColor: colors.danger,
       buttons: [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('blindDate.common.cancel'), style: 'cancel' },
         {
-          text: 'End Blind Date',
+          text: t('blindDate.manage.alerts.endButton'),
           style: 'destructive',
           onPress: () =>
             closeSession.mutate(undefined, {
               onSuccess: () => {
-                themedSuccess('Blind Date closed');
+                themedSuccess(t('blindDate.manage.success.closed'));
                 router.back();
               },
-              onError: (e) => themedError('Could not close', friendlyError(e)),
+              onError: (e) => themedError(t('blindDate.manage.errors.closeSession'), friendlyError(e)),
             }),
         },
       ],
@@ -470,18 +520,22 @@ export default function SessionManageScreen() {
           setRoundPickerOpen(false);
           setPickedQ(new Set());
           setPickedC(new Set());
-          themedSuccess('Next round started', 'Advanced participants get the new questions.');
+          themedSuccess(t('blindDate.manage.success.roundStartedTitle'), t('blindDate.manage.success.roundStartedMessage'));
         },
-        onError: (e) => themedError('Could not start round', friendlyError(e, maxRoundQuestions)),
+        onError: (e) => themedError(t('blindDate.manage.errors.startRound'), friendlyError(e, maxRoundQuestions)),
       },
     );
 
   const handleFinalDecision = (decision: 'INTERESTED' | 'NOT_INTERESTED') => {
     if (!sessionId || deciding) return;
     setDeciding(true);
-    submitFinalDecision(sessionId, decision)
+    // match_conflict / like_conflict lost a concurrent race — the contract
+    // says one retry is safe and resolves to the committed state.
+    const submit = () => submitFinalDecision(sessionId, decision);
+    submit()
+      .catch((e) => (isRetryableBlindDateError(e) ? submit() : Promise.reject(e)))
       .then(() => refetch())
-      .catch((e: unknown) => themedError('Could not submit', friendlyError(e)))
+      .catch((e: unknown) => themedError(t('blindDate.manage.errors.submitDecision'), friendlyError(e)))
       .finally(() => setDeciding(false));
   };
 
@@ -506,6 +560,7 @@ export default function SessionManageScreen() {
           params: { tab: 'participating' },
         })
       }
+      onMatches={() => router.push('/(app)/(tabs)/matches' as never)}
       onProfile={() => router.push('/(app)/(tabs)/profile' as never)}
     />
   );
@@ -528,9 +583,9 @@ export default function SessionManageScreen() {
       <View style={[styles.screen, { backgroundColor: th.background }]}>
         <View style={styles.centerFill}>
           <Ionicons name="cloud-offline-outline" size={48} color={bdColors.primary} />
-          <Text style={[styles.emptyTitle, { color: th.text, marginTop: 12 }]}>Couldn&rsquo;t load the session</Text>
+          <Text style={[styles.emptyTitle, { color: th.text, marginTop: 12 }]}>{t('blindDate.manage.loadError')}</Text>
           <TouchableOpacity onPress={refetch} accessibilityRole="button">
-            <Text style={{ color: bdColors.primary, fontWeight: '700', marginTop: 8 }}>Retry</Text>
+            <Text style={{ color: bdColors.primary, fontWeight: '700', marginTop: 8 }}>{t('blindDate.common.retry')}</Text>
           </TouchableOpacity>
         </View>
         {bottomNav}
@@ -547,21 +602,21 @@ export default function SessionManageScreen() {
           onPress={() => router.back()}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t('blindDate.common.back')}
         >
           <Ionicons name="chevron-back" size={22} color={th.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: th.text }]}>Manage Blind Date</Text>
+        <Text style={[styles.headerTitle, { color: th.text }]}>{t('blindDate.manage.title')}</Text>
         <View style={[styles.statusPill, { backgroundColor: `${bdColors.primary}1F` }]}>
           <Text style={[styles.statusPillText, { color: bdColors.primary }]}>
-            {{
-              OPEN: 'LIVE',
-              REVEAL: 'REVEAL',
-              COMPLETED: 'ENDED',
-              CLOSED: 'CLOSED',
-              CANCELLED: 'CLOSED',
-              EXPIRED: 'EXPIRED',
-            }[session.status] ?? session.status}
+            {({
+              OPEN: t('blindDate.status.live'),
+              REVEAL: t('blindDate.status.reveal'),
+              COMPLETED: t('blindDate.status.ended'),
+              CLOSED: t('blindDate.status.closed'),
+              CANCELLED: t('blindDate.status.closed'),
+              EXPIRED: t('blindDate.status.expired'),
+            }[session.status] ?? session.status).toUpperCase()}
           </Text>
         </View>
       </View>
@@ -605,7 +660,7 @@ export default function SessionManageScreen() {
         {/* Participant roster */}
         {session.status === 'OPEN' && (
           <ReviewRoster
-            participants={participants}
+            participants={rosterParticipants}
             selectable={!!openRound}
             isFinalRound={isFinalRound}
             pendingId={pendingSelectId}
@@ -639,7 +694,7 @@ export default function SessionManageScreen() {
                     <>
                       <Ionicons name="arrow-forward" size={17} color="#FFF" />
                       <Text style={[styles.footerBtnText, { color: '#FFF' }]}>
-                        Advance selected to Round {currentRound + 1}
+                        {t('blindDate.manage.advanceToRound', { round: currentRound + 1 })}
                       </Text>
                     </>
                   )}
@@ -647,10 +702,10 @@ export default function SessionManageScreen() {
               )}
               <Text style={[styles.footerHintSmall, { color: th.textSecondary }]}>
                 {isFinalRound
-                  ? 'Final round — tap Finalist on a card to start the reveal.'
+                  ? t('blindDate.manage.hintFinalRound')
                   : anyCurrentRoundAnswers
-                    ? 'Found the one already? Tap Finalist on their card — it ends the rounds and starts the reveal.'
-                    : 'No answers this round yet — you can still pick a finalist from earlier-round answers.'}
+                    ? t('blindDate.manage.hintPickFinalist')
+                    : t('blindDate.manage.hintNoAnswers')}
               </Text>
             </>
           ) : canStartNextRound ? (
@@ -661,12 +716,12 @@ export default function SessionManageScreen() {
             >
               <Ionicons name="play" size={16} color="#FFF" />
               <Text style={[styles.footerBtnText, { color: '#FFF' }]}>
-                Start Round {nextRoundNumber}
+                {t('blindDate.manage.startRound', { round: nextRoundNumber })}
               </Text>
             </TouchableOpacity>
           ) : (
             <Text style={[styles.footerHint, { color: th.textSecondary }]}>
-              No open round — pick your finalist’s card above, or end this Blind Date.
+              {t('blindDate.manage.hintNoOpenRound')}
             </Text>
           )}
           <TouchableOpacity
@@ -676,8 +731,29 @@ export default function SessionManageScreen() {
             accessibilityRole="button"
           >
             <Text style={[styles.dangerLinkText, { color: colors.danger }]}>
-              End this Blind Date
+              {t('blindDate.manage.endBlindDate')}
             </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Reveal-phase footer — lets the creator end the session while the
+          finalist's decision is still pending. */}
+      {!sessionOpen && revealPending && (
+        <View style={[styles.footer, { backgroundColor: th.background, borderTopColor: th.border }]}>
+          <TouchableOpacity
+            onPress={handleCloseSession}
+            disabled={closeSession.isPending}
+            style={styles.dangerLink}
+            accessibilityRole="button"
+          >
+            {closeSession.isPending ? (
+              <ActivityIndicator color={colors.danger} size="small" />
+            ) : (
+              <Text style={[styles.dangerLinkText, { color: colors.danger }]}>
+                {t('blindDate.manage.endBlindDate')}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       )}
@@ -700,10 +776,10 @@ export default function SessionManageScreen() {
           >
             <View style={styles.sheetHandle} />
             <Text style={[styles.sheetTitle, { color: th.text }]}>
-              Round {nextRoundNumber} questions
+              {t('blindDate.manage.roundQuestionsTitle', { round: nextRoundNumber })}
             </Text>
             <Text style={[styles.sheetSub, { color: th.textSecondary }]}>
-              Questions already asked in earlier rounds can&rsquo;t be reused.
+              {t('blindDate.manage.roundQuestionsSub')}
             </Text>
             <QuestionSetPicker
               enabled={roundPickerOpen}
@@ -758,7 +834,9 @@ export default function SessionManageScreen() {
                 <>
                   <Ionicons name="play" size={16} color="#FFF" />
                   <Text style={[styles.footerBtnText, { color: '#FFF' }]}>
-                    Start round{pickedCount > 0 ? ` (${pickedCount}${maxRoundQuestions != null ? `/${maxRoundQuestions}` : ''})` : ''}
+                    {pickedCount > 0
+                      ? t('blindDate.manage.startRoundCount', { picked: pickedCount, max: maxRoundQuestions != null ? `/${maxRoundQuestions}` : '' })
+                      : t('blindDate.manage.startRoundNoCount')}
                   </Text>
                 </>
               )}
@@ -768,7 +846,7 @@ export default function SessionManageScreen() {
               onPress={() => setRoundPickerOpen(false)}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Close"
+              accessibilityLabel={t('blindDate.common.close')}
             >
               <Ionicons name="close" size={20} color={th.textSecondary} />
             </TouchableOpacity>

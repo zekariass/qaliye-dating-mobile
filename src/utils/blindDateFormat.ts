@@ -1,15 +1,18 @@
 // ─── Shared Blind Date formatting helpers ────────────────────────────────────
 
+import i18n from '@/i18n';
+
 export function formatTimeLeft(expiresAt: string | null | undefined): string {
-  if (!expiresAt) return 'No deadline';
+  const t = i18n.t.bind(i18n);
+  if (!expiresAt) return t('blindDate.format.noDeadline');
   const diff = new Date(expiresAt).getTime() - Date.now();
-  if (diff <= 0) return 'Ended';
+  if (diff <= 0) return t('blindDate.format.ended');
   const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m left`;
+  if (mins < 60) return t('blindDate.format.minutesLeft', { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h left`;
+  if (hrs < 24) return t('blindDate.format.hoursLeft', { count: hrs });
   const days = Math.floor(hrs / 24);
-  return `${days} day${days === 1 ? '' : 's'} left`;
+  return t('blindDate.format.daysLeft', { count: days });
 }
 
 export function formatDate(iso: string | null | undefined): string | null {
@@ -21,13 +24,14 @@ export function formatDate(iso: string | null | undefined): string | null {
 
 /** "Decide within 34h" style countdown from final_decision.decision_deadline_at. */
 export function formatDecisionDeadline(iso: string | null | undefined): string | null {
+  const t = i18n.t.bind(i18n);
   if (!iso) return null;
   const diff = new Date(iso).getTime() - Date.now();
   if (diff <= 0) return null;
   const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `Decide within ${mins}m`;
+  if (mins < 60) return t('blindDate.format.decideWithinMinutes', { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 48) return `Decide within ${hrs}h`;
+  if (hrs < 48) return t('blindDate.format.decideWithinHours', { count: hrs });
   const days = Math.floor(hrs / 24);
-  return `Decide within ${days} day${days === 1 ? '' : 's'}`;
+  return t('blindDate.format.decideWithinDays', { count: days });
 }
