@@ -2715,9 +2715,8 @@
       "title": "Manage Blind Date"
     },
     "nav": {
+      "browse": "Browse",
       "create": "Create",
-      "explore": "Explore",
-      "home": "Home",
       "joined": "Joined",
       "matches": "Matches",
       "profile": "Profile"
@@ -2886,6 +2885,7 @@
         }
       },
       "roundBadge": "Round {{round}}",
+      "statDates": "dates",
       "statRound": "round",
       "statStarted": "started",
       "theWinner": "The winner",

@@ -374,6 +374,11 @@ export default function SessionManageScreen() {
   const anyCurrentRoundAnswers = participants.some((p) =>
     (p.answers ?? []).some((a) => a.submitted_at != null),
   );
+  // A recorded decision counts too — the API allows selecting before any
+  // answers arrive (which locks that participant's answers), so requiring
+  // submissions would deadlock the host once everyone is marked.
+  const anySelection = participants.some((p) => p.decision != null);
+  const canAdvanceRound = anyCurrentRoundAnswers || anySelection;
 
   // Eliminated participants belong to the round that eliminated them — the
   // backend leaves `current_round_id` pointing at it (only advancement moves
@@ -682,10 +687,10 @@ export default function SessionManageScreen() {
                   style={[
                     styles.footerBtn,
                     { backgroundColor: bdColors.primary },
-                    !anyCurrentRoundAnswers && { opacity: 0.45 },
+                    !canAdvanceRound && { opacity: 0.45 },
                   ]}
                   onPress={handleAdvanceToNextRound}
-                  disabled={closeRound.isPending || !anyCurrentRoundAnswers}
+                  disabled={closeRound.isPending || !canAdvanceRound}
                   accessibilityRole="button"
                 >
                   {closeRound.isPending ? (
@@ -703,7 +708,7 @@ export default function SessionManageScreen() {
               <Text style={[styles.footerHintSmall, { color: th.textSecondary }]}>
                 {isFinalRound
                   ? t('blindDate.manage.hintFinalRound')
-                  : anyCurrentRoundAnswers
+                  : canAdvanceRound
                     ? t('blindDate.manage.hintPickFinalist')
                     : t('blindDate.manage.hintNoAnswers')}
               </Text>

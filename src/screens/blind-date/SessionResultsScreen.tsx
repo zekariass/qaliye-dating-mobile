@@ -26,7 +26,7 @@ import type {
     BlindDateSessionWinnerDto,
     BlindDateWinnerRoundDto
 } from '@/types/blindDate';
-import { formatDate } from '@/utils/blindDateFormat';
+import { formatDate, formatDateRange } from '@/utils/blindDateFormat';
 import {
     RELATIONSHIP_API_TO_LABEL,
     RELIGION_API_TO_LABEL,
@@ -215,7 +215,9 @@ function StatChip({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap
   return (
     <View style={[styles.statChip, { backgroundColor: th.surface, borderColor: th.border }]}>
       <Ionicons name={icon} size={14} color={bdColors.primary} />
-      <Text style={[styles.statValue, { color: th.text }]}>{value}</Text>
+      <Text style={[styles.statValue, { color: th.text }, value.length > 14 && { fontSize: 12 }]}>
+        {value}
+      </Text>
       <Text style={[styles.statLabel, { color: th.textSecondary }]}>{label}</Text>
     </View>
   );
@@ -472,7 +474,20 @@ export default function SessionResultsScreen() {
 
   const roundCount = results?.round_count ?? session.rounds?.length ?? 0;
   const participantCount = results?.participant_count ?? session.participant_count ?? 0;
-  const dateLabel = formatDate(session.created_at);
+  // The session payload has no ended_at — the last round's completion is the
+  // real end of the game (reveal + decisions follow), with revealed_at as a
+  // fallback for sessions whose round rows lack completed_at.
+  const endedAt =
+    (session.rounds ?? []).reduce<string | null>(
+      (latest, r) =>
+        r.completed_at != null && (latest == null || r.completed_at > latest)
+          ? r.completed_at
+          : latest,
+      null,
+    ) ?? session.final_decision?.revealed_at ?? null;
+  const dateIsRange =
+    endedAt != null && formatDate(endedAt) !== formatDate(session.created_at);
+  const dateLabel = formatDateRange(session.created_at, endedAt);
 
   return (
     <View style={[styles.screen, { backgroundColor: th.background }]}>
@@ -509,7 +524,13 @@ export default function SessionResultsScreen() {
         <View style={styles.statsRow}>
           <StatChip icon="people" value={`${participantCount}`} label={t('blindDate.manage.statJoined')} />
           <StatChip icon="albums-outline" value={`${roundCount}`} label={roundCount === 1 ? t('blindDate.results.statRound') : t('blindDate.manage.statRounds')} />
-          {dateLabel && <StatChip icon="calendar-outline" value={dateLabel} label={t('blindDate.results.statStarted')} />}
+          {dateLabel && (
+            <StatChip
+              icon="calendar-outline"
+              value={dateLabel}
+              label={t(dateIsRange ? 'blindDate.results.statDates' : 'blindDate.results.statStarted')}
+            />
+          )}
         </View>
 
         {/* Winner — only headed "The winner" when there's actually one to

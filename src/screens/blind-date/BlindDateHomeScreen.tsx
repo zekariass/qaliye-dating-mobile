@@ -310,12 +310,15 @@ function MySessionCard({
       {/* Thumbnail — blurred photo (blind date) or rose gradient placeholder */}
       <View style={[styles.myThumb, dimmed && { opacity: 0.55 }]}>
         {photoUrl ? (
-          <Image
-            source={{ uri: photoUrl }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            blurRadius={48}
-          />
+          <>
+            <Image
+              source={{ uri: photoUrl }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              blurRadius={100}
+            />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,8,40,0.4)' }]} />
+          </>
         ) : (
           <LinearGradient
             colors={bdGradients.hero as unknown as [string, string, string]}

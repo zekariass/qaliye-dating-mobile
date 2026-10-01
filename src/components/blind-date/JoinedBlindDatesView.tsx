@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BlurredPortraitFallback } from '@/components/blind-date/SessionSwipeCard';
 import { colors } from '@/constants/theme';
+import { isParticipantAnswersLocked } from '@/hooks/blindDate/useParticipantFlow';
 import { useTheme } from '@/hooks/use-theme';
 import i18n from '@/i18n';
 import type {
@@ -257,7 +258,12 @@ function deriveCardState(item: BlindDateParticipationDto): CardState {
     };
   }
 
-  if (item.answers_submitted === true || pending === 0) {
+  // A participant the host already decided on still reads ACTIVE with pending
+  // questions — but their answers are locked, so "your turn" would invite a
+  // submit that 409s. Show the same waiting state as a submitted round.
+  const decidedByHost = item.status === 'ACTIVE' && isParticipantAnswersLocked(item.participant_id);
+
+  if (item.answers_submitted === true || pending === 0 || decidedByHost) {
     return {
       badge: i18n.t('blindDate.joined.badgeAwaiting'),
       badgeColor: BLUE,
@@ -509,12 +515,13 @@ function JoinedSessionCard({
                 source={{ uri: creator.primary_photo.signed_url }}
                 style={StyleSheet.absoluteFill}
                 contentFit="cover"
-                blurRadius={48}
+                blurRadius={100}
                 cachePolicy="memory-disk"
               />
             ) : (
               <BlurredPortraitFallback seed={item.session_id || item.participant_id} />
             )}
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,8,40,0.4)' }]} />
             <LinearGradient
               colors={['rgba(10,5,20,0)', 'rgba(10,5,20,0.38)']}
               locations={[0.55, 1]}
@@ -555,7 +562,7 @@ function JoinedSessionCard({
                 accessibilityRole="button"
                 accessibilityLabel={t('blindDate.joined.aboutA11y')}
               >
-                <Ionicons name="information-circle-outline" size={19} color={th.textSecondary} />
+                <Ionicons name="information-circle-outline" size={24} color={BLUE} />
               </TouchableOpacity>
             </View>
 

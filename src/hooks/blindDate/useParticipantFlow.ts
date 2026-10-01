@@ -45,6 +45,16 @@ export type ParticipantStep =
 
 type RevealPhase = 'intro' | 'countdown' | 'profile' | 'decide';
 
+// The API exposes no participant-visible "answers locked" flag — a 409
+// `answer_locked` on submit is the only signal. Remember it for the app
+// session so revisiting the flow (and the joined list) shows the waiting
+// state instead of offering answers that would just fail again.
+const answersLockedIds = new Set<string>();
+
+export function isParticipantAnswersLocked(participantId: string | null | undefined): boolean {
+  return participantId != null && answersLockedIds.has(participantId);
+}
+
 // ─── Step derivation ──────────────────────────────────────────────────────────
 
 function deriveStep(args: {
@@ -58,11 +68,12 @@ function deriveStep(args: {
   justSubmitted: boolean;
   seenFinalist: boolean;
   advancedPending: boolean;
+  answerLocked: boolean;
 }): ParticipantStep {
   const {
     participantId, participation, session, questions,
     submittedIds, startedAnswering, hasDrafts,
-    justSubmitted, seenFinalist, advancedPending,
+    justSubmitted, seenFinalist, advancedPending, answerLocked,
   } = args;
 
   if (!participantId) return 'JOIN_CONFIRM';
@@ -92,6 +103,12 @@ function deriveStep(args: {
 
   // Session ended while participant was still in the running
   if (session && session.status !== 'OPEN') return 'ELIMINATED';
+
+  // Host already recorded a decision on this participant in the open round —
+  // answers are locked server-side until the round closes. `decision` is
+  // creator-only and `status` stays ACTIVE, so a lock means "waiting for the
+  // outcome", not a prompt to answer.
+  if (answerLocked && pStatus === 'ACTIVE') return 'WAITING';
 
   // Advanced but their round is closed and the next one isn't open yet —
   // nothing to answer, regardless of what the questions query returns.
@@ -249,7 +266,9 @@ export function useParticipantFlow(
       } catch (err) {
         const c = blindDateErrorCode(err);
         if (c === 'answer_locked') {
+          answersLockedIds.add(effectiveParticipantId);
           setAnswerLocked(true);
+          setEditingAnswers(false);
           setAnswerError(i18n.t('blindDate.errors.answerLocked'));
           void refetchSession();
           void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
@@ -296,7 +315,9 @@ export function useParticipantFlow(
       if (code === 'answer_locked') {
         // Creator already decided — stop the flow; the refetched participation
         // status moves the step to ADVANCED/ELIMINATED/WAITING via deriveStep.
+        answersLockedIds.add(effectiveParticipantId);
         setAnswerLocked(true);
+        setEditingAnswers(false);
         void refetchSession();
         void queryClient.invalidateQueries({ queryKey: ['blindDate', 'participations'] });
         return true;
@@ -471,6 +492,10 @@ export function useParticipantFlow(
 
   // ── Derived step ───────────────────────────────────────────────────────────
 
+  // Local state covers the lock learned on this mount; the module registry
+  // covers revisits after a previous mount hit `answer_locked`.
+  const answersLocked = answerLocked || isParticipantAnswersLocked(effectiveParticipantId);
+
   const questions = roundQuestions ?? [];
   const step = deriveStep({
     participantId: effectiveParticipantId,
@@ -483,6 +508,7 @@ export function useParticipantFlow(
     justSubmitted,
     seenFinalist,
     advancedPending,
+    answerLocked: answersLocked,
   });
 
   // Reveal sub-phases refine REVEAL_INTRO into countdown/profile/decision steps.
@@ -521,7 +547,7 @@ export function useParticipantFlow(
     submittedIds,
     savingQuestionId,
     answerError,
-    answerLocked,
+    answerLocked: answersLocked,
     setDraft,
     beginAnswering,
     beginEditingAnswers,

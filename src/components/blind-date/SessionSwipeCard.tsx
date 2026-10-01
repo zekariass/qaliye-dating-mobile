@@ -260,7 +260,7 @@ const SessionSwipeCard = forwardRef<SessionSwipeCardHandle, Props>(
               source={{ uri: creator.primary_photo.signed_url }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
-              blurRadius={60}
+              blurRadius={100}
               cachePolicy="memory-disk"
             />
           ) : (
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(20,8,40,0.30)',
+    backgroundColor: 'rgba(20,8,40,0.55)',
   },
   portraitShoulders: {
     position: 'absolute',

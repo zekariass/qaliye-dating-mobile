@@ -32,8 +32,8 @@ export function useBlindDateTheme() {
 export type BlindDateNavKey = 'home' | 'open' | 'mine' | 'participating' | 'matches' | 'profile';
 
 const NAV_ITEMS: { key: BlindDateNavKey; labelKey: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'home',          labelKey: 'blindDate.nav.home',          icon: 'home-outline' },
-  { key: 'open',          labelKey: 'blindDate.nav.explore',       icon: 'compass-outline' },
+  { key: 'home',          labelKey: 'tabs.discover',               icon: 'compass-outline' },
+  { key: 'open',          labelKey: 'blindDate.nav.browse',        icon: 'albums-outline' },
   { key: 'participating', labelKey: 'blindDate.nav.joined',        icon: 'heart-outline' },
   { key: 'mine',          labelKey: 'blindDate.nav.create',        icon: 'add-outline' },
   { key: 'matches',       labelKey: 'blindDate.nav.matches',       icon: 'heart-circle-outline' },

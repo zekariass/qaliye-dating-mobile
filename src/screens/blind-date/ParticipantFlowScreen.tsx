@@ -1007,9 +1007,11 @@ function WaitingStep({ flow, onBack, onWithdrawn, onEditAnswers }: { flow: Retur
           </View>
           <Text style={styles.waitingTitle}>{t('blindDate.flow.waiting.title')}</Text>
           <Text style={styles.waitingSub}>
-            {flow.participation?.status === 'ADVANCED'
-              ? t('blindDate.flow.waiting.subAdvanced')
-              : t('blindDate.flow.waiting.subReviewing')}
+            {flow.answerLocked
+              ? t('blindDate.flow.answering.locked')
+              : flow.participation?.status === 'ADVANCED'
+                ? t('blindDate.flow.waiting.subAdvanced')
+                : t('blindDate.flow.waiting.subReviewing')}
           </Text>
         </LinearGradient>
       </View>
@@ -1032,7 +1034,7 @@ function WaitingStep({ flow, onBack, onWithdrawn, onEditAnswers }: { flow: Retur
 
       <View style={styles.waitingFooter}>
         <PrimaryButton label={t('blindDate.flow.backToMyBlindDates')} onPress={onBack} />
-        {flow.participation?.status === 'ACTIVE' && flow.session?.status === 'OPEN' && (
+        {flow.participation?.status === 'ACTIVE' && flow.session?.status === 'OPEN' && !flow.answerLocked && (
           <TouchableOpacity
             onPress={onEditAnswers}
             style={styles.editAnswersLink}

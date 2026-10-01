@@ -22,6 +22,29 @@ export function formatDate(iso: string | null | undefined): string | null {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/**
+ * Compact start→end range for a session's run: "20 Sep – 22 Sep 2026".
+ * Same-day collapses to a single date; the year rides on the end date only,
+ * unless the range crosses a year boundary (then both carry it).
+ */
+export function formatDateRange(
+  startIso: string | null | undefined,
+  endIso: string | null | undefined,
+): string | null {
+  const start = formatDate(startIso);
+  if (!start) return null;
+  const end = formatDate(endIso);
+  if (!end) return start;
+  const s = new Date(startIso!);
+  const e = new Date(endIso!);
+  if (s.toDateString() === e.toDateString()) return start;
+  const short = { day: 'numeric', month: 'short' } as const;
+  if (s.getFullYear() === e.getFullYear()) {
+    return `${s.toLocaleDateString('en-GB', short)} – ${end}`;
+  }
+  return `${start} – ${end}`;
+}
+
 /** "Decide within 34h" style countdown from final_decision.decision_deadline_at. */
 export function formatDecisionDeadline(iso: string | null | undefined): string | null {
   const t = i18n.t.bind(i18n);
