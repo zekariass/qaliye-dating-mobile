@@ -119,6 +119,18 @@ export interface InboxLastMessage {
   createdAt: string;
 }
 
+/** Live video-call request summary carried on an inbox row (snapshot at fetch time). */
+export interface InboxVideoCallRequest {
+  id: string;
+  status: 'PENDING' | 'ACCEPTED';
+  /** 'VIDEO' | 'AUDIO' — drives the 📹/📞 badge affordance. */
+  callType: 'VIDEO' | 'AUDIO';
+  isRequester: boolean;
+  canAccept: boolean;
+  canCancel: boolean;
+  canJoin: boolean;
+}
+
 export interface InboxItem {
   matchId: string;
   status: 'ACTIVE';
@@ -129,6 +141,8 @@ export interface InboxItem {
   mutedUntil: string | null;
   matchedAt: string;
   lastMessageAt: string | null;
+  /** Non-null while a PENDING or ACCEPTED video-call request exists on the match. */
+  videoCallRequest: InboxVideoCallRequest | null;
 }
 
 // ── API DTOs (wire format — snake_case) ───────────────────────────────────
@@ -157,6 +171,17 @@ export interface InboxItemDto {
   muted_until: string | null;
   matched_at: string;
   last_message_at: string | null;
+  // Additive field; absent or null when the match has no live video-call request.
+  // Note: `isRequester` arrives camel-cased while the can_* flags are snake_case.
+  video_call_request?: {
+    id: string;
+    status: 'PENDING' | 'ACCEPTED';
+    call_type?: 'VIDEO' | 'AUDIO';
+    isRequester: boolean;
+    can_accept: boolean;
+    can_cancel: boolean;
+    can_join: boolean;
+  } | null;
 }
 
 export interface InboxResponse {

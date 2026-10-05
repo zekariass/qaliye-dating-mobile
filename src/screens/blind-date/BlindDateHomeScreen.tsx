@@ -5,31 +5,31 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useSharedValue,
-    withRepeat,
-    withTiming,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BlindDateBottomNav, { useBlindDateTheme } from '@/components/blind-date/BlindDateBottomNav';
 import JoinedBlindDatesView from '@/components/blind-date/JoinedBlindDatesView';
 import SessionSwipeCard, {
-    type SessionSwipeCardHandle,
-    type SessionSwipeDirection,
+  type SessionSwipeCardHandle,
+  type SessionSwipeDirection,
 } from '@/components/blind-date/SessionSwipeCard';
 import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { bdColors, bdGradients } from '@/constants/blindDateTheme';
@@ -39,15 +39,15 @@ import { useBlindDateConfiguration } from '@/hooks/blindDate/useBlindDateConfigu
 import { useDiscoverSessions } from '@/hooks/blindDate/useDiscoverSessions';
 import { useJoinSession } from '@/hooks/blindDate/useJoinSession';
 import {
-    useMyBlindDateSessions
+  useMyBlindDateSessions
 } from '@/hooks/blindDate/useMyBlindDateSessions';
 import { useMyParticipations } from '@/hooks/blindDate/useMyParticipations';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import i18n from '@/i18n';
 import type {
-    BlindDateMySessionDto,
-    BlindDateSessionSummaryDto
+  BlindDateMySessionDto,
+  BlindDateSessionSummaryDto
 } from '@/types/blindDate';
 import { extractApiError } from '@/utils/apiError';
 import { blindDateErrorMessage } from '@/utils/blindDateErrors';
@@ -114,28 +114,60 @@ const cardShadow = Platform.select({
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
-function Header({ title, onHelp }: { title: string; onHelp: () => void }) {
+function Header({ title, onHelp, onProfile }: { title: string; onHelp: () => void; onProfile: () => void }) {
   const { t } = useTranslation();
-  const { textPrimary, textMuted, card, border } = useBlindDateTheme();
+  const { textPrimary, textMuted } = useBlindDateTheme();
   return (
     <View style={styles.headerWrap}>
       <View style={styles.header}>
-        {/* Left: heart icon + title */}
+        {/* Left: blind date icon + title */}
         <View style={styles.headerLeft}>
-          <Ionicons name="heart" size={22} color={bdColors.primary} />
+          <Image
+            source={require('@/assets/images/blind-date-icon.png')}
+            style={styles.headerIcon}
+            resizeMode="contain"
+          />
           <Text style={[styles.headerTitle, { color: textPrimary }]}>{title}</Text>
         </View>
 
-        {/* Right: help button */}
-        <TouchableOpacity
-          style={[styles.headerBtn, { borderColor: border, backgroundColor: card }]}
-          onPress={onHelp}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={t('blindDate.home.helpA11y')}
-        >
-          <Ionicons name="help-circle-outline" size={22} color={textPrimary} />
-        </TouchableOpacity>
+        {/* Right: profile + help buttons */}
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            onPress={onProfile}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('blindDate.nav.profile')}
+          >
+            <LinearGradient
+              colors={bdGradients.hero}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.headerIconBtnInner}
+            >
+              <Ionicons name="person" size={18} color="#FFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={onHelp}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('blindDate.home.helpA11y')}
+          >
+            <LinearGradient
+              colors={bdGradients.hero}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.headerBtnInner}
+            >
+              <Ionicons name="help" size={14} color="#FFF" />
+              <Text style={styles.headerBtnText}>
+                {t('blindDate.home.help')}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Subtitle */}
@@ -386,18 +418,11 @@ function MySessionCard({
             { backgroundColor: isDark ? tone.blockBgDark : tone.blockBg },
           ]}
         >
-          <View
-            style={[
-              styles.roundIconWrap,
-              { backgroundColor: dimmed ? 'rgba(138,147,166,0.16)' : `${tone.accent}1F` },
-            ]}
-          >
-            <Ionicons
-              name={tone.icon}
-              size={13}
-              color={dimmed ? textMuted : tone.accent}
-            />
-          </View>
+          <Ionicons
+            name={tone.icon}
+            size={16}
+            color={dimmed ? textMuted : tone.accent}
+          />
           <View style={{ flex: 1 }}>
             <Text style={[styles.roundKicker, { color: textMuted }]}>{roundLabel}</Text>
             <Text
@@ -582,9 +607,6 @@ function HostedEmptyState({ onPrimary }: { onPrimary: () => void }) {
         locations={[0, 0.55, 1]}
         style={StyleSheet.absoluteFill}
       />
-
-      {/* Warm pink spotlight glow behind the artwork */}
-      <View style={styles.hostedGlow} />
 
       {/* Floating artwork — large and centred */}
       <Animated.View style={[styles.hostedArtWrap, artStyle]} pointerEvents="none">
@@ -1255,6 +1277,7 @@ export default function BlindDateHomeScreen() {
                 : t('blindDate.common.blindDate')
           }
           onHelp={() => setHowVisible(true)}
+          onProfile={() => router.push('/(app)/(tabs)/profile' as never)}
         />
       </View>
 
@@ -1395,7 +1418,6 @@ export default function BlindDateHomeScreen() {
         onMine={() => setActiveTab('mine')}
         onJoined={() => setActiveTab('participating')}
         onMatches={() => router.push('/(app)/(tabs)/matches' as never)}
-        onProfile={() => router.push('/(app)/(tabs)/profile' as never)}
       />
 
       <HowItWorksModal visible={howVisible} onClose={() => setHowVisible(false)} />
@@ -1480,15 +1502,55 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  headerBtn: {
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIconBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
+    ...Platform.select({
+      ios:     { shadowColor: bdColors.primary, shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 6 },
+      default: {},
+    }),
+  },
+  headerIconBtnInner: {
+    flex: 1,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { fontSize: 22, fontWeight: '900', letterSpacing: -0.4 },
+  headerBtn: {
+    height: 36,
+    borderRadius: 18,
+    ...Platform.select({
+      ios:     { shadowColor: bdColors.primary, shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 6 },
+      default: {},
+    }),
+  },
+  headerBtnInner: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+  },
+  headerBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  headerIcon: {
+    width: 34,
+    height: 34,
+  },
+  headerTitle: { fontSize: 18, fontWeight: '900', letterSpacing: -0.4 },
   headerSub: { fontSize: 12.5, fontWeight: '500', letterSpacing: 0.1 },
 
   // Discover tab: card stack + external actions
@@ -1628,14 +1690,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginTop: 10,
   },
-  roundIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(138,44,255,0.14)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   roundKicker: { fontSize: 10, fontWeight: '600' },
   roundValue: { fontSize: 13, fontWeight: '800', marginTop: 1 },
   myCta: {
@@ -1756,23 +1810,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 24,
   },
-  // Soft pink ambient glow behind the artwork
-  hostedGlow: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: 'rgba(255,79,163,0.22)',
-    left: (SCREEN_W - 280) / 2,
-    top: SCREEN_H * 0.60 * 0.05,
-  },
   // Artwork fills the upper ~62% of the panel
   hostedArtWrap: {
     position: 'absolute',
     top: '1%',
     left: '4%',
     right: '4%',
-    bottom: '32%',
+    bottom: '38%',
   },
   // Bottom copy block
   hostedCopy: {

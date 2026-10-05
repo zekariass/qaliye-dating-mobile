@@ -4,7 +4,7 @@ import type {
     NotificationType,
     ValidatedNavIntent,
 } from '@/types/notifications';
-import { BLIND_DATE_ALERT_CODES } from '@/types/notifications';
+import { BLIND_DATE_ALERT_CODES, MATCHMAKING_ALERT_CODES } from '@/types/notifications';
 
 const SUPPORTED_TYPES: NotificationType[] = [
   'CHAT_MESSAGE',
@@ -13,6 +13,17 @@ const SUPPORTED_TYPES: NotificationType[] = [
   'SUPERLIKE_RECEIVED',
   'ACCOUNT_ALERT',
   'MARKETING',
+  // Audio/video calls
+  'VIDEO_CALL_REQUESTED',
+  'VIDEO_CALL_ACCEPTED',
+  'VIDEO_CALL_DECLINED',
+  'VIDEO_CALL_CANCELLED',
+  'VIDEO_CALL_EXPIRED',
+  'AUDIO_CALL_REQUESTED',
+  'AUDIO_CALL_ACCEPTED',
+  'AUDIO_CALL_DECLINED',
+  'AUDIO_CALL_CANCELLED',
+  'AUDIO_CALL_EXPIRED',
 ];
 
 const UUID_PATTERN =
@@ -75,6 +86,15 @@ export function validatePayload(raw: unknown): NotificationPayloadData | null {
         ? data.alert_code
         : undefined,
     session_id: isValidUuid(data.session_id) ? data.session_id : undefined,
+    introduction_id: isValidUuid(data.introduction_id) ? data.introduction_id : undefined,
+    request_id: isValidUuid(data.request_id) ? data.request_id : undefined,
+    video_call_request_id: isValidUuid(data.video_call_request_id)
+      ? data.video_call_request_id
+      : undefined,
+    call_type:
+      typeof data.call_type === 'string' && data.call_type
+        ? data.call_type
+        : undefined,
     navigation,
   };
 }
@@ -116,6 +136,19 @@ export function buildNavIntent(
           screen: 'blind-date',
         };
       }
+      // Matchmaking alerts ride the same ACCOUNT_ALERT envelope — the event
+      // name lives in `alert_code` and the deep-link ids (introduction_id /
+      // request_id / match_id) are resolved by navigateMatchmakingAlert.
+      if (payload.alert_code && MATCHMAKING_ALERT_CODES.has(payload.alert_code)) {
+        return {
+          type,
+          alert_code: payload.alert_code,
+          introduction_id: payload.introduction_id,
+          request_id: payload.request_id,
+          match_id: payload.match_id,
+          screen: 'matchmaking',
+        };
+      }
       return { type, alert_code: payload.alert_code, screen: 'settings' };
     case 'MARKETING':
       return {
@@ -125,5 +158,28 @@ export function buildNavIntent(
         screen: payload.navigation?.screen ?? '',
         params: payload.navigation?.params,
       };
+    case 'VIDEO_CALL_REQUESTED':
+    case 'VIDEO_CALL_ACCEPTED':
+    case 'VIDEO_CALL_DECLINED':
+    case 'VIDEO_CALL_CANCELLED':
+    case 'VIDEO_CALL_EXPIRED':
+    case 'AUDIO_CALL_REQUESTED':
+    case 'AUDIO_CALL_ACCEPTED':
+    case 'AUDIO_CALL_DECLINED':
+    case 'AUDIO_CALL_CANCELLED':
+    case 'AUDIO_CALL_EXPIRED':
+      return payload.match_id
+        ? {
+            type,
+            match_id: payload.match_id,
+            video_call_request_id:
+              payload.video_call_request_id ?? payload.request_id,
+            screen: 'video-call',
+            params: {
+              matchId: payload.match_id,
+              requestId: payload.video_call_request_id ?? payload.request_id,
+            },
+          }
+        : null;
   }
 }

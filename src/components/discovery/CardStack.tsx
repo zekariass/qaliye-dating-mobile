@@ -21,8 +21,8 @@ interface Props {
   topRightActions?: ReactNode;
   /**
    * Shared vertical scroll offset of the containing ScrollView (if any).
-   * The top card's fixed action buttons counter-translate by this amount so
-   * they stay pinned on screen while the card scrolls beneath them.
+   * The top card's right-side action buttons counter-translate by this
+   * amount so they stay pinned on screen while the card scrolls beneath them.
    */
   scrollY?:         SharedValue<number>;
 }

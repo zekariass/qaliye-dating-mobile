@@ -3,7 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 
 import { fetchInbox, type InboxFilter } from '@/api/chat/chatApi';
-import type { InboxItem, InboxItemDto } from '@/types/chat';
+import type { InboxItem, InboxItemDto, InboxVideoCallRequest } from '@/types/chat';
 import { smartMergeFirstPage } from '@/utils/smartQueryMerge';
 import type { QueryClient } from '@tanstack/react-query';
 
@@ -47,6 +47,24 @@ function mapInboxItemDto(dto: InboxItemDto): InboxItem {
     mutedUntil: dto.muted_until,
     matchedAt: dto.matched_at,
     lastMessageAt: dto.last_message_at,
+    videoCallRequest: mapVideoCallRequestDto(dto.video_call_request),
+  };
+}
+
+/** `isRequester` arrives camel-cased on the wire; fall back to the snake variant. */
+function mapVideoCallRequestDto(
+  dto: InboxItemDto['video_call_request'],
+): InboxVideoCallRequest | null {
+  if (!dto) return null;
+  const raw = dto as Record<string, unknown>;
+  return {
+    id: dto.id,
+    status: dto.status,
+    callType: (raw.call_type ?? raw.callType) === 'AUDIO' ? 'AUDIO' : 'VIDEO',
+    isRequester: Boolean(raw.isRequester ?? raw.is_requester),
+    canAccept: Boolean(dto.can_accept),
+    canCancel: Boolean(dto.can_cancel),
+    canJoin: Boolean(dto.can_join),
   };
 }
 
@@ -156,6 +174,39 @@ export function upsertInboxItem(
         };
 
         return { ...old, pages: newPages };
+      },
+    );
+  }
+}
+
+/**
+ * Sets or clears the live video-call request summary on an inbox row.
+ * Called when a VIDEO_CALL_* push arrives so the badge doesn't go stale
+ * while the list is open. Pass `null` for terminal events.
+ */
+export function updateInboxVideoCallRequest(
+  queryClient: QueryClient,
+  matchId: string,
+  request: InboxVideoCallRequest | null,
+) {
+  for (const filter of ['ALL', 'UNREAD'] as InboxFilter[]) {
+    queryClient.setQueryData(
+      inboxQueryKey(filter),
+      (old: InboxCacheData | undefined) => {
+        if (!old?.pages?.length) return old;
+
+        let changed = false;
+        const pages = old.pages.map((page) => ({
+          ...page,
+          items: page.items.map((item) => {
+            if (item.matchId !== matchId) return item;
+            if (item.videoCallRequest === request) return item;
+            changed = true;
+            return { ...item, videoCallRequest: request };
+          }),
+        }));
+
+        return changed ? { ...old, pages } : old;
       },
     );
   }

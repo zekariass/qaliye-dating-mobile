@@ -6,7 +6,17 @@ export type NotificationType =
   | 'LIKE_RECEIVED'
   | 'SUPERLIKE_RECEIVED'
   | 'ACCOUNT_ALERT'
-  | 'MARKETING';
+  | 'MARKETING'
+  | 'VIDEO_CALL_REQUESTED'
+  | 'VIDEO_CALL_ACCEPTED'
+  | 'VIDEO_CALL_DECLINED'
+  | 'VIDEO_CALL_CANCELLED'
+  | 'VIDEO_CALL_EXPIRED'
+  | 'AUDIO_CALL_REQUESTED'
+  | 'AUDIO_CALL_ACCEPTED'
+  | 'AUDIO_CALL_DECLINED'
+  | 'AUDIO_CALL_CANCELLED'
+  | 'AUDIO_CALL_EXPIRED';
 
 export type DeviceRegistrationRequest = {
   expoPushToken: string;
@@ -65,6 +75,33 @@ export const BLIND_DATE_ALERT_CODES: ReadonlySet<string> = new Set<string>([
   'BLIND_DATE_ADVANCED',
 ]);
 
+/**
+ * ACCOUNT_ALERT sub-codes emitted by the matchmaking feature.
+ * The backend sends notification_type="ACCOUNT_ALERT" with the real event in
+ * `alert_code` — route on the alert_code, never on notification_type.
+ * See docs/matchmaking-client-api.md §5.
+ */
+export type MatchmakingAlertCode =
+  | 'MATCHMAKING_REQUEST_CREATED'
+  | 'MATCHMAKING_REQUEST_CANCELLED'
+  | 'MATCHMAKING_REQUEST_EXPIRED'
+  | 'MATCHMAKING_INTRODUCTION_PROPOSED'
+  | 'MATCHMAKING_INTRODUCTION_DECLINED'
+  | 'MATCHMAKING_INTRODUCTION_CANCELLED'
+  | 'MATCHMAKING_INTRODUCTION_EXPIRED'
+  | 'MATCHMAKING_MATCHED';
+
+export const MATCHMAKING_ALERT_CODES: ReadonlySet<string> = new Set<string>([
+  'MATCHMAKING_REQUEST_CREATED',
+  'MATCHMAKING_REQUEST_CANCELLED',
+  'MATCHMAKING_REQUEST_EXPIRED',
+  'MATCHMAKING_INTRODUCTION_PROPOSED',
+  'MATCHMAKING_INTRODUCTION_DECLINED',
+  'MATCHMAKING_INTRODUCTION_CANCELLED',
+  'MATCHMAKING_INTRODUCTION_EXPIRED',
+  'MATCHMAKING_MATCHED',
+]);
+
 export type NotificationPayloadData = {
   type: NotificationType;
   match_id?: string;
@@ -78,6 +115,14 @@ export type NotificationPayloadData = {
   session_id?: string;
   /** Only present for MARKETING notifications. Contains the deep-link target. */
   navigation?: MarketingNavigation;
+  /** Matchmaking: the introduction id (MATCHMAKING_INTRODUCTION_* / MATCHMAKING_MATCHED alert codes). */
+  introduction_id?: string;
+  /** Matchmaking: the caller's own request id (MATCHMAKING_* alert codes). */
+  request_id?: string;
+  /** Video call: the video-call request id (VIDEO_CALL_* events). */
+  video_call_request_id?: string;
+  /** Video call: 'VIDEO' | 'AUDIO' (VIDEO_CALL_* events; absent on older payloads). */
+  call_type?: string;
 };
 
 export type ValidatedNavIntent = {
@@ -88,6 +133,9 @@ export type ValidatedNavIntent = {
   campaign_id?: string;
   alert_code?: string;
   session_id?: string;
+  introduction_id?: string;
+  request_id?: string;
+  video_call_request_id?: string;
   screen: string;
   params?: Record<string, unknown>;
 };

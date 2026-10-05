@@ -1,0 +1,2 @@
+import MatchmakingMutualInterestScreen from '@/screens/matchmaking/MatchmakingMutualInterestScreen';
+export default MatchmakingMutualInterestScreen;

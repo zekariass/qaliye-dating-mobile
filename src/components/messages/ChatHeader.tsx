@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { BlindDateBadge } from '@/components/common/BlindDateBadge';
-import { colors, fontSize, spacing } from '@/constants/theme';
+import { colors, fontSize, gradients, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { ActivityStatus } from '@/types/activity';
 
@@ -27,6 +28,8 @@ export interface ChatHeaderProps {
   onProfilePress?: () => void;
   /** Optional: open overflow actions menu */
   onMorePress?: () => void;
+  /** Optional: open the calls hub (audio + video share the same screen) */
+  onCallPress?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -43,6 +46,7 @@ export function ChatHeader({
   onBack,
   onProfilePress,
   onMorePress,
+  onCallPress,
 }: ChatHeaderProps) {
   const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
@@ -138,20 +142,50 @@ export function ChatHeader({
         </View>
       </TouchableOpacity>
 
-      {/* Overflow actions */}
-      {onMorePress ? (
-        <TouchableOpacity
-          style={styles.moreBtn}
-          onPress={onMorePress}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.conversationActions')}
-        >
-          <Ionicons name="ellipsis-vertical" size={20} color={th.text} />
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.rightSpacer} />
-      )}
+      {/* Right-side actions: audio call + video call + overflow */}
+      <View style={styles.rightActions}>
+        {onCallPress && (
+          <>
+            <TouchableOpacity
+              style={[styles.callBtn, styles.audioCallBtn]}
+              onPress={onCallPress}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.audioCall', { defaultValue: 'Audio call' })}
+            >
+              <Ionicons name="call" size={19} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onCallPress}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.videoCall', { defaultValue: 'Video call' })}
+            >
+              <LinearGradient
+                colors={gradients.primary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.callBtn, styles.videoCallBtn]}
+              >
+                <Ionicons name="videocam" size={20} color="#FFF" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </>
+        )}
+        {onMorePress ? (
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={onMorePress}
+            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.conversationActions')}
+          >
+            <Ionicons name="ellipsis-vertical" size={20} color={th.text} />
+          </TouchableOpacity>
+        ) : !onCallPress ? (
+          <View style={styles.rightSpacer} />
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -229,13 +263,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   rightSpacer: {
     width: 36,
   },
-  moreBtn: {
+  iconBtn: {
     width: 36,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  callBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+  },
+  audioCallBtn: {
+    backgroundColor: colors.verifiedBlue,
+    shadowColor: colors.verifiedBlue,
+  },
+  videoCallBtn: {
+    shadowColor: colors.primary,
   },
 });

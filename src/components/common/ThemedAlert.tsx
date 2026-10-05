@@ -23,6 +23,9 @@ export type ThemedAlertButton = {
   icon?: React.ComponentProps<typeof Ionicons>['name'] | (string & {});
   iconFamily?: 'ionicons' | 'material';
   iconColor?: string;
+  /** Stays tappable while a button cooldown runs — set on retry-style actions
+   *  you want blocked. Cancel/dismiss buttons are always allowed. */
+  allowDuringCooldown?: boolean;
 };
 
 export type ThemedAlertOptions = {
@@ -34,6 +37,11 @@ export type ThemedAlertOptions = {
   loading?: boolean;
   /** When set, shows a countdown and auto-dismisses after this many milliseconds. */
   autoDismissMs?: number;
+  /** Seconds buttons stay disabled while a live countdown runs. `{seconds}` in
+   *  `message` is replaced with the remaining time. No auto-dismiss. */
+  buttonCooldownSeconds?: number;
+  /** Message shown once the button cooldown reaches zero. */
+  cooldownDoneMessage?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -70,6 +78,7 @@ export function ThemedAlert() {
   const [visible, setVisible] = useState(false);
   const [opts, setOpts] = useState<ThemedAlertOptions>({});
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [cooldown, setCooldown] = useState<number | null>(null);
 
   const show = useCallback((o: ThemedAlertOptions) => {
     setOpts(o);
@@ -79,11 +88,17 @@ export function ThemedAlert() {
     } else {
       setCountdown(null);
     }
+    setCooldown(
+      o.buttonCooldownSeconds != null && o.buttonCooldownSeconds > 0
+        ? Math.ceil(o.buttonCooldownSeconds)
+        : null,
+    );
   }, []);
 
   const hide = useCallback(() => {
     setVisible(false);
     setCountdown(null);
+    setCooldown(null);
   }, []);
 
   useEffect(() => {
@@ -112,9 +127,30 @@ export function ThemedAlert() {
     return () => clearTimeout(timer);
   }, [visible, opts.autoDismissMs, countdown, hide]);
 
-  const buttons = opts.buttons ?? [{ text: t('common.ok', 'OK'), style: 'default' }];
+  // Button-cooldown ticker — disables actions until it reaches zero
+  useEffect(() => {
+    if (!visible || cooldown === null || cooldown <= 0) return;
+    const timer = setTimeout(() => {
+      setCooldown((c) => (c !== null ? Math.max(0, c - 1) : null));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [visible, cooldown]);
+
+  const cooldownActive = cooldown !== null && cooldown > 0;
+  const displayMessage =
+    cooldown === 0 && opts.cooldownDoneMessage
+      ? opts.cooldownDoneMessage
+      : opts.message?.replace('{seconds}', String(cooldown ?? 0));
+
+  const buttons = opts.buttons ?? [{ text: t('common.ok', 'OK'), style: 'default' as const, allowDuringCooldown: true }];
+
+  // Dismiss-style buttons (cancel, or explicitly allowed) stay live during a
+  // cooldown; only action buttons are blocked.
+  const btnBlocked = (btn: ThemedAlertButton) =>
+    cooldownActive && btn.style !== 'cancel' && !btn.allowDuringCooldown;
 
   const handlePress = (btn: ThemedAlertButton) => {
+    if (btnBlocked(btn)) return;
     setVisible(false);
     btn.onPress?.();
   };
@@ -156,8 +192,8 @@ export function ThemedAlert() {
           ) : null}
 
           {/* Message */}
-          {opts.message ? (
-            <Text style={[styles.message, { color: th.textSecondary }]}>{opts.message}</Text>
+          {displayMessage ? (
+            <Text style={[styles.message, { color: th.textSecondary }]}>{displayMessage}</Text>
           ) : null}
 
           {/* Countdown indicator */}
@@ -191,8 +227,10 @@ export function ThemedAlert() {
                     isCancel && styles.buttonCancel,
                     isDestructive && styles.buttonDestructive,
                     { borderColor: th.border },
+                    btnBlocked(btn) && { opacity: 0.45 },
                   ]}
                   onPress={() => handlePress(btn)}
+                  disabled={btnBlocked(btn)}
                 >
                   {btn.icon ? (
                     btn.iconFamily === 'material' ? (

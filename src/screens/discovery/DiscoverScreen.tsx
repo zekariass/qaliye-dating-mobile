@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,6 +42,7 @@ import TopLeftActionButtons from '@/components/discovery/TopLeftActionButtons';
 import { SwipeIcon } from '@/components/layout/AppTabBar';
 import { NotificationPromptModal } from '@/components/notifications/NotificationPromptModal';
 import { IdentityVerificationPromptModal } from '@/components/profile/IdentityVerificationPromptModal';
+import { bdGradients } from '@/constants/blindDateTheme';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useActivateBoost } from '@/hooks/billing/useActivateBoost';
@@ -78,6 +80,12 @@ import { isBlindDateMatch } from '@/utils/matchSource';
 const HEADER_H = 56;
 const TAB_BAR_PADDING = 18;
 const TAB_BAR_H = 68;
+
+// Ways-to-meet pills layout. false = both pills inline in the header center
+// and boost sits on the swipe card's action rail; true = dedicated pills row
+// under the header with the single Blind Date pill + boost back in the header.
+const FEATURE_PILLS_ROW = false;
+const PILLS_ROW_H = FEATURE_PILLS_ROW ? 52 : 0;
 
 // ---------------------------------------------------------------------------
 // Ripple / sonar loading animation
@@ -135,6 +143,13 @@ function RippleRing({ delay, accentColor }: { delay: number; accentColor: string
   );
 }
 
+/** Loader artwork for the *opposite* gender — a male viewer sees the female icon and vice versa. */
+function loaderIconForGender(gender?: string | null) {
+  if (gender === 'MALE') return require('@/assets/images/loader/loader-icon-female.webp');
+  if (gender === 'FEMALE') return require('@/assets/images/loader/loader-icon-male.webp');
+  return require('@/assets/images/loader/loader-icon-male-and-female.webp');
+}
+
 function FindingMatchesAnimation({ accentColor, textColor, subtitleColor, gender }: {
   accentColor: string;
   textColor: string;
@@ -142,11 +157,7 @@ function FindingMatchesAnimation({ accentColor, textColor, subtitleColor, gender
   gender?: string;
 }) {
   const { t } = useTranslation();
-  const loaderIcon = !gender || (gender !== 'MALE' && gender !== 'FEMALE')
-    ? require('@/assets/images/loader/loader-icon-male-and-female.webp')
-    : gender === 'MALE'
-      ? require('@/assets/images/loader/loader-icon-female.webp')
-      : require('@/assets/images/loader/loader-icon-male.webp');
+  const loaderIcon = loaderIconForGender(gender);
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 0 }}>
       <View style={{ width: RING_MAX, height: RING_MAX, alignItems: 'center', justifyContent: 'center' }}>
@@ -206,56 +217,45 @@ function ScrollHint({ color }: { color: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Blind date button — breathing glow halo behind the pill
+// Feature pills — compact "ways to meet" links (header center or pills row)
 // ---------------------------------------------------------------------------
-type BlindDateButtonProps = {
-  borderColor: string;
-  backgroundColor: string;
-  textColor: string;
+type FeaturePillProps = {
   label: string;
   onPress: () => void;
-  /** Browse mode header is denser — shrink the icon to leave room. */
+  /** Dense header/pills-row contexts — shrink the icon to leave room. */
   compact?: boolean;
+  /** Stretch to fill the parent row cell instead of hugging content. */
+  fill?: boolean;
+  isDark: boolean;
 };
 
-function BlindDateButton({ borderColor, backgroundColor, textColor, label, onPress, compact }: BlindDateButtonProps) {
-  const glow = useSharedValue(0);
-
-  useEffect(() => {
-    glow.value = withRepeat(
-      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
-    );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.35 + glow.value * 0.55,
-    transform: [{ scale: 1 + glow.value * 0.12 }],
-    shadowOpacity: 0.25 + glow.value * 0.55,
-  }));
-
+/** Blind Date — primary CTA: hero gradient, mask icon on a white chip. */
+function BlindDateButton({ label, onPress, compact, fill, isDark }: FeaturePillProps) {
   return (
-    <View style={styles.blindDateWrap}>
-      <Animated.View pointerEvents="none" style={[styles.blindDateGlow, glowStyle]} />
-      <TouchableOpacity
-        style={[styles.blindDateBtn, { borderColor, backgroundColor }]}
-        onPress={onPress}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-      >
+    <TouchableOpacity
+      style={[styles.featurePill, styles.blindDateBtn, fill && styles.featurePillFill]}
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <LinearGradient
+        colors={bdGradients.hero as unknown as [string, string, string]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={[StyleSheet.absoluteFill, { borderRadius: 12 }]}
+      />
+      <View style={styles.bdIconChip}>
         <Image
           source={require('@/assets/images/blind-date-icon.png')}
           style={[styles.blindDateIcon, compact && styles.blindDateIconCompact]}
           resizeMode="contain"
         />
-        <Text style={[styles.blindDateText, { color: textColor }]}>
-          {label}
-        </Text>
-      </TouchableOpacity>
-    </View>
+      </View>
+      <Text style={[styles.featurePillText, { color: '#FFFFFF' }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -708,10 +708,10 @@ export default function DiscoverScreen() {
 
   // ── Layout constants ────────────────────────────────────────────────────────
   const TOTAL_TAB = TAB_BAR_PADDING + TAB_BAR_H + Math.max(safeBottom, 12);
-  const CARD_AREA_H = SCREEN_H - HEADER_H - TOTAL_TAB - 12;
+  const CARD_AREA_H = SCREEN_H - HEADER_H - PILLS_ROW_H - TOTAL_TAB - 12;
 
   const headerContainerStyle = useAnimatedStyle(() => ({
-    height: HEADER_H + bannerHeightSV.value,
+    height: HEADER_H + PILLS_ROW_H + bannerHeightSV.value,
   }));
 
   const cardAreaAnimStyle = useAnimatedStyle(() => ({
@@ -1014,18 +1014,15 @@ export default function DiscoverScreen() {
               <SwipeIcon color={th.text} active={false} inactiveFill={isDark ? '#E5E7EB' : '#0B0B0B'} />
             )}
           </TouchableOpacity>
-
         </View>
 
         {/* Blind date button — centered between the mode toggle and the right cluster */}
         <View style={styles.blindDateCenterWrap}>
           <BlindDateButton
-            borderColor={th.border}
-            backgroundColor={isDark ? th.backgroundElement : th.surface}
-            textColor={th.text}
             label={t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
             onPress={() => router.push('/(app)/blind-date' as any)}
             compact={viewMode === 'browse'}
+            isDark={isDark}
           />
         </View>
 
@@ -1081,7 +1078,11 @@ export default function DiscoverScreen() {
             isError={isError}
             onRefresh={refetch}
             isRefreshing={isRefetching}
-            onSwitchToSwipe={() => setViewMode('swipe')}
+            onSwitchToSwipe={() => {
+              if (modeSwitching) return;
+              setModeSwitching(true);
+              setViewMode('swipe');
+            }}
             onMatch={(response) => {
               if (response.is_match && response.match) {
                 setMatchName(response.match.other_user.display_name);
@@ -1150,7 +1151,11 @@ export default function DiscoverScreen() {
             ) : isEmpty ? (
               <View style={styles.emptyWrap}>
                 <View style={[styles.emptyIconCircle, { backgroundColor: isDark ? th.backgroundElement : colors.backgroundLavender }]}>
-                  <Ionicons name="heart-dislike-outline" size={48} color={colors.primary} />
+                  <Image
+                    source={loaderIconForGender(profileDto?.gender)}
+                    style={{ width: 112, height: 112 }}
+                    resizeMode="contain"
+                  />
                 </View>
                 <Text style={[styles.emptyTitle, { color: th.text }]}>
                   {t('discovery.noMoreProfiles')}
@@ -1205,6 +1210,7 @@ export default function DiscoverScreen() {
                 }
               />
             )}
+
 
             {/* Rewind loading overlay */}
             {isRewinding && (
@@ -1331,12 +1337,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
   },
-  headerLeft: {
+  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  headerRight: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -1344,60 +1350,6 @@ const styles = StyleSheet.create({
   blindDateCenterWrap: {
     flex: 1,
     alignItems: 'center',
-  },
-  blindDateWrap: {
-    borderRadius: 21,
-  },
-  blindDateGlow: {
-    position: 'absolute',
-    top: -2,
-    left: -2,
-    right: -2,
-    bottom: -2,
-    borderRadius: 23,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '24',
-    shadowColor: colors.primary,
-    shadowOpacity: 0,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  blindDateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 42,
-    paddingHorizontal: 12,
-    borderRadius: 21,
-    borderWidth: 1.5,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-  },
-  blindDateIcon: {
-    width: 48,
-    height: 28,
-  },
-  blindDateIconCompact: {
-    width: 36,
-    height: 21,
-  },
-  blindDateText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  incognitoIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  incognitoText: {
-    fontSize: 12,
-    fontWeight: '500',
   },
   settingsBtn: {
     width: 42,
@@ -1409,10 +1361,59 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.06,
     shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
+  featurePillFill: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  featurePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    height: 44,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  blindDateBtn: {
+    borderWidth: 0,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  bdIconChip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  blindDateIcon: {
+    width: 40,
+    height: 24,
+  },
+  blindDateIconCompact: {
+    width: 30,
+    height: 18,
+  },
+  featurePillText: {
+    fontSize: 14,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
 
+  incognitoIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  incognitoText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
   // ── Scroll / Main ───────────────────────────────────────────────────────
   scroll: {
     flex: 1,
@@ -1433,7 +1434,6 @@ const styles = StyleSheet.create({
     // details below — keep this subtree painted (and hit-tested) above them.
     zIndex: 2,
   },
-
   // ── Scroll hint ─────────────────────────────────────────────────────────
   scrollHint: {
     alignItems: 'center',

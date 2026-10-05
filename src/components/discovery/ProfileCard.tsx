@@ -14,11 +14,11 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
     Easing,
     interpolateColor,
+    SharedValue,
     useAnimatedStyle,
     useDerivedValue,
     useSharedValue,
-    withTiming,
-    type SharedValue,
+    withTiming
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -89,9 +89,9 @@ interface Props {
   actions?: ReactNode;
   rightActions?: ReactNode;
   /**
-   * Shared vertical scroll offset of the enclosing ScrollView. The fixed
-   * action overlay counter-translates by this so the buttons stay pinned on
-   * screen while the card scrolls beneath them.
+   * Vertical scroll offset of the outer ScrollView. The right-side action
+   * rail counter-translates by this so it stays pinned on screen while the
+   * card scrolls; the left rail intentionally scrolls with the card.
    */
   scrollY?: SharedValue<number>;
 }
@@ -192,6 +192,12 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
     ],
   }));
 
+  // Right rail only: counter-translate by the scroll offset so it stays
+  // pinned while the card content scrolls beneath it.
+  const fixedRightActionsStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scrollY?.value ?? 0 }],
+  }));
+
   const likeStampStyle = useAnimatedStyle(() => ({
     opacity: likeOpacity.value,
     transform: [{ rotateZ: '-20deg' }],
@@ -213,12 +219,6 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
     const borderWidth = Math.max(0, Math.min(4, Math.abs(x) / SWIPE_THRESHOLD * 4));
     return { borderColor, borderWidth };
   });
-
-  // Counter-translate the fixed actions overlay by the screen's scroll offset
-  // so the buttons stay pinned in place while the card scrolls beneath them.
-  const fixedActionsStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: scrollY?.value ?? 0 }],
-  }));
 
   const locationText = (() => {
     const sameCountry = myCountry !== '' && card.country_name === myCountry;
@@ -366,14 +366,15 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
     </GestureDetector>
 
     {/* Floating action buttons — rendered outside the swiping transform so
-        they don't move with the card, and counter-translated by scrollY so
-        they stay fixed on screen while the card scrolls beneath them.
+        they don't move with the card's drag. The left rail (rewind / pass /
+        super message) scrolls along with the card like the mode switch and
+        boost buttons; the right rail stays pinned via scrollY.
         The overlay's bottom edge sits 6px above the name row — the same
         spot the actions row occupied when it lived inside infoBox. */}
     {(actions || rightActions) && (
       <Animated.View
         pointerEvents="box-none"
-        style={[styles.actionsRow, { bottom: Math.max(0, infoBoxH - nameTopY + 6) }, fixedActionsStyle]}
+        style={[styles.actionsRow, { bottom: Math.max(0, infoBoxH - nameTopY + 6) }]}
       >
         {/* Mirrors imageCard's tablet width so the buttons align with the
             card edges (not the wider container) on tablets. */}
@@ -383,7 +384,9 @@ const ProfileCard = forwardRef<ProfileCardHandle, Props>(
         >
           {actions}
           <View style={styles.actionsSpacer} />
-          {rightActions}
+          <Animated.View pointerEvents="box-none" style={fixedRightActionsStyle}>
+            {rightActions}
+          </Animated.View>
         </View>
       </Animated.View>
     )}

@@ -1,0 +1,2 @@
+import MatchmakingIntroductionDetailScreen from '@/screens/matchmaking/MatchmakingIntroductionDetailScreen';
+export default MatchmakingIntroductionDetailScreen;

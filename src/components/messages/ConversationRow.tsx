@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -16,7 +17,7 @@ import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import i18n from '@/i18n';
 import type { ActivityStatus } from '@/types/activity';
-import type { InboxItem } from '@/types/chat';
+import type { InboxItem, InboxVideoCallRequest } from '@/types/chat';
 import { isBlindDateMatch } from '@/utils/matchSource';
 
 // ---------------------------------------------------------------------------
@@ -95,9 +96,11 @@ function useRowTheme() {
 interface AvatarProps {
   uri: string | null;
   activityStatus?: ActivityStatus | null;
+  hasVideoCall?: boolean;
+  videoCallType?: 'VIDEO' | 'AUDIO';
 }
 
-function Avatar({ uri, activityStatus }: AvatarProps) {
+function Avatar({ uri, activityStatus, hasVideoCall, videoCallType }: AvatarProps) {
   return (
     <View style={avatarStyles.wrapper} accessibilityElementsHidden>
       {uri ? (
@@ -118,6 +121,11 @@ function Avatar({ uri, activityStatus }: AvatarProps) {
           size={12}
           style={avatarStyles.statusDot}
         />
+      )}
+      {hasVideoCall && (
+        <View style={avatarStyles.videoChip}>
+          <Ionicons name={videoCallType === 'AUDIO' ? 'call' : 'videocam'} size={10} color="#FFF" />
+        </View>
       )}
     </View>
   );
@@ -149,6 +157,19 @@ const avatarStyles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     padding: 2,
+  },
+  videoChip: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
 });
 
@@ -187,6 +208,88 @@ const badgeStyles = StyleSheet.create({
 });
 
 // ---------------------------------------------------------------------------
+// Video-call request badge
+// ---------------------------------------------------------------------------
+
+const VC_STATE = {
+  respond: {
+    label: (ct: 'VIDEO' | 'AUDIO') => ct === 'AUDIO' ? 'Accept audio call' : 'Accept video call',
+    bg: colors.primary,
+  },
+  join: {
+    label: (ct: 'VIDEO' | 'AUDIO') => ct === 'AUDIO' ? 'Audio call in progress' : 'Video call in progress',
+    bg: colors.success,
+  },
+  waiting: {
+    label: (ct: 'VIDEO' | 'AUDIO') => ct === 'AUDIO' ? 'Audio call request sent' : 'Video call request sent',
+    bg: colors.verifiedBlue,
+  },
+} as const;
+
+function vcState(request: InboxVideoCallRequest): keyof typeof VC_STATE {
+  if (request.canAccept) return 'respond';
+  if (request.canJoin) return 'join';
+  return 'waiting';
+}
+
+/**
+ * Compact call badge — icon combo only:
+ *   direction arrow (incoming ↙ / outgoing ↗) + call-type icon (📞 / 📹).
+ * State is carried by the pill colour (purple = accept, green = in progress,
+ * blue = request sent). The full label stays on accessibilityLabel.
+ */
+function VideoCallBadge({
+  request,
+  onPress,
+}: {
+  request: InboxVideoCallRequest;
+  onPress: () => void;
+}) {
+  const meta = VC_STATE[vcState(request)];
+  const label = meta.label(request.callType);
+  return (
+    <TouchableOpacity
+      style={[vcBadgeStyles.pill, { backgroundColor: meta.bg }]}
+      onPress={onPress}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Ionicons
+        name={request.callType === 'AUDIO' ? 'call' : 'videocam'}
+        size={12}
+        color="#FFFFFF"
+      />
+      <Text style={vcBadgeStyles.arrow}>
+        {request.isRequester ? '↗' : '↙'}
+      </Text>
+      {request.canAccept && (
+        <Ionicons name="chevron-forward" size={11} color="#FFFFFF" />
+      )}
+    </TouchableOpacity>
+  );
+}
+
+const vcBadgeStyles = StyleSheet.create({
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 3,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    maxWidth: '100%',
+  },
+  arrow: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 14,
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Platform card shadow
 // ---------------------------------------------------------------------------
 
@@ -209,6 +312,7 @@ interface ConversationRowProps {
 
 function ConversationRowInner({ item, onPress, isLast, activityStatus }: ConversationRowProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const th = useRowTheme();
   const { label: timestampLabel, isRecent } = formatTimestamp(
     item.lastMessageAt ?? item.matchedAt,
@@ -240,7 +344,12 @@ function ConversationRowInner({ item, onPress, isLast, activityStatus }: Convers
       accessibilityLabel={accessibilityLabel}
     >
       {/* Avatar */}
-      <Avatar uri={item.participant.avatarUrl} activityStatus={activityStatus ?? item.participant.activityStatus} />
+      <Avatar
+        uri={item.participant.avatarUrl}
+        activityStatus={activityStatus ?? item.participant.activityStatus}
+        hasVideoCall={item.videoCallRequest != null}
+        videoCallType={item.videoCallRequest?.callType}
+      />
 
       {/* Content + metadata */}
       <View style={styles.body}>
@@ -270,7 +379,8 @@ function ConversationRowInner({ item, onPress, isLast, activityStatus }: Convers
           </Text>
         </View>
 
-        {/* Bottom row: preview + badge/muted */}
+        {/* Bottom row: preview + right column (call pill under the
+            timestamp, then unread/muted) */}
         <View style={styles.bottomRow}>
           <Text
             style={[styles.preview, { color: th.previewColor }]}
@@ -280,6 +390,22 @@ function ConversationRowInner({ item, onPress, isLast, activityStatus }: Convers
           </Text>
 
           <View style={styles.badgeArea}>
+            {item.videoCallRequest && (
+              <VideoCallBadge
+                request={item.videoCallRequest}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(app)/video-call' as never,
+                    params: {
+                      matchId: item.matchId,
+                      displayName: item.participant.displayName,
+                      avatarUrl: item.participant.avatarUrl ?? '',
+                      requestId: item.videoCallRequest!.id,
+                    },
+                  })
+                }
+              />
+            )}
             {isMuted ? (
               <Ionicons
                 name="notifications-off-outline"
@@ -361,6 +487,7 @@ const styles = StyleSheet.create({
     minWidth: 22,
     alignItems: 'flex-end',
     marginTop: 1,
+    gap: 4,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

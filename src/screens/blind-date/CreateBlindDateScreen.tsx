@@ -942,7 +942,6 @@ export default function CreateBlindDateScreen() {
           })
         }
         onMatches={() => router.push('/(app)/(tabs)/matches' as never)}
-        onProfile={() => router.push('/(app)/(tabs)/profile' as never)}
       />
     </View>
   );

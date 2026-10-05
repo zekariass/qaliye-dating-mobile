@@ -1,6 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { rs, useTabletScale } from '@/utils/responsive';
@@ -13,6 +13,10 @@ interface Props {
   disabled?: boolean;
   /** Disables only the rewind button (e.g. no rewind credits left). */
   rewindDisabled?: boolean;
+  /** Omit to hide the boost button. Shown above rewind. */
+  onBoost?: () => void;
+  boostActive?: boolean;
+  boostLoading?: boolean;
 }
 
 /**
@@ -34,9 +38,34 @@ function BoldIcon({ children, style }: { children: React.ReactNode; style?: obje
  * Pass + rewind + super message — boxed icons in a vertical column, rendered
  * at the bottom-left of the swipe card photo just above the profile name.
  */
-export default function TopLeftActionButtons({ onPass, onRewind, onSuperMessage, disabled, rewindDisabled }: Props) {
+export default function TopLeftActionButtons({ onPass, onRewind, onSuperMessage, disabled, rewindDisabled, onBoost, boostActive, boostLoading }: Props) {
   const { t } = useTranslation();
   const scale = useTabletScale();
+
+  const boostBtn = onBoost ? (
+    <TouchableOpacity
+      style={styles.hitArea}
+      onPress={onBoost}
+      disabled={disabled || boostLoading}
+      activeOpacity={0.7}
+      accessibilityLabel={boostActive ? t('discovery.boost.activeLabel') : t('discovery.boost.activateTitle')}
+    >
+      <View style={[styles.iconBox, boostActive && styles.iconBoxBoost]}>
+        {boostLoading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <BoldIcon>
+            <Ionicons
+              name={boostActive ? 'rocket' : 'rocket-outline'}
+              size={rs(24, scale)}
+              color={boostActive ? '#C084FC' : '#FFFFFF'}
+              style={styles.icon}
+            />
+          </BoldIcon>
+        )}
+      </View>
+    </TouchableOpacity>
+  ) : null;
 
   const rewindBtn = onRewind ? (
     <TouchableOpacity
@@ -61,6 +90,9 @@ export default function TopLeftActionButtons({ onPass, onRewind, onSuperMessage,
 
   return (
     <View style={styles.container}>
+      {/* Boost */}
+      {boostBtn}
+
       {/* Rewind */}
       {rewindBtn}
 
@@ -127,6 +159,9 @@ const styles = StyleSheet.create({
   },
   iconBoxAmber: {
     borderColor: 'rgba(251,191,36,0.9)',
+  },
+  iconBoxBoost: {
+    borderColor: 'rgba(192,132,252,0.9)',
   },
   iconBoxDanger: {
     borderColor: 'rgba(239,68,68,0.9)',

@@ -55,6 +55,7 @@
     "react-hook-form": "^7.79.0",
     "react-i18next": "^17.0.8",
     "react-native": "0.85.3",
+    "react-native-agora": "^4.3.0-build.1",
     "react-native-gesture-handler": "~2.31.1",
     "react-native-purchases": "^10.4.0",
     "react-native-reanimated": "4.3.1",

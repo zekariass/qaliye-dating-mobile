@@ -5,22 +5,22 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Alert,
-    BackHandler,
-    FlatList,
-    InteractionManager,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  BackHandler,
+  FlatList,
+  InteractionManager,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,6 +30,7 @@ import { ChatHeader } from '@/components/messages/ChatHeader';
 import { DateSeparator } from '@/components/messages/DateSeparator';
 import { MessageBubble } from '@/components/messages/MessageBubble';
 import { MessageComposer } from '@/components/messages/MessageComposer';
+import { VideoCallStatusBanner } from '@/components/messages/VideoCallStatusBanner';
 import { NotificationPromptModal } from '@/components/notifications/NotificationPromptModal';
 import { colors } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
@@ -52,16 +53,16 @@ import { useTheme } from '@/hooks/use-theme';
 import i18n from '@/i18n';
 import { useChatStore } from '@/stores/chat-store';
 import type {
-    ChatFileAttachment,
-    ChatListItem,
-    ChatMessage,
-    ChatMessageViewModel,
-    ReceiptState,
-    ServerDeliveryStatus,
+  ChatFileAttachment,
+  ChatListItem,
+  ChatMessage,
+  ChatMessageViewModel,
+  ReceiptState,
+  ServerDeliveryStatus,
 } from '@/types/chat';
 import {
-    getImageChatMsgsStatus,
-    getVoiceChatMsgsStatus
+  getImageChatMsgsStatus,
+  getVoiceChatMsgsStatus
 } from '@/utils/entitlements';
 import { processChatImage } from '@/utils/imageProcessor';
 import { isBlindDateMatch } from '@/utils/matchSource';
@@ -648,6 +649,20 @@ export default function ChatScreen() {
     }
   }, [router, thread, matchId]);
 
+  // One entry point for both call types — the hub shows the live request if
+  // one exists, or offers "Request Video Call" / "Request Audio Call" if not.
+  const handleCall = useCallback(() => {
+    router.push({
+      pathname: '/(app)/video-call' as any,
+      params: {
+        matchId,
+        displayName: thread?.participant.displayName ?? displayName,
+        avatarUrl: thread?.participant.avatarUrl ?? avatarUrl ?? '',
+      },
+    });
+  }, [router, matchId, thread, displayName, avatarUrl]);
+
+
   const participant = thread?.participant;
 
   const handleOpenActions = useCallback(() => {
@@ -850,7 +865,15 @@ export default function ChatScreen() {
         activityStatus={headerActivityStatus}
         onBack={handleBack}
         onProfilePress={handleProfilePress}
+        onCallPress={handleCall}
         onMorePress={participant ? handleOpenActions : undefined}
+      />
+
+      {/* Live video-call request banner */}
+      <VideoCallStatusBanner
+        matchId={matchId}
+        displayName={thread?.participant.displayName ?? displayName}
+        avatarUrl={avatarUrl ?? thread?.participant.avatarUrl ?? null}
       />
 
       {/* Message timeline */}

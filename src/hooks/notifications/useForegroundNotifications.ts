@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
-import { upsertInboxItem } from '@/hooks/messages/useInbox';
+import { updateInboxVideoCallRequest, upsertInboxItem } from '@/hooks/messages/useInbox';
 import { Expo } from '@/services/notifications/notificationsModule';
 import {
     buildNavIntent,
@@ -11,12 +11,75 @@ import {
 import { useNotificationsStore } from '@/stores/notifications-store';
 import {
     BLIND_DATE_ALERT_CODES,
-    type ForegroundBannerState,
+    MATCHMAKING_ALERT_CODES,
+    type ForegroundBannerState
 } from '@/types/notifications';
 
 type ForegroundNotificationOptions = {
   currentMatchId?: string | null;
 };
+
+type VideoCallEventCode =
+  | 'VIDEO_CALL_REQUESTED'
+  | 'VIDEO_CALL_ACCEPTED'
+  | 'VIDEO_CALL_DECLINED'
+  | 'VIDEO_CALL_CANCELLED'
+  | 'VIDEO_CALL_EXPIRED';
+
+/**
+ * Keeps the inbox row's video-call badge in sync when a VIDEO_CALL_* push
+ * arrives. The inbox field is a fetch-time snapshot — live events patch it
+ * locally so the badge doesn't go stale while the list is open.
+ *
+ * Events are caller-relative to the recipient:
+ *  • VIDEO_CALL_REQUESTED → responder → can_accept
+ *  • VIDEO_CALL_ACCEPTED  → requester → can_join
+ *  • terminal events      → badge cleared
+ */
+function applyVideoCallBadgeUpdate(
+  queryClient: ReturnType<typeof useQueryClient>,
+  code: VideoCallEventCode,
+  payload: {
+    match_id?: string;
+    video_call_request_id?: string;
+    request_id?: string;
+    call_type?: string;
+    callType?: string;
+  },
+) {
+  const matchId = payload.match_id;
+  if (!matchId) {
+    queryClient.invalidateQueries({ queryKey: ['chat-inbox'] });
+    return;
+  }
+  const requestId = payload.video_call_request_id ?? payload.request_id ?? '';
+  const callType = (payload.call_type ?? payload.callType) === 'AUDIO' ? 'AUDIO' as const : 'VIDEO' as const;
+
+  if (code === 'VIDEO_CALL_REQUESTED') {
+    updateInboxVideoCallRequest(queryClient, matchId, {
+      id: requestId,
+      status: 'PENDING',
+      callType,
+      isRequester: false,
+      canAccept: true,
+      canCancel: false,
+      canJoin: false,
+    });
+  } else if (code === 'VIDEO_CALL_ACCEPTED') {
+    updateInboxVideoCallRequest(queryClient, matchId, {
+      id: requestId,
+      status: 'ACCEPTED',
+      callType,
+      isRequester: true,
+      canAccept: false,
+      canCancel: false,
+      canJoin: true,
+    });
+  } else {
+    // DECLINED / CANCELLED / EXPIRED → request is terminal, clear the badge.
+    updateInboxVideoCallRequest(queryClient, matchId, null);
+  }
+}
 
 export function useForegroundNotifications(options?: ForegroundNotificationOptions) {
   const queryClient = useQueryClient();
@@ -91,7 +154,7 @@ export function useForegroundNotifications(options?: ForegroundNotificationOptio
           showBanner(notification, payload);
           break;
 
-        case 'ACCOUNT_ALERT':
+        case 'ACCOUNT_ALERT': {
           queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
           queryClient.invalidateQueries({ queryKey: ['me'] });
           // Blind Date lifecycle alerts ride on ACCOUNT_ALERT — refresh the
@@ -100,6 +163,36 @@ export function useForegroundNotifications(options?: ForegroundNotificationOptio
             queryClient.invalidateQueries({ queryKey: ['blindDate'] });
             queryClient.invalidateQueries({ queryKey: ['matches'] });
           }
+          // Matchmaking lifecycle alerts ride ACCOUNT_ALERT as alert_code —
+          // refresh requests/intros/preferences so the status screens show
+          // the new state when the user taps through.
+          if (payload?.alert_code && MATCHMAKING_ALERT_CODES.has(payload.alert_code)) {
+            queryClient.invalidateQueries({ queryKey: ['matchmaking'] });
+            if (payload.alert_code === 'MATCHMAKING_MATCHED') {
+              queryClient.invalidateQueries({ queryKey: ['matches'] });
+              queryClient.invalidateQueries({ queryKey: ['chat-inbox'] });
+            }
+          }
+          // VIDEO_CALL_* may also ride on ACCOUNT_ALERT as an alert_code —
+          // apply the same badge update as dedicated notification types.
+          if (payload?.alert_code?.startsWith('VIDEO_CALL_')) {
+            applyVideoCallBadgeUpdate(
+              queryClient,
+              payload.alert_code as Parameters<typeof applyVideoCallBadgeUpdate>[1],
+              payload,
+            );
+          }
+          showBanner(notification, payload);
+          break;
+        }
+
+        case 'VIDEO_CALL_REQUESTED':
+        case 'VIDEO_CALL_ACCEPTED':
+        case 'VIDEO_CALL_DECLINED':
+        case 'VIDEO_CALL_CANCELLED':
+        case 'VIDEO_CALL_EXPIRED':
+          applyVideoCallBadgeUpdate(queryClient, type, payload);
+          queryClient.invalidateQueries({ queryKey: ['videoCall'] });
           showBanner(notification, payload);
           break;
 

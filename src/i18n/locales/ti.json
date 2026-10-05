@@ -666,12 +666,13 @@
     }
   },
   "support": {
-    "title": "Qal Dating Support",
+    "title": "Qal Support",
     "officialSupport": "Official",
     "statusIdle": "Contact our support team",
     "statusWaiting": "Waiting for support",
     "statusActive": "Active support conversation",
     "statusClosed": "Conversation closed",
+    "introGreeting": "ሰላም! ናብ Qal ሓገዝ ብደሓን መጻእኩም 👋",
     "emptyState": "How can we help you?",
     "emptyStateBody": "Send us a message and our support team will get back to you.",
     "closedStateBody": "This conversation is closed. Staff will need to reopen it before you can send new messages.",
@@ -1322,7 +1323,7 @@
       "q14": "ስለምንታይ ዝኾነ Match ክረክብ ዘይክኣልኩ?",
       "a14": "ኣብ ላዕለዋይ የማናይ ኩርናዕ ናይቲ ናይ Discovery ገጽ ዘሎ ምልክት Filter ብምጥዋቕ ምርጫታትካ ኣረጋግጽ። ኣድማስ ምድላይካ ንምስፋሕ ርሕቀትካን ክልል ዕድመኻን ኣተዓራሪ። ብተወሳኺ ፕሮፋይልካ ንጹር ስእልታትን ምሉእ ባዮን ከም ዘለዎ ኣረጋግጽ። Boost ምጥቃም ኣብ ከባቢኻ ንዘለዉ ዝያዳ ሰባት ናይ ምርኣይ ዕድልካ ብግዝያዊነት ከዕብዮ ይኽእል።",
       "q15": "ናይ ሓገዝ ጉጅለ (support) ከመይ ገይረ ክረክብ ይኽእል?",
-      "a15": "ምስ ናይ ሓገዝ ጉጅለና ዕላል ንምጅማር ናብ Messages ኪድ እሞ \"Qal Dating Support\" ዝብል ጠውቕ። ከምኡ'ውን ካብ ናይ ዝኾነ ተጠቃሚ ፕሮፋይል ወይ ቻት ብቐጥታ ጸገማት ሪፖርት ክትገብር ትኽእል ኢኻ።"
+      "a15": "ምስ ናይ ሓገዝ ጉጅለና ዕላል ንምጅማር ናብ Messages ኪድ እሞ \"Qal Support\" ዝብል ጠውቕ። ከምኡ'ውን ካብ ናይ ዝኾነ ተጠቃሚ ፕሮፋይል ወይ ቻት ብቐጥታ ጸገማት ሪፖርት ክትገብር ትኽእል ኢኻ።"
     },
     "supportLink": "ሕቶ ኣለካ? ምስና ተወያይዩ",
     "supportSubtitle": "ብተደጋጋሚ ኣብ 24 ሰዓታት ክንመልስ ኢና"

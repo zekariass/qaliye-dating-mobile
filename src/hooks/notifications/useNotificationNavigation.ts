@@ -7,6 +7,7 @@ import type * as NotificationsType from 'expo-notifications';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { navigateBlindDateAlert } from '@/services/notifications/blindDateNavigation';
 import { navigateMarketingIntent } from '@/services/notifications/marketingNavigation';
+import { navigateMatchmakingAlert } from '@/services/notifications/matchmakingNavigation';
 import { Expo } from '@/services/notifications/notificationsModule';
 import {
     buildNavIntent,
@@ -29,6 +30,9 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
   const setPendingNavIntent = useNotificationsStore((s) => s.setPendingNavIntent);
   const myUserId = useCurrentProfile().data?.user_id;
   const processedOnce = useRef(false);
+  // Dedup MATCHMAKING_MATCHED vs the generic MATCH_CREATED push that arrives
+  // alongside it — both carry the same match_id.
+  const lastMatchNavRef = useRef<{ matchId: string; ts: number } | null>(null);
   const [persistedIdLoaded, setPersistedIdLoaded] = useState(false);
 
   const navigate = useCallback(
@@ -50,6 +54,19 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
           }
           break;
         case 'MATCH_CREATED':
+          // A matchmaking match emits MATCHMAKING_MATCHED alongside this
+          // generic push — if the matchmaking nav just ran for the same
+          // match_id, skip so we don't stack a second screen.
+          if (
+            intent.match_id &&
+            intent.match_id === lastMatchNavRef.current?.matchId &&
+            Date.now() - lastMatchNavRef.current!.ts < 5000
+          ) {
+            break;
+          }
+          if (intent.match_id) {
+            lastMatchNavRef.current = { matchId: intent.match_id, ts: Date.now() };
+          }
           router.push('/(app)/(tabs)/matches' as any);
           break;
         case 'LIKE_RECEIVED':
@@ -66,6 +83,28 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
               sessionId: intent.session_id,
               userId: myUserId,
             });
+          } else if (intent.screen === 'matchmaking') {
+            // Matchmaking pushes ride ACCOUNT_ALERT — route on alert_code.
+            // MATCHMAKING_MATCHED also emits a generic MATCH_CREATED push; the
+            // dedup ref below prevents a double-navigation on match_id.
+            if (
+              intent.alert_code === 'MATCHMAKING_MATCHED' &&
+              intent.match_id &&
+              intent.match_id === lastMatchNavRef.current?.matchId &&
+              Date.now() - lastMatchNavRef.current!.ts < 5000
+            ) {
+              break;
+            }
+            if (intent.alert_code === 'MATCHMAKING_MATCHED' && intent.match_id) {
+              lastMatchNavRef.current = { matchId: intent.match_id, ts: Date.now() };
+            }
+            navigateMatchmakingAlert({
+              router,
+              alertCode: intent.alert_code,
+              introductionId: intent.introduction_id,
+              requestId: intent.request_id,
+              matchId: intent.match_id,
+            });
           } else {
             router.push('/(app)/settings' as any);
           }
@@ -77,6 +116,28 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
             intent.params as Record<string, unknown> | undefined,
             intent.campaign_id,
           );
+          break;
+        case 'VIDEO_CALL_REQUESTED':
+        case 'VIDEO_CALL_ACCEPTED':
+        case 'VIDEO_CALL_DECLINED':
+        case 'VIDEO_CALL_CANCELLED':
+        case 'VIDEO_CALL_EXPIRED':
+        case 'AUDIO_CALL_REQUESTED':
+        case 'AUDIO_CALL_ACCEPTED':
+        case 'AUDIO_CALL_DECLINED':
+        case 'AUDIO_CALL_CANCELLED':
+        case 'AUDIO_CALL_EXPIRED':
+          if (intent.match_id) {
+            router.push({
+              pathname: '/(app)/video-call' as any,
+              params: {
+                matchId: intent.match_id,
+                ...(intent.video_call_request_id
+                  ? { requestId: intent.video_call_request_id }
+                  : {}),
+              },
+            });
+          }
           break;
         default:
           break;

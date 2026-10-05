@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SwipeIcon } from '@/components/layout/AppTabBar';
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -29,15 +30,18 @@ export function useBlindDateTheme() {
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
-export type BlindDateNavKey = 'home' | 'open' | 'mine' | 'participating' | 'matches' | 'profile';
+export type BlindDateNavKey = 'home' | 'open' | 'mine' | 'participating' | 'matches';
+
+const BAR_H  = 64;
+const C      = 38;   // center circle diameter
+const CENTER: BlindDateNavKey = 'mine';
 
 const NAV_ITEMS: { key: BlindDateNavKey; labelKey: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'home',          labelKey: 'tabs.discover',               icon: 'compass-outline' },
-  { key: 'open',          labelKey: 'blindDate.nav.browse',        icon: 'albums-outline' },
-  { key: 'participating', labelKey: 'blindDate.nav.joined',        icon: 'heart-outline' },
-  { key: 'mine',          labelKey: 'blindDate.nav.create',        icon: 'add-outline' },
-  { key: 'matches',       labelKey: 'blindDate.nav.matches',       icon: 'heart-circle-outline' },
-  { key: 'profile',       labelKey: 'blindDate.nav.profile',       icon: 'person-circle-outline' },
+  { key: 'open',          labelKey: 'blindDate.nav.browse',  icon: 'albums-outline' },
+  { key: 'participating', labelKey: 'blindDate.nav.joined',  icon: 'heart-outline' },
+  { key: 'mine',          labelKey: 'blindDate.nav.create',  icon: 'add' },
+  { key: 'home',          labelKey: 'tabs.discover',         icon: 'grid-outline' },
+  { key: 'matches',       labelKey: 'blindDate.nav.matches', icon: 'heart-circle-outline' },
 ];
 
 // ─── Matches icon — same double-heart as the discovery tab bar ────────────────
@@ -70,7 +74,6 @@ export interface BlindDateBottomNavProps {
   onMine: () => void;
   onJoined: () => void;
   onMatches: () => void;
-  onProfile: () => void;
 }
 
 export default function BlindDateBottomNav({
@@ -80,95 +83,210 @@ export default function BlindDateBottomNav({
   onMine,
   onJoined,
   onMatches,
-  onProfile,
 }: BlindDateBottomNavProps) {
   const { t } = useTranslation();
-  const { card, border, textMuted, purple, isDark } = useBlindDateTheme();
-  const insets = useSafeAreaInsets();
-  // Matches the discovery bar's inactive front-heart fill.
-  const matchesInactiveFill = isDark ? '#E5E7EB' : '#0B0B0B';
+  const { bg, isDark } = useBlindDateTheme();
+  const { bottom } = useSafeAreaInsets();
+
+  // Same palette as the discovery tab bar.
+  const barBg             = bg;
+  const separatorColor    = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.30)';
+  const inactiveColor     = isDark ? '#64748B' : '#111827';
+  const activeColor       = isDark ? '#A78BFA' : colors.primary;
+  const inactiveFill      = isDark ? '#E5E7EB' : '#0B0B0B';
+  const centerOuterBorder = separatorColor;
 
   const handlers: Record<BlindDateNavKey, () => void> = {
-    home:          onHome,
     open:          onExplore,
     participating: onJoined,
-    matches:       onMatches,
     mine:          onMine,
-    profile:       onProfile,
+    home:          onHome,
+    matches:       onMatches,
   };
 
   return (
     <View
       style={[
-        styles.nav,
-        {
-          backgroundColor: card,
-          borderColor: border,
-          paddingBottom: Math.max(insets.bottom, 10),
-        },
+        styles.wrapper,
+        { paddingBottom: Math.max(bottom, 10), backgroundColor: barBg },
       ]}
     >
-      {NAV_ITEMS.map((item) => {
-        const active = item.key === activeTab;
-        return (
-          <TouchableOpacity
-            key={item.key}
-            style={styles.navItem}
-            onPress={handlers[item.key]}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={t(item.labelKey)}
-            accessibilityState={{ selected: active }}
-          >
-            {item.key === 'matches' ? (
-              <MatchesNavIcon
-                active={active}
-                color={active ? purple : textMuted}
-                inactiveFill={matchesInactiveFill}
-              />
-            ) : (
-              <Ionicons name={item.icon} size={22} color={active ? purple : textMuted} />
-            )}
-            <Text style={[styles.navLabel, { color: active ? purple : textMuted }]} numberOfLines={1}>
-              {t(item.labelKey)}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+      {/* Hairline separator — same as the discovery tab bar */}
+      <View style={[styles.separator, { backgroundColor: separatorColor }]} />
+
+      <View style={[styles.bar, { backgroundColor: barBg }]}>
+        {NAV_ITEMS.map((item) => {
+          const active = item.key === activeTab;
+          const onPress = handlers[item.key];
+
+          // ── Center button (Create) ────────────────────────────────────────
+          if (item.key === CENTER) {
+            return (
+              <TouchableOpacity
+                key={item.key}
+                style={styles.centerWrap}
+                onPress={onPress}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={t(item.labelKey)}
+              >
+                {/* Outer ring provides visual separation from content above */}
+                <View
+                  style={[
+                    styles.centerOuter,
+                    { backgroundColor: barBg, borderColor: centerOuterBorder },
+                  ]}
+                >
+                  <View style={styles.centerCircle}>
+                    <Ionicons name="add" size={24} color="#fff" />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          }
+
+          // ── Regular tabs ───────────────────────────────────────────────────
+          const iconColor = active ? activeColor : inactiveColor;
+
+          return (
+            <TouchableOpacity
+              key={item.key}
+              style={styles.tab}
+              onPress={onPress}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={t(item.labelKey)}
+              accessibilityState={{ selected: active }}
+            >
+              {/* Top pill indicator — same as the discovery tab bar */}
+              {active && (
+                <View style={[styles.activeIndicator, { backgroundColor: activeColor }]} />
+              )}
+
+              <View style={styles.iconWrap}>
+                {item.key === 'matches' ? (
+                  <MatchesNavIcon
+                    active={active}
+                    color={iconColor}
+                    inactiveFill={inactiveFill}
+                  />
+                ) : item.key === 'open' ? (
+                  <SwipeIcon
+                    color={iconColor}
+                    active={active}
+                    inactiveFill={inactiveFill}
+                  />
+                ) : item.key === 'participating' ? (
+                  <Ionicons name={active ? 'heart' : 'heart-outline'} size={23} color={iconColor} />
+                ) : (
+                  <Ionicons name={item.icon} size={23} color={iconColor} />
+                )}
+              </View>
+
+              <Text
+                style={[
+                  styles.label,
+                  { color: inactiveColor },
+                  active && { color: activeColor, fontWeight: '700' },
+                ]}
+                numberOfLines={1}
+              >
+                {t(item.labelKey)}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  nav: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    paddingTop: 8,
-    paddingHorizontal: 8,
+  wrapper: {
+    overflow: 'visible',
   },
-  navItem: {
+  separator: {
+    height: StyleSheet.hairlineWidth,
+  },
+  bar: {
+    height: BAR_H,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    overflow: 'visible',
+  },
+  tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
-    paddingVertical: 4,
+    height: BAR_H,
+    position: 'relative',
   },
-  navLabel: { fontSize: 10.5, fontWeight: '700' },
+  activeIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: '50%',
+    marginLeft: -12,
+    width: 24,
+    height: 2.5,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+  },
+  iconWrap: {
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
   matchesIconWrap: {
     width: 34,
-    height: 22,
+    height: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
   matchesHeartBack: {
     position: 'absolute',
     left: 0,
-    top: 0,
+    top: 2,
     opacity: 0.55,
   },
   matchesHeartFront: {
     position: 'absolute',
     right: 0,
-    top: 0,
+    top: 2,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  // Floats above the bar; background matches th.background for a clean "cutout"
+  centerWrap: {
+    width: C + 24,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: -(C * 0.72),
+    paddingBottom: 4,
+  },
+  centerOuter: {
+    width: C + 16,
+    height: C + 16,
+    borderRadius: (C + 16) / 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerCircle: {
+    width: C,
+    height: C,
+    borderRadius: C / 2,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOpacity: 0.55,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 12,
   },
 });

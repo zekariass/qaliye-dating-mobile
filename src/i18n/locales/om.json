@@ -666,12 +666,13 @@
     }
   },
   "support": {
-    "title": "Qal Dating Support",
+    "title": "Qal Support",
     "officialSupport": "Official",
     "statusIdle": "Contact our support team",
     "statusWaiting": "Waiting for support",
     "statusActive": "Active support conversation",
     "statusClosed": "Conversation closed",
+    "introGreeting": "Akkam! Gara Qal Deeggarsaatti baga nagaan dhuftan 👋",
     "emptyState": "How can we help you?",
     "emptyStateBody": "Send us a message and our support team will get back to you.",
     "closedStateBody": "This conversation is closed. Staff will need to reopen it before you can send new messages.",
@@ -1322,7 +1323,7 @@
       "q14": "Maaliifan Match tokkoyyuu argachuu dhabe?",
       "a14": "Fuula Discovery gubbaa mirgaa irratti mallattoo Filter tuquudhaan filannoowwan keessan mirkaneeffadhaa. Barbaacha keessan bal'isuuf fageenya fi daangaa umrii keessanii sirreessaa. Akkasumas pirofaayiliin keessan suuraa ifa ta'ee fi seenaa (bio) guutuu qabaachuu isaa mirkaneeffadhaa. Boost fayyadamuun namoota naannoo keessan jiran baayyee biratti akka mul'attan yeroof isin gargaaruu danda'a.",
       "q15": "Garee deeggarsaa (support) akkamittan qunnama?",
-      "a15": "Garee deeggarsaa keenya waliin haasaa eegaluuf gara Messages deemaa \"Qal Dating Support\" tuqaa. Akkasumas rakkoolee kallattiin pirofaayilii yookaan chaatii fayyadamaa kamiyyuu irraa rippoortii gochuu dandeessu."
+      "a15": "Garee deeggarsaa keenya waliin haasaa eegaluuf gara Messages deemaa \"Qal Support\" tuqaa. Akkasumas rakkoolee kallattiin pirofaayilii yookaan chaatii fayyadamaa kamiyyuu irraa rippoortii gochuu dandeessu."
     },
     "supportLink": "Gaaffii qabdu? Nu waliin haasawaa",
     "supportSubtitle": "Yeroo baay'ee sa'aatii 24 keessatti deebifanna"

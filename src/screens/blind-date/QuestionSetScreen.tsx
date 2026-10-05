@@ -1119,24 +1119,38 @@ function SetQuestionRow({
         {reorderMode ? (
           <>
             <TouchableOpacity
-              style={[styles.qActionBtn, { opacity: index === 0 || busy ? 0.35 : 1 }]}
+              style={[styles.qReorderBtn, { opacity: index === 0 || busy ? 0.35 : 1 }]}
               onPress={() => onMove(-1)}
               disabled={index === 0 || busy}
               hitSlop={6}
               accessibilityRole="button"
               accessibilityLabel={t('blindDate.questionSet.moveUp')}
             >
-              <Ionicons name="chevron-up" size={18} color={textPrimary} />
+              <LinearGradient
+                colors={bdGradients.hero}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.qReorderBtnInner}
+              >
+                <Ionicons name="chevron-up" size={18} color="#FFF" />
+              </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.qActionBtn, { opacity: index === total - 1 || busy ? 0.35 : 1 }]}
+              style={[styles.qReorderBtn, styles.qReorderBtnGap, { opacity: index === total - 1 || busy ? 0.35 : 1 }]}
               onPress={() => onMove(1)}
               disabled={index === total - 1 || busy}
               hitSlop={6}
               accessibilityRole="button"
               accessibilityLabel={t('blindDate.questionSet.moveDown')}
             >
-              <Ionicons name="chevron-down" size={18} color={textPrimary} />
+              <LinearGradient
+                colors={bdGradients.hero}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.qReorderBtnInner}
+              >
+                <Ionicons name="chevron-down" size={18} color="#FFF" />
+              </LinearGradient>
             </TouchableOpacity>
           </>
         ) : (
@@ -1693,7 +1707,6 @@ export default function QuestionSetScreen() {
           })
         }
         onMatches={() => router.push('/(app)/(tabs)/matches' as never)}
-        onProfile={() => router.push('/(app)/(tabs)/profile' as never)}
       />
     </View>
   );
@@ -1819,6 +1832,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  qReorderBtn: {
+    width: 40,
+    height: 36,
+    borderRadius: 18,
+    ...Platform.select({
+      ios:     { shadowColor: bdColors.primary, shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 6 },
+      default: {},
+    }),
+  },
+  qReorderBtnInner: {
+    flex: 1,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qReorderBtnGap: { marginLeft: 10 },
   qActionDivider: { width: StyleSheet.hairlineWidth, height: 20 },
   answerPanel: {
     borderRadius: 12,

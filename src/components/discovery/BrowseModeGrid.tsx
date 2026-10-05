@@ -117,6 +117,10 @@ function BrowseProfileCard({
   borderColor,
   textColor,
   isActing,
+  onBoost,
+  boostActive,
+  boostLoading,
+  onSwitchToSwipe,
 }: {
   item: BrowseItem;
   onPress: (userId: string) => void;
@@ -130,6 +134,10 @@ function BrowseProfileCard({
   borderColor: string;
   textColor: string;
   isActing: boolean;
+  onBoost?: () => void;
+  boostActive?: boolean;
+  boostLoading?: boolean;
+  onSwitchToSwipe: () => void;
 }) {
   const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
@@ -449,11 +457,15 @@ function BrowseProfileCard({
         <TopLeftActionButtons
           onPass={handlePass}
           onRewind={onRewind}
+          onBoost={onBoost}
+          boostActive={boostActive}
+          boostLoading={boostLoading}
           onSuperMessage={() => onSuperMessage(item.user_id)}
           disabled={animating || isActing}
           rewindDisabled={!canRewind}
         />
       </View>
+
       </View>
 
       {/* Info section */}
@@ -556,7 +568,7 @@ function BrowseProfileCard({
           accessibilityState={{ expanded: showVariantInfo }}
         >
           <Ionicons
-            name={showVariantInfo ? 'close' : 'help'}
+            name={showVariantInfo ? 'chevron-up' : 'chevron-down'}
             size={rs(15, scale)}
             color={th.textSecondary}
           />
@@ -621,6 +633,10 @@ interface Props {
   /** Called after a successful Like or Super Like. Passes true when the action
    *  produced a match so the caller can suppress overlapping prompts. */
   onLikeSuccess?: (isMatch: boolean) => void;
+  /** Card-rail boost control — omitted while incognito. */
+  onBoost?: () => void;
+  boostActive?: boolean;
+  boostLoading?: boolean;
 }
 
 export default function BrowseModeGrid({
@@ -638,6 +654,9 @@ export default function BrowseModeGrid({
   onCardAction,
   onSuperMessage,
   onLikeSuccess,
+  onBoost,
+  boostActive,
+  boostLoading,
 }: Props) {
   const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
@@ -886,6 +905,10 @@ export default function BrowseModeGrid({
             borderColor={th.border}
             textColor={th.text}
             isActing={isSwiping || isRewinding}
+            onBoost={onBoost}
+            boostActive={boostActive}
+            boostLoading={boostLoading}
+            onSwitchToSwipe={onSwitchToSwipe}
           />
         )}
       />

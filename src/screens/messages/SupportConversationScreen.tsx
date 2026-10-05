@@ -341,6 +341,48 @@ function PendingBubble({
 }
 
 // ---------------------------------------------------------------------------
+// Empty conversation intro — greeting + prompt shown as support bubbles
+// ---------------------------------------------------------------------------
+
+function SupportEmptyIntro() {
+  const { t } = useTranslation();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
+  const bubbleBg = isDark ? '#2A1D44' : '#EDE8F8';
+
+  const renderBubble = (text: string) => (
+    <View style={[bubbleStyles.row, bubbleStyles.inRow]}>
+      <View style={[bubbleStyles.supportAvatar, { backgroundColor: isDark ? '#2E1A5A' : '#F0E8FF' }]}>
+        <Ionicons name="headset" size={14} color={colors.primary} />
+      </View>
+      <View style={bubbleStyles.content}>
+        <Text style={[bubbleStyles.senderLabel, { color: colors.primary }]}>
+          {t('support.title')}
+        </Text>
+        <View style={[bubbleStyles.bubble, { backgroundColor: bubbleBg }]}>
+          <Text style={[bubbleStyles.bodyText, { color: th.text }]}>{text}</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={introStyles.wrapper}>
+      {renderBubble(t('support.introGreeting'))}
+      {renderBubble(t('support.emptyState'))}
+      <Text style={[introStyles.caption, { color: th.textMuted }]}>
+        {t('support.emptyStateBody')}
+      </Text>
+    </View>
+  );
+}
+
+const introStyles = StyleSheet.create({
+  wrapper: { alignSelf: 'stretch', paddingTop: 8 },
+  caption: { fontSize: 12, textAlign: 'center', marginTop: 12, paddingHorizontal: spacing.lg },
+});
+
+// ---------------------------------------------------------------------------
 // Attachment preview strip (pre-send)
 // ---------------------------------------------------------------------------
 
@@ -1117,9 +1159,7 @@ export default function SupportConversationScreen() {
           ListEmptyComponent={
             !isLoading ? (
               <View style={screenStyles.emptyState}>
-                <Ionicons name="chatbubble-ellipses-outline" size={48} color={th.textMuted} />
-                <Text style={[screenStyles.emptyTitle, { color: th.text }]}>{t('support.emptyState')}</Text>
-                <Text style={[screenStyles.emptySub, { color: th.textSecondary }]}>{t('support.emptyStateBody')}</Text>
+                <SupportEmptyIntro />
               </View>
             ) : null
           }
@@ -1181,8 +1221,6 @@ const screenStyles = StyleSheet.create({
   listContent: { paddingTop: 12, paddingBottom: 8 },
   olderLoader: { paddingVertical: 16, alignItems: 'center' },
   emptyState: { padding: 40, alignItems: 'center', gap: 12 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', textAlign: 'center' },
-  emptySub: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
   closedBanner: {
     flexDirection: 'row',
     alignItems: 'center',

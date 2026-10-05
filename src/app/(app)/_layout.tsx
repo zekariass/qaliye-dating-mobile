@@ -148,6 +148,50 @@ export default function AppLayout() {
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen
+          name="shimgilina"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="shimgilina-preferences"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="shimgilina-preferences-additional"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="shimgilina-review"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="shimgilina-request-submit"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="shimgilina-submitted"
+          options={{ animation: 'fade' }}
+        />
+        <Stack.Screen
+          name="shimgilina-request-status"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="shimgilina-introductions"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="shimgilina-introduction"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="shimgilina-introduction-detail"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="shimgilina-mutual-interest"
+          options={{ animation: 'fade' }}
+        />
+        <Stack.Screen
           name="edit-profile"
           options={{ animation: 'slide_from_right' }}
         />
@@ -209,6 +253,35 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="help"
+          options={{ animation: 'slide_from_right' }}
+        />
+        {/* ── Video Call flow ──────────────────────────────────────── */}
+        <Stack.Screen
+          name="video-call"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="video-call-new-request"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="video-call-detail"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="video-call-active"
+          options={{ animation: 'slide_from_bottom', presentation: 'fullScreenModal' }}
+        />
+        <Stack.Screen
+          name="video-call-ended"
+          options={{ animation: 'fade' }}
+        />
+        <Stack.Screen
+          name="video-call-history"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="video-call-history-detail"
           options={{ animation: 'slide_from_right' }}
         />
       </Stack>

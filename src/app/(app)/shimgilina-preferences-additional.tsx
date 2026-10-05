@@ -1,0 +1,3 @@
+import MatchmakingPreferencesAdditionalScreen from '@/screens/matchmaking/MatchmakingPreferencesAdditionalScreen';
+
+export default MatchmakingPreferencesAdditionalScreen;
