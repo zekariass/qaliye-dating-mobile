@@ -9,44 +9,65 @@
  *
  * The requester is charged on their first successful join.
  * The responder never pays.
+ *
+ * Duration cap: the call deadline is anchored server-side on the first join
+ * (`call_deadline_at` on the request; `expires_at` on join creds is the same
+ * instant). The countdown runs against it and the call ends at 0 — Agora
+ * drops both participants when the token privilege expires anyway, so this
+ * is the graceful UX layer on top.
  */
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    Modal,
-    PanResponder,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View
+  ActivityIndicator,
+  Animated,
+  Linking,
+  Modal,
+  PanResponder,
+  PermissionsAndroid,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
 } from 'react-native';
 import {
-    AudioProfileType,
-    AudioScenarioType,
-    ChannelProfileType,
-    ClientRoleType,
-    createAgoraRtcEngine,
-    DegradationPreference,
-    IRtcEngine,
-    OrientationMode,
-    RemoteVideoState,
-    RemoteVideoStateReason,
-    RenderModeType,
-    RtcTextureView,
-    VideoSourceType
+  AudioProfileType,
+  AudioScenarioType,
+  ChannelProfileType,
+  ClientRoleType,
+  createAgoraRtcEngine,
+  DegradationPreference,
+  IRtcEngine,
+  IRtcEngineEventHandler,
+  LastmileProbeResultState,
+  OrientationMode,
+  QualityType,
+  RemoteAudioState,
+  RemoteAudioStateReason,
+  RemoteVideoState,
+  RemoteVideoStateReason,
+  RenderModeType,
+  RtcSurfaceView,
+  RtcTextureView,
+  StreamFallbackOptions,
+  UserOfflineReasonType,
+  VideoEncoderConfiguration,
+  VideoSourceType
 } from 'react-native-agora';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { joinVideoCall } from '@/api/videoCall/videoCallApi';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useEndVideoCall, useJoinVideoCall, useVideoCallRequests } from '@/hooks/videoCall/useVideoCallRequests';
+import { useEndVideoCall, useJoinVideoCall, useVideoCallRequests, vcRequestsKey } from '@/hooks/videoCall/useVideoCallRequests';
 import type { JoinCallCredentials } from '@/types/videoCall';
+import * as Sentry from '@sentry/react-native';
 
 const AGORA_APP_ID = process.env.EXPO_PUBLIC_AGORA_APP_ID ?? '';
 
@@ -58,8 +79,27 @@ const EDGE = 8;
 
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
 
+// AgoraRtcTextureView is Android-only — iOS registers AgoraRtcSurfaceView.
+// Rendering the wrong one throws "Unimplemented Component".
+const RtcVideoView = Platform.OS === 'ios' ? RtcSurfaceView : RtcTextureView;
+
+// Encoder tiers picked once at join time from the last-mile probe:
+// 360p@15 suits congested mobile links (~400 kbps); 480p@24 is reserved for
+// measured-good links (~800 kbps+). bitrate 0 = Agora's recommended value;
+// MaintainBalanced sheds resolution AND frame rate under congestion —
+// MaintainQuality would hold resolution, drop to slideshow fps, and still
+// saturate the link.
+const videoEncoderConfig = (highQuality: boolean): VideoEncoderConfiguration => ({
+  dimensions: highQuality ? { width: 640, height: 480 } : { width: 640, height: 360 },
+  frameRate: highQuality ? 24 : 15,
+  bitrate: 0,
+  orientationMode: OrientationMode.OrientationModeAdaptive,
+  degradationPreference: DegradationPreference.MaintainBalanced,
+});
+
 export default function ActiveVideoCallScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
   const { colors: th } = useTheme();
@@ -74,16 +114,24 @@ export default function ActiveVideoCallScreen() {
 
   const joinMutation = useJoinVideoCall();
   const endMutation = useEndVideoCall(matchId ?? '');
-  const { data: vcRequests } = useVideoCallRequests(matchId ?? '');
+  // 5s while the call screen is mounted — the deadline/status updates need
+  // to be fresher here than on waiting screens (default 15s).
+  const { data: vcRequests } = useVideoCallRequests(matchId ?? '', 5_000);
+
+  const liveRequest = vcRequests?.find((r) => r.id === requestId);
 
   // call_type is fixed at creation — param is the fast path, query is the
   // authoritative source. Defaults to VIDEO.
-  const resolvedCallType =
-    vcRequests?.find((r) => r.id === requestId)?.call_type ?? callType ?? 'VIDEO';
+  const resolvedCallType = liveRequest?.call_type ?? callType ?? 'VIDEO';
   const isAudio = resolvedCallType === 'AUDIO';
 
   const engineRef = useRef<IRtcEngine | null>(null);
   const credentialsRef = useRef<JoinCallCredentials | null>(null);
+  // Async races: joinVideoCall/token-refresh callbacks can resolve after
+  // the screen unmounts or the engine is torn down — touching the native
+  // engine then crashes. These guards make teardown and late callbacks safe.
+  const mountedRef = useRef(true);
+  const agoraHandlerRef = useRef<IRtcEngineEventHandler | null>(null);
 
   const [phase, setPhase] = useState<CallPhase>('joining');
   const [errorMsg, setErrorMsg] = useState('');
@@ -93,10 +141,38 @@ export default function ActiveVideoCallScreen() {
   const [isSpeakerOn, setIsSpeakerOn] = useState(!isAudio);
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isRemoteVideoOff, setIsRemoteVideoOff] = useState(false);
+  const [isRemoteAudioMuted, setIsRemoteAudioMuted] = useState(false);
+  const [weakNetwork, setWeakNetwork] = useState(false);
   const [isLocalLarge, setIsLocalLarge] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  // Call deadline — null until known (join creds' expires_at first, then the
+  // request's call_deadline_at which is authoritative). `remaining` is the
+  // countdown in seconds; `capSeconds` is the total for the progress bar.
+  const deadlineMsRef = useRef<number | null>(null);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [capSeconds, setCapSeconds] = useState(0);
+  // On Android permissions must be granted before Agora can access hardware.
+  // iOS uses Info.plist declarations — no runtime check needed here.
+  const [permissionsGranted, setPermissionsGranted] = useState(Platform.OS !== 'android');
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const setDeadline = useCallback((ms: number | null) => {
+    if (ms == null || !Number.isFinite(ms) || deadlineMsRef.current === ms) return;
+    deadlineMsRef.current = ms;
+    const rem = Math.max(0, Math.ceil((ms - Date.now()) / 1000));
+    // Renewals return expires_at = min(deadline, now+ttl) which can precede
+    // the deadline — only grow the cap estimate, never shrink it.
+    setCapSeconds((c) => Math.max(c, rem));
+    setRemaining(rem);
+  }, []);
+
+  // The request row's call_deadline_at is authoritative — overwrite the
+  // estimate taken from join creds as soon as the poll delivers it.
+  useEffect(() => {
+    const iso = liveRequest?.call_deadline_at;
+    if (iso) setDeadline(Date.parse(iso));
+  }, [liveRequest?.call_deadline_at, setDeadline]);
 
   // ── Draggable local preview ─────────────────────────────────────────────
   // Free-form drag; the view springs back inside bounds on release.
@@ -182,40 +258,110 @@ export default function ActiveVideoCallScreen() {
   // ── Engine teardown ──────────────────────────────────────────────────────
 
   const teardown = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     const engine = engineRef.current;
     if (engine) {
-      engine.leaveChannel();
-      engine.release();
+      // Null the ref FIRST — any in-flight async callback (token refresh,
+      // join success) that reads engineRef will bail instead of calling
+      // into a released native engine.
       engineRef.current = null;
+      try {
+        // Unregister before release so no event callback can fire mid-
+        // teardown; stopPreview detaches the local TextureView; sync
+        // release blocks until the native engine is actually destroyed —
+        // async release races view unmount on slower devices.
+        if (agoraHandlerRef.current) engine.unregisterEventHandler(agoraHandlerRef.current);
+        engine.stopPreview();
+        engine.leaveChannel();
+        engine.release(true);
+      } catch {
+        // Engine may already be partially released — teardown must never
+        // throw or the user is stranded on a dead call screen.
+      }
     }
   }, []);
 
-  useEffect(() => () => teardown(), [teardown]);
+  useEffect(() => () => {
+    mountedRef.current = false;
+    teardown();
+  }, [teardown]);
 
   // End the call and leave this screen — shared by the local "End" button and
   // the remote participant leaving the channel. Idempotent.
   const hasEnded = useRef(false);
-  const finishAndExit = useCallback(() => {
+  const finishAndExit = useCallback((endReason?: 'time_limit') => {
     if (hasEnded.current) return;
     hasEnded.current = true;
     teardown();
     endMutation.mutate(requestId ?? '');
     router.replace({
       pathname: '/(app)/video-call-ended' as never,
-      params: { matchId, requestId, displayName, avatarUrl: avatarUrl ?? '', callType: resolvedCallType },
+      params: { matchId, requestId, displayName, avatarUrl: avatarUrl ?? '', callType: resolvedCallType, endReason },
     });
   }, [teardown, endMutation, requestId, matchId, displayName, avatarUrl, resolvedCallType, router]);
 
-  // ── Join flow ────────────────────────────────────────────────────────────
+  // ── Android permission check ─────────────────────────────────────────────
+  // Request camera + microphone on Android and block the call if the user
+  // denies them — without permissions Agora silently produces no video/audio
+  // which is very confusing. iOS relies on Info.plist, no runtime check here.
 
   useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    // Audio-only calls don't need camera permission.
+    const permsNeeded = isAudio
+      ? [PermissionsAndroid.PERMISSIONS.RECORD_AUDIO]
+      : [PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, PermissionsAndroid.PERMISSIONS.CAMERA];
+
+    PermissionsAndroid.requestMultiple(permsNeeded).then((results) => {
+      const audioOk =
+        results[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === PermissionsAndroid.RESULTS.GRANTED;
+      const cameraOk =
+        isAudio ||
+        results[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED;
+
+      if (!audioOk || !cameraOk) {
+        setPhase('error');
+        setErrorMsg('permissions_denied');
+      } else {
+        setPermissionsGranted(true);
+      }
+    }).catch(() => {
+      // If the permission API itself errors, try to proceed — Agora will show
+      // its own error if hardware access fails.
+      setPermissionsGranted(true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Join flow ────────────────────────────────────────────────────────────
+  // Gated behind permissionsGranted — on iOS this is true immediately;
+  // on Android it becomes true once the user grants camera + microphone.
+
+  useEffect(() => {
+    if (!permissionsGranted) return;
+
     joinMutation.mutate(requestId ?? '', {
       onSuccess: (creds) => {
+        // Screen unmounted or call already ended while the join request was
+        // in flight — creating an engine now would leak it and bind video
+        // surfaces to dead views.
+        if (!mountedRef.current || hasEnded.current) return;
         credentialsRef.current = creds;
+        // expires_at on the first join is the token privilege expiry, which
+        // the backend clamps to the call deadline — use it as the countdown
+        // target until the request row's call_deadline_at arrives on poll.
+        setDeadline(Date.parse(creds.expires_at));
         initAgora(creds);
+        // Fetch the freshly-anchored call_deadline_at immediately rather than
+        // waiting out the 15 s poll — the countdown starts at once.
+        queryClient.invalidateQueries({ queryKey: vcRequestsKey(matchId ?? '') });
       },
       onError: (err: any) => {
+        if (!mountedRef.current) return;
         const status = err?.response?.status;
         const raw = err?.response?.data?.error;
         const code = typeof raw === 'string' ? raw : raw?.code;
@@ -229,7 +375,7 @@ export default function ActiveVideoCallScreen() {
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [permissionsGranted]);
 
   const initAgora = (creds: JoinCallCredentials) => {
     try {
@@ -244,39 +390,98 @@ export default function ActiveVideoCallScreen() {
       });
 
       // Audio tuning for 1:1 calls:
-      // Chatroom scenario keeps acoustic echo cancellation active at high
-      // playback volumes. Video calls default to speakerphone; audio calls
+      // Default scenario — Chatroom enables in-ear monitoring (local voice
+      // loopback) on Android, which makes callers hear themselves instead of
+      // the remote side. Video calls default to speakerphone; audio calls
       // start on the earpiece like a normal phone call.
       engine.setAudioProfile(
         AudioProfileType.AudioProfileDefault,
-        AudioScenarioType.AudioScenarioChatroom,
+        AudioScenarioType.AudioScenarioDefault,
       );
       engine.setDefaultAudioRouteToSpeakerphone(!isAudio);
 
       engine.enableAudio();
       if (!isAudio) {
         engine.enableVideo();
-        // HD 720p — clear on phone screens without FHD's bandwidth cost.
-        // bitrate 0 lets Agora pick the recommended value; MaintainQuality
-        // degrades frame rate before resolution on weak connections.
-        engine.setVideoEncoderConfiguration({
-          dimensions: { width: 1280, height: 720 },
-          frameRate: 24,
-          bitrate: 0,
-          orientationMode: OrientationMode.OrientationModeAdaptive,
-          degradationPreference: DegradationPreference.MaintainQuality,
-        });
+        // Start low — the last-mile probe below upgrades to 480p before
+        // joinChannel if the measured link can sustain it.
+        engine.setVideoEncoderConfiguration(videoEncoderConfig(false));
+        // Graceful collapse: when either direction can't sustain video the
+        // SDK falls back to audio-only instead of freezing, and restores
+        // video automatically when the network recovers. Must be set
+        // before joinChannel.
+        engine.setLocalPublishFallbackOption(StreamFallbackOptions.StreamFallbackOptionAudioOnly);
+        engine.setRemoteSubscribeFallbackOption(StreamFallbackOptions.StreamFallbackOptionAudioOnly);
         engine.startPreview();
       }
 
-      engine.registerEventHandler({
+      // One-shot quality pick — whichever probe signal arrives first (or the
+      // 4s timeout) decides the encoder tier, then joins once. No mid-call
+      // switching: the decision is made once, before joinChannel.
+      let joined = false;
+      let probeTimer: ReturnType<typeof setTimeout> | null = null;
+      const joinNow = (goodLink: boolean) => {
+        if (joined || !mountedRef.current || hasEnded.current || engineRef.current !== engine) return;
+        joined = true;
+        if (probeTimer) {
+          clearTimeout(probeTimer);
+          probeTimer = null;
+        }
+        if (!isAudio) {
+          try { engine.stopLastmileProbeTest(); } catch { /* probe may not be running */ }
+          if (goodLink) engine.setVideoEncoderConfiguration(videoEncoderConfig(true));
+        }
+        engine.joinChannel(creds.token, creds.channel_name, creds.uid, {
+          clientRoleType: ClientRoleType.ClientRoleBroadcaster,
+          publishMicrophoneTrack: true,
+          publishCameraTrack: !isAudio,
+          autoSubscribeAudio: true,
+          autoSubscribeVideo: !isAudio,
+        });
+      };
+
+      const eventHandler: IRtcEngineEventHandler = {
+        onLastmileQuality: (quality) => {
+          // Fires ~2s into the probe — the SDK's own rating of the link.
+          joinNow(quality <= QualityType.QualityGood);
+        },
+        onLastmileProbeResult: (result) => {
+          // Full stats — fallback if the quality rating never arrived.
+          // Missing/unavailable measurements count as a weak link.
+          const up = result.uplinkReport?.availableBandwidth ?? 0;
+          const down = result.downlinkReport?.availableBandwidth ?? 0;
+          const loss = Math.max(
+            result.uplinkReport?.packetLossRate ?? 0,
+            result.downlinkReport?.packetLossRate ?? 0,
+          );
+          joinNow(
+            result.state === LastmileProbeResultState.LastmileProbeResultComplete &&
+            up >= 700_000 && down >= 700_000 && loss < 5,
+          );
+        },
         onJoinChannelSuccess: () => {
           setPhase('active');
-          timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+          timerRef.current = setInterval(() => {
+            setElapsed((s) => s + 1);
+            const dl = deadlineMsRef.current;
+            if (dl != null) {
+              const rem = Math.max(0, Math.ceil((dl - Date.now()) / 1000));
+              setRemaining(rem);
+              // Deadline reached — exit gracefully. Agora would drop us at
+              // token expiry anyway; ending here keeps the UX clean.
+              if (rem <= 0) finishAndExit('time_limit');
+            }
+          }, 1000);
+          // setDefaultAudioRouteToSpeakerphone (called at init) only sets the
+          // *default* route. On iOS the system may override it when the channel
+          // is established. Calling setEnableSpeakerphone here forces the
+          // current route to match what was intended for this call type.
+          engine.setEnableSpeakerphone(!isAudio);
         },
         onUserJoined: (_conn, uid) => {
           setRemoteUid(uid);
           setIsRemoteVideoOff(false);
+          setIsRemoteAudioMuted(false);
         },
         onRemoteVideoStateChanged: (_conn, _uid, state, reason) => {
           if (reason === RemoteVideoStateReason.RemoteVideoStateReasonRemoteMuted ||
@@ -287,32 +492,85 @@ export default function ActiveVideoCallScreen() {
             setIsRemoteVideoOff(false);
           }
         },
-        onUserOffline: () => {
+        onRemoteAudioStateChanged: (_conn, _uid, state, reason) => {
+          if (reason === RemoteAudioStateReason.RemoteAudioReasonRemoteMuted ||
+              state === RemoteAudioState.RemoteAudioStateStopped) {
+            setIsRemoteAudioMuted(true);
+          } else if (reason === RemoteAudioStateReason.RemoteAudioReasonRemoteUnmuted ||
+                     state === RemoteAudioState.RemoteAudioStateDecoding) {
+            setIsRemoteAudioMuted(false);
+          }
+        },
+        onNetworkQuality: (_conn, uid, txQuality, rxQuality) => {
+          // uid 0 is the local user's link report — remote reports are
+          // skipped since rxQuality on our side already reflects them.
+          if (uid !== 0) return;
+          const weak =
+            rxQuality >= QualityType.QualityPoor || txQuality >= QualityType.QualityBad;
+          setWeakNetwork(weak);
+        },
+        onRemoteSubscribeFallbackToAudioOnly: (_uid, isFallbackOrRecover) => {
+          // Downlink couldn't sustain remote video — SDK switched this
+          // subscription to audio-only. The overlay already covers the
+          // missing video; the weak-network pill explains why.
+          setIsRemoteVideoOff(isFallbackOrRecover);
+          if (isFallbackOrRecover) setWeakNetwork(true);
+        },
+        onLocalPublishFallbackToAudioOnly: (isFallbackOrRecover) => {
+          // Our uplink collapsed — remote is receiving audio only.
+          if (isFallbackOrRecover) setWeakNetwork(true);
+        },
+        onUserOffline: (_conn, _uid, reason) => {
           setRemoteUid(null);
-          // Remote ended/left the call — stop on this side immediately too.
-          finishAndExit();
+          // Only end the call when the remote user deliberately quit.
+          // UserOfflineDropped = temporary network loss — wait for them to
+          // rejoin via onUserJoined instead of tearing down immediately.
+          if (reason === UserOfflineReasonType.UserOfflineDropped) return;
+          const pastDeadline =
+            deadlineMsRef.current != null && Date.now() >= deadlineMsRef.current;
+          finishAndExit(pastDeadline ? 'time_limit' : undefined);
         },
         onTokenPrivilegeWillExpire: async () => {
-          // Refresh token before it expires
+          // Refresh token before it expires — non-fatal if it fails, EXCEPT a
+          // 409 CALL_DURATION_EXCEEDED which IS the end-of-call signal: the
+          // deadline passed and the backend refuses to mint further tokens.
+          if (!requestId) return;
           try {
-            const newCreds = await import('@/api/videoCall/videoCallApi').then((m) =>
-              m.joinVideoCall(requestId ?? ''),
-            );
-            engine.renewToken(newCreds.token);
-          } catch { /* non-fatal */ }
+            const newCreds = await joinVideoCall(requestId);
+            // The call may have ended during the await — renewToken on a
+            // released engine is a native call into dead memory.
+            if (engineRef.current === engine && !hasEnded.current) {
+              engine.renewToken(newCreds.token);
+            }
+          } catch (e: any) {
+            const raw = e?.response?.data?.error;
+            const code = typeof raw === 'string' ? raw : raw?.code;
+            if (e?.response?.status === 409 && String(code).toUpperCase().includes('DURATION')) {
+              finishAndExit('time_limit');
+            }
+          }
         },
         onError: (err) => {
           if (__DEV__) console.warn('[Agora] error', err);
+          Sentry.captureException(new Error(`Agora RTC error: ${err}`));
         },
-      });
+      };
+      agoraHandlerRef.current = eventHandler;
+      engine.registerEventHandler(eventHandler);
 
-      engine.joinChannel(creds.token, creds.channel_name, creds.uid, {
-        clientRoleType: ClientRoleType.ClientRoleBroadcaster,
-        publishMicrophoneTrack: true,
-        publishCameraTrack: !isAudio,
-        autoSubscribeAudio: true,
-        autoSubscribeVideo: !isAudio,
-      });
+      if (isAudio) {
+        joinNow(false);
+      } else {
+        // Probe the real Agora path (~2s). The timeout keeps the call from
+        // stalling if the probe never reports (blocked UDP, captive portal…).
+        engine.startLastmileProbeTest({
+          probeUplink: true,
+          probeDownlink: true,
+          expectedUplinkBitrate: 800_000,
+          expectedDownlinkBitrate: 800_000,
+        });
+        probeTimer = setTimeout(() => joinNow(false), 4000);
+      }
     } catch (e) {
       setPhase('error');
       setErrorMsg('Failed to initialise video. Please try again.');
@@ -356,6 +614,39 @@ export default function ActiveVideoCallScreen() {
     const ss = (s % 60).toString().padStart(2, '0');
     return `${m}:${ss}`;
   };
+
+  // ── Permissions denied (Android) ────────────────────────────────────────
+
+  if (phase === 'error' && errorMsg === 'permissions_denied') {
+    return (
+      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <View style={styles.errorState}>
+          <View style={[styles.errorIcon, { backgroundColor: colors.danger + '25' }]}>
+            <Ionicons name="mic-off-outline" size={40} color={colors.danger} />
+          </View>
+          <Text style={styles.errorTitle}>Permissions Required</Text>
+          <Text style={styles.errorSub}>
+            {isAudio ? 'Microphone access denied' : 'Camera & microphone access denied'}
+          </Text>
+          <Text style={styles.errorBody}>
+            {isAudio
+              ? 'To join an audio call, please allow microphone access in your device settings.'
+              : 'To join a video call, please allow camera and microphone access in your device settings.'}
+          </Text>
+          <TouchableOpacity
+            style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
+            onPress={() => Linking.openSettings()}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.ctaBtnText}>Open Settings</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelLink} onPress={() => router.back()}>
+            <Text style={styles.cancelLinkText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   // ── Insufficient credits ─────────────────────────────────────────────────
 
@@ -443,6 +734,12 @@ export default function ActiveVideoCallScreen() {
             <Ionicons name="call" size={13} color="rgba(255,255,255,0.6)" />
             <View style={[styles.statusDot, { backgroundColor: remoteConnected ? colors.success : colors.warning }]} />
             <Text style={styles.audioStatus}>{remoteConnected ? 'Connected' : 'Ringing…'}</Text>
+            {remoteConnected && isRemoteAudioMuted && (
+              <View style={styles.remoteMuteChip}>
+                <Ionicons name="mic-off" size={12} color="#fff" />
+                <Text style={styles.remoteMuteChipText}>Muted</Text>
+              </View>
+            )}
           </View>
         </View>
       ) : (
@@ -461,7 +758,7 @@ export default function ActiveVideoCallScreen() {
       >
         {remoteConnected ? (
           <>
-            <RtcTextureView
+            <RtcVideoView
               canvas={{
                 uid: remoteUid,
                 sourceType: VideoSourceType.VideoSourceRemote,
@@ -483,6 +780,12 @@ export default function ActiveVideoCallScreen() {
                     <Ionicons name="videocam-off" size={13} color="#fff" />
                   </View>
                 </View>
+              </View>
+            )}
+            {!isRemoteVideoOff && isRemoteAudioMuted && (
+              <View style={styles.remoteMuteOverlay}>
+                <Ionicons name="mic-off" size={13} color="#fff" />
+                <Text style={styles.remoteMuteChipText}>Muted</Text>
               </View>
             )}
           </>
@@ -551,7 +854,7 @@ export default function ActiveVideoCallScreen() {
             </View>
           )
         ) : (
-          <RtcTextureView
+          <RtcVideoView
             canvas={{
               uid: 0,
               sourceType: VideoSourceType.VideoSourceCamera,
@@ -571,11 +874,40 @@ export default function ActiveVideoCallScreen() {
         style={[styles.bottomScrim, { paddingBottom: insets.bottom + spacing.lg }]}
         pointerEvents="box-none"
       >
-        {/* Timer */}
-        <View style={styles.timerPill}>
-          <Ionicons name="ellipse" size={8} color={remoteConnected ? colors.success : colors.warning} />
-          <Text style={styles.timerText}>{fmtElapsed(elapsed)}</Text>
-        </View>
+        {/* Timer — counts down to the call deadline once it's known
+            (green → amber under a minute → red under ten seconds); falls
+            back to elapsed time until the deadline arrives. */}
+        {(() => {
+          const countdown = remaining != null;
+          const timerColor = countdown
+            ? remaining! <= 10 ? colors.danger : remaining! <= 60 ? colors.warning : colors.success
+            : remoteConnected ? colors.success : colors.warning;
+          const pct = countdown && capSeconds > 0
+            ? Math.min(100, Math.max(0, (remaining! / capSeconds) * 100))
+            : null;
+          return (
+            <View style={styles.timerWrap}>
+              <View style={[styles.timerPill, countdown && { borderWidth: 1, borderColor: timerColor + '66' }]}>
+                <Ionicons
+                  name={countdown ? 'time-outline' : 'ellipse'}
+                  size={countdown ? 13 : 8}
+                  color={timerColor}
+                />
+                <Text style={[styles.timerText, countdown && { color: timerColor }]}>
+                  {fmtElapsed(remaining ?? elapsed)}
+                </Text>
+                {countdown && (
+                  <Text style={[styles.timerUnit, { color: timerColor }]}>left</Text>
+                )}
+              </View>
+              {pct != null && (
+                <View style={styles.countdownTrack}>
+                  <View style={[styles.countdownFill, { width: `${pct}%`, backgroundColor: timerColor }]} />
+                </View>
+              )}
+            </View>
+          );
+        })()}
 
         {/* Controls row */}
         <View style={styles.controlsRow}>
@@ -635,6 +967,15 @@ export default function ActiveVideoCallScreen() {
           <Text style={styles.endLabel}>End</Text>
         </TouchableOpacity>
       </LinearGradient>
+
+      {/* Weak-network banner — Agora reports poor link quality or the
+          stream fell back to audio-only. Shared across call modes. */}
+      {weakNetwork && (
+        <View style={[styles.weakNetPill, { top: insets.top + 56 }]} pointerEvents="none">
+          <Ionicons name="cellular-outline" size={12} color={colors.warning} />
+          <Text style={styles.weakNetText}>Weak connection</Text>
+        </View>
+      )}
 
       {/* End call confirmation modal */}
       <Modal
@@ -726,6 +1067,19 @@ const styles = StyleSheet.create({
   partnerPillText: { color: '#FFF', fontSize: 14, fontWeight: '700', flexShrink: 1 },
   statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.4)' },
   partnerPillSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '500' },
+  weakNetPill: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    zIndex: 30,
+  },
+  weakNetText: { color: '#FFF', fontSize: 12, fontWeight: '600' },
 
   // ── Local preview ────────────────────────────────────────────────────
   localPreview: {
@@ -800,6 +1154,30 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.25)',
   },
+  // Small mute badge shown in video feed corner when remote is audio-muted
+  remoteMuteOverlay: {
+    position: 'absolute',
+    bottom: spacing.md,
+    left: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  // Used in both audio call status row and video feed mute badge
+  remoteMuteChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  remoteMuteChipText: { color: '#fff', fontSize: 11, fontWeight: '600' },
 
   // ── Bottom overlay (one container — nothing overlaps) ────────────────
   bottomScrim: {
@@ -813,6 +1191,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     zIndex: 10,
   },
+  timerWrap: { alignItems: 'center', gap: 7 },
   timerPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -823,6 +1202,15 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   timerText: { color: '#FFF', fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  timerUnit: { fontSize: 11, fontWeight: '600', opacity: 0.9 },
+  countdownTrack: {
+    width: 150,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    overflow: 'hidden',
+  },
+  countdownFill: { height: 3, borderRadius: 2 },
   controlsRow: {
     flexDirection: 'row',
     justifyContent: 'center',

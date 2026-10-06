@@ -7,7 +7,7 @@ import { ACTIVITY_STATUS_REFRESH_INTERVAL_MS } from '@/constants/activity';
 import type { ActivityStatus } from '@/types/activity';
 
 /**
- * Polls `POST /api/v1/activity/statuses` every 90 s while the screen is focused
+ * Polls `POST /api/v1/activity/statuses` every 30 s while the screen is focused
  * and the app is in the foreground.
  *
  * statusMap values:

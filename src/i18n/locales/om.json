@@ -873,6 +873,13 @@
       "solicitation": "Solicitation",
       "spam": "Spam",
       "other": "Other"
+    },
+    "emptyState": {
+      "title": "You matched with {{name}}!",
+      "subtitle": "Say hi — every great conversation starts with a simple hello.",
+      "icebreaker1": "Hey {{name}}! How's your day going?",
+      "icebreaker2": "Hi {{name}}! What's something that always makes you smile?",
+      "icebreaker3": "Hello {{name}}! What's your favorite way to spend a weekend?"
     }
   },
   "profile": {

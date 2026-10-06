@@ -69,6 +69,12 @@ export function mapProfileToCard(p: DiscoveryProfileDto): CardDto {
       answerText: pa.answerText ?? pa.answer_text ?? pa.answer,
     })),
     activity_status: profile.activity_status ?? profile.activityStatus,
+    // Marriage & relationship prefs (snake_case primary, camelCase fallback)
+    marriage_timeline: profile.marriage_timeline ?? profile.marriageTimeline ?? null,
+    long_distance_relationship: profile.long_distance_relationship ?? profile.longDistanceRelationship ?? null,
+    family_involvement: profile.family_involvement ?? profile.familyInvolvement ?? null,
+    religion_importance: profile.religion_importance ?? profile.religionImportance ?? null,
+    willing_to_relocate: profile.willing_to_relocate ?? profile.willingToRelocate ?? null,
   };
 }
 

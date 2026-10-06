@@ -616,7 +616,38 @@
       "completeError": "Could not complete onboarding. Please try again.",
       "pendingBadge": "ALMOST THERE"
     },
-    "stepOf": "{{current}} of {{total}}"
+    "stepOf": "{{current}} of {{total}}",
+    "marriagePrefs": {
+      "stepOf": "{{current}} of {{total}}",
+      "skip": "Skip",
+      "continue": "Continue",
+      "skipHint": "Optional — tap Next to skip",
+      "marriageTimeline": {
+        "title": "When are you hoping to get married?",
+        "subtitle": "This helps us find people who share your vision for the future.",
+        "label": "Marriage timeline"
+      },
+      "longDistance": {
+        "title": "Are you open to a long-distance relationship?",
+        "subtitle": "Distance is just a number — tell us your preference.",
+        "label": "Long distance relationship"
+      },
+      "familyInvolvement": {
+        "title": "How important is family involvement in your marriage?",
+        "subtitle": "Family plays a central role for many couples in our community.",
+        "label": "Family involvement in marriage"
+      },
+      "religionImportance": {
+        "title": "How important is religion in your relationship?",
+        "subtitle": "Shared faith can be a strong foundation.",
+        "label": "Importance of religion"
+      },
+      "willingToRelocate": {
+        "title": "Would you be willing to relocate for a relationship?",
+        "subtitle": "Love sometimes means moving — let matches know your thoughts.",
+        "label": "Willing to relocate"
+      }
+    }
   },
   "notifications": {
     "title": "Notifications",
@@ -1597,7 +1628,7 @@
     "conversationActions": "Conversation actions",
     "imageLabel": "Image: {{name}}",
     "closeImage": "Close image",
-    "newMatchPreview": "New match! Say hello",
+    "newMatchPreview": "Say hi to {{name}}",
     "lastMessage": "Last message: {{preview}}",
     "unread": "{{count}} unread",
     "unread_one": "{{count}} unread",
@@ -1634,7 +1665,14 @@
     "recordingNotAvailable": "Voice recording is not available right now.",
     "voiceNotSupportedWeb": "Voice recording is not supported on web.",
     "voiceRequiresBuild": "Voice recording requires a development build of the app.",
-    "voiceUnavailable": "Voice Recording Unavailable"
+    "voiceUnavailable": "Voice Recording Unavailable",
+    "emptyState": {
+      "title": "You matched with {{name}}!",
+      "subtitle": "Say hi — every great conversation starts with a simple hello.",
+      "icebreaker1": "Hey {{name}}! How's your day going?",
+      "icebreaker2": "Hi {{name}}! What's something that always makes you smile?",
+      "icebreaker3": "Hello {{name}}! What's your favorite way to spend a weekend?"
+    }
   },
   "profile": {
     "editTitle": "Edit Profile",
@@ -2003,6 +2041,16 @@
       "blockUser": "Block user",
       "selectReportReason": "Select report reason",
       "reportDescription": "Report description"
+    },
+    "marriagePrefs": {
+      "sectionTitle": "Marriage & Relationship Preferences",
+      "marriageTimeline": "Marriage timeline",
+      "longDistance": "Long distance relationship",
+      "familyInvolvement": "Family involvement in marriage",
+      "religionImportance": "Importance of religion",
+      "willingToRelocate": "Willing to relocate",
+      "notSpecified": "Not specified",
+      "skip": "Skip"
     },
     "verifyPrompt": {
       "title": "Verify Your Identity",

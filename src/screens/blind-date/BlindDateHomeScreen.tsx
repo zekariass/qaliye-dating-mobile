@@ -42,6 +42,7 @@ import {
   useMyBlindDateSessions
 } from '@/hooks/blindDate/useMyBlindDateSessions';
 import { useMyParticipations } from '@/hooks/blindDate/useMyParticipations';
+import { useWinnerPhotoUrl } from '@/hooks/blindDate/useSessionResults';
 import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import i18n from '@/i18n';
@@ -291,6 +292,13 @@ function MySessionCard({
   // Truly terminated sessions (no match) get dimmed; matched stays vibrant.
   const dimmed = ended && !matched;
 
+  // Matched with a revealed finalist → the thumb shows the winner's real
+  // photo instead of the caller's blurred own photo. `null` while results
+  // load, on error, or when there is no winner — all fall back to blurred.
+  const winnerPhotoUrl = useWinnerPhotoUrl(matched && !isParticipant ? session.id : null);
+  const winnerRevealed = matched && !!winnerPhotoUrl;
+  const thumbUrl = winnerRevealed ? winnerPhotoUrl : photoUrl;
+
   // Reference: filled rose CTA while the session is live, outlined otherwise.
   const { ctaLabel, ctaFilled } = isParticipant
     ? session.status === 'OPEN'
@@ -339,17 +347,20 @@ function MySessionCard({
       activeOpacity={0.88}
       accessibilityRole="button"
     >
-      {/* Thumbnail — blurred photo (blind date) or rose gradient placeholder */}
+      {/* Thumbnail — blurred photo (blind date), the revealed winner's photo
+          once matched, or a rose gradient placeholder */}
       <View style={[styles.myThumb, dimmed && { opacity: 0.55 }]}>
-        {photoUrl ? (
+        {thumbUrl ? (
           <>
             <Image
-              source={{ uri: photoUrl }}
+              source={{ uri: thumbUrl }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
-              blurRadius={100}
+              blurRadius={winnerRevealed ? 0 : 100}
             />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,8,40,0.4)' }]} />
+            {!winnerRevealed && (
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,8,40,0.4)' }]} />
+            )}
           </>
         ) : (
           <LinearGradient
@@ -1058,18 +1069,28 @@ export default function BlindDateHomeScreen() {
     [discover.items, dismissedIds],
   );
 
-  // Prefetch the next page before the stack runs dry.
+  // Prefetch the next page before the stack runs dry. Also fires at an empty
+  // stack so pagination continues while pages remain. The isFetchNextPageError
+  // guard stops a failed fetch from re-firing every render (the deps here are
+  // primitives, so this effect re-evaluates on every render otherwise).
   useEffect(() => {
     if (
       activeTab === 'open' &&
-      visibleSessions.length > 0 &&
       visibleSessions.length <= 2 &&
       discover.hasNextPage &&
-      !discover.isFetchingNextPage
+      !discover.isFetchingNextPage &&
+      !discover.isFetchNextPageError
     ) {
       discover.fetchNextPage();
     }
-  }, [activeTab, visibleSessions.length, discover]);
+  }, [
+    activeTab,
+    visibleSessions.length,
+    discover.hasNextPage,
+    discover.isFetchingNextPage,
+    discover.isFetchNextPageError,
+    discover.fetchNextPage,
+  ]);
 
   const languageNameFor = useCallback(
     (code: string): string | null =>
@@ -1182,15 +1203,59 @@ export default function BlindDateHomeScreen() {
   }, [router]);
 
   // ── List rows for the My Own tab ─────────────────────────────────────────
+  // `/sessions/mine` returns joined sessions too — this tab is "blind dates
+  // I created" only; joined sessions live in the Participating tab.
+  const hostedSessions = useMemo(
+    () => mySessions.items.filter((s) => s.role !== 'PARTICIPANT'),
+    [mySessions.items],
+  );
+
+  // A fetched page can contain only PARTICIPANT rows, so the hosted filter can
+  // yield nothing while unfetched pages still hold created sessions. Keep
+  // pulling pages until hosted rows appear or pages run out — onEndReached
+  // alone can't be trusted here because a still-empty list may not refire it.
+  useEffect(() => {
+    if (
+      activeTab === 'mine' &&
+      hostedSessions.length === 0 &&
+      mySessions.hasNextPage &&
+      !mySessions.isFetchingNextPage &&
+      !mySessions.isFetchNextPageError
+    ) {
+      mySessions.fetchNextPage();
+    }
+  }, [
+    activeTab,
+    hostedSessions.length,
+    mySessions.hasNextPage,
+    mySessions.isFetchingNextPage,
+    mySessions.isFetchNextPageError,
+    mySessions.fetchNextPage,
+  ]);
+
   const rows = useMemo<Row[]>(() => {
-    // `/sessions/mine` returns joined sessions too — this tab is "blind dates
-    // I created" only; joined sessions live in the Participating tab.
-    const hosted = mySessions.items.filter((s) => s.role !== 'PARTICIPANT');
-    if (mySessions.isLoading && hosted.length === 0) return [{ kind: 'loading' }];
-    if (mySessions.isError && hosted.length === 0) return [{ kind: 'error', onRetry: mySessions.refetch }];
-    if (hosted.length === 0) return [{ kind: 'empty' }];
-    return hosted.map((s): Row => ({ kind: 'mySession', session: s }));
-  }, [mySessions]);
+    if (hostedSessions.length === 0) {
+      // Still pulling pages for hosted sessions (or about to) — not "empty".
+      if (
+        mySessions.isLoading ||
+        mySessions.isFetchingNextPage ||
+        (mySessions.hasNextPage && !mySessions.isFetchNextPageError)
+      ) {
+        return [{ kind: 'loading' }];
+      }
+      if (mySessions.isError) return [{ kind: 'error', onRetry: mySessions.refetch }];
+      return [{ kind: 'empty' }];
+    }
+    return hostedSessions.map((s): Row => ({ kind: 'mySession', session: s }));
+  }, [
+    hostedSessions,
+    mySessions.isLoading,
+    mySessions.isError,
+    mySessions.isFetchingNextPage,
+    mySessions.hasNextPage,
+    mySessions.isFetchNextPageError,
+    mySessions.refetch,
+  ]);
 
   const renderRow = useCallback(({ item }: { item: Row }) => {
     switch (item.kind) {
@@ -1290,6 +1355,12 @@ export default function BlindDateHomeScreen() {
               <CardSkeleton />
             ) : discover.isError && discover.items.length === 0 ? (
               <ErrorState onRetry={discover.refetch} />
+            ) : visibleSessions.length === 0 &&
+              (discover.isFetchingNextPage ||
+                (discover.hasNextPage && !discover.isFetchNextPageError)) ? (
+              // Stack ran dry but more pages exist — the prefetch effect is
+              // firing (or in flight); show the skeleton, not the empty state.
+              <CardSkeleton />
             ) : visibleSessions.length === 0 ? (
               <EmptyState tab="open" onPrimary={handleCreate} onRefresh={handleRefreshStack} />
             ) : (

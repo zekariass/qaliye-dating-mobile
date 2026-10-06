@@ -32,6 +32,13 @@ describe('residency_type exclusion from profile requests', () => {
       interests: ['Travel'],
       languages: [],
     },
+    marriagePrefs: {
+      marriageTimeline: '',
+      longDistanceRelationship: '',
+      familyInvolvement: '',
+      religionImportance: '',
+      willingToRelocate: '',
+    },
   };
 
   it('mapEditDraftToUpdateRequest does not include residency_type', () => {

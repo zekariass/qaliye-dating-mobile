@@ -133,11 +133,12 @@ export default function EmailOtpScreen({ email, mode = 'signup' }: Props) {
             <View style={styles.heroSection}>
               <View style={styles.brandContainer}>
                 <View style={styles.brandNameRow}>
-                  <Text style={styles.brandNameText}>Qali</Text>
+                  <Text style={styles.brandNameText}>{'Qal Dat'}</Text>
                   <View style={styles.brandIWrapper}>
                     <Text style={styles.brandHeartIcon}>♥</Text>
-                    <Text style={styles.brandNameText}>ye</Text>
+                    <Text style={styles.brandNameText}>i</Text>
                   </View>
+                  <Text style={styles.brandNameText}>ng</Text>
                 </View>
                 <View style={styles.decorDivider}>
                   <View style={styles.decorLine} />

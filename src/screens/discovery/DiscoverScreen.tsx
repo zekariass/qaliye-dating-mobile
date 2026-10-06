@@ -735,6 +735,12 @@ export default function DiscoverScreen() {
       ethnicities: topProfileDetail.ethnicities?.length ? topProfileDetail.ethnicities : topCard.ethnicities,
       smoking: topProfileDetail.smoking ?? topCard.smoking,
       drinking: topProfileDetail.drinking ?? topCard.drinking,
+      // Marriage & relationship prefs (snake_case primary, camelCase fallback)
+      marriage_timeline: topProfileDetail.marriage_timeline ?? topProfileDetail.marriageTimeline ?? topCard.marriage_timeline,
+      long_distance_relationship: topProfileDetail.long_distance_relationship ?? topProfileDetail.longDistanceRelationship ?? topCard.long_distance_relationship,
+      family_involvement: topProfileDetail.family_involvement ?? topProfileDetail.familyInvolvement ?? topCard.family_involvement,
+      religion_importance: topProfileDetail.religion_importance ?? topProfileDetail.religionImportance ?? topCard.religion_importance,
+      willing_to_relocate: topProfileDetail.willing_to_relocate ?? topProfileDetail.willingToRelocate ?? topCard.willing_to_relocate,
     };
   }, [topCard, topProfileDetail]);
 
@@ -1123,6 +1129,9 @@ export default function DiscoverScreen() {
                 idVerifPrompt.onLikeOrSuperLike(notifPrompt.visible);
               }
             }}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            fetchNextPage={fetchNextPage}
           />
         ) : (
         <>

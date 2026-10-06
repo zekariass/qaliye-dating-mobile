@@ -1597,7 +1597,7 @@
     "conversationActions": "የውይይት እርምጃዎች",
     "imageLabel": "ምስል፦ {{name}}",
     "closeImage": "ፎቶውን ዝጋ",
-    "newMatchPreview": "አዲስ ማች! ሰላም ይበሉ",
+    "newMatchPreview": "ለ{{name}} ሰላም ይበሉ",
     "lastMessage": "የመጨረሻ መልእክት፦ {{preview}}",
     "unread": "{{count}} ያልተነበቡ",
     "unread_one": "{{count}} ያልተነበበ",
@@ -1634,7 +1634,14 @@
     "recordingNotAvailable": "የድምፅ ቀረጻ አሁን አይገኝም።",
     "voiceNotSupportedWeb": "በድር ላይ የድምፅ ቀረጻ አይደገፍም።",
     "voiceRequiresBuild": "የድምፅ ቀረጻ የመተግበሪያውን Development Build ይፈልጋል።",
-    "voiceUnavailable": "የድምፅ ቀረጻ አይገኝም"
+    "voiceUnavailable": "የድምፅ ቀረጻ አይገኝም",
+    "emptyState": {
+      "title": "ከ{{name}} ጋር ተገናኝተዋል!",
+      "subtitle": "ሰላም ይበሉ — ማንኛውም ታላቅ ውይይት በቀላል ሰላምታ ይጀምራል።",
+      "icebreaker1": "ሰላም {{name}}! ቀኑ እንዴት እያለ ነው?",
+      "icebreaker2": "ሰላም {{name}}! ሁልጊዜ የሚያስቅዎ ነገር ምንድን ነው?",
+      "icebreaker3": "ሰላም {{name}}! ቅዳሜና እሁድ ማለፍ የሚወዱት መንገድ ምንድን ነው?"
+    }
   },
   "profile": {
     "editTitle": "ፕሮፋይል አስተካክል ",

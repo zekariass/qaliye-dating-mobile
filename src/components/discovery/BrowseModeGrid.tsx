@@ -146,7 +146,7 @@ function BrowseProfileCard({
   const myCountry = myProfile?.address?.country_name ?? '';
   const { width: screenW } = useWindowDimensions();
   const isTablet = screenW >= TABLET_BREAK;
-  const CARD_W = isTablet ? Math.round(screenW * 0.9) : (screenW - spacing.md * 2);
+  const CARD_W = isTablet ? Math.round(screenW * 0.9) : (screenW - spacing.sm * 2);
   const CARD_H = CARD_W * 1.1;
   const scale = useTabletScale();
 
@@ -637,6 +637,10 @@ interface Props {
   onBoost?: () => void;
   boostActive?: boolean;
   boostLoading?: boolean;
+  /** Infinite-scroll pagination — same cursor feed as swipe mode. */
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  fetchNextPage?: () => void;
 }
 
 export default function BrowseModeGrid({
@@ -657,6 +661,9 @@ export default function BrowseModeGrid({
   onBoost,
   boostActive,
   boostLoading,
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPage,
 }: Props) {
   const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
@@ -876,6 +883,10 @@ export default function BrowseModeGrid({
         keyExtractor={(item) => item.user_id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) fetchNextPage?.();
+        }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -885,7 +896,7 @@ export default function BrowseModeGrid({
           />
         }
         ListFooterComponent={
-          isRefreshing && items.length > 0 ? (
+          (isRefreshing || isFetchingNextPage) && items.length > 0 ? (
             <View style={styles.footerLoading}>
               <ActivityIndicator size="small" color={colors.primary} />
             </View>
@@ -940,7 +951,7 @@ export default function BrowseModeGrid({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
   listContent: {
     paddingVertical: spacing.sm,

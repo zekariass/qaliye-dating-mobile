@@ -42,6 +42,26 @@ export type ProfileDiscoveryPreferencesDto = {
   preferences_version: number;
 };
 
+export type MarriageTimeline =
+  | 'WITHIN_6_MONTHS'
+  | 'WITHIN_1_YEAR'
+  | '1_TO_2_YEARS'
+  | '2_TO_5_YEARS'
+  | 'MORE_THAN_5_YEARS'
+  | 'NOT_SURE';
+
+export type LongDistanceRelationship = 'YES' | 'NO' | 'MAYBE';
+
+export type FamilyInvolvement =
+  | 'VERY_IMPORTANT'
+  | 'IMPORTANT'
+  | 'SOMEWHAT_IMPORTANT'
+  | 'NOT_IMPORTANT';
+
+export type ReligionImportance = 'VERY_IMPORTANT' | 'SOMEWHAT_IMPORTANT' | 'NOT_IMPORTANT';
+
+export type WillingToRelocate = 'YES' | 'NO' | 'MAYBE';
+
 export type ProfileMeDto = {
   user_id: string;
   display_name: string;
@@ -79,6 +99,18 @@ export type ProfileMeDto = {
   role: string;
   primary_photo_url: string | null;
   photos: ProfilePhotoDto[];
+  // Marriage & Relationship Preferences (snake_case = backend wire format;
+  // camelCase variants kept as tolerant-read fallbacks)
+  marriage_timeline?: MarriageTimeline | null;
+  long_distance_relationship?: LongDistanceRelationship | null;
+  family_involvement?: FamilyInvolvement | null;
+  religion_importance?: ReligionImportance | null;
+  willing_to_relocate?: WillingToRelocate | null;
+  marriageTimeline?: MarriageTimeline | null;
+  longDistanceRelationship?: LongDistanceRelationship | null;
+  familyInvolvement?: FamilyInvolvement | null;
+  religionImportance?: ReligionImportance | null;
+  willingToRelocate?: WillingToRelocate | null;
 };
 
 // ─── Request Payloads ──────────────────────────────────────────────────────────
@@ -107,6 +139,19 @@ export type ProfileUpdateRequest = {
   ethnicity_ids?: string[];
   ethnicity_other_text?: string | null;
   discovery_mode?: 'PUBLIC' | 'INCOGNITO';
+  // Marriage & Relationship Preferences — both casings are sent for
+  // forward/backward compatibility; the backend ignores whichever it
+  // doesn't declare (absent/null = keep existing via COALESCE).
+  marriage_timeline?: MarriageTimeline | null;
+  long_distance_relationship?: LongDistanceRelationship | null;
+  family_involvement?: FamilyInvolvement | null;
+  religion_importance?: ReligionImportance | null;
+  willing_to_relocate?: WillingToRelocate | null;
+  marriageTimeline?: MarriageTimeline | null;
+  longDistanceRelationship?: LongDistanceRelationship | null;
+  familyInvolvement?: FamilyInvolvement | null;
+  religionImportance?: ReligionImportance | null;
+  willingToRelocate?: WillingToRelocate | null;
 };
 
 export type PhotoRegistrationRequest = {
@@ -188,6 +233,18 @@ export type OtherUserProfileDto = {
   relation_status: 'NONE' | 'LIKED' | 'LIKED_YOU' | 'MATCHED';
   match_id?: string | null;
   activity_status?: import('./activity').ActivityStatus;
+  // Marriage & Relationship Preferences (snake_case = backend wire format;
+  // camelCase variants kept as tolerant-read fallbacks)
+  marriage_timeline?: MarriageTimeline | null;
+  long_distance_relationship?: LongDistanceRelationship | null;
+  family_involvement?: FamilyInvolvement | null;
+  religion_importance?: ReligionImportance | null;
+  willing_to_relocate?: WillingToRelocate | null;
+  marriageTimeline?: MarriageTimeline | null;
+  longDistanceRelationship?: LongDistanceRelationship | null;
+  familyInvolvement?: FamilyInvolvement | null;
+  religionImportance?: ReligionImportance | null;
+  willingToRelocate?: WillingToRelocate | null;
 };
 
 export type ProfileLocationDto = {

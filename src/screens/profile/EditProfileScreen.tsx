@@ -500,7 +500,8 @@ export default function EditProfileScreen() {
         ref={scrollRef}
         className="flex-1"
         contentContainerStyle={{
-          padding: 16,
+          paddingHorizontal: 10,
+          paddingTop: 24,
           paddingBottom: showSaveButton
             ? 0  // save button below provides spacing
             : keyboardHeight > 0 ? keyboardHeight + safeBottom + 24 : safeBottom + 24,
@@ -556,12 +557,12 @@ export default function EditProfileScreen() {
 const saveStyles = StyleSheet.create({
   container: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 12,
-    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingHorizontal: 24,
   },
   button: {
     borderRadius: 9999,
-    paddingVertical: 16,
+    paddingVertical: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },

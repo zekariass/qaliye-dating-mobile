@@ -19,10 +19,17 @@ export function useMyParticipations(opts?: { enabled?: boolean }) {
     enabled: opts?.enabled ?? true,
   });
 
-  const items = useMemo<BlindDateParticipationDto[]>(
-    () => query.data?.pages.flatMap((page) => page.items) ?? [],
-    [query.data],
-  );
+  const items = useMemo<BlindDateParticipationDto[]>(() => {
+    const flat = query.data?.pages.flatMap((page) => page.items) ?? [];
+    // Offset pagination on a mutable feed can return the same row on two
+    // pages — deduplicate by participant id (unique per user-per-session).
+    const seen = new Set<string>();
+    return flat.filter((p) => {
+      if (seen.has(p.participant_id)) return false;
+      seen.add(p.participant_id);
+      return true;
+    });
+  }, [query.data]);
 
   return { ...query, items };
 }

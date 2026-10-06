@@ -30,6 +30,9 @@ export function useSocialAuth() {
       });
       await GoogleSignin.hasPlayServices();
       const result = await GoogleSignin.signIn();
+      // v13 resolves instead of throwing when the user dismisses the
+      // sign-in sheet — cancel is not an error, bail silently.
+      if ((result as any).type === 'cancelled') return;
       const idToken = (result as any).idToken ?? (result as any).data?.idToken;
       if (!idToken) throw new Error('Google sign-in failed: no idToken returned');
       // Revoke access + sign out AFTER obtaining the token so that:

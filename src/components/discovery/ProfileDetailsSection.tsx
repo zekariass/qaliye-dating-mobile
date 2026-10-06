@@ -7,6 +7,13 @@ import { getCountryName } from '@/constants/countries';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getDiscoveryInterests, getInterestEmoji, translateInterest } from '@/utils/interests';
+import {
+    FAMILY_INVOLVEMENT_API_TO_LABEL,
+    LONG_DISTANCE_API_TO_LABEL,
+    MARRIAGE_TIMELINE_API_TO_LABEL,
+    RELIGION_IMPORTANCE_API_TO_LABEL,
+    WILLING_TO_RELOCATE_API_TO_LABEL,
+} from '@/utils/profileMappers';
 
 function formatLabel(value: string): string {
   return value
@@ -203,6 +210,31 @@ export default function ProfileDetailsSection({ card }: Props) {
     boolLabel(card.wants_children) ? { icon: 'happy-outline',         label: t('discovery.details.wantsChildren'), value: boolLabel(card.wants_children)! } : null,
   ].filter(Boolean) as DetailItem[];
 
+  // Marriage & relationship prefs — read snake_case first, camelCase fallback;
+  // map enum → display label, fall back to title-cased raw value.
+  const pref = (
+    snake: string | null | undefined,
+    camel: string | null | undefined,
+    map: Record<string, string>,
+  ): string | null => {
+    const raw = snake ?? camel;
+    if (!raw) return null;
+    return map[raw] ?? formatLabel(raw);
+  };
+
+  const marriageItems: DetailItem[] = [
+    pref(card.marriage_timeline, card.marriageTimeline, MARRIAGE_TIMELINE_API_TO_LABEL)
+      ? { icon: 'calendar-outline', label: t('profile.marriagePrefs.marriageTimeline'), value: pref(card.marriage_timeline, card.marriageTimeline, MARRIAGE_TIMELINE_API_TO_LABEL)! } : null,
+    pref(card.long_distance_relationship, card.longDistanceRelationship, LONG_DISTANCE_API_TO_LABEL)
+      ? { icon: 'airplane-outline', label: t('profile.marriagePrefs.longDistance'), value: pref(card.long_distance_relationship, card.longDistanceRelationship, LONG_DISTANCE_API_TO_LABEL)! } : null,
+    pref(card.family_involvement, card.familyInvolvement, FAMILY_INVOLVEMENT_API_TO_LABEL)
+      ? { icon: 'people-outline', label: t('profile.marriagePrefs.familyInvolvement'), value: pref(card.family_involvement, card.familyInvolvement, FAMILY_INVOLVEMENT_API_TO_LABEL)! } : null,
+    pref(card.religion_importance, card.religionImportance, RELIGION_IMPORTANCE_API_TO_LABEL)
+      ? { icon: 'leaf-outline', label: t('profile.marriagePrefs.religionImportance'), value: pref(card.religion_importance, card.religionImportance, RELIGION_IMPORTANCE_API_TO_LABEL)! } : null,
+    pref(card.willing_to_relocate, card.willingToRelocate, WILLING_TO_RELOCATE_API_TO_LABEL)
+      ? { icon: 'location-outline', label: t('profile.marriagePrefs.willingToRelocate'), value: pref(card.willing_to_relocate, card.willingToRelocate, WILLING_TO_RELOCATE_API_TO_LABEL)! } : null,
+  ].filter(Boolean) as DetailItem[];
+
   const activityKey = card.activity_level
     ? ACTIVITY_API_TO_KEY[card.activity_level.toUpperCase()]
     : undefined;
@@ -223,6 +255,7 @@ export default function ProfileDetailsSection({ card }: Props) {
     { title: t('discovery.details.groupEducationWork'), items: workItems },
     { title: t('discovery.details.groupRelationship'),  items: relationshipItems },
     { title: t('discovery.details.groupLifestyle'),     items: lifestyleItems },
+    { title: t('profile.marriagePrefs.sectionTitle'),   items: marriageItems },
   ];
 
   return (

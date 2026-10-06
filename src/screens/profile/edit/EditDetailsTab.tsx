@@ -10,10 +10,15 @@ import { translateProfileOption } from '@/utils/profileOptions';
 import {
     type EditProfileDraft,
     EDUCATION_OPTIONS,
+    FAMILY_INVOLVEMENT_OPTIONS,
     GENDER_OPTIONS,
+    LONG_DISTANCE_OPTIONS,
     MARITAL_STATUS_OPTIONS,
+    MARRIAGE_TIMELINE_OPTIONS,
     RELATIONSHIP_INTENTION_OPTIONS,
+    RELIGION_IMPORTANCE_OPTIONS,
     RELIGION_OPTIONS,
+    WILLING_TO_RELOCATE_OPTIONS,
     YES_NO_OPTIONS,
 } from '../mockEditProfile';
 import {
@@ -33,9 +38,12 @@ type Props = {
   sem: SemanticTheme;
 };
 
+// Thin wrapper: display strings are already labels (no i18n translation needed)
+const identityLabel = (opt: string) => opt;
+
 export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, onChangeEthnicities, sem }: Props) {
   const { t } = useTranslation();
-  const { basics, personal } = draft;
+  const { basics, personal, marriagePrefs } = draft;
   const genderLabels = { MALE: t('profile.edit.male'), FEMALE: t('profile.edit.female') } as const;
   const optionLabel = (opt: string) => translateProfileOption(opt, t);
 
@@ -212,6 +220,71 @@ export const EditDetailsTab = memo(function EditDetailsTab({ draft, onChange, on
             />
           </LabeledField>
         </RowPair>
+      </SectionCard>
+
+      {/* ─── Marriage & Relationship Preferences ─── */}
+      <SectionCard sem={sem}>
+        <SectionTitle title={t('profile.marriagePrefs.sectionTitle')} sem={sem} />
+
+        <LabeledField label={t('profile.marriagePrefs.marriageTimeline')} sem={sem} flex={false}>
+          <SelectField
+            value={marriagePrefs.marriageTimeline}
+            options={MARRIAGE_TIMELINE_OPTIONS as unknown as string[]}
+            getOptionLabel={identityLabel}
+            onSelect={(v) => onChange('marriagePrefs.marriageTimeline', v)}
+            sem={sem}
+            leftIcon="calendar-outline"
+            placeholder={t('profile.marriagePrefs.notSpecified')}
+          />
+        </LabeledField>
+
+        <LabeledField label={t('profile.marriagePrefs.longDistance')} sem={sem} flex={false}>
+          <SelectField
+            value={marriagePrefs.longDistanceRelationship}
+            options={LONG_DISTANCE_OPTIONS as unknown as string[]}
+            getOptionLabel={identityLabel}
+            onSelect={(v) => onChange('marriagePrefs.longDistanceRelationship', v)}
+            sem={sem}
+            leftIcon="airplane-outline"
+            placeholder={t('profile.marriagePrefs.notSpecified')}
+          />
+        </LabeledField>
+
+        <LabeledField label={t('profile.marriagePrefs.familyInvolvement')} sem={sem} flex={false}>
+          <SelectField
+            value={marriagePrefs.familyInvolvement}
+            options={FAMILY_INVOLVEMENT_OPTIONS as unknown as string[]}
+            getOptionLabel={identityLabel}
+            onSelect={(v) => onChange('marriagePrefs.familyInvolvement', v)}
+            sem={sem}
+            leftIcon="people-outline"
+            placeholder={t('profile.marriagePrefs.notSpecified')}
+          />
+        </LabeledField>
+
+        <LabeledField label={t('profile.marriagePrefs.religionImportance')} sem={sem} flex={false}>
+          <SelectField
+            value={marriagePrefs.religionImportance}
+            options={RELIGION_IMPORTANCE_OPTIONS as unknown as string[]}
+            getOptionLabel={identityLabel}
+            onSelect={(v) => onChange('marriagePrefs.religionImportance', v)}
+            sem={sem}
+            leftIcon="leaf-outline"
+            placeholder={t('profile.marriagePrefs.notSpecified')}
+          />
+        </LabeledField>
+
+        <LabeledField label={t('profile.marriagePrefs.willingToRelocate')} sem={sem} flex={false}>
+          <SelectField
+            value={marriagePrefs.willingToRelocate}
+            options={WILLING_TO_RELOCATE_OPTIONS as unknown as string[]}
+            getOptionLabel={identityLabel}
+            onSelect={(v) => onChange('marriagePrefs.willingToRelocate', v)}
+            sem={sem}
+            leftIcon="location-outline"
+            placeholder={t('profile.marriagePrefs.notSpecified')}
+          />
+        </LabeledField>
       </SectionCard>
     </View>
   );

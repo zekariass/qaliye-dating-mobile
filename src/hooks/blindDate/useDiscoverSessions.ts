@@ -18,10 +18,17 @@ export function useDiscoverSessions() {
     staleTime: 30_000,
   });
 
-  const items = useMemo<BlindDateSessionSummaryDto[]>(
-    () => query.data?.pages.flatMap((page) => page.items) ?? [],
-    [query.data],
-  );
+  const items = useMemo<BlindDateSessionSummaryDto[]>(() => {
+    const flat = query.data?.pages.flatMap((page) => page.items) ?? [];
+    // Offset pagination on a mutable feed (sessions fill, expire, get created)
+    // can return the same session on two pages — deduplicate by id.
+    const seen = new Set<string>();
+    return flat.filter((s) => {
+      if (seen.has(s.id)) return false;
+      seen.add(s.id);
+      return true;
+    });
+  }, [query.data]);
 
   return { ...query, items };
 }

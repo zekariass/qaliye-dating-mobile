@@ -202,11 +202,12 @@ export default function PhoneOtpScreen() {
 
               <View style={styles.brandContainer}>
                 <View style={styles.brandNameRow}>
-                  <Text style={[styles.brandNameText, { color: isDark ? th.text : '#3B0068' }]}>Qali</Text>
+                  <Text style={[styles.brandNameText, { color: isDark ? th.text : '#3B0068' }]}>{'Qal Dat'}</Text>
                   <View style={styles.brandIWrapper}>
                     <Text style={styles.brandHeartIcon}>♥</Text>
-                    <Text style={[styles.brandNameText, { color: isDark ? th.text : '#3B0068' }]}>ye</Text>
+                    <Text style={[styles.brandNameText, { color: isDark ? th.text : '#3B0068' }]}>i</Text>
                   </View>
+                  <Text style={[styles.brandNameText, { color: isDark ? th.text : '#3B0068' }]}>ng</Text>
                 </View>
                 <View style={styles.decorDivider}>
                   <View style={[styles.decorLine, { backgroundColor: colors.primary }]} />

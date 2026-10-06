@@ -32,6 +32,7 @@ import {
     useRemindVideoCallRequest,
     useVideoCallRequests
 } from '@/hooks/videoCall/useVideoCallRequests';
+import { TERMINAL_STATUSES, type VideoCallRequestStatus } from '@/types/videoCall';
 import { extractRetryAfterSeconds } from '@/utils/retryAfter';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -67,7 +68,9 @@ export default function VideoCallRequestDetailScreen() {
 
   const [avatarFailed, setAvatarFailed] = useState(false);
 
-  const { data: requests, isLoading, isFetching, refetch } = useVideoCallRequests(matchId ?? '');
+  // 5s while this screen is up — joined-state updates (requester_joined /
+  // responder_joined) and accept/cancel transitions must feel live.
+  const { data: requests, isLoading, isFetching, refetch } = useVideoCallRequests(matchId ?? '', 5_000);
   const request = requests?.find((r) => r.id === requestId);
 
   // The request may be absent from a stale cache while the mount refetch is
@@ -336,6 +339,22 @@ export default function VideoCallRequestDetailScreen() {
   const isPendingOutgoing = request.status === 'PENDING' && request.is_requester;
   const isPendingIncoming = request.status === 'PENDING' && !request.is_requester;
   const isAccepted = request.status === 'ACCEPTED';
+  const isTerminal = TERMINAL_STATUSES.includes(request.status);
+
+  // Terminal copy — without this branch the screen renders header + blank
+  // body when a request gets cancelled/declined while open.
+  const TERMINAL_META: Record<
+    VideoCallRequestStatus,
+    { icon: React.ComponentProps<typeof Ionicons>['name']; color: string; title: string; body: string }
+  > = {
+    PENDING: { icon: 'time', color: colors.warning, title: '', body: '' },
+    ACCEPTED: { icon: 'checkmark', color: colors.success, title: '', body: '' },
+    CANCELLED: { icon: 'close-circle', color: colors.danger, title: 'Request Cancelled', body: `The ${isAudio ? 'audio' : 'video'} call request was cancelled.` },
+    DECLINED: { icon: 'close-circle', color: colors.danger, title: 'Call Declined', body: `The ${isAudio ? 'audio' : 'video'} call request was declined.` },
+    EXPIRED: { icon: 'time-outline', color: colors.warning, title: 'Request Expired', body: `The ${isAudio ? 'audio' : 'video'} call request expired.` },
+    COMPLETED: { icon: 'checkmark-circle', color: colors.success, title: 'Call Completed', body: `The ${isAudio ? 'audio' : 'video'} call has ended.` },
+  };
+  const terminalMeta = TERMINAL_META[request.status];
 
   const myJoined = request.is_requester ? request.requester_joined : request.responder_joined;
   const otherJoined = request.is_requester ? request.responder_joined : request.requester_joined;
@@ -494,6 +513,36 @@ export default function VideoCallRequestDetailScreen() {
               handleJoinCall,
               false,
             )}
+          </>
+        )}
+
+        {/* ── TERMINAL — cancelled / declined / expired / completed ──────
+            Without this branch a request ending while this screen is open
+            renders the header over a blank body. */}
+        {isTerminal && (
+          <>
+            <View style={styles.heroSection}>
+              {heroAvatar(terminalMeta.icon, terminalMeta.color)}
+              <View style={styles.heroText}>
+                <Text style={[styles.heroTitle, { color: th.text }]}>{terminalMeta.title}</Text>
+                <Text style={[styles.heroSub, { color: th.textSecondary }]}>
+                  {terminalMeta.body}
+                </Text>
+              </View>
+            </View>
+
+            {outlineBtn('arrow-back-outline', 'Go Back', () => router.back(), false, colors.primary)}
+
+            <TouchableOpacity
+              style={styles.linkBtn}
+              onPress={() => router.push({
+                pathname: '/(app)/video-call-history' as never,
+                params: { matchId, displayName },
+              })}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.linkBtnText, { color: colors.primary }]}>View History →</Text>
+            </TouchableOpacity>
           </>
         )}
       </ScrollView>

@@ -158,6 +158,12 @@ export default function BrowseProfileDetailSheet({
       smoking: profileDetail.smoking ?? card.smoking,
       drinking: profileDetail.drinking ?? card.drinking,
       bio: profileDetail.bio ?? card.bio,
+      // Marriage & relationship prefs (snake_case primary, camelCase fallback)
+      marriage_timeline: profileDetail.marriage_timeline ?? profileDetail.marriageTimeline ?? card.marriage_timeline,
+      long_distance_relationship: profileDetail.long_distance_relationship ?? profileDetail.longDistanceRelationship ?? card.long_distance_relationship,
+      family_involvement: profileDetail.family_involvement ?? profileDetail.familyInvolvement ?? card.family_involvement,
+      religion_importance: profileDetail.religion_importance ?? profileDetail.religionImportance ?? card.religion_importance,
+      willing_to_relocate: profileDetail.willing_to_relocate ?? profileDetail.willingToRelocate ?? card.willing_to_relocate,
     };
   }, [card, profileDetail]);
 

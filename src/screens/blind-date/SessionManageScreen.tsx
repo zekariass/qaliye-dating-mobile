@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQueries } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
@@ -331,6 +331,19 @@ export default function SessionManageScreen() {
   const [pickedC, setPickedC] = useState<Set<string>>(new Set());
   const [roundPickerOpen, setRoundPickerOpen] = useState(false);
   const [deciding, setDeciding] = useState(false);
+  const [userRefreshing, setUserRefreshing] = useState(false);
+
+  // Clear the user-pull indicator once the background fetch settles so
+  // mutation-triggered refetches (selections, round actions) never flash
+  // the pull-to-refresh spinner.
+  useEffect(() => {
+    if (!isRefetching) setUserRefreshing(false);
+  }, [isRefetching]);
+
+  const handleManualRefresh = useCallback(() => {
+    setUserRefreshing(true);
+    refetch();
+  }, [refetch]);
 
   // The manage screen is creator-only. If the session detail resolves and
   // the caller isn't the creator (e.g. deep link or stale nav from a joined
@@ -618,7 +631,7 @@ export default function SessionManageScreen() {
               REVEAL: t('blindDate.status.reveal'),
               COMPLETED: t('blindDate.status.ended'),
               CLOSED: t('blindDate.status.closed'),
-              CANCELLED: t('blindDate.status.closed'),
+              CANCELLED: t('blindDate.status.cancelled'),
               EXPIRED: t('blindDate.status.expired'),
             }[session.status] ?? session.status).toUpperCase()}
           </Text>
@@ -628,7 +641,7 @@ export default function SessionManageScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={bdColors.primary} />
+          <RefreshControl refreshing={userRefreshing} onRefresh={handleManualRefresh} tintColor={bdColors.primary} />
         }
         showsVerticalScrollIndicator={false}
       >

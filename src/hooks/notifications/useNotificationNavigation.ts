@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
@@ -29,6 +29,8 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
   const pendingNavIntent = useNotificationsStore((s) => s.pendingNavIntent);
   const setPendingNavIntent = useNotificationsStore((s) => s.setPendingNavIntent);
   const myUserId = useCurrentProfile().data?.user_id;
+  const pathname = usePathname();
+  const currentParams = useGlobalSearchParams<{ matchId?: string; requestId?: string }>();
   const processedOnce = useRef(false);
   // Dedup MATCHMAKING_MATCHED vs the generic MATCH_CREATED push that arrives
   // alongside it — both carry the same match_id.
@@ -105,6 +107,11 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
               requestId: intent.request_id,
               matchId: intent.match_id,
             });
+          } else if (intent.screen === 'video-call') {
+            // Call pushes (ACCOUNT_ALERT + VIDEO_CALL_*/AUDIO_CALL_*) land on
+            // the messages list — the user opens the match's call screen from
+            // there.
+            router.push('/(app)/(tabs)/messages' as any);
           } else {
             router.push('/(app)/settings' as any);
           }
@@ -127,23 +134,35 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
         case 'AUDIO_CALL_DECLINED':
         case 'AUDIO_CALL_CANCELLED':
         case 'AUDIO_CALL_EXPIRED':
+        case 'VIDEO_CALL_ENDED_TIME_LIMIT':
+        case 'AUDIO_CALL_ENDED_TIME_LIMIT':
           if (intent.match_id) {
-            router.push({
-              pathname: '/(app)/video-call' as any,
-              params: {
-                matchId: intent.match_id,
-                ...(intent.video_call_request_id
-                  ? { requestId: intent.video_call_request_id }
-                  : {}),
-              },
-            });
+            // Skip the push when already viewing this request — the screen
+            // polls every 5s and reflects the new state itself; pushing
+            // again would stack an identical copy per notification.
+            const alreadyViewing =
+              (pathname === '/video-call' || pathname.endsWith('/video-call')) &&
+              currentParams.matchId === intent.match_id &&
+              (!intent.video_call_request_id ||
+                currentParams.requestId === intent.video_call_request_id);
+            if (!alreadyViewing) {
+              router.push({
+                pathname: '/(app)/video-call' as any,
+                params: {
+                  matchId: intent.match_id,
+                  ...(intent.video_call_request_id
+                    ? { requestId: intent.video_call_request_id }
+                    : {}),
+                },
+              });
+            }
           }
           break;
         default:
           break;
       }
     },
-    [hasSession, router, setPendingNavIntent, myUserId],
+    [hasSession, router, setPendingNavIntent, myUserId, pathname, currentParams],
   );
 
   const handleResponse = useCallback(

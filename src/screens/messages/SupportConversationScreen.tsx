@@ -1145,6 +1145,7 @@ export default function SupportConversationScreen() {
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           inverted
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
           contentContainerStyle={screenStyles.listContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"

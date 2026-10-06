@@ -39,8 +39,13 @@ import {
     ACTIVITY_OPTIONS,
     DRINKING_OPTIONS,
     EDUCATION_OPTIONS,
+    FAMILY_INVOLVEMENT_OPTIONS,
+    LONG_DISTANCE_OPTIONS,
+    MARRIAGE_TIMELINE_OPTIONS,
+    RELIGION_IMPORTANCE_OPTIONS,
     RELIGION_OPTIONS,
     SMOKING_OPTIONS,
+    WILLING_TO_RELOCATE_OPTIONS,
 } from '@/screens/profile/mockEditProfile';
 import { Gender, RelationshipIntention } from '@/types/api';
 import { sanitizeInterests } from '@/utils/interests';
@@ -51,10 +56,20 @@ import {
     DRINKING_LABEL_TO_API,
     EDUCATION_API_TO_LABEL,
     EDUCATION_LABEL_TO_API,
+    FAMILY_INVOLVEMENT_API_TO_LABEL,
+    FAMILY_INVOLVEMENT_LABEL_TO_API,
+    LONG_DISTANCE_API_TO_LABEL,
+    LONG_DISTANCE_LABEL_TO_API,
+    MARRIAGE_TIMELINE_API_TO_LABEL,
+    MARRIAGE_TIMELINE_LABEL_TO_API,
     RELIGION_API_TO_LABEL,
+    RELIGION_IMPORTANCE_API_TO_LABEL,
+    RELIGION_IMPORTANCE_LABEL_TO_API,
     RELIGION_LABEL_TO_API,
     SMOKING_API_TO_LABEL,
     SMOKING_LABEL_TO_API,
+    WILLING_TO_RELOCATE_API_TO_LABEL,
+    WILLING_TO_RELOCATE_LABEL_TO_API,
 } from '@/utils/profileMappers';
 import { translateProfileOption } from '@/utils/profileOptions';
 
@@ -84,6 +99,19 @@ function calculateAge(dobDisplay: string): number | null {
     age--;
   }
   return age;
+}
+
+// Reads a marriage-preference field tolerating both wire casings, then maps
+// the enum to its display label (empty string = unanswered).
+function readPref(
+  dto: object,
+  snakeKey: string,
+  camelKey: string,
+  apiToLabel: Record<string, string>,
+): string {
+  const raw = (dto as Record<string, unknown>)[snakeKey] ?? (dto as Record<string, unknown>)[camelKey];
+  if (typeof raw !== 'string' || !raw) return '';
+  return apiToLabel[raw] ?? raw;
 }
 
 type Props = { onComplete: () => Promise<void>; isCompleted: boolean };
@@ -143,6 +171,12 @@ const schema = z
       .min(1, { error: () => i18n.t('onboarding.basicProfile.errors.activityRequired', 'Please select your activity level.') }),
     education_level: z.string().optional(),
     occupation: z.string().max(100, { error: () => i18n.t('onboarding.basicProfile.errors.occupationTooLong', 'Must be 100 characters or less.') }).optional(),
+    // Marriage & Relationship Preferences — optional, no validation
+    marriage_timeline: z.string().optional(),
+    long_distance_relationship: z.string().optional(),
+    family_involvement: z.string().optional(),
+    religion_importance: z.string().optional(),
+    willing_to_relocate: z.string().optional(),
   })
 
 type FormValues = z.infer<typeof schema>;
@@ -185,9 +219,69 @@ const LIFESTYLE_COLORS = {
   fitness: '#10B981',  // green
 };
 
+// Marriage & Relationship Preferences — optional single-select sub-steps
+// rendered right after relationship_intention (sub-steps 4–8).
+type MarriagePrefSubStep = {
+  name: 'marriage_timeline' | 'long_distance_relationship' | 'family_involvement' | 'religion_importance' | 'willing_to_relocate';
+  titleKey: string;
+  subtitleKey: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  options: readonly string[];
+  apiToLabel: Record<string, string>;
+  labelToApi: Record<string, string>;
+};
+
+const MARRIAGE_PREF_SUBSTEPS: MarriagePrefSubStep[] = [
+  {
+    name: 'marriage_timeline',
+    titleKey: 'onboarding.marriagePrefs.marriageTimeline.title',
+    subtitleKey: 'onboarding.marriagePrefs.marriageTimeline.subtitle',
+    icon: 'calendar-outline',
+    options: MARRIAGE_TIMELINE_OPTIONS,
+    apiToLabel: MARRIAGE_TIMELINE_API_TO_LABEL,
+    labelToApi: MARRIAGE_TIMELINE_LABEL_TO_API,
+  },
+  {
+    name: 'long_distance_relationship',
+    titleKey: 'onboarding.marriagePrefs.longDistance.title',
+    subtitleKey: 'onboarding.marriagePrefs.longDistance.subtitle',
+    icon: 'airplane-outline',
+    options: LONG_DISTANCE_OPTIONS,
+    apiToLabel: LONG_DISTANCE_API_TO_LABEL,
+    labelToApi: LONG_DISTANCE_LABEL_TO_API,
+  },
+  {
+    name: 'family_involvement',
+    titleKey: 'onboarding.marriagePrefs.familyInvolvement.title',
+    subtitleKey: 'onboarding.marriagePrefs.familyInvolvement.subtitle',
+    icon: 'people-outline',
+    options: FAMILY_INVOLVEMENT_OPTIONS,
+    apiToLabel: FAMILY_INVOLVEMENT_API_TO_LABEL,
+    labelToApi: FAMILY_INVOLVEMENT_LABEL_TO_API,
+  },
+  {
+    name: 'religion_importance',
+    titleKey: 'onboarding.marriagePrefs.religionImportance.title',
+    subtitleKey: 'onboarding.marriagePrefs.religionImportance.subtitle',
+    icon: 'leaf-outline',
+    options: RELIGION_IMPORTANCE_OPTIONS,
+    apiToLabel: RELIGION_IMPORTANCE_API_TO_LABEL,
+    labelToApi: RELIGION_IMPORTANCE_LABEL_TO_API,
+  },
+  {
+    name: 'willing_to_relocate',
+    titleKey: 'onboarding.marriagePrefs.willingToRelocate.title',
+    subtitleKey: 'onboarding.marriagePrefs.willingToRelocate.subtitle',
+    icon: 'location-outline',
+    options: WILLING_TO_RELOCATE_OPTIONS,
+    apiToLabel: WILLING_TO_RELOCATE_API_TO_LABEL,
+    labelToApi: WILLING_TO_RELOCATE_LABEL_TO_API,
+  },
+];
 
 
-const TOTAL_STEPS = 8;
+
+const TOTAL_STEPS = 13;
 
 // Sub-step index → form fields that must validate before advancing
 const FIELDS_TO_VALIDATE: Partial<Record<number, (keyof FormValues)[]>> = {
@@ -195,8 +289,9 @@ const FIELDS_TO_VALIDATE: Partial<Record<number, (keyof FormValues)[]>> = {
   1: ['gender'],
   2: ['date_of_birth'],
   3: ['relationship_intention'],
-  5: ['religion'],
-  6: ['smoking_detail', 'drinking_detail', 'activity_level'],
+  // 4–8: marriage & relationship preferences — optional, no validation
+  10: ['religion'],
+  11: ['smoking_detail', 'drinking_detail', 'activity_level'],
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -269,6 +364,13 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
           activity_level: profile.activity_level ? (ACTIVITY_API_TO_LABEL[profile.activity_level] ?? '') : '',
           education_level: profile.education_level ? (EDUCATION_API_TO_LABEL[profile.education_level] ?? '') : '',
           occupation: profile.occupation ?? '',
+          // Marriage & relationship prefs — ProfileMeResponse doesn't declare
+          // these yet; read tolerantly across both wire casings.
+          marriage_timeline: readPref(profile, 'marriage_timeline', 'marriageTimeline', MARRIAGE_TIMELINE_API_TO_LABEL),
+          long_distance_relationship: readPref(profile, 'long_distance_relationship', 'longDistanceRelationship', LONG_DISTANCE_API_TO_LABEL),
+          family_involvement: readPref(profile, 'family_involvement', 'familyInvolvement', FAMILY_INVOLVEMENT_API_TO_LABEL),
+          religion_importance: readPref(profile, 'religion_importance', 'religionImportance', RELIGION_IMPORTANCE_API_TO_LABEL),
+          willing_to_relocate: readPref(profile, 'willing_to_relocate', 'willingToRelocate', WILLING_TO_RELOCATE_API_TO_LABEL),
         });
         setSelectedInterests(sanitizeInterests(profile.interests));
       })
@@ -355,6 +457,18 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
         smoking_detail: values.smoking_detail ? (SMOKING_LABEL_TO_API[values.smoking_detail] ?? null) : null,
         drinking_detail: values.drinking_detail ? (DRINKING_LABEL_TO_API[values.drinking_detail] ?? null) : null,
         activity_level: values.activity_level ? (ACTIVITY_LABEL_TO_API[values.activity_level] ?? null) : null,
+        // Marriage & relationship prefs — sent under both casings; the backend
+        // ignores whichever it doesn't declare. null/undefined = keep existing.
+        marriage_timeline: values.marriage_timeline ? (MARRIAGE_TIMELINE_LABEL_TO_API[values.marriage_timeline] ?? values.marriage_timeline) : undefined,
+        long_distance_relationship: values.long_distance_relationship ? (LONG_DISTANCE_LABEL_TO_API[values.long_distance_relationship] ?? values.long_distance_relationship) : undefined,
+        family_involvement: values.family_involvement ? (FAMILY_INVOLVEMENT_LABEL_TO_API[values.family_involvement] ?? values.family_involvement) : undefined,
+        religion_importance: values.religion_importance ? (RELIGION_IMPORTANCE_LABEL_TO_API[values.religion_importance] ?? values.religion_importance) : undefined,
+        willing_to_relocate: values.willing_to_relocate ? (WILLING_TO_RELOCATE_LABEL_TO_API[values.willing_to_relocate] ?? values.willing_to_relocate) : undefined,
+        marriageTimeline: values.marriage_timeline ? (MARRIAGE_TIMELINE_LABEL_TO_API[values.marriage_timeline] ?? values.marriage_timeline) : undefined,
+        longDistanceRelationship: values.long_distance_relationship ? (LONG_DISTANCE_LABEL_TO_API[values.long_distance_relationship] ?? values.long_distance_relationship) : undefined,
+        familyInvolvement: values.family_involvement ? (FAMILY_INVOLVEMENT_LABEL_TO_API[values.family_involvement] ?? values.family_involvement) : undefined,
+        religionImportance: values.religion_importance ? (RELIGION_IMPORTANCE_LABEL_TO_API[values.religion_importance] ?? values.religion_importance) : undefined,
+        willingToRelocate: values.willing_to_relocate ? (WILLING_TO_RELOCATE_LABEL_TO_API[values.willing_to_relocate] ?? values.willing_to_relocate) : undefined,
       });
       await onComplete();
     } catch (e: unknown) {
@@ -621,8 +735,57 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
             </View>
           )}
 
-          {/* Step 4: Interests */}
-          {subStep === 4 && (
+          {/* Steps 4–8: Marriage & Relationship Preferences (optional) */}
+          {subStep >= 4 && subStep <= 8 && (() => {
+            const step = MARRIAGE_PREF_SUBSTEPS[subStep - 4];
+            return (
+              <View style={styles.stepContainer}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name={step.icon} size={40} color={colors.primary} />
+                </View>
+                <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
+                  {t(step.subtitleKey)}
+                </Text>
+                <Text style={[styles.stepTitle, { color: th.text }]}>
+                  {t(step.titleKey)}
+                </Text>
+                <Controller
+                  control={control}
+                  name={step.name}
+                  render={({ field: { onChange, value } }) => (
+                    <View style={styles.intentionList}>
+                      {step.options.map((opt) => {
+                        const sel = value === opt;
+                        return (
+                          <TouchableOpacity
+                            key={opt}
+                            style={[
+                              styles.intentionRow,
+                              {
+                                backgroundColor: sel ? colors.primary : th.surface,
+                                borderColor: sel ? colors.primary : th.border,
+                              },
+                            ]}
+                            onPress={() => onChange(sel ? '' : opt)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={[styles.intentionText, { color: sel ? '#FFFFFF' : th.text }]}>{opt}</Text>
+                            {sel && <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" style={{ marginLeft: 'auto' }} />}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
+                />
+                <Text style={[styles.prefSkipHint, { color: th.textMuted }]}>
+                  {t('onboarding.marriagePrefs.skipHint', 'Optional — tap Next to skip')}
+                </Text>
+              </View>
+            );
+          })()}
+
+          {/* Step 9: Interests */}
+          {subStep === 9 && (
             <View style={styles.stepContainer}>
               <View style={styles.iconCircle}>
                 <Ionicons name="color-palette-outline" size={40} color={colors.primary} />
@@ -643,8 +806,8 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
             </View>
           )}
 
-          {/* Step 5: Religion */}
-          {subStep === 5 && (
+          {/* Step 10: Religion */}
+          {subStep === 10 && (
             <View style={styles.stepContainer}>
               <View style={styles.iconCircle}>
                 <MaterialCommunityIcons name="hands-pray" size={40} color={colors.primary} />
@@ -705,8 +868,8 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
             </View>
           )}
 
-          {/* Step 6: Lifestyle (Smoking, Drinking, Fitness) */}
-          {subStep === 6 && (
+          {/* Step 11: Lifestyle (Smoking, Drinking, Fitness) */}
+          {subStep === 11 && (
             <View style={styles.stepContainer}>
               <View style={styles.iconCircle}>
                 <Ionicons name="heart-circle-outline" size={40} color={colors.primary} />
@@ -872,8 +1035,8 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
             </View>
           )}
 
-          {/* Step 7: Education & Occupation */}
-          {subStep === 7 && (
+          {/* Step 12: Education & Occupation */}
+          {subStep === 12 && (
             <View style={styles.stepContainer}>
               <View style={styles.iconCircle}>
                 <Ionicons name="school-outline" size={40} color={colors.primary} />
@@ -1122,6 +1285,13 @@ const styles = StyleSheet.create({
   },
   intentionEmoji: { fontSize: 18 },
   intentionText: { fontSize: 15, fontWeight: '600' },
+
+  // Optional marriage-pref steps
+  prefSkipHint: {
+    fontSize: 13,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
 
   // Religion grid
   religionGrid: {

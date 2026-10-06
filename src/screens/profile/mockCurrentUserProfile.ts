@@ -59,6 +59,13 @@ export type CurrentUserProfile = {
   isOnboarded: boolean;
   profileCompletionScore: number;
 
+  // Marriage & Relationship Preferences
+  marriageTimeline: string | null;
+  longDistanceRelationship: string | null;
+  familyInvolvement: string | null;
+  religionImportance: string | null;
+  willingToRelocate: string | null;
+
   // Preferences tab — discovery_preferences
   discoveryMode: string;
   interestedInGender: string;
@@ -116,6 +123,12 @@ export const CURRENT_USER_PROFILE: CurrentUserProfile = {
   languages: [],
   activityLevel: 'Moderate: Exercises a few times a week',
   interests: ['Travel', 'Coffee', 'Reading', 'Fitness', 'Music'],
+
+  marriageTimeline: null,
+  longDistanceRelationship: null,
+  familyInvolvement: null,
+  religionImportance: null,
+  willingToRelocate: null,
 
   isVisible: true,
   isOnboarded: true,

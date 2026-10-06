@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
@@ -394,6 +394,19 @@ export default function SessionResultsScreen() {
   const { session, results, isCreator, isLoading, isError, resultsFailed, refetch, refetchResults, isRefetching } =
     useSessionResults(sessionId ?? null);
 
+  const [userRefreshing, setUserRefreshing] = useState(false);
+
+  // Clear the pull indicator once the fetch settles — keeps mutation-triggered
+  // background refetches from ever flashing the pull-to-refresh spinner.
+  useEffect(() => {
+    if (!isRefetching) setUserRefreshing(false);
+  }, [isRefetching]);
+
+  const handleManualRefresh = useCallback(() => {
+    setUserRefreshing(true);
+    refetch();
+  }, [refetch]);
+
   // Creator-only screen — participants land on the participant flow instead.
   useEffect(() => {
     if (isCreator === false && sessionId) {
@@ -512,7 +525,7 @@ export default function SessionResultsScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={bdColors.primary} />
+          <RefreshControl refreshing={userRefreshing} onRefresh={handleManualRefresh} tintColor={bdColors.primary} />
         }
         showsVerticalScrollIndicator={false}
       >

@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     RefreshControl,
@@ -92,10 +93,21 @@ export default function VideoCallsScreen() {
     liveRequest,
     history,
     isLoading,
-    isRefetching,
+    isFetching,
     refetch,
     error,
   } = useLiveVideoCallRequest(matchId ?? '');
+
+  // Pull-to-refresh is user-initiated only — the 15s background poll must
+  // stay silent, so the spinner is driven by a local flag, not isRefetching.
+  const [userRefreshing, setUserRefreshing] = useState(false);
+  useEffect(() => {
+    if (!isFetching) setUserRefreshing(false);
+  }, [isFetching]);
+  const handleRefresh = useCallback(() => {
+    setUserRefreshing(true);
+    void refetch();
+  }, [refetch]);
 
   const cancelMutation = useCancelVideoCallRequest(matchId ?? '');
   const declineMutation = useDeclineVideoCallRequest(matchId ?? '');
@@ -286,11 +298,7 @@ export default function VideoCallsScreen() {
       return (
         <View style={[styles.currentCard, { backgroundColor: isDark ? th.surface : '#FAF7FF', borderColor: th.border }]}>
           <View style={styles.emptyState}>
-            <View style={styles.emptyTitleRow}>
-              <Ionicons name="videocam" size={26} color={colors.success} />
-              <Ionicons name="call" size={26} color={colors.verifiedBlue} />
-              <Text style={[styles.emptyTitle, { color: th.text }]}>No active request</Text>
-            </View>
+            <Text style={[styles.emptyTitle, { color: th.text }]}>No active request</Text>
             <Text style={[styles.emptySub, { color: th.textSecondary }]}>
               Request a video or audio call to connect with {displayName}.
             </Text>
@@ -513,7 +521,7 @@ export default function VideoCallsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+          <RefreshControl refreshing={userRefreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
       >
         {/* CURRENT */}
@@ -589,12 +597,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   emptyState: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
-  emptyTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
   emptyTitle: { fontSize: 18, fontWeight: '700' },
   emptySub: { fontSize: 15, lineHeight: 22, textAlign: 'center' },
   statusPill: {

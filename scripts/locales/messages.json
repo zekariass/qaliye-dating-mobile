@@ -31,7 +31,7 @@
     "conversationActions": "Conversation actions",
     "imageLabel": "Image: {{name}}",
     "closeImage": "Close image",
-    "newMatchPreview": "New match! Say hello",
+    "newMatchPreview": "Say hi to {{name}}",
     "lastMessage": "Last message: {{preview}}",
     "unread": "{{count}} unread",
     "unread_one": "{{count}} unread",

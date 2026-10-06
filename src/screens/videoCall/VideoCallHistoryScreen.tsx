@@ -4,6 +4,7 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     RefreshControl,
@@ -55,7 +56,18 @@ export default function VideoCallHistoryScreen() {
     displayName: string;
   }>();
 
-  const { data: requests, isLoading, isRefetching, refetch } = useVideoCallRequests(matchId ?? '');
+  const { data: requests, isLoading, isFetching, refetch } = useVideoCallRequests(matchId ?? '');
+
+  // Pull-to-refresh is user-initiated only — the 15s background poll must
+  // stay silent, so the spinner is driven by a local flag, not isRefetching.
+  const [userRefreshing, setUserRefreshing] = useState(false);
+  useEffect(() => {
+    if (!isFetching) setUserRefreshing(false);
+  }, [isFetching]);
+  const handleRefresh = useCallback(() => {
+    setUserRefreshing(true);
+    void refetch();
+  }, [refetch]);
 
   // Show all terminal statuses as history
   const history = (requests ?? []).filter(
@@ -86,7 +98,7 @@ export default function VideoCallHistoryScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+            <RefreshControl refreshing={userRefreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
           }
         >
           <Text style={[styles.sectionLabel, { color: th.textMuted }]}>HISTORY</Text>

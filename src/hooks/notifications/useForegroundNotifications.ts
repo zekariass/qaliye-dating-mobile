@@ -24,7 +24,9 @@ type VideoCallEventCode =
   | 'VIDEO_CALL_ACCEPTED'
   | 'VIDEO_CALL_DECLINED'
   | 'VIDEO_CALL_CANCELLED'
-  | 'VIDEO_CALL_EXPIRED';
+  | 'VIDEO_CALL_EXPIRED'
+  | 'VIDEO_CALL_ENDED_TIME_LIMIT'
+  | 'AUDIO_CALL_ENDED_TIME_LIMIT';
 
 /**
  * Keeps the inbox row's video-call badge in sync when a VIDEO_CALL_* push
@@ -76,7 +78,8 @@ function applyVideoCallBadgeUpdate(
       canJoin: true,
     });
   } else {
-    // DECLINED / CANCELLED / EXPIRED → request is terminal, clear the badge.
+    // DECLINED / CANCELLED / EXPIRED / ENDED_TIME_LIMIT → request is
+    // terminal, clear the badge.
     updateInboxVideoCallRequest(queryClient, matchId, null);
   }
 }
@@ -175,7 +178,11 @@ export function useForegroundNotifications(options?: ForegroundNotificationOptio
           }
           // VIDEO_CALL_* may also ride on ACCOUNT_ALERT as an alert_code —
           // apply the same badge update as dedicated notification types.
-          if (payload?.alert_code?.startsWith('VIDEO_CALL_')) {
+          // AUDIO_CALL_ENDED_TIME_LIMIT is included explicitly: the generic
+          // VIDEO_CALL_ prefix doesn't cover it, and it maps to the terminal
+          // (badge-clearing) branch.
+          if (payload?.alert_code?.startsWith('VIDEO_CALL_') ||
+              payload?.alert_code === 'AUDIO_CALL_ENDED_TIME_LIMIT') {
             applyVideoCallBadgeUpdate(
               queryClient,
               payload.alert_code as Parameters<typeof applyVideoCallBadgeUpdate>[1],
@@ -191,6 +198,8 @@ export function useForegroundNotifications(options?: ForegroundNotificationOptio
         case 'VIDEO_CALL_DECLINED':
         case 'VIDEO_CALL_CANCELLED':
         case 'VIDEO_CALL_EXPIRED':
+        case 'VIDEO_CALL_ENDED_TIME_LIMIT':
+        case 'AUDIO_CALL_ENDED_TIME_LIMIT':
           applyVideoCallBadgeUpdate(queryClient, type, payload);
           queryClient.invalidateQueries({ queryKey: ['videoCall'] });
           showBanner(notification, payload);

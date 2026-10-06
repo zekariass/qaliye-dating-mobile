@@ -24,10 +24,10 @@ import { useTheme } from '@/hooks/use-theme';
 
 const { width: W, height: H } = Dimensions.get('window');
 const AnimatedImage = Animated.createAnimatedComponent(Image);
-
 const MALE_ICON = require('@/assets/images/loader/loader-icon-male.webp');
 const FEMALE_ICON = require('@/assets/images/loader/loader-icon-female.webp');
 const BOTH_ICON = require('@/assets/images/loader/loader-icon-male-and-female.webp');
+const BLINDFOLD_ICON = require('@/assets/images/blind-date-icon.png');
 
 const CIRCLE_SIZE = 120;
 const ICON_SIZE = 64;
@@ -40,7 +40,7 @@ const TRAVEL_DISTANCE = W * 0.32;
 //   400  – 2400  circles glide toward centre (2000ms ease-in-out)
 //   2200 – 2600  merged circle fades in (overlaps with circle arrival)
 //   2400 – 2900  individual circles fade out (no flicker — overlap with merged)
-//   2600+ merged circle stays visible until splash exits
+//   2600+ merged circle + blindfold badge stay visible until splash exits
 const FADE_IN_DELAY = 200;
 const FADE_IN_DURATION = 400;
 const MOVE_DELAY = 500;
@@ -49,6 +49,40 @@ const MERGED_FADE_START = MOVE_DELAY + MOVE_DURATION - 300;
 const MERGED_FADE_DURATION = 500;
 const INDIVIDUAL_FADE_START = MOVE_DELAY + MOVE_DURATION - 100;
 const INDIVIDUAL_FADE_DURATION = 500;
+
+// Blindfold icon floats above the merged circle — the blind-date brand stamp.
+function BlindfoldBadge() {
+  const scale = useSharedValue(0);
+  const floatY = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withDelay(
+      MERGED_FADE_START + 250,
+      withSpring(1, { damping: 11, stiffness: 140 }),
+    );
+    floatY.value = withDelay(
+      MERGED_FADE_START + 700,
+      withRepeat(
+        withSequence(
+          withTiming(-4, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        true,
+      ),
+    );
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateY: floatY.value }, { scale: scale.value }, { rotate: '-8deg' }],
+  }));
+
+  return (
+    <Animated.View style={[styles.badge, style]}>
+      <Image source={BLINDFOLD_ICON} style={styles.badgeIcon} resizeMode="contain" />
+    </Animated.View>
+  );
+}
 
 function CircleMergeAnimation() {
   const leftX = useSharedValue(-TRAVEL_DISTANCE);
@@ -131,11 +165,12 @@ function CircleMergeAnimation() {
         </View>
       </Animated.View>
 
-      {/* Merged circle with both icons */}
+      {/* Merged circle with both icons + blindfold badge */}
       <Animated.View style={[styles.circleWrap, styles.mergedHeart, mergedStyle]}>
         <View style={[styles.circle, { width: MERGED_CIRCLE_SIZE, height: MERGED_CIRCLE_SIZE, borderRadius: MERGED_CIRCLE_SIZE / 2, borderColor: 'rgba(255,79,163,0.7)' }]}>
           <Image source={BOTH_ICON} style={{ width: MERGED_ICON_SIZE, height: MERGED_ICON_SIZE }} resizeMode="contain" />
         </View>
+        <BlindfoldBadge />
       </Animated.View>
     </View>
   );
@@ -522,6 +557,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2.5,
     backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  badge: {
+    position: 'absolute',
+    top: -34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeIcon: {
+    width: 76,
+    height: 46,
   },
   mergedHeart: {
     zIndex: 10,

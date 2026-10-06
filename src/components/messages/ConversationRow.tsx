@@ -4,14 +4,13 @@ import { useRouter } from 'expo-router';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
-import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { BlindDateBadge } from '@/components/common/BlindDateBadge';
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -83,24 +82,69 @@ function useRowTheme() {
     oldTimestamp: isDark ? '#7C6EA0' : '#9CA3AF',
     badgeBg: colors.primary,
     badgeText: '#FFFFFF',
-    onlineDot: colors.success,
-    offlineDot: isDark ? '#4A3F6B' : '#C4BAD8',
     verifiedColor: colors.primary,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Video-call state helpers  (declared early so Avatar can reference them)
+// ---------------------------------------------------------------------------
+
+const VC_STATE = {
+  respond: {
+    shortLabel: (_ct: 'VIDEO' | 'AUDIO') => 'Accept',
+    fullLabel: (ct: 'VIDEO' | 'AUDIO') =>
+      ct === 'AUDIO' ? 'Accept audio call' : 'Accept video call',
+    bg: colors.primary,
+  },
+  join: {
+    shortLabel: (_ct: 'VIDEO' | 'AUDIO') => 'Join',
+    fullLabel: (ct: 'VIDEO' | 'AUDIO') =>
+      ct === 'AUDIO' ? 'Audio call in progress' : 'Video call in progress',
+    bg: colors.success,
+  },
+  waiting: {
+    shortLabel: (_ct: 'VIDEO' | 'AUDIO') => 'Waiting',
+    fullLabel: (ct: 'VIDEO' | 'AUDIO') =>
+      ct === 'AUDIO' ? 'Audio call request sent' : 'Video call request sent',
+    bg: colors.verifiedBlue,
+  },
+} as const;
+
+function vcState(request: InboxVideoCallRequest): keyof typeof VC_STATE {
+  if (request.canAccept) return 'respond';
+  if (request.canJoin) return 'join';
+  return 'waiting';
 }
 
 // ---------------------------------------------------------------------------
 // Avatar
 // ---------------------------------------------------------------------------
 
+// Status ring — detached from the photo (story-ring style) with a 3px gap.
+// OFFLINE shows no ring at all (messenger convention): a visible ring only
+// marks active states, which keeps the list decluttered since most rows
+// are offline.
+const STATUS_RING: Partial<
+  Record<ActivityStatus, { light: string; dark: string; width: number }>
+> = {
+  ONLINE: { light: colors.success, dark: '#4ADE80', width: 2 },
+  RECENTLY_ACTIVE: { light: colors.warning, dark: '#FBBF24', width: 2 },
+};
+
 interface AvatarProps {
   uri: string | null;
   activityStatus?: ActivityStatus | null;
-  hasVideoCall?: boolean;
-  videoCallType?: 'VIDEO' | 'AUDIO';
+  videoCallRequest?: InboxVideoCallRequest | null;
 }
 
-function Avatar({ uri, activityStatus, hasVideoCall, videoCallType }: AvatarProps) {
+function Avatar({ uri, activityStatus, videoCallRequest }: AvatarProps) {
+  const { mode } = useTheme();
+  const chipColor = videoCallRequest
+    ? VC_STATE[vcState(videoCallRequest)].bg
+    : undefined;
+  const ring = activityStatus ? STATUS_RING[activityStatus] : undefined;
+
   return (
     <View style={avatarStyles.wrapper} accessibilityElementsHidden>
       {uri ? (
@@ -115,16 +159,24 @@ function Avatar({ uri, activityStatus, hasVideoCall, videoCallType }: AvatarProp
           <Ionicons name="person" size={24} color="#999" />
         </View>
       )}
-      {(activityStatus === 'ONLINE' || activityStatus === 'RECENTLY_ACTIVE') && (
-        <ActivityStatusIndicator
-          status={activityStatus}
-          size={12}
-          style={avatarStyles.statusDot}
+      {ring && (
+        <View
+          style={[
+            avatarStyles.statusRing,
+            {
+              borderColor: mode === 'dark' ? ring.dark : ring.light,
+              borderWidth: ring.width,
+            },
+          ]}
         />
       )}
-      {hasVideoCall && (
-        <View style={avatarStyles.videoChip}>
-          <Ionicons name={videoCallType === 'AUDIO' ? 'call' : 'videocam'} size={10} color="#FFF" />
+      {videoCallRequest && chipColor && (
+        <View style={[avatarStyles.videoChip, { backgroundColor: chipColor }]}>
+          <Ionicons
+            name={videoCallRequest.callType === 'AUDIO' ? 'call' : 'videocam'}
+            size={11}
+            color="#FFF"
+          />
         </View>
       )}
     </View>
@@ -150,22 +202,21 @@ const avatarStyles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#E5E5E5',
   },
-  statusDot: {
+  statusRing: {
     position: 'absolute',
-    bottom: 1,
-    right: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 2,
+    top: -3,
+    left: -3,
+    right: -3,
+    bottom: -3,
+    borderRadius: (AVATAR_SIZE + 6) / 2,
   },
   videoChip: {
     position: 'absolute',
     bottom: 0,
     left: 0,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.success,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -211,32 +262,14 @@ const badgeStyles = StyleSheet.create({
 // Video-call request badge
 // ---------------------------------------------------------------------------
 
-const VC_STATE = {
-  respond: {
-    label: (ct: 'VIDEO' | 'AUDIO') => ct === 'AUDIO' ? 'Accept audio call' : 'Accept video call',
-    bg: colors.primary,
-  },
-  join: {
-    label: (ct: 'VIDEO' | 'AUDIO') => ct === 'AUDIO' ? 'Audio call in progress' : 'Video call in progress',
-    bg: colors.success,
-  },
-  waiting: {
-    label: (ct: 'VIDEO' | 'AUDIO') => ct === 'AUDIO' ? 'Audio call request sent' : 'Video call request sent',
-    bg: colors.verifiedBlue,
-  },
-} as const;
-
-function vcState(request: InboxVideoCallRequest): keyof typeof VC_STATE {
-  if (request.canAccept) return 'respond';
-  if (request.canJoin) return 'join';
-  return 'waiting';
-}
-
 /**
- * Compact call badge — icon combo only:
- *   direction arrow (incoming ↙ / outgoing ↗) + call-type icon (📞 / 📹).
- * State is carried by the pill colour (purple = accept, green = in progress,
- * blue = request sent). The full label stays on accessibilityLabel.
+ * Pill badge showing call state with an icon, a short text label, and an
+ * optional action chevron. Colours are inherited from VC_STATE (declared
+ * above Avatar so both components share the same source of truth).
+ *
+ *   purple  = "Accept"  — incoming call waiting for acceptance
+ *   green   = "Join"    — call in progress, tap to join
+ *   blue    = "Waiting" — outgoing request sent, awaiting response
  */
 function VideoCallBadge({
   request,
@@ -245,25 +278,26 @@ function VideoCallBadge({
   request: InboxVideoCallRequest;
   onPress: () => void;
 }) {
-  const meta = VC_STATE[vcState(request)];
-  const label = meta.label(request.callType);
+  const state = vcState(request);
+  const meta = VC_STATE[state];
+  const shortLabel = meta.shortLabel(request.callType);
+  const fullLabel = meta.fullLabel(request.callType);
+
   return (
     <TouchableOpacity
       style={[vcBadgeStyles.pill, { backgroundColor: meta.bg }]}
       onPress={onPress}
       activeOpacity={0.75}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={fullLabel}
     >
       <Ionicons
         name={request.callType === 'AUDIO' ? 'call' : 'videocam'}
         size={12}
         color="#FFFFFF"
       />
-      <Text style={vcBadgeStyles.arrow}>
-        {request.isRequester ? '↗' : '↙'}
-      </Text>
-      {request.canAccept && (
+      <Text style={vcBadgeStyles.label}>{shortLabel}</Text>
+      {state === 'respond' && (
         <Ionicons name="chevron-forward" size={11} color="#FFFFFF" />
       )}
     </TouchableOpacity>
@@ -275,17 +309,16 @@ const vcBadgeStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: 3,
+    gap: 4,
     borderRadius: 999,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 5,
-    maxWidth: '100%',
   },
-  arrow: {
+  label: {
     color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-    lineHeight: 14,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 });
 
@@ -319,7 +352,10 @@ function ConversationRowInner({ item, onPress, isLast, activityStatus }: Convers
   );
   const timestampColor = isRecent ? th.recentTimestamp : th.oldTimestamp;
 
-  const preview = item.lastMessage?.preview ?? t('chat.newMatchPreview');
+  const hasMessage = item.lastMessage != null;
+  const preview = hasMessage
+    ? item.lastMessage!.preview
+    : t('chat.newMatchPreview', { name: item.participant.displayName });
   const isMuted =
     item.mutedUntil != null && new Date(item.mutedUntil) > new Date();
   const isBlindDate = isBlindDateMatch(item);
@@ -347,8 +383,7 @@ function ConversationRowInner({ item, onPress, isLast, activityStatus }: Convers
       <Avatar
         uri={item.participant.avatarUrl}
         activityStatus={activityStatus ?? item.participant.activityStatus}
-        hasVideoCall={item.videoCallRequest != null}
-        videoCallType={item.videoCallRequest?.callType}
+        videoCallRequest={item.videoCallRequest}
       />
 
       {/* Content + metadata */}
@@ -383,8 +418,11 @@ function ConversationRowInner({ item, onPress, isLast, activityStatus }: Convers
             timestamp, then unread/muted) */}
         <View style={styles.bottomRow}>
           <Text
-            style={[styles.preview, { color: th.previewColor }]}
-            numberOfLines={2}
+            style={[
+              styles.preview,
+              { color: hasMessage ? th.previewColor : th.oldTimestamp },
+            ]}
+            numberOfLines={1}
           >
             {preview}
           </Text>
@@ -484,7 +522,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   badgeArea: {
-    minWidth: 22,
+    flexShrink: 0,
     alignItems: 'flex-end',
     marginTop: 1,
     gap: 4,

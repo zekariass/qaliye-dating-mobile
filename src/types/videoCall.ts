@@ -44,6 +44,9 @@ export interface VideoCallRequest {
   responder_joined: boolean;
   /** PENDING auto-expiry (~48h from creation). */
   request_expires_at: string | null;
+  /** Absolute instant Agora drops both participants — null until the first
+   *  join anchors it. Drive the in-call countdown from this. */
+  call_deadline_at: string | null;
   /** Server-configured remind cooldown: null = remind not applicable (not
    *  PENDING or I'm the responder), 0 = allowed now, >0 = seconds to wait. */
   next_remind_in_seconds: number | null;

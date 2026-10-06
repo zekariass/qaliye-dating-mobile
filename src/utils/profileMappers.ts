@@ -16,6 +16,59 @@ import type {
 import { sanitizeInterests } from '@/utils/interests';
 import { translateProfileOption } from '@/utils/profileOptions';
 
+// ─── Marriage & Relationship Preference Maps ───────────────────────────────────
+
+export const MARRIAGE_TIMELINE_API_TO_LABEL: Record<string, string> = {
+  WITHIN_6_MONTHS:  'Within 6 months',
+  WITHIN_1_YEAR:    'Within 1 year',
+  '1_TO_2_YEARS':   '1 – 2 years',
+  '2_TO_5_YEARS':   '2 – 5 years',
+  MORE_THAN_5_YEARS: 'More than 5 years',
+  NOT_SURE:         'Not sure yet',
+};
+
+export const LONG_DISTANCE_API_TO_LABEL: Record<string, string> = {
+  YES:   'Yes, I’m open to it',
+  NO:    'No, I prefer local',
+  MAYBE: 'Depends on the person',
+};
+
+export const FAMILY_INVOLVEMENT_API_TO_LABEL: Record<string, string> = {
+  VERY_IMPORTANT:     'Very important',
+  IMPORTANT:          'Important',
+  SOMEWHAT_IMPORTANT: 'Somewhat important',
+  NOT_IMPORTANT:      'Not important',
+};
+
+export const RELIGION_IMPORTANCE_API_TO_LABEL: Record<string, string> = {
+  VERY_IMPORTANT:     'Very important',
+  SOMEWHAT_IMPORTANT: 'Somewhat important',
+  NOT_IMPORTANT:      'Not important',
+};
+
+export const WILLING_TO_RELOCATE_API_TO_LABEL: Record<string, string> = {
+  YES:   'Yes, willing to relocate',
+  NO:    'Not willing to relocate',
+  MAYBE: 'Open to discussing it',
+};
+
+// Reverse maps (label → API enum) used by the edit form
+export const MARRIAGE_TIMELINE_LABEL_TO_API = Object.fromEntries(
+  Object.entries(MARRIAGE_TIMELINE_API_TO_LABEL).map(([k, v]) => [v, k]),
+);
+export const LONG_DISTANCE_LABEL_TO_API = Object.fromEntries(
+  Object.entries(LONG_DISTANCE_API_TO_LABEL).map(([k, v]) => [v, k]),
+);
+export const FAMILY_INVOLVEMENT_LABEL_TO_API = Object.fromEntries(
+  Object.entries(FAMILY_INVOLVEMENT_API_TO_LABEL).map(([k, v]) => [v, k]),
+);
+export const RELIGION_IMPORTANCE_LABEL_TO_API = Object.fromEntries(
+  Object.entries(RELIGION_IMPORTANCE_API_TO_LABEL).map(([k, v]) => [v, k]),
+);
+export const WILLING_TO_RELOCATE_LABEL_TO_API = Object.fromEntries(
+  Object.entries(WILLING_TO_RELOCATE_API_TO_LABEL).map(([k, v]) => [v, k]),
+);
+
 // ─── Enum → Display Label ──────────────────────────────────────────────────────
 
 const ETHNICITY_API_TO_LABEL: Record<string, string> = {
@@ -193,6 +246,19 @@ function displayToBool(val: string): boolean | null {
 
 // ─── ProfileMeDto → CurrentUserProfile ────────────────────────────────────────
 
+// Reads a marriage-preference field tolerating both wire casings, then maps the
+// enum to its display label (falls back to the raw value for unknown enums).
+function marriagePref(
+  dto: Record<string, unknown>,
+  snakeKey: string,
+  camelKey: string,
+  labelMap: Record<string, string>,
+): string | null {
+  const raw = (dto[snakeKey] ?? dto[camelKey]) as string | null | undefined;
+  if (!raw) return null;
+  return labelMap[raw] ?? raw;
+}
+
 export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentUserProfile {
   const address =
     dto.address?.formatted_address ??
@@ -239,6 +305,12 @@ export function mapProfileMeDtoToCurrentUserProfile(dto: ProfileMeDto): CurrentU
     languages: dto.languages ?? [],
     activityLevel: dto.activity_level ? (ACTIVITY_API_TO_LABEL[dto.activity_level] ?? dto.activity_level) : null,
     interests: sanitizeInterests(dto.interests),
+
+    marriageTimeline: marriagePref(dto, 'marriage_timeline', 'marriageTimeline', MARRIAGE_TIMELINE_API_TO_LABEL),
+    longDistanceRelationship: marriagePref(dto, 'long_distance_relationship', 'longDistanceRelationship', LONG_DISTANCE_API_TO_LABEL),
+    familyInvolvement: marriagePref(dto, 'family_involvement', 'familyInvolvement', FAMILY_INVOLVEMENT_API_TO_LABEL),
+    religionImportance: marriagePref(dto, 'religion_importance', 'religionImportance', RELIGION_IMPORTANCE_API_TO_LABEL),
+    willingToRelocate: marriagePref(dto, 'willing_to_relocate', 'willingToRelocate', WILLING_TO_RELOCATE_API_TO_LABEL),
 
     isVisible: dto.is_visible,
     isOnboarded: dto.is_onboarded,
@@ -307,6 +379,13 @@ export function mapProfileMeDtoToEditDraft(dto: ProfileMeDto): EditProfileDraft 
       interests: dto.interests ?? [],
       languages: dto.languages ?? [],
     },
+    marriagePrefs: {
+      marriageTimeline: marriagePref(dto, 'marriage_timeline', 'marriageTimeline', MARRIAGE_TIMELINE_API_TO_LABEL) ?? '',
+      longDistanceRelationship: marriagePref(dto, 'long_distance_relationship', 'longDistanceRelationship', LONG_DISTANCE_API_TO_LABEL) ?? '',
+      familyInvolvement: marriagePref(dto, 'family_involvement', 'familyInvolvement', FAMILY_INVOLVEMENT_API_TO_LABEL) ?? '',
+      religionImportance: marriagePref(dto, 'religion_importance', 'religionImportance', RELIGION_IMPORTANCE_API_TO_LABEL) ?? '',
+      willingToRelocate: marriagePref(dto, 'willing_to_relocate', 'willingToRelocate', WILLING_TO_RELOCATE_API_TO_LABEL) ?? '',
+    },
   };
 }
 
@@ -316,10 +395,28 @@ export function mapProfileMeDtoToEditDraft(dto: ProfileMeDto): EditProfileDraft 
 export function mapEditDraftToUpdateRequest(
   draft: EditProfileDraft,
 ): ProfileUpdateRequest {
-  const { basics, personal, lifestyle } = draft;
+  const { basics, personal, lifestyle, marriagePrefs } = draft;
 
   const smokingDetail = SMOKING_LABEL_TO_API[lifestyle.smoking] ?? null;
   const drinkingDetail = DRINKING_LABEL_TO_API[lifestyle.drinking] ?? null;
+
+  // Marriage prefs: only send when a label is selected (non-empty).
+  // Do NOT send null — the API uses COALESCE semantics (null = keep existing).
+  const marriageTimelineApi = marriagePrefs.marriageTimeline
+    ? (MARRIAGE_TIMELINE_LABEL_TO_API[marriagePrefs.marriageTimeline] ?? marriagePrefs.marriageTimeline)
+    : undefined;
+  const longDistanceApi = marriagePrefs.longDistanceRelationship
+    ? (LONG_DISTANCE_LABEL_TO_API[marriagePrefs.longDistanceRelationship] ?? marriagePrefs.longDistanceRelationship)
+    : undefined;
+  const familyInvolvementApi = marriagePrefs.familyInvolvement
+    ? (FAMILY_INVOLVEMENT_LABEL_TO_API[marriagePrefs.familyInvolvement] ?? marriagePrefs.familyInvolvement)
+    : undefined;
+  const religionImportanceApi = marriagePrefs.religionImportance
+    ? (RELIGION_IMPORTANCE_LABEL_TO_API[marriagePrefs.religionImportance] ?? marriagePrefs.religionImportance)
+    : undefined;
+  const willingToRelocateApi = marriagePrefs.willingToRelocate
+    ? (WILLING_TO_RELOCATE_LABEL_TO_API[marriagePrefs.willingToRelocate] ?? marriagePrefs.willingToRelocate)
+    : undefined;
 
   return {
     display_name: basics.displayName || undefined,
@@ -346,6 +443,16 @@ export function mapEditDraftToUpdateRequest(
     language_ids: lifestyle.languages.length > 0 ? lifestyle.languages.map((l) => l.id) : undefined,
     ethnicity_ids: personal.ethnicities.length > 0 ? personal.ethnicities.map((e) => e.id) : undefined,
     ethnicity_other_text: personal.ethnicityOtherText || null,
+    marriage_timeline: marriageTimelineApi as any,
+    long_distance_relationship: longDistanceApi as any,
+    family_involvement: familyInvolvementApi as any,
+    religion_importance: religionImportanceApi as any,
+    willing_to_relocate: willingToRelocateApi as any,
+    marriageTimeline: marriageTimelineApi as any,
+    longDistanceRelationship: longDistanceApi as any,
+    familyInvolvement: familyInvolvementApi as any,
+    religionImportance: religionImportanceApi as any,
+    willingToRelocate: willingToRelocateApi as any,
   };
 }
 
@@ -550,6 +657,20 @@ function buildOtherUserDetailGroups(dto: OtherUserProfileDto): OtherUserDetailGr
   if (dto.interests && dto.interests.length > 0)
     lifestyle.push({ id: 'interests', label: i18n.t('interests.label'),      icon: 'color-palette-outline', value: '' });
   if (lifestyle.length > 0) groups.push({ title: i18n.t('profile.details.lifestyleTitle', { defaultValue: 'Lifestyle' }), items: lifestyle });
+
+  const marriage: OtherUserDetailItem[] = [];
+  const mTimeline = marriagePref(dto, 'marriage_timeline', 'marriageTimeline', MARRIAGE_TIMELINE_API_TO_LABEL);
+  const mLongDist = marriagePref(dto, 'long_distance_relationship', 'longDistanceRelationship', LONG_DISTANCE_API_TO_LABEL);
+  const mFamily = marriagePref(dto, 'family_involvement', 'familyInvolvement', FAMILY_INVOLVEMENT_API_TO_LABEL);
+  const mReligion = marriagePref(dto, 'religion_importance', 'religionImportance', RELIGION_IMPORTANCE_API_TO_LABEL);
+  const mRelocate = marriagePref(dto, 'willing_to_relocate', 'willingToRelocate', WILLING_TO_RELOCATE_API_TO_LABEL);
+  if (mTimeline) marriage.push({ id: 'mTimeline', label: i18n.t('profile.marriagePrefs.marriageTimeline'), icon: 'calendar-outline', value: mTimeline });
+  if (mLongDist) marriage.push({ id: 'mLongDist', label: i18n.t('profile.marriagePrefs.longDistance'), icon: 'airplane-outline', value: mLongDist });
+  if (mFamily)   marriage.push({ id: 'mFamily',   label: i18n.t('profile.marriagePrefs.familyInvolvement'), icon: 'people-outline', value: mFamily });
+  if (mReligion) marriage.push({ id: 'mReligion', label: i18n.t('profile.marriagePrefs.religionImportance'), icon: 'leaf-outline', value: mReligion });
+  if (mRelocate) marriage.push({ id: 'mRelocate', label: i18n.t('profile.marriagePrefs.willingToRelocate'), icon: 'location-outline', value: mRelocate });
+  if (marriage.length > 0)
+    groups.push({ title: i18n.t('profile.marriagePrefs.sectionTitle'), items: marriage });
 
   return groups;
 }

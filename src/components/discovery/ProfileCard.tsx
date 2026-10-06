@@ -75,6 +75,17 @@ export type CardDto = {
   interests?: string[];
   prompt_answers?: { promptText: string; answerText: string }[];
   activity_status?: ActivityStatus;
+  // Marriage & Relationship Preferences (snake_case primary, camelCase fallback)
+  marriage_timeline?: string | null;
+  long_distance_relationship?: string | null;
+  family_involvement?: string | null;
+  religion_importance?: string | null;
+  willing_to_relocate?: string | null;
+  marriageTimeline?: string | null;
+  longDistanceRelationship?: string | null;
+  familyInvolvement?: string | null;
+  religionImportance?: string | null;
+  willingToRelocate?: string | null;
 };
 
 export interface ProfileCardHandle {

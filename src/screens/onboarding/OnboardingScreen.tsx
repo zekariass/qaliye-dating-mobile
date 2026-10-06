@@ -186,8 +186,8 @@ export default function OnboardingScreen() {
           verificationStatus={onboardingStatus?.identity_verification_status}
         />
       );
-      case 'SET_PREFERENCES': return <PreferencesStep onComplete={handleStepDone} isCompleted={completed} />;
-      case 'COMPLETE':      return <CompletionStep />;
+      case 'SET_PREFERENCES':  return <PreferencesStep onComplete={handleStepDone} isCompleted={completed} />;
+      case 'COMPLETE':       return <CompletionStep />;
       default:              return null;
     }
   }

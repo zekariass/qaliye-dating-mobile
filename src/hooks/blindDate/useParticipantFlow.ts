@@ -165,12 +165,38 @@ export function useParticipantFlow(
   // resolved from the participations list.
   const effectiveParticipantId = participantId ?? participation?.participant_id ?? null;
 
+  // Participant status is already known from the participations list — use it
+  // to kill the poll immediately when the participant is eliminated/withdrawn,
+  // without waiting for the session fetch to confirm the terminal state.
+  const isTerminalParticipation =
+    participation?.status === 'ELIMINATED' || participation?.status === 'WITHDRAWN';
+
   const { data: session, refetch: refetchSession } = useQuery({
     queryKey: ['blindDate', 'session', sessionId],
     queryFn: () => fetchBlindDateSession(sessionId!),
     enabled: !!sessionId,
     staleTime: 10_000,
-    refetchInterval: 30_000,
+    // Stop polling once any terminal state is reached — there is nothing new
+    // to observe after ELIMINATED / WITHDRAWN / a resolved final outcome or a
+    // hard-stopped session. React Query v5 passes the Query object; extract
+    // data from query.state.data to inspect the latest cached session.
+    refetchInterval: isTerminalParticipation
+      ? false
+      : (query) => {
+          const data = query.state.data;
+          const outcome = data?.final_decision?.outcome;
+          if (
+            outcome === 'MATCHED' ||
+            outcome === 'ALREADY_MATCHED' ||
+            outcome === 'NO_MATCH' ||
+            outcome === 'EXPIRED'
+          )
+            return false;
+          const s = data?.status;
+          if (s === 'COMPLETED' || s === 'CANCELLED' || s === 'CLOSED' || s === 'EXPIRED')
+            return false;
+          return 30_000;
+        },
   });
 
   // Pre-join there is no participation row — fall back to the session's current
@@ -442,6 +468,12 @@ export function useParticipantFlow(
   const [seededRoundId, setSeededRoundId] = useState<string | null>(null);
   if (roundQuestions && currentRoundId && currentRoundId !== seededRoundId) {
     setSeededRoundId(currentRoundId);
+    // A new round means the host's per-round answer lock no longer applies —
+    // clear the module-level lock and the local flag so the participant can
+    // answer again. The lock is re-set if the host locks them again in the
+    // new round and they try to submit after the fact.
+    if (effectiveParticipantId) answersLockedIds.delete(effectiveParticipantId);
+    setAnswerLocked(false);
     const serverDrafts: Record<string, string> = {};
     const serverSubmitted = new Set<string>();
     let firstUnanswered = -1;

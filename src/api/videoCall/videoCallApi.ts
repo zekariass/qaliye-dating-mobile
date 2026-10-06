@@ -59,6 +59,7 @@ function normalizeRequest(raw: Record<string, unknown>): VideoCallRequest {
     requester_joined: toBool(raw.requester_joined ?? raw.requesterJoined),
     responder_joined: toBool(raw.responder_joined ?? raw.responderJoined),
     request_expires_at: str(raw.request_expires_at ?? raw.requestExpiresAt ?? raw.expires_at),
+    call_deadline_at: str(raw.call_deadline_at ?? raw.callDeadlineAt),
     next_remind_in_seconds: (() => {
       const v = raw.next_remind_in_seconds ?? raw.nextRemindInSeconds;
       const n = typeof v === 'number' ? v : Number.parseInt(String(v ?? ''), 10);

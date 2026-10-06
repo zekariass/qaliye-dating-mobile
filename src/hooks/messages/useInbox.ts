@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { fetchInbox, type InboxFilter } from '@/api/chat/chatApi';
 import type { InboxItem, InboxItemDto, InboxVideoCallRequest } from '@/types/chat';
@@ -257,8 +257,17 @@ export function useInbox(filter: InboxFilter) {
     }, [queryClient, filter]), // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const allItems: InboxItem[] =
-    query.data?.pages.flatMap((page) => page.items) ?? [];
+  const allItems: InboxItem[] = useMemo(() => {
+    const flat = query.data?.pages.flatMap((page) => page.items) ?? [];
+    // Deduplicate by matchId: inbox ordering shifts as messages arrive, so a
+    // conversation can be returned on two different pages between fetches.
+    const seen = new Set<string>();
+    return flat.filter((item) => {
+      if (seen.has(item.matchId)) return false;
+      seen.add(item.matchId);
+      return true;
+    });
+  }, [query.data]);
 
   const removeMatch = useCallback(
     (matchId: string) => {

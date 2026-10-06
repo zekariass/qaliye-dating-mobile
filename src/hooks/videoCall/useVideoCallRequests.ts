@@ -27,12 +27,12 @@ export function vcRequestsKey(matchId: string) {
 // ── Queries ───────────────────────────────────────────────────────────────────
 
 /** All requests (history + current) for a match. */
-export function useVideoCallRequests(matchId: string) {
+export function useVideoCallRequests(matchId: string, refetchMs = 15_000) {
   return useQuery<VideoCallRequest[], Error>({
     queryKey: vcRequestsKey(matchId),
     queryFn: () => fetchVideoCallRequests(matchId),
-    staleTime: 15_000,
-    refetchInterval: 15_000,
+    staleTime: Math.min(15_000, refetchMs),
+    refetchInterval: refetchMs,
     refetchOnMount: 'always',
     enabled: !!matchId,
   });

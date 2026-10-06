@@ -306,6 +306,55 @@ const stateStyles = StyleSheet.create({
 });
 
 // ---------------------------------------------------------------------------
+// Empty conversation — match banner for new matches
+// ---------------------------------------------------------------------------
+
+function EmptyChatState({ name }: { name: string }) {
+  const { t } = useTranslation();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
+  return (
+    <View style={emptyStyles.wrap}>
+      <View
+        style={[
+          emptyStyles.iconCircle,
+          { backgroundColor: isDark ? '#2A1D44' : '#EDE8F8' },
+        ]}
+      >
+        <Ionicons name="chatbubble-ellipses-outline" size={36} color={colors.primary} />
+      </View>
+      <Text style={[emptyStyles.title, { color: th.text }]}>
+        {t('chat.emptyState.title', { name })}
+      </Text>
+      <Text style={[emptyStyles.sub, { color: th.textSecondary }]}>
+        {t('chat.emptyState.subtitle')}
+      </Text>
+    </View>
+  );
+}
+
+const emptyStyles = StyleSheet.create({
+  wrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 10,
+    transform: Platform.OS === 'android' ? [{ scale: -1 }] : [{ scaleY: -1 }],
+  },
+  iconCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  title: { fontSize: 18, fontWeight: '800', textAlign: 'center' },
+  sub: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 6 },
+});
+
+// ---------------------------------------------------------------------------
 // ChatScreen
 // ---------------------------------------------------------------------------
 
@@ -895,7 +944,16 @@ export default function ChatScreen() {
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           inverted
-          contentContainerStyle={styles.listContent}
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          contentContainerStyle={[
+            styles.listContent,
+            listData.length === 0 && styles.listContentEmpty,
+          ]}
+          ListEmptyComponent={
+            <EmptyChatState
+              name={thread?.participant.displayName ?? displayName}
+            />
+          }
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
@@ -1164,6 +1222,10 @@ const styles = StyleSheet.create({
   listContent: {
     paddingTop: 12,
     paddingBottom: 8,
+  },
+  listContentEmpty: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   centered: {
     flex: 1,

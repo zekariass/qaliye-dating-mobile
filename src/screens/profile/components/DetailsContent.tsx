@@ -6,6 +6,13 @@ import { colors, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import i18n from '@/i18n';
 import { supabase } from '@/lib/supabase';
+import {
+    FAMILY_INVOLVEMENT_API_TO_LABEL,
+    LONG_DISTANCE_API_TO_LABEL,
+    MARRIAGE_TIMELINE_API_TO_LABEL,
+    RELIGION_IMPORTANCE_API_TO_LABEL,
+    WILLING_TO_RELOCATE_API_TO_LABEL,
+} from '@/utils/profileMappers';
 import { translateProfileOption } from '@/utils/profileOptions';
 import type { CurrentUserProfile } from '../mockCurrentUserProfile';
 
@@ -79,6 +86,29 @@ function buildDetails(p: CurrentUserProfile, email: string | null): DetailItem[]
   return items;
 }
 
+interface MarriagePrefItem {
+  label: string;
+  value: string;
+}
+
+// CurrentUserProfile stores marriage pref fields as human-readable display labels
+// (already converted by mapProfileMeDtoToCurrentUserProfile). The API→label maps
+// are imported as a fallback for any stale raw-enum values that might slip through.
+function buildMarriagePrefItems(p: CurrentUserProfile): MarriagePrefItem[] {
+  const items: MarriagePrefItem[] = [];
+  if (p.marriageTimeline)
+    items.push({ label: i18n.t('profile.marriagePrefs.marriageTimeline'), value: MARRIAGE_TIMELINE_API_TO_LABEL[p.marriageTimeline] ?? p.marriageTimeline });
+  if (p.longDistanceRelationship)
+    items.push({ label: i18n.t('profile.marriagePrefs.longDistance'), value: LONG_DISTANCE_API_TO_LABEL[p.longDistanceRelationship] ?? p.longDistanceRelationship });
+  if (p.familyInvolvement)
+    items.push({ label: i18n.t('profile.marriagePrefs.familyInvolvement'), value: FAMILY_INVOLVEMENT_API_TO_LABEL[p.familyInvolvement] ?? p.familyInvolvement });
+  if (p.religionImportance)
+    items.push({ label: i18n.t('profile.marriagePrefs.religionImportance'), value: RELIGION_IMPORTANCE_API_TO_LABEL[p.religionImportance] ?? p.religionImportance });
+  if (p.willingToRelocate)
+    items.push({ label: i18n.t('profile.marriagePrefs.willingToRelocate'), value: WILLING_TO_RELOCATE_API_TO_LABEL[p.willingToRelocate] ?? p.willingToRelocate });
+  return items;
+}
+
 interface DetailsContentProps {
   profile: CurrentUserProfile;
 }
@@ -103,6 +133,7 @@ export default function DetailsContent({ profile }: DetailsContentProps) {
   }, []);
 
   const details = buildDetails(profile, email);
+  const marriageItems = buildMarriagePrefItems(profile);
 
   const surfaceBg = th.surface;
   const iconBg = isDark ? th.backgroundSelected : '#F3EEFF';
@@ -146,6 +177,40 @@ export default function DetailsContent({ profile }: DetailsContentProps) {
           </View>
         ))}
       </View>
+
+      {/* ─── Marriage & Relationship Preferences (hidden when all null) ─── */}
+      {marriageItems.length > 0 && (
+        <>
+          <Text style={[styles.sectionHeader, { color: mutedCol }]}>
+            {i18n.t('profile.marriagePrefs.sectionTitle')}
+          </Text>
+          <View
+            style={[
+              styles.listCard,
+              {
+                backgroundColor: surfaceBg,
+                borderColor: borderCol,
+                ...Platform.select({
+                  ios: { shadowColor: '#8A2CFF', shadowOpacity: isDark ? 0.15 : 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } },
+                  android: { elevation: 3 },
+                }) as any,
+              },
+            ]}
+          >
+            {marriageItems.map((item, idx) => (
+              <View key={item.label}>
+                {idx > 0 && <View style={[styles.divider, { backgroundColor: borderCol }]} />}
+                <View style={styles.listRow}>
+                  <View style={styles.detailBody}>
+                    <Text style={[styles.detailLabel, { color: mutedCol }]}>{item.label}</Text>
+                    <Text style={[styles.detailValue, { color: textCol }]}>{item.value}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -154,6 +219,15 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
     paddingTop: 20,
+    gap: 12,
+  },
+  sectionHeader: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginTop: 4,
+    paddingHorizontal: 4,
   },
   listCard: {
     borderRadius: radius.lg,

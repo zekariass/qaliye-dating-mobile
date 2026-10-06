@@ -19,10 +19,17 @@ export function useMyBlindDateSessions(opts?: { enabled?: boolean }) {
     enabled: opts?.enabled ?? true,
   });
 
-  const items = useMemo<BlindDateMySessionDto[]>(
-    () => query.data?.pages.flatMap((page) => page.items) ?? [],
-    [query.data],
-  );
+  const items = useMemo<BlindDateMySessionDto[]>(() => {
+    const flat = query.data?.pages.flatMap((page) => page.items) ?? [];
+    // Offset pagination on a mutable feed can return the same row on two
+    // pages — deduplicate by session id.
+    const seen = new Set<string>();
+    return flat.filter((s) => {
+      if (seen.has(s.id)) return false;
+      seen.add(s.id);
+      return true;
+    });
+  }, [query.data]);
 
   // Only sessions the caller CREATED count toward the "one active session"
   // limit — `/sessions/mine` also returns joined (role=PARTICIPANT) rows,

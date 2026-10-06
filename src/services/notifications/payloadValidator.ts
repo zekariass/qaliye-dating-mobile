@@ -4,7 +4,7 @@ import type {
     NotificationType,
     ValidatedNavIntent,
 } from '@/types/notifications';
-import { BLIND_DATE_ALERT_CODES, MATCHMAKING_ALERT_CODES } from '@/types/notifications';
+import { BLIND_DATE_ALERT_CODES, CALL_ALERT_CODES, MATCHMAKING_ALERT_CODES } from '@/types/notifications';
 
 const SUPPORTED_TYPES: NotificationType[] = [
   'CHAT_MESSAGE',
@@ -24,6 +24,8 @@ const SUPPORTED_TYPES: NotificationType[] = [
   'AUDIO_CALL_DECLINED',
   'AUDIO_CALL_CANCELLED',
   'AUDIO_CALL_EXPIRED',
+  'VIDEO_CALL_ENDED_TIME_LIMIT',
+  'AUDIO_CALL_ENDED_TIME_LIMIT',
 ];
 
 const UUID_PATTERN =
@@ -149,6 +151,17 @@ export function buildNavIntent(
           screen: 'matchmaking',
         };
       }
+      // Audio/video call events ride ACCOUNT_ALERT too (VIDEO_CALL_* /
+      // AUDIO_CALL_*) — without this branch they fell through to Settings.
+      if (payload.alert_code && CALL_ALERT_CODES.has(payload.alert_code)) {
+        return {
+          type,
+          alert_code: payload.alert_code,
+          match_id: payload.match_id,
+          video_call_request_id: payload.video_call_request_id ?? payload.request_id,
+          screen: 'video-call',
+        };
+      }
       return { type, alert_code: payload.alert_code, screen: 'settings' };
     case 'MARKETING':
       return {
@@ -168,6 +181,8 @@ export function buildNavIntent(
     case 'AUDIO_CALL_DECLINED':
     case 'AUDIO_CALL_CANCELLED':
     case 'AUDIO_CALL_EXPIRED':
+    case 'VIDEO_CALL_ENDED_TIME_LIMIT':
+    case 'AUDIO_CALL_ENDED_TIME_LIMIT':
       return payload.match_id
         ? {
             type,

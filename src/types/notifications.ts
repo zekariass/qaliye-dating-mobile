@@ -16,7 +16,9 @@ export type NotificationType =
   | 'AUDIO_CALL_ACCEPTED'
   | 'AUDIO_CALL_DECLINED'
   | 'AUDIO_CALL_CANCELLED'
-  | 'AUDIO_CALL_EXPIRED';
+  | 'AUDIO_CALL_EXPIRED'
+  | 'VIDEO_CALL_ENDED_TIME_LIMIT'
+  | 'AUDIO_CALL_ENDED_TIME_LIMIT';
 
 export type DeviceRegistrationRequest = {
   expoPushToken: string;
@@ -100,6 +102,26 @@ export const MATCHMAKING_ALERT_CODES: ReadonlySet<string> = new Set<string>([
   'MATCHMAKING_INTRODUCTION_CANCELLED',
   'MATCHMAKING_INTRODUCTION_EXPIRED',
   'MATCHMAKING_MATCHED',
+]);
+
+/**
+ * ACCOUNT_ALERT sub-codes emitted by the audio/video call feature — the
+ * prefix carries the call type (VIDEO_CALL_* / AUDIO_CALL_*).
+ * See docs/video-audio-call/backend-api.md §2.
+ */
+export const CALL_ALERT_CODES: ReadonlySet<string> = new Set<string>([
+  'VIDEO_CALL_REQUESTED',
+  'VIDEO_CALL_ACCEPTED',
+  'VIDEO_CALL_DECLINED',
+  'VIDEO_CALL_CANCELLED',
+  'VIDEO_CALL_EXPIRED',
+  'AUDIO_CALL_REQUESTED',
+  'AUDIO_CALL_ACCEPTED',
+  'AUDIO_CALL_DECLINED',
+  'AUDIO_CALL_CANCELLED',
+  'AUDIO_CALL_EXPIRED',
+  'VIDEO_CALL_ENDED_TIME_LIMIT',
+  'AUDIO_CALL_ENDED_TIME_LIMIT',
 ]);
 
 export type NotificationPayloadData = {

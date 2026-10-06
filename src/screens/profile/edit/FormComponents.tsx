@@ -10,6 +10,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import i18n from '@/i18n';
@@ -24,7 +25,7 @@ type SectionCardProps = {
 export const SectionCard = memo(function SectionCard({ children, sem }: SectionCardProps) {
   return (
     <View
-      className="rounded-3xl px-5 py-6 mb-4"
+      className="rounded-3xl mb-6"
       style={{
         backgroundColor: sem.surface,
         shadowColor: sem.shadow,
@@ -32,6 +33,8 @@ export const SectionCard = memo(function SectionCard({ children, sem }: SectionC
         shadowRadius: 16,
         shadowOffset: { width: 0, height: 4 },
         elevation: 4,
+        paddingHorizontal: 24,
+        paddingVertical: 32,
       }}
     >
       {children}
@@ -49,8 +52,8 @@ type SectionTitleProps = {
 export const SectionTitle = memo(function SectionTitle({ title, sem }: SectionTitleProps) {
   return (
     <Text
-      className="text-xl font-bold mb-4"
-      style={{ color: sem.textPrimary }}
+      className="font-bold"
+      style={{ color: sem.textPrimary, fontSize: 20, marginBottom: 24 }}
     >
       {title}
     </Text>
@@ -61,7 +64,7 @@ export const SectionTitle = memo(function SectionTitle({ title, sem }: SectionTi
 
 export function RowPair({ children }: { children: React.ReactNode }) {
   return (
-    <View className="flex-row gap-3 mb-3">
+    <View style={{ flexDirection: 'row', gap: 16, marginBottom: 20 }}>
       {children}
     </View>
   );
@@ -78,10 +81,9 @@ type LabeledFieldProps = {
 
 export function LabeledField({ label, sem, children, flex = true }: LabeledFieldProps) {
   return (
-    <View className={flex ? 'flex-1' : 'w-full'}>
+    <View style={flex ? { flex: 1 } : { width: '100%', marginBottom: 20 }}>
       <Text
-        className="text-sm font-medium mb-1.5"
-        style={{ color: sem.textSecondary }}
+        style={{ color: sem.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: 10, letterSpacing: 0.2 }}
       >
         {label}
       </Text>
@@ -113,19 +115,21 @@ export const TextInputField = memo(function TextInputField({
 }: TextInputFieldProps) {
   return (
     <View
-      className="flex-row items-center rounded-xl px-3 py-3 border"
+      className="flex-row items-center rounded-2xl border"
       style={{
         backgroundColor: sem.surfaceMuted,
         borderColor: sem.border,
+        paddingHorizontal: 16,
+        paddingVertical: 16,
       }}
     >
       {leftIcon && (
         leftIcon.startsWith('mci:') ? (
-          <MaterialCommunityIcons name={leftIcon.slice(4) as any} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+          <MaterialCommunityIcons name={leftIcon.slice(4) as any} size={20} color={sem.textMuted} style={{ marginRight: 12 }} />
         ) : /^[a-z-]+$/i.test(leftIcon) ? (
-          <Ionicons name={leftIcon as any} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+          <Ionicons name={leftIcon as any} size={20} color={sem.textMuted} style={{ marginRight: 12 }} />
         ) : (
-          <Text style={{ fontSize: 16, marginRight: 8 }}>{leftIcon}</Text>
+          <Text style={{ fontSize: 20, marginRight: 12 }}>{leftIcon}</Text>
         )
       )}
       <TextInput
@@ -134,8 +138,8 @@ export const TextInputField = memo(function TextInputField({
         placeholder={placeholder}
         placeholderTextColor={sem.textMuted}
         editable={editable}
-        className="flex-1 text-base"
-        style={{ color: sem.textPrimary, padding: 0 }}
+        className="flex-1"
+        style={{ color: sem.textPrimary, padding: 0, fontSize: 17 }}
       />
       {rightElement}
     </View>
@@ -165,6 +169,7 @@ export const SelectField = memo(function SelectField({
   getOptionLabel,
 }: SelectFieldProps) {
   const { t } = useTranslation();
+  const { bottom: safeBottom } = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const displayLabel = (opt: string) => getOptionLabel?.(opt) ?? opt;
 
@@ -177,67 +182,100 @@ export const SelectField = memo(function SelectField({
     <>
       <Pressable
         onPress={() => setOpen(true)}
-        className="flex-row items-center rounded-xl px-3 py-3 border"
+        className="flex-row items-center rounded-2xl border"
         style={{
           backgroundColor: sem.surfaceMuted,
           borderColor: sem.border,
+          paddingHorizontal: 16,
+          paddingVertical: 16,
         }}
         accessibilityRole="button"
         accessibilityLabel={placeholder ? t('profile.edit.selectA11y', { label: placeholder, value: value ? displayLabel(value) : value, defaultValue: '{{label}}: {{value}}' }) : (value ? displayLabel(value) : value)}
       >
         {leftIcon && (
           leftIcon.startsWith('mci:') ? (
-            <MaterialCommunityIcons name={leftIcon.slice(4) as any} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+            <MaterialCommunityIcons name={leftIcon.slice(4) as any} size={20} color={sem.textMuted} style={{ marginRight: 12 }} />
           ) : /^[a-z-]+$/i.test(leftIcon) ? (
-            <Ionicons name={leftIcon as any} size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+            <Ionicons name={leftIcon as any} size={20} color={sem.textMuted} style={{ marginRight: 12 }} />
           ) : (
-            <Text style={{ fontSize: 16, marginRight: 8 }}>{leftIcon}</Text>
+            <Text style={{ fontSize: 20, marginRight: 12 }}>{leftIcon}</Text>
           )
         )}
         <Text
-          className="flex-1 text-base"
-          style={{ color: value ? sem.textPrimary : sem.textMuted }}
+          className="flex-1"
+          style={{ color: value ? sem.textPrimary : sem.textMuted, fontSize: 17 }}
           numberOfLines={1}
         >
           {value ? displayLabel(value) : placeholder || t('profile.edit.select', 'Select')}
         </Text>
-        <Ionicons name="chevron-down" size={16} color={sem.textMuted} />
+        <Ionicons name="chevron-down" size={20} color={sem.textMuted} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      <Modal
+        visible={open}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        navigationBarTranslucent
+        onRequestClose={() => setOpen(false)}
+      >
         <Pressable
-          className="flex-1 justify-end"
-          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+          style={[pickerStyles.backdrop, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
           onPress={() => setOpen(false)}
         >
-          <Pressable onPress={() => {}}>
+          <Pressable onPress={(e) => e.stopPropagation()}>
             <View
-              className="rounded-t-3xl px-5 pt-6 pb-10 max-h-96"
-              style={{ backgroundColor: sem.surface }}
+              style={[
+                pickerStyles.sheet,
+                {
+                  backgroundColor: sem.surface,
+                  paddingBottom: safeBottom,
+                },
+              ]}
             >
-              <Text className="text-lg font-bold mb-4" style={{ color: sem.textPrimary }}>
+              {/* Drag handle */}
+              <View style={[pickerStyles.handle, { backgroundColor: sem.border }]} />
+
+              {/* Title */}
+              <Text style={[pickerStyles.title, { color: sem.textPrimary }]}>
                 {placeholder || t('profile.edit.selectOption', 'Select option')}
               </Text>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {options.map((opt) => (
-                  <Pressable
-                    key={opt}
-                    onPress={() => handleSelect(opt)}
-                    className="py-3 px-4 rounded-xl mb-1"
-                    style={{
-                      backgroundColor: opt === value ? sem.accentSoft : 'transparent',
-                    }}
-                    accessibilityRole="menuitem"
-                  >
-                    <Text
-                      className="text-base font-medium"
-                      style={{ color: opt === value ? sem.accent : sem.textPrimary }}
+
+              {/* Options — always fully visible, no scrolling */}
+              <View>
+                {options.map((opt) => {
+                  const isActive = opt === value;
+                  return (
+                    <Pressable
+                      key={opt}
+                      onPress={() => handleSelect(opt)}
+                      style={[
+                        pickerStyles.optionRow,
+                        {
+                          backgroundColor: isActive ? sem.accentSoft : 'transparent',
+                        },
+                      ]}
+                      accessibilityRole="menuitem"
+                      accessibilityState={{ selected: isActive }}
                     >
-                      {displayLabel(opt)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+                      <Text
+                        style={[
+                          pickerStyles.optionText,
+                          {
+                            color: isActive ? sem.accent : sem.textPrimary,
+                            fontWeight: isActive ? '700' : '500',
+                          },
+                        ]}
+                      >
+                        {displayLabel(opt)}
+                      </Text>
+                      {isActive && (
+                        <Ionicons name="checkmark-circle" size={22} color={sem.accent} />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           </Pressable>
         </Pressable>
@@ -265,10 +303,12 @@ export const TextAreaField = memo(function TextAreaField({
 }: TextAreaFieldProps) {
   return (
     <View
-      className="rounded-xl px-4 py-3 border"
+      className="rounded-2xl border"
       style={{
         backgroundColor: sem.surfaceMuted,
         borderColor: sem.border,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
       }}
     >
       <TextInput
@@ -278,10 +318,10 @@ export const TextAreaField = memo(function TextAreaField({
         placeholderTextColor={sem.textMuted}
         multiline
         maxLength={maxLength}
-        className="text-base min-h-[80px]"
-        style={{ color: sem.textPrimary, textAlignVertical: 'top', padding: 0 }}
+        className="min-h-[80px]"
+        style={{ color: sem.textPrimary, textAlignVertical: 'top', padding: 0, fontSize: 17 }}
       />
-      <Text className="text-sm text-right mt-2" style={{ color: sem.textMuted }}>
+      <Text style={{ color: sem.textMuted, fontSize: 13, textAlign: 'right', marginTop: 8 }}>
         {value.length}/{maxLength}
       </Text>
     </View>
@@ -292,7 +332,7 @@ export const TextAreaField = memo(function TextAreaField({
 
 export function HelperText({ text, sem }: { text: string; sem: SemanticTheme }) {
   return (
-    <Text className="text-sm mt-1.5 ml-1" style={{ color: sem.textMuted }}>
+    <Text className="text-[13px] mt-2 ml-1" style={{ color: sem.textMuted }}>
       {text}
     </Text>
   );
@@ -321,18 +361,19 @@ export const ChipSelector = memo(function ChipSelector({
           <Pressable
             key={opt}
             onPress={() => onToggle(opt)}
-            className="rounded-full px-4 py-2 border"
+            className="rounded-full border"
             style={{
               backgroundColor: isActive ? sem.accentSoft : sem.surfaceMuted,
               borderColor: isActive ? sem.accent : sem.border,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
             }}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: isActive }}
             accessibilityLabel={opt}
           >
             <Text
-              className="text-sm font-semibold"
-              style={{ color: isActive ? sem.accent : sem.textSecondary }}
+              style={{ color: isActive ? sem.accent : sem.textSecondary, fontSize: 15, fontWeight: '600' }}
             >
               {opt}
             </Text>
@@ -484,17 +525,17 @@ export const DatePickerField = memo(function DatePickerField({
     <>
       <Pressable
         onPress={() => setOpen(true)}
-        className="flex-row items-center rounded-xl px-3 py-3 border"
-        style={{ backgroundColor: sem.surfaceMuted, borderColor: sem.border }}
+        className="flex-row items-center rounded-2xl border"
+        style={{ backgroundColor: sem.surfaceMuted, borderColor: sem.border, paddingHorizontal: 16, paddingVertical: 16 }}
       >
-        <Ionicons name="calendar-outline" size={16} color={sem.textMuted} style={{ marginRight: 8 }} />
+        <Ionicons name="calendar-outline" size={20} color={sem.textMuted} style={{ marginRight: 12 }} />
         <Text
-          className="flex-1 text-base"
-          style={{ color: value ? sem.textPrimary : sem.textMuted }}
+          className="flex-1"
+          style={{ color: value ? sem.textPrimary : sem.textMuted, fontSize: 17 }}
         >
           {value || resolvedPlaceholder}
         </Text>
-        <Ionicons name="chevron-down" size={16} color={sem.textMuted} />
+        <Ionicons name="chevron-down" size={20} color={sem.textMuted} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -709,5 +750,53 @@ const dpStyles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+});
+
+// ─── Bottom-sheet picker (SelectField dropdown) ───────────────────────────────
+
+const pickerStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    // Soft shadow on top edge
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 16,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+    opacity: 0.5,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    marginBottom: 4,
+  },
+  optionText: {
+    fontSize: 17,
+    flex: 1,
   },
 });

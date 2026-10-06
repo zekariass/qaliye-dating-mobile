@@ -71,3 +71,22 @@ export function useSessionResults(sessionId: string | null) {
     isRefetching: sessionQuery.isRefetching || resultsQuery.isRefetching,
   };
 }
+
+/**
+ * The revealed winner's primary photo for a session the caller created —
+ * used by the My Blind Dates card to swap the blurred own-photo thumb for
+ * the winner's real photo once the session matched. Pass `null` to skip
+ * the fetch entirely. Returns null until loaded, on error, or when there
+ * is no winner — callers fall back to the blurred thumb in every case.
+ * Shares the results screen's query key, so a visited session is instant.
+ */
+export function useWinnerPhotoUrl(sessionId: string | null): string | null {
+  const query = useQuery<BlindDateSessionResultsDto>({
+    queryKey: BLIND_DATE_RESULTS_KEY(sessionId ?? ''),
+    queryFn: () => fetchSessionResults(sessionId!),
+    enabled: !!sessionId,
+    retry: resultsRetry,
+    staleTime: 60_000,
+  });
+  return query.data?.winner?.profile?.primary_photo?.signed_url ?? null;
+}

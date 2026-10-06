@@ -42,6 +42,13 @@ export type EditProfileDraft = {
     interests: string[];
     languages: LanguageOption[];
   };
+  marriagePrefs: {
+    marriageTimeline: string;
+    longDistanceRelationship: string;
+    familyInvolvement: string;
+    religionImportance: string;
+    willingToRelocate: string;
+  };
 };
 
 export type LocationMode = 'nearby' | 'diaspora' | 'specific_countries' | 'anywhere';
@@ -91,6 +98,42 @@ export const MARITAL_STATUS_OPTIONS = [
 ] as const;
 
 export const YES_NO_OPTIONS = ['Yes', 'No', 'Prefer not to say'] as const;
+
+// Marriage & Relationship Preference display option arrays
+// Values are the human-readable labels; API enums are mapped in profileMappers.ts
+export const MARRIAGE_TIMELINE_OPTIONS = [
+  'Within 6 months',
+  'Within 1 year',
+  '1 – 2 years',
+  '2 – 5 years',
+  'More than 5 years',
+  'Not sure yet',
+] as const;
+
+export const LONG_DISTANCE_OPTIONS = [
+  'Yes, I’m open to it',
+  'No, I prefer local',
+  'Depends on the person',
+] as const;
+
+export const FAMILY_INVOLVEMENT_OPTIONS = [
+  'Very important',
+  'Important',
+  'Somewhat important',
+  'Not important',
+] as const;
+
+export const RELIGION_IMPORTANCE_OPTIONS = [
+  'Very important',
+  'Somewhat important',
+  'Not important',
+] as const;
+
+export const WILLING_TO_RELOCATE_OPTIONS = [
+  'Yes, willing to relocate',
+  'Not willing to relocate',
+  'Open to discussing it',
+] as const;
 
 export const SMOKING_OPTIONS = ['No', 'Yes', 'Occasionally', 'Trying to quit'] as const;
 export const DRINKING_OPTIONS = ['No', 'Socially', 'Occasionally', 'Yes'] as const;
@@ -194,6 +237,13 @@ export const INITIAL_DRAFT: EditProfileDraft = {
     activityLevel: 'Moderate: Exercises a few times a week',
     interests: ['Travel', 'Coffee Ceremony', 'Reading', 'Fitness', 'Music'],
     languages: [],
+  },
+  marriagePrefs: {
+    marriageTimeline: '',
+    longDistanceRelationship: '',
+    familyInvolvement: '',
+    religionImportance: '',
+    willingToRelocate: '',
   },
 };
 

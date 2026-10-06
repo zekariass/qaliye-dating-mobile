@@ -70,6 +70,18 @@ export type BasicProfilePayload = {
   smoking_detail?: string | null;
   drinking_detail?: string | null;
   activity_level?: string | null;
+  // Marriage & Relationship Preferences — both wire casings are sent; the
+  // backend ignores whichever it doesn't declare.
+  marriage_timeline?: string | null;
+  long_distance_relationship?: string | null;
+  family_involvement?: string | null;
+  religion_importance?: string | null;
+  willing_to_relocate?: string | null;
+  marriageTimeline?: string | null;
+  longDistanceRelationship?: string | null;
+  familyInvolvement?: string | null;
+  religionImportance?: string | null;
+  willingToRelocate?: string | null;
 };
 
 export type GpsLocationPayload = {

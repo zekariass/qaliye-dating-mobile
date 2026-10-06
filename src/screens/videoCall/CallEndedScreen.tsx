@@ -3,6 +3,7 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import {
     ScrollView,
     StyleSheet,
@@ -30,19 +31,46 @@ export default function CallEndedScreen() {
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
 
-  const { matchId, requestId, displayName, avatarUrl, callType } = useLocalSearchParams<{
+  const { matchId, requestId, displayName, avatarUrl, callType, endReason } = useLocalSearchParams<{
     matchId: string;
     requestId: string;
     displayName: string;
     avatarUrl?: string;
     callType?: string;
+    /** 'time_limit' when the server-enforced duration cap ended the call. */
+    endReason?: string;
   }>();
 
-  const { data: requests } = useVideoCallRequests(matchId ?? '');
+  const { data: requests } = useVideoCallRequests(matchId ?? '', 5_000);
   const request = requests?.find((r) => r.id === requestId);
+
+  // A new incoming request while this screen is up → jump straight to the
+  // accept screen instead of making the user back out and tap a banner.
+  const incoming = requests?.find(
+    (r) =>
+      r.id !== requestId &&
+      !r.is_requester &&
+      (r.status === 'PENDING' || r.status === 'ACCEPTED'),
+  );
+
+  useEffect(() => {
+    if (!incoming) return;
+    router.replace({
+      pathname: '/(app)/video-call' as never,
+      params: {
+        matchId,
+        requestId: incoming.id,
+        displayName,
+        avatarUrl: avatarUrl ?? '',
+        callType: incoming.call_type,
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming?.id]);
 
   // The request row is authoritative; the nav param is the fast path.
   const isAudio = (request?.call_type ?? callType) === 'AUDIO';
+  const isTimeLimit = endReason === 'time_limit';
 
   const endedAt = fmtDateTime(request?.ended_at);
 
@@ -86,18 +114,30 @@ export default function CallEndedScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Icon */}
-        <View style={[styles.iconCircle, { backgroundColor: colors.success + '20' }]}>
-          <Ionicons name="checkmark-circle" size={48} color={colors.success} />
+        <View style={[styles.iconCircle, { backgroundColor: (isTimeLimit ? colors.warning : colors.success) + '20' }]}>
+          <Ionicons
+            name={isTimeLimit ? 'hourglass-outline' : 'checkmark-circle'}
+            size={48}
+            color={isTimeLimit ? colors.warning : colors.success}
+          />
         </View>
 
-        <Text style={[styles.title, { color: th.text }]}>Call Ended</Text>
-        <Text style={[styles.sub, { color: th.textSecondary }]}>Your {isAudio ? 'audio' : 'video'} call has ended.</Text>
+        <Text style={[styles.title, { color: th.text }]}>
+          {isTimeLimit ? "Time's Up" : 'Call Ended'}
+        </Text>
+        <Text style={[styles.sub, { color: th.textSecondary }]}>
+          {isTimeLimit
+            ? `Your ${isAudio ? 'audio' : 'video'} call reached the time limit.`
+            : `Your ${isAudio ? 'audio' : 'video'} call has ended.`}
+        </Text>
 
         {/* Status card */}
         <View style={[styles.card, { backgroundColor: isDark ? th.surface : '#FAF7FF', borderColor: th.border }]}>
           <View style={styles.cardRow}>
             <Text style={[styles.cardKey, { color: th.textMuted }]}>Status</Text>
-            <Text style={[styles.cardVal, { color: colors.success }]}>Completed</Text>
+            <Text style={[styles.cardVal, { color: isTimeLimit ? colors.warning : colors.success }]}>
+              {isTimeLimit ? 'Time limit reached' : 'Completed'}
+            </Text>
           </View>
           <View style={[styles.cardRow, { borderTopColor: th.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
             <Text style={[styles.cardKey, { color: th.textMuted }]}>Call type</Text>

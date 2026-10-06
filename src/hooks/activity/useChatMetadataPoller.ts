@@ -8,7 +8,7 @@ import type { ActivityStatus } from '@/types/activity';
 import type { ChatThreadDto } from '@/types/chat';
 
 /**
- * Polls `GET /api/v1/chat/matches/{matchId}` every 90 s while the chat screen
+ * Polls `GET /api/v1/chat/matches/{matchId}` every 30 s while the chat screen
  * is focused and the app is foregrounded.
  *
  * Per spec: use this endpoint (not the batch statuses endpoint) for open chat.
