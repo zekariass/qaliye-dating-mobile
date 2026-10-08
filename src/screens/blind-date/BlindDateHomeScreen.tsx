@@ -53,13 +53,16 @@ import type {
 import { extractApiError } from '@/utils/apiError';
 import { blindDateErrorMessage } from '@/utils/blindDateErrors';
 import { getCostForAction, isInsufficientCreditsError } from '@/utils/entitlements';
+import { getSwipeCardWidth, rs, useTabletScale } from '@/utils/responsive';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
 const SCREEN_W  = Dimensions.get('window').width;
 const SCREEN_H  = Dimensions.get('window').height;
 const IS_TABLET = SCREEN_W >= 500;
-const CONTENT_W = IS_TABLET ? Math.min(Math.round(SCREEN_W * 0.9), 560) : SCREEN_W;
+// Tablet: same 93%-of-screen width the discovery swipe card uses — the old
+// 560px cap left the screens phone-width and centered on iPads.
+const CONTENT_W = IS_TABLET ? getSwipeCardWidth(SCREEN_W) : SCREEN_W;
 const OUTER_PAD = 16;
 
 
@@ -118,6 +121,7 @@ const cardShadow = Platform.select({
 function Header({ title, onHelp, onProfile }: { title: string; onHelp: () => void; onProfile: () => void }) {
   const { t } = useTranslation();
   const { textPrimary, textMuted } = useBlindDateTheme();
+  const scale = useTabletScale();
   return (
     <View style={styles.headerWrap}>
       <View style={styles.header}>
@@ -125,16 +129,16 @@ function Header({ title, onHelp, onProfile }: { title: string; onHelp: () => voi
         <View style={styles.headerLeft}>
           <Image
             source={require('@/assets/images/blind-date-icon.png')}
-            style={styles.headerIcon}
+            style={[styles.headerIcon, { width: rs(34, scale), height: rs(34, scale) }]}
             resizeMode="contain"
           />
-          <Text style={[styles.headerTitle, { color: textPrimary }]}>{title}</Text>
+          <Text style={[styles.headerTitle, { color: textPrimary, fontSize: rs(18, scale) }]}>{title}</Text>
         </View>
 
         {/* Right: profile + help buttons */}
         <View style={styles.headerRight}>
           <TouchableOpacity
-            style={styles.headerIconBtn}
+            style={[styles.headerIconBtn, { width: rs(36, scale), height: rs(36, scale), borderRadius: rs(18, scale) }]}
             onPress={onProfile}
             activeOpacity={0.7}
             accessibilityRole="button"
@@ -144,13 +148,13 @@ function Header({ title, onHelp, onProfile }: { title: string; onHelp: () => voi
               colors={bdGradients.hero}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.headerIconBtnInner}
+              style={[styles.headerIconBtnInner, { borderRadius: rs(18, scale) }]}
             >
-              <Ionicons name="person" size={18} color="#FFF" />
+              <Ionicons name="person" size={rs(18, scale)} color="#FFF" />
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.headerBtn}
+            style={[styles.headerBtn, { height: rs(36, scale), borderRadius: rs(18, scale) }]}
             onPress={onHelp}
             activeOpacity={0.7}
             accessibilityRole="button"
@@ -160,10 +164,10 @@ function Header({ title, onHelp, onProfile }: { title: string; onHelp: () => voi
               colors={bdGradients.hero}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.headerBtnInner}
+              style={[styles.headerBtnInner, { borderRadius: rs(18, scale), paddingHorizontal: rs(14, scale), gap: rs(5, scale) }]}
             >
-              <Ionicons name="help" size={14} color="#FFF" />
-              <Text style={styles.headerBtnText}>
+              <Ionicons name="help" size={rs(14, scale)} color="#FFF" />
+              <Text style={[styles.headerBtnText, { fontSize: rs(13, scale) }]}>
                 {t('blindDate.home.help')}
               </Text>
             </LinearGradient>
@@ -172,7 +176,7 @@ function Header({ title, onHelp, onProfile }: { title: string; onHelp: () => voi
       </View>
 
       {/* Subtitle */}
-      <Text style={[styles.headerSub, { color: textMuted }]}>
+      <Text style={[styles.headerSub, { color: textMuted, fontSize: rs(12.5, scale) }]}>
         {t('blindDate.home.headerSubtitle')}
       </Text>
     </View>
@@ -2239,7 +2243,7 @@ const styles = StyleSheet.create({
   },
   gateCard: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: IS_TABLET ? 520 : 380,
     borderRadius: 26,
     borderWidth: 1,
     paddingHorizontal: 26,

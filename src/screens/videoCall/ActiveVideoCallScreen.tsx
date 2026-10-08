@@ -925,8 +925,8 @@ export default function ActiveVideoCallScreen() {
           );
         })()}
 
-        {/* Controls row */}
-        <View style={styles.controlsRow}>
+        {/* Controls bar — mute / speaker|camera+flip / end on one line */}
+        <View style={styles.controlsBar}>
           <TouchableOpacity
             style={[styles.controlBtn, isMuted && styles.controlBtnActive]}
             onPress={handleToggleMute}
@@ -970,18 +970,17 @@ export default function ActiveVideoCallScreen() {
               </TouchableOpacity>
             </>
           )}
-        </View>
 
-        {/* End call */}
-        <TouchableOpacity
-          style={styles.endBtn}
-          onPress={handleEndPress}
-          activeOpacity={0.85}
-          accessibilityLabel="End call"
-        >
-          <Ionicons name="call" size={26} color="#FFF" style={{ transform: [{ rotate: '135deg' }] }} />
-          <Text style={styles.endLabel}>End</Text>
-        </TouchableOpacity>
+          {/* End call — same line as the other controls */}
+          <TouchableOpacity
+            style={styles.endBtn}
+            onPress={handleEndPress}
+            activeOpacity={0.85}
+            accessibilityLabel="End call"
+          >
+            <Ionicons name="call" size={24} color="#FFF" style={{ transform: [{ rotate: '135deg' }] }} />
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
       {/* Weak-network banner — Agora reports poor link quality or the
@@ -1227,37 +1226,43 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   countdownFill: { height: 3, borderRadius: 2 },
-  controlsRow: {
+  // One-line dark bar holding every call control — FaceTime-style bottom bar
+  controlsBar: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'space-evenly',
+    alignSelf: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(30,30,32,0.85)',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   controlBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    width: 68,
-    paddingVertical: 12,
-    borderRadius: radius.xl,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    gap: 4,
+    width: 64,
+    paddingVertical: 9,
+    borderRadius: radius.lg,
   },
-  controlBtnActive: { backgroundColor: 'rgba(255,255,255,0.38)' },
+  controlBtnActive: { backgroundColor: 'rgba(255,255,255,0.22)' },
   controlLabel: { fontSize: 11, color: '#FFF', fontWeight: '500' },
   endBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: colors.danger,
     shadowColor: colors.danger,
-    shadowOpacity: 0.55,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 12,
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 8,
   },
-  endLabel: { fontSize: 11, color: '#FFF', fontWeight: '600' },
 
   // ── Loading / error states ───────────────────────────────────────────
   loadingState: {

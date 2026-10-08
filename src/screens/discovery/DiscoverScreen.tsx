@@ -74,6 +74,7 @@ import {
 import { defaultLikeVariant } from '@/utils/likeVariants';
 import { showActionErrorAlert } from '@/utils/limitExceededAlert';
 import { isBlindDateMatch } from '@/utils/matchSource';
+import { getActionOverlayLeft, rs, useTabletScale } from '@/utils/responsive';
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -232,9 +233,15 @@ type FeaturePillProps = {
 
 /** Blind Date — primary CTA: hero gradient, mask icon on a white chip. */
 function BlindDateButton({ label, onPress, compact, fill, isDark }: FeaturePillProps) {
+  const scale = useTabletScale();
   return (
     <TouchableOpacity
-      style={[styles.featurePill, styles.blindDateBtn, fill && styles.featurePillFill]}
+      style={[
+        styles.featurePill,
+        styles.blindDateBtn,
+        fill && styles.featurePillFill,
+        { height: rs(44, scale), paddingHorizontal: rs(10, scale), borderRadius: rs(12, scale), gap: rs(5, scale) },
+      ]}
       onPress={onPress}
       activeOpacity={0.8}
       accessibilityRole="button"
@@ -244,16 +251,20 @@ function BlindDateButton({ label, onPress, compact, fill, isDark }: FeaturePillP
         colors={bdGradients.hero as unknown as [string, string, string]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={[StyleSheet.absoluteFill, { borderRadius: 12 }]}
+        style={[StyleSheet.absoluteFill, { borderRadius: rs(12, scale) }]}
       />
-      <View style={styles.bdIconChip}>
+      <View style={[styles.bdIconChip, { borderRadius: rs(10, scale), paddingHorizontal: rs(4, scale), paddingVertical: rs(2, scale) }]}>
         <Image
           source={require('@/assets/images/blind-date-icon.png')}
-          style={[styles.blindDateIcon, compact && styles.blindDateIconCompact]}
+          style={[
+            styles.blindDateIcon,
+            { width: rs(40, scale), height: rs(24, scale) },
+            compact && { width: rs(30, scale), height: rs(18, scale) },
+          ]}
           resizeMode="contain"
         />
       </View>
-      <Text style={[styles.featurePillText, { color: '#FFFFFF' }]} numberOfLines={1}>
+      <Text style={[styles.featurePillText, { color: '#FFFFFF', fontSize: rs(14, scale) }]} numberOfLines={1}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -275,6 +286,7 @@ type BoostControlProps = {
 
 function BoostControl({ boostStatus, isActivating, onActivate, onShowStatus, themeColors, isDark }: BoostControlProps) {
   const { t } = useTranslation();
+  const scale = useTabletScale();
   if (boostStatus.isActive) {
     // Icon-only badge — a labelled pill here overflows the header row and
     // clips off the left edge on narrower screens. Tappable: opens the
@@ -283,12 +295,12 @@ function BoostControl({ boostStatus, isActivating, onActivate, onShowStatus, the
       <TouchableOpacity
         onPress={onShowStatus}
         activeOpacity={0.8}
-        style={boostStyles.boostedBadge}
+        style={[boostStyles.boostedBadge, { width: rs(42, scale), height: rs(42, scale), borderRadius: rs(21, scale) }]}
         accessibilityRole="button"
         accessibilityLabel={t('discovery.boost.activeLabel')}
         accessibilityHint={t('discovery.boost.activeHint')}
       >
-        <Ionicons name="rocket" size={20} color="#FFF" />
+        <Ionicons name="rocket" size={rs(20, scale)} color="#FFF" />
       </TouchableOpacity>
     );
   }
@@ -305,6 +317,9 @@ function BoostControl({ boostStatus, isActivating, onActivate, onShowStatus, the
           backgroundColor: isDark ? themeColors.backgroundElement : themeColors.surface,
           borderColor: colors.primary,
           borderWidth: 1.5,
+          width: rs(42, scale),
+          height: rs(42, scale),
+          borderRadius: rs(21, scale),
         },
       ]}
       accessibilityRole="button"
@@ -313,7 +328,7 @@ function BoostControl({ boostStatus, isActivating, onActivate, onShowStatus, the
       {isActivating ? (
         <ActivityIndicator size="small" color={colors.primary} />
       ) : (
-        <Ionicons name="rocket-outline" size={20} color={colors.primary} />
+        <Ionicons name="rocket-outline" size={rs(20, scale)} color={colors.primary} />
       )}
     </TouchableOpacity>
   );
@@ -365,6 +380,7 @@ export default function DiscoverScreen() {
   const isDark = mode === 'dark';
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { height: SCREEN_H, width: SCREEN_W } = useWindowDimensions();
+  const scale = useTabletScale();
 
   const cardStackRef        = useRef<CardStackHandle>(null);
   const scrollRef            = useRef<ScrollView>(null);
@@ -1106,7 +1122,7 @@ export default function DiscoverScreen() {
         <View style={styles.headerLeft}>
           {/* Mode toggle — replaces Qaliye logo */}
           <TouchableOpacity
-            style={[styles.settingsBtn, styles.modeToggleBtn, { borderColor: colors.primary, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
+            style={[styles.settingsBtn, styles.modeToggleBtn, { borderColor: colors.primary, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5, width: rs(42, scale), height: rs(42, scale), borderRadius: rs(21, scale) }]}
             onPress={() => {
               if (modeSwitching) return;
               setModeSwitching(true);
@@ -1118,9 +1134,11 @@ export default function DiscoverScreen() {
             accessibilityRole="button"
           >
             {viewMode === 'swipe' ? (
-              <Ionicons name="grid-outline" size={22} color={colors.primary} />
+              <Ionicons name="grid-outline" size={rs(22, scale)} color={colors.primary} />
             ) : (
-              <SwipeIcon color={colors.primary} active={false} inactiveFill={colors.primary} />
+              <View style={{ transform: [{ scale }] }}>
+                <SwipeIcon color={colors.primary} active={false} inactiveFill={colors.primary} />
+              </View>
             )}
           </TouchableOpacity>
         </View>
@@ -1139,8 +1157,8 @@ export default function DiscoverScreen() {
           {/* Incognito indicator OR Boost control */}
           {isIncognito ? (
             <View style={styles.incognitoIndicator}>
-              <Ionicons name="eye-off" size={12} color={th.textSecondary} />
-              <Text style={[styles.incognitoText, { color: th.textSecondary }]}>{t('discovery.privateMode')}</Text>
+              <Ionicons name="eye-off" size={rs(12, scale)} color={th.textSecondary} />
+              <Text style={[styles.incognitoText, { color: th.textSecondary, fontSize: rs(12, scale) }]}>{t('discovery.privateMode')}</Text>
             </View>
           ) : (
             <BoostControl
@@ -1155,12 +1173,12 @@ export default function DiscoverScreen() {
 
           {/* Settings / Preferences */}
           <TouchableOpacity
-            style={[styles.settingsBtn, styles.modeToggleBtn, { borderColor: colors.primary, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
+            style={[styles.settingsBtn, styles.modeToggleBtn, { borderColor: colors.primary, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5, width: rs(42, scale), height: rs(42, scale), borderRadius: rs(21, scale) }]}
             onPress={() => router.push('/(app)/preferences')}
             activeOpacity={0.7}
             accessibilityLabel={t('discovery.openPreferences')}
           >
-            <Ionicons name="options-outline" size={21} color={colors.primary} />
+            <Ionicons name="options-outline" size={rs(21, scale)} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -1376,7 +1394,7 @@ export default function DiscoverScreen() {
             promos, even after the banner auto-dismisses. */}
         {entryPromos.length > 0 && (
           <TouchableOpacity
-            style={styles.promoFab}
+            style={[styles.promoFab, { left: getActionOverlayLeft(SCREEN_W, spacing.md) }]}
             onPress={handlePromoEntryTap}
             activeOpacity={0.85}
             accessibilityRole="button"
@@ -1609,9 +1627,10 @@ const styles = StyleSheet.create({
   promoFab: {
     position: 'absolute',
     // Mirrors the card's photo-thumbnail row (top/right: spacing.md) so the
-    // icon lands on the card's top-left corner.
+    // icon lands on the card's top-left corner. `left` is set inline via
+    // getActionOverlayLeft — the card is 93%-width centered on tablets, so
+    // the screen-edge offset doesn't track the card edge there.
     top: spacing.md + 4,
-    left: spacing.md,
     zIndex: 30,
   },
   promoFabCircle: {

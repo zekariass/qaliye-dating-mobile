@@ -104,15 +104,16 @@ const MSG_BTN_SHADOW = Platform.select({
 function MatchesHeader() {
   const { t } = useTranslation();
   const router = useRouter();
+  const scale = useTabletScale();
 
   return (
     <Animated.View entering={FadeInDown.duration(350)} style={headerStyles.container}>
       <View style={headerStyles.titleRow}>
         <View style={headerStyles.titleGroup}>
-          <Ionicons name="heart-circle" size={26} color={colors.primary} />
+          <Ionicons name="heart-circle" size={rs(26, scale)} color={colors.primary} />
           <View>
             <View style={headerStyles.titleInner}>
-              <Text style={[headerStyles.title, { color: colors.primary }]}>{t('matches.title')}</Text>
+              <Text style={[headerStyles.title, { color: colors.primary, fontSize: rs(20, scale) }]}>{t('matches.title')}</Text>
             </View>
             {/* Active-tab indicator — marks Matches as the current screen */}
             <View style={headerStyles.activeIndicator} />
@@ -120,7 +121,7 @@ function MatchesHeader() {
         </View>
         <View style={headerStyles.blindDateWrap}>
           <TouchableOpacity
-            style={headerStyles.blindDateBtn}
+            style={[headerStyles.blindDateBtn, { height: rs(38, scale), borderRadius: rs(12, scale), paddingHorizontal: rs(10, scale), gap: rs(6, scale) }]}
             onPress={() => router.push('/(app)/blind-date' as any)}
             activeOpacity={0.8}
             accessibilityRole="button"
@@ -130,16 +131,16 @@ function MatchesHeader() {
               colors={bdGradients.hero as unknown as [string, string, string]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={[StyleSheet.absoluteFill, { borderRadius: 12 }]}
+              style={[StyleSheet.absoluteFill, { borderRadius: rs(12, scale) }]}
             />
-            <View style={headerStyles.bdIconChip}>
+            <View style={[headerStyles.bdIconChip, { borderRadius: rs(10, scale), paddingHorizontal: rs(4, scale), paddingVertical: rs(2, scale) }]}>
               <Image
                 source={require('@/assets/images/blind-date-icon.png')}
-                style={headerStyles.blindDateIcon}
+                style={[headerStyles.blindDateIcon, { width: rs(34, scale), height: rs(20, scale) }]}
                 contentFit="contain"
               />
             </View>
-            <Text style={headerStyles.blindDateText}>
+            <Text style={[headerStyles.blindDateText, { fontSize: rs(13, scale) }]}>
               {t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
             </Text>
           </TouchableOpacity>
