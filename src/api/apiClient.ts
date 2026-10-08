@@ -74,16 +74,6 @@ apiClient.interceptors.request.use(async (config) => {
 
   if (session?.access_token) {
     config.headers.Authorization = `Bearer ${session.access_token}`;
-    if (__DEV__) {
-      console.log(
-        `[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
-        '| token:', session.access_token.slice(0, 20) + '…',
-      );
-      if (config.data) {
-        console.log(`[API] request data:`, typeof config.data === 'string' ? config.data : JSON.stringify(config.data));
-        console.log(`[API] Content-Type:`, config.headers['Content-Type'] ?? config.headers['content-type'] ?? 'not set');
-      }
-    }
   } else if (__DEV__) {
     console.warn('[API] No active session — request sent without Bearer token');
   }
@@ -151,9 +141,10 @@ apiClient.interceptors.response.use(
       // Blind Date
       if (url.match(/\/blind-date\/sessions\/[^/]+\/join/)) return 'BLIND_DATE_PARTICIPATE';
       if (url.match(/\/blind-date\/sessions$/) && (config?.method ?? '').toLowerCase() === 'post') return 'BLIND_DATE_SESSION_CREATE';
-      // Profile actions
+      // Profile actions — INCOGNITO_MODE is tagged via request metadata by
+      // updateProfileMe (PUT /profile/me is a generic endpoint, so the URL
+      // alone can't identify the charged action)
       if (url.includes('/profile/location')) return 'CHANGE_ADDRESS';
-      if (url.includes('/profile/me/discovery-settings')) return 'INCOGNITO_MODE';
       return undefined;
     }
 

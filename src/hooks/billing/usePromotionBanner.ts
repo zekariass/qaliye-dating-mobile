@@ -112,20 +112,17 @@ export function usePromotionBanner(
   useEffect(() => {
     if (hasEvaluatedRef.current) return;
     if (!userId) {
-      if (__DEV__) console.log('[banner] skipping: no userId');
       return;
     }
     // Premium users can still receive CREDITS promotions, so we don't skip
     // evaluation entirely. Non-CREDITS promotions are filtered out below when
     // the user has active premium.
     hasEvaluatedRef.current = true;
-    if (__DEV__) console.log('[banner] evaluating promotions for user:', userId, 'hasActivePremium:', hasActivePremium);
 
     (async () => {
       try {
         const fresh = await fetchEligiblePromotions();
         if (!isMountedRef.current) return;
-        if (__DEV__) console.log('[banner] fetched promotions:', fresh?.length, JSON.stringify(fresh?.map(p => ({ key: p.campaign_key, status: p.status, trigger: p.trigger_type, eligibility: p.eligibility_type, benefit: p.benefit_type, starts_at: p.starts_at, ends_at: p.ends_at }))));
 
         const now = new Date();
         const eligible = fresh
@@ -133,31 +130,26 @@ export function usePromotionBanner(
             // Premium users should only see CREDITS promotions — skip
             // FREE_PREMIUM and DISCOUNT since they already have premium.
             if (hasActivePremium && p.benefit_type !== 'CREDITS') {
-              if (__DEV__) console.log('[banner] skipping non-CREDITS for premium user:', p.campaign_key, 'benefit:', p.benefit_type);
               return false;
             }
             const structValid = isPromoStructurallyValid(p);
             if (!structValid) {
-              if (__DEV__) console.log('[banner] structurally invalid:', p.campaign_key, 'status:', p.status, 'trigger:', p.trigger_type, 'eligibility:', p.eligibility_type, 'benefit:', p.benefit_type);
               return false;
             }
             const timeValid = isPromoCurrentlyValid(p, now);
             if (!timeValid) {
-              if (__DEV__) console.log('[banner] not currently valid:', p.campaign_key, 'status:', p.status, 'starts_at:', p.starts_at, 'ends_at:', p.ends_at, 'now:', now.toISOString());
               return false;
             }
             const record = store.getRecord(userId!, p.campaign_key);
             const canShow = canShowCampaign(p, record, userId!, store, now);
             if (!canShow) {
-              if (__DEV__) console.log('[banner] canShowCampaign false:', p.campaign_key, 'record:', JSON.stringify(record), 'sessionShown:', store.isShownThisSession(userId!, p.campaign_key));
               return false;
             }
-            if (__DEV__) console.log('[banner] eligible:', p.campaign_key);
+            
             return true;
           })
           .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 
-        if (__DEV__) console.log('[banner] eligible count:', eligible.length);
         if (eligible.length === 0) return;
 
         // Record shown in store
@@ -174,7 +166,6 @@ export function usePromotionBanner(
 
         startTimersFrom(0);
       } catch (err) {
-        if (__DEV__) console.log('[banner] error fetching promotions:', err);
       }
     })();
   }, [userId, hasActivePremium, addTimer, store, startTimersFrom]);

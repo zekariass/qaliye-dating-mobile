@@ -229,7 +229,11 @@
       "backgroundCulture": "Background & Culture",
       "ethnicityHint": "Leave empty to see all backgrounds.",
       "languagesSpoken": "Languages spoken",
-      "languagesHint": "Leave empty to see all languages."
+      "languagesHint": "Leave empty to see all languages.",
+      "resetToDefaults": "Reset to defaults",
+      "resetConfirmTitle": "Reset preferences?",
+      "resetConfirmMessage": "This clears all your filters so you see the widest range of profiles.",
+      "resetDone": "Preferences reset to defaults"
     },
     "details": {
       "gender": "Gender",
@@ -1157,6 +1161,8 @@
       "revisitProfile": "Revisit Profile",
       "incognitoMode": "Incognito Mode",
       "changeAddress": "Change Address",
+      "videoCall": "Video Call",
+      "audioCall": "Audio Call",
       "thisAction": "This Action"
     },
     "actionLabels": {
@@ -1328,6 +1334,8 @@
     "claimNow": "Claim now",
     "notNow": "Not now",
     "viewOffer": "View offer",
+    "giftA11y": "View your promotions",
+    "listTitle": "Your promotions",
     "subscribe": "Subscribe",
     "freeDays": "{{duration}} free",
     "expiresOn": "Expires {{date}}",
@@ -3093,7 +3101,7 @@
       "title": "Manage Blind Date"
     },
     "nav": {
-      "browse": "Browse",
+      "browse": "Join",
       "create": "Create",
       "joined": "Joined",
       "matches": "Matches",

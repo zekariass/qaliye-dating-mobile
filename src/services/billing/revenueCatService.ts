@@ -70,10 +70,6 @@ export async function getRevenueCatOfferings(): Promise<PurchasesOfferings | nul
   if (!getApiKey()) return null;
   try {
     const offerings = await Purchases.getOfferings();
-    if (__DEV__) {
-      const ids = Object.keys(offerings?.all ?? {});
-      console.log('[RevenueCat] offerings fetched. IDs:', ids.length > 0 ? ids : '(empty)');
-    }
     return offerings;
   } catch (e) {
     if (__DEV__) console.warn('[RevenueCat] getOfferings failed', e);

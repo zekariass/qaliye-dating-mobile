@@ -37,6 +37,7 @@ const META: Record<VideoCallRequestStatus, StatusMeta> = {
   DECLINED:  { icon: 'close-circle',      color: colors.danger,   label: 'Request declined', sub: (r) => r.is_requester ? 'They declined your request' : 'You declined the request' },
   CANCELLED: { icon: 'ban',               color: colors.textMuted, label: 'Request cancelled', sub: (r) => r.is_requester ? 'You cancelled the request' : 'They cancelled the request' },
   EXPIRED:   { icon: 'time-outline',      color: colors.textMuted, label: 'Request expired', sub: () => 'No response' },
+  NO_SHOW:   { icon: 'person-remove-outline', color: colors.textMuted, label: 'No show', sub: () => 'Someone didn\'t join in time' },
 };
 
 function fmtDate(iso: string | null | undefined): string {

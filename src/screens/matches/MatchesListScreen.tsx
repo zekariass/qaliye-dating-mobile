@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,12 +15,7 @@ import {
     View,
 } from 'react-native';
 import Animated, {
-    Easing,
-    FadeInDown,
-    useAnimatedStyle,
-    useSharedValue,
-    withRepeat,
-    withTiming
+    FadeInDown
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,6 +23,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { ActivityStatusIndicator } from '@/components/common/ActivityStatusIndicator';
 import { BlindDateBadge } from '@/components/common/BlindDateBadge';
+import { bdGradients } from '@/constants/blindDateTheme';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useActivityStatuses } from '@/hooks/activity/useActivityStatuses';
 import { useMatches } from '@/hooks/discovery/useMatches';
@@ -107,24 +104,6 @@ const MSG_BTN_SHADOW = Platform.select({
 function MatchesHeader() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { colors: th, mode } = useTheme();
-  const isDark = mode === 'dark';
-
-  // Same breathing glow as the discovery header's blind-date button
-  const glow = useSharedValue(0);
-  useEffect(() => {
-    glow.value = withRepeat(
-      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
-    );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.35 + glow.value * 0.55,
-    transform: [{ scale: 1 + glow.value * 0.12 }],
-    shadowOpacity: 0.25 + glow.value * 0.55,
-  }));
 
   return (
     <Animated.View entering={FadeInDown.duration(350)} style={headerStyles.container}>
@@ -140,23 +119,27 @@ function MatchesHeader() {
           </View>
         </View>
         <View style={headerStyles.blindDateWrap}>
-          <Animated.View pointerEvents="none" style={[headerStyles.blindDateGlow, glowStyle]} />
           <TouchableOpacity
-            style={[
-              headerStyles.blindDateBtn,
-              { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface },
-            ]}
+            style={headerStyles.blindDateBtn}
             onPress={() => router.push('/(app)/blind-date' as any)}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel={t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
           >
-            <Image
-              source={require('@/assets/images/blind-date-icon.png')}
-              style={headerStyles.blindDateIcon}
-              contentFit="contain"
+            <LinearGradient
+              colors={bdGradients.hero as unknown as [string, string, string]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[StyleSheet.absoluteFill, { borderRadius: 12 }]}
             />
-            <Text style={[headerStyles.blindDateText, { color: th.text }]}>
+            <View style={headerStyles.bdIconChip}>
+              <Image
+                source={require('@/assets/images/blind-date-icon.png')}
+                style={headerStyles.blindDateIcon}
+                contentFit="contain"
+              />
+            </View>
+            <Text style={headerStyles.blindDateText}>
               {t('discovery.blindDate', { defaultValue: 'Try Blind Dating' })}
             </Text>
           </TouchableOpacity>
@@ -193,34 +176,28 @@ const headerStyles = StyleSheet.create({
     marginTop:       3,
   },
   blindDateWrap: {
-    flex:         1,
-    borderRadius: 19,
-  },
-  blindDateGlow: {
-    position:          'absolute',
-    top:               -2,
-    left:              -2,
-    right:             -2,
-    bottom:            -2,
-    borderRadius:      21,
-    borderWidth:       1.5,
-    borderColor:       colors.primary,
-    backgroundColor:   colors.primary + '24',
-    shadowColor:       colors.primary,
-    shadowOpacity:     0,
-    shadowRadius:      10,
-    shadowOffset:      { width: 0, height: 0 },
+    flex:       1,
+    alignItems: 'flex-end',
   },
   blindDateBtn: {
-    flex:              1,
     flexDirection:     'row',
     alignItems:        'center',
     justifyContent:    'center',
     gap:               6,
     height:            38,
-    paddingHorizontal: 12,
-    borderRadius:      19,
-    borderWidth:       1.5,
+    paddingHorizontal: 10,
+    borderRadius:      12,
+    shadowColor:       colors.primary,
+    shadowOpacity:     0.3,
+    shadowRadius:      8,
+    shadowOffset:      { width: 0, height: 3 },
+    elevation:         4,
+  },
+  bdIconChip: {
+    backgroundColor:   '#FFFFFF',
+    borderRadius:      10,
+    paddingHorizontal: 4,
+    paddingVertical:   2,
   },
   blindDateIcon: {
     width:  34,
@@ -229,6 +206,7 @@ const headerStyles = StyleSheet.create({
   blindDateText: {
     fontSize:   13,
     fontWeight: '700',
+    color:      '#FFFFFF',
   },
   title: {
     fontSize:      20,

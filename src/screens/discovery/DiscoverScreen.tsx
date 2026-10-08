@@ -27,6 +27,7 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DEFAULT_LIKE_VARIANT_CODE } from '@/api/discovery/discoveryApi';
+import { PromoListSheet } from '@/components/billing/PromoListSheet';
 import { PromotionAlert } from '@/components/billing/PromotionAlert';
 import { themedAlert, themedAlertDismiss } from '@/components/common/ThemedAlert';
 import ActionRail from '@/components/discovery/ActionRail';
@@ -43,10 +44,10 @@ import { SwipeIcon } from '@/components/layout/AppTabBar';
 import { NotificationPromptModal } from '@/components/notifications/NotificationPromptModal';
 import { IdentityVerificationPromptModal } from '@/components/profile/IdentityVerificationPromptModal';
 import { bdGradients } from '@/constants/blindDateTheme';
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, gradients, radius, spacing } from '@/constants/theme';
 import { useCurrentUserId } from '@/hooks/auth/useCurrentUserId';
 import { useActivateBoost } from '@/hooks/billing/useActivateBoost';
-import { useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
+import { isPromoCurrentlyValid, isPromoStructurallyValid, useEligiblePromotions } from '@/hooks/billing/useEligiblePromotions';
 import { useEntitlements } from '@/hooks/billing/useEntitlements';
 import { usePromotionBanner } from '@/hooks/billing/usePromotionBanner';
 import { mapProfileToCard, useDiscoveryProfiles } from '@/hooks/discovery/useDiscoveryProfiles';
@@ -299,9 +300,10 @@ function BoostControl({ boostStatus, isActivating, onActivate, onShowStatus, the
       activeOpacity={0.7}
       style={[
         boostStyles.boostBtn,
+        boostStyles.boostBtnGlow,
         {
           backgroundColor: isDark ? themeColors.backgroundElement : themeColors.surface,
-          borderColor: themeColors.border,
+          borderColor: colors.primary,
           borderWidth: 1.5,
         },
       ]}
@@ -345,6 +347,13 @@ const boostStyles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
+  },
+  boostBtnGlow: {
+    shadowColor: colors.primary,
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
   },
 });
 
@@ -418,7 +427,7 @@ export default function DiscoverScreen() {
   const { entitlements, refreshEntitlements } = useEntitlements();
 
   const userId = useCurrentUserId();
-  const { tryShowPromotion, hasActivePremium } = useEligiblePromotions(userId);
+  const { tryShowPromotion, hasActivePremium, data: eligiblePromoData, refetch: refetchPromos } = useEligiblePromotions(userId);
   const {
     promotions: bannerPromotions,
     currentIndex: bannerIndex,
@@ -431,6 +440,65 @@ export default function DiscoverScreen() {
   const recordExplicitDismissal = usePromotionStore((s) => s.recordExplicitDismissal);
   const markClaimedOrRedeemed = usePromotionStore((s) => s.markClaimedOrRedeemed);
   const clearSessionForUser = usePromotionStore((s) => s.clearSessionForUser);
+
+  // ── Promo entry icon ─────────────────────────────────────────────────────
+  // Promos the backend already deems this user entitled to (status, time
+  // window, country, gender, eligibility type, global + per-user caps are all
+  // checked server-side). The icon is a passive, user-initiated entry point —
+  // intentionally NOT gated by the display-frequency rules (dismissal
+  // cooldowns, shown-this-session, permanentlyHidden) that limit the proactive
+  // banner, so it stays visible as long as any entitled promo exists.
+  const entryPromos = useMemo(() => {
+    const now = new Date();
+    return (eligiblePromoData ?? []).filter(
+      (p) =>
+        (!hasActivePremium || p.benefit_type === 'CREDITS') &&
+        isPromoStructurallyValid(p) &&
+        isPromoCurrentlyValid(p, now),
+    );
+  }, [eligiblePromoData, hasActivePremium]);
+
+  // Route a non-claimable promotion to the shop — the same targets as the
+  // banner CTA and PromotionAlert's "View offer".
+  const routePromoToShop = useCallback(
+    (promo: EligiblePromotionDto) => {
+      const isCreditsPromo =
+        promo.benefit_type === 'CREDITS' ||
+        (promo.consumable_product_id != null && promo.subscription_product_id == null);
+      router.push((isCreditsPromo ? '/(app)/credits-shop' : '/(app)/premium') as any);
+    },
+    [router],
+  );
+
+  const [promoListOpen, setPromoListOpen] = useState(false);
+
+  const handlePromoEntryTap = useCallback(() => {
+    if (entryPromos.length === 0) return;
+    // Multiple entitled promos → let the user pick; single promo → straight
+    // to its action.
+    if (entryPromos.length > 1) {
+      setPromoListOpen(true);
+      return;
+    }
+    const promo = entryPromos[0];
+    if (promo.can_redeem) {
+      setActivePromotion(promo);
+      return;
+    }
+    routePromoToShop(promo);
+  }, [entryPromos, routePromoToShop]);
+
+  const handlePromoListSelect = useCallback(
+    (promo: EligiblePromotionDto) => {
+      setPromoListOpen(false);
+      if (promo.can_redeem) {
+        setActivePromotion(promo);
+        return;
+      }
+      routePromoToShop(promo);
+    },
+    [routePromoToShop],
+  );
 
   const matchVisibleRef = useRef(false);
   const activePromotionRef = useRef<EligiblePromotionDto | null>(null);
@@ -486,18 +554,18 @@ export default function DiscoverScreen() {
   }, [matchVisible]);
 
   const handleTryShowPromotion = useCallback(async () => {
-    if (__DEV__) console.log('[promo] handleTryShowPromotion called, userId:', userId, 'activePromo:', !!activePromotionRef.current, 'matchVisible:', matchVisibleRef.current);
+    
     if (!userId) return;
     if (activePromotionRef.current) return;
     const promo = await tryShowPromotion();
-    if (__DEV__) console.log('[promo] handleTryShowPromotion result:', promo?.campaign_key ?? 'null');
+    
     if (!promo) return;
     if (matchVisibleRef.current) {
-      if (__DEV__) console.log('[promo] deferring to pending (match visible)');
+      
       pendingPromotionRef.current = promo;
       return;
     }
-    if (__DEV__) console.log('[promo] setting active promotion');
+    
     setActivePromotion(promo);
   }, [tryShowPromotion, userId]);
 
@@ -513,6 +581,14 @@ export default function DiscoverScreen() {
         setActivePromotion(pending);
       }
     }, []),
+  );
+
+  // Keep the promo entry icon in sync with backend entitlement whenever the
+  // discovery tab regains focus.
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) refetchPromos();
+    }, [userId, refetchPromos]),
   );
 
   // Reset to swipe mode when app returns from background to active
@@ -888,10 +964,20 @@ export default function DiscoverScreen() {
             subscriptionEnabled: entitlements?.country_settings?.subscription_enabled ?? true,
             creditsEnabled: entitlements?.country_settings?.credits_enabled ?? true,
           });
+        } else {
+          // Anything else (nothing to undo, network failure…) — don't leave
+          // the tap as a silent no-op.
+          themedAlert({
+            title: t('discovery.rewindFailedTitle', { defaultValue: 'Could not rewind' }),
+            message: t('discovery.rewindFailedMessage', { defaultValue: 'There is no recent action to undo, or the connection failed. Please try again.' }),
+            icon: 'arrow-undo-outline',
+            iconColor: colors.warning,
+            buttons: [{ text: t('common.ok') }],
+          });
         }
       },
     });
-  }, [rewind, scrollToTop, entitlements]);
+  }, [rewind, scrollToTop, entitlements, router, t]);
 
   // ── Button handlers ─────────────────────────────────────────────────────────
   const handlePass = useCallback(async () => {
@@ -917,9 +1003,26 @@ export default function DiscoverScreen() {
       sendSuperMessage.mutate(
         { targetUserId, message },
         {
-          onSuccess: () => {
+          onSuccess: (sm) => {
             setSuperMessageTarget(null);
-            router.push('/(app)/messages' as any);
+            // The send consumed this card — remove it from both queues like a
+            // swipe does, otherwise it lingers in swipe/browse until refetch.
+            setDisplayQueue((prev) => prev.filter((c) => c.user_id !== targetUserId));
+            setSwipedIds((prev) => new Set(prev).add(targetUserId));
+            if (sm.match_id) {
+              // Receiver had already liked us — instant match.
+              setMatchName(sm.receiver?.display_name ?? '');
+              setMatchPhoto(sm.receiver?.photo_url ?? undefined);
+              setMatchId(sm.match_id);
+              setMatchIsBlindDate(false);
+              setMatchVisible(true);
+              if (!hasTriggeredMatchPromotionRef.current) {
+                hasTriggeredMatchPromotionRef.current = true;
+                handleTryShowPromotion();
+              }
+            } else {
+              router.push('/(app)/messages' as any);
+            }
           },
           onError: (err: any) => {
             setSuperMessageTarget(null);
@@ -946,7 +1049,7 @@ export default function DiscoverScreen() {
         },
       );
     },
-    [sendSuperMessage, router, entitlements],
+    [sendSuperMessage, router, entitlements, handleTryShowPromotion],
   );
 
   // Cards the API has returned but the sync effect hasn't moved into the
@@ -1003,7 +1106,7 @@ export default function DiscoverScreen() {
         <View style={styles.headerLeft}>
           {/* Mode toggle — replaces Qaliye logo */}
           <TouchableOpacity
-            style={[styles.settingsBtn, { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
+            style={[styles.settingsBtn, styles.modeToggleBtn, { borderColor: colors.primary, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
             onPress={() => {
               if (modeSwitching) return;
               setModeSwitching(true);
@@ -1015,9 +1118,9 @@ export default function DiscoverScreen() {
             accessibilityRole="button"
           >
             {viewMode === 'swipe' ? (
-              <Ionicons name="grid-outline" size={22} color={th.text} />
+              <Ionicons name="grid-outline" size={22} color={colors.primary} />
             ) : (
-              <SwipeIcon color={th.text} active={false} inactiveFill={isDark ? '#E5E7EB' : '#0B0B0B'} />
+              <SwipeIcon color={colors.primary} active={false} inactiveFill={colors.primary} />
             )}
           </TouchableOpacity>
         </View>
@@ -1052,12 +1155,12 @@ export default function DiscoverScreen() {
 
           {/* Settings / Preferences */}
           <TouchableOpacity
-            style={[styles.settingsBtn, { borderColor: th.border, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
+            style={[styles.settingsBtn, styles.modeToggleBtn, { borderColor: colors.primary, backgroundColor: isDark ? th.backgroundElement : th.surface, borderWidth: 1.5 }]}
             onPress={() => router.push('/(app)/preferences')}
             activeOpacity={0.7}
             accessibilityLabel={t('discovery.openPreferences')}
           >
-            <Ionicons name="options-outline" size={21} color={th.text} />
+            <Ionicons name="options-outline" size={21} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -1180,6 +1283,23 @@ export default function DiscoverScreen() {
                   <Ionicons name="options-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
                   <Text style={styles.emptyBtnText}>{t('discovery.adjustPreferences')}</Text>
                 </TouchableOpacity>
+                {/* Rewind — restores the last passed/liked card back into the
+                    empty queue via the existing handleRewind flow. */}
+                <TouchableOpacity
+                  style={[styles.emptyBtnSecondary, { borderColor: th.border }]}
+                  activeOpacity={0.85}
+                  onPress={handleRewind}
+                  disabled={isRewinding}
+                >
+                  {isRewinding ? (
+                    <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 6 }} />
+                  ) : (
+                    <Ionicons name="arrow-undo-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
+                  )}
+                  <Text style={[styles.emptyBtnSecondaryText, { color: th.text }]}>
+                    {t('discovery.rewindLastAction')}
+                  </Text>
+                </TouchableOpacity>
               </View>
             ) : isError && errorInfo && displayQueue.length === 0 ? (
               <View style={styles.emptyWrap}>
@@ -1250,6 +1370,33 @@ export default function DiscoverScreen() {
 
         </>
         )}
+
+        {/* Promo entry icon — pinned to the top-left corner of the card
+            area. Stays visible whenever the user has backend-entitled
+            promos, even after the banner auto-dismisses. */}
+        {entryPromos.length > 0 && (
+          <TouchableOpacity
+            style={styles.promoFab}
+            onPress={handlePromoEntryTap}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={t('promotion.giftA11y', 'View your promotions')}
+          >
+            <LinearGradient
+              colors={isDark ? ['#5B18D6', '#3B0FA0'] : gradients.romantic}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.promoFabCircle}
+            >
+              <Ionicons name="gift" size={19} color="#FFFFFF" />
+            </LinearGradient>
+            {entryPromos.length > 1 && (
+              <View style={styles.promoFabBadge} pointerEvents="none">
+                <Text style={styles.promoFabBadgeText}>{entryPromos.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Mode switching overlay ── */}
@@ -1299,6 +1446,14 @@ export default function DiscoverScreen() {
         isSending={sendSuperMessage.isPending}
         onSend={handleSendSuperMessage}
         onClose={() => setSuperMessageTarget(null)}
+      />
+
+      {/* ── Promo list — pick among multiple entitled promotions ── */}
+      <PromoListSheet
+        visible={promoListOpen}
+        promotions={entryPromos}
+        onSelect={handlePromoListSelect}
+        onClose={() => setPromoListOpen(false)}
       />
 
       {/* ── Promotion alert — temporary, non-blocking ── */}
@@ -1373,6 +1528,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
+  modeToggleBtn: {
+    shadowColor: colors.primary,
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+  },
   featurePillFill: {
     flex: 1,
     justifyContent: 'center',
@@ -1443,6 +1605,46 @@ const styles = StyleSheet.create({
     // details below — keep this subtree painted (and hit-tested) above them.
     zIndex: 2,
   },
+  // ── Promo entry icon ──────────────────────────────────────────────────────
+  promoFab: {
+    position: 'absolute',
+    // Mirrors the card's photo-thumbnail row (top/right: spacing.md) so the
+    // icon lands on the card's top-left corner.
+    top: spacing.md + 4,
+    left: spacing.md,
+    zIndex: 30,
+  },
+  promoFabCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+  },
+  promoFabBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.danger,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  promoFabBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+  },
   // ── Scroll hint ─────────────────────────────────────────────────────────
   scrollHint: {
     alignItems: 'center',
@@ -1502,6 +1704,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+  emptyBtnSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 13,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+  },
+  emptyBtnSecondaryText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // ── Mode switch overlay ──────────────────────────────────────────────

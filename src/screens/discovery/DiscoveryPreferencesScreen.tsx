@@ -229,6 +229,16 @@ export default function DiscoveryPreferencesScreen() {
     }));
   }, []);
 
+  const handleSaveError = useCallback((err: unknown) => {
+    if (isInsufficientCreditsError(err)) return;
+    themedAlert({
+      title: t('common.errorTitle', { defaultValue: 'Something went wrong' }),
+      message: t('common.errorRetryHint', { defaultValue: 'Please try again.' }),
+      icon: 'alert-circle',
+      iconColor: colors.danger,
+    });
+  }, [t]);
+
   const handleSave = useCallback(() => {
     const payload = mapDiscoveryPrefDraftToUpdateRequest(prefs);
     savePrefs(
@@ -243,18 +253,54 @@ export default function DiscoveryPreferencesScreen() {
           });
           setTimeout(() => router.back(), 3000);
         },
-        onError: (err) => {
-          if (isInsufficientCreditsError(err)) return;
-          themedAlert({
-            title: t('common.errorTitle', { defaultValue: 'Something went wrong' }),
-            message: t('common.errorRetryHint', { defaultValue: 'Please try again.' }),
-            icon: 'alert-circle',
-            iconColor: colors.danger,
-          });
-        },
+        onError: handleSaveError,
       },
     );
-  }, [prefs, savePrefs, t, router]);
+  }, [prefs, savePrefs, t, router, handleSaveError]);
+
+  // One-tap recovery for "I see no profiles" — clears every filter back to
+  // the open defaults and saves immediately. interestedIn follows the
+  // user's gender (same derivation as the mapper); discoveryMode and the
+  // optimistic-concurrency version carry over untouched.
+  const handleReset = useCallback(() => {
+    themedAlert({
+      title: t('discovery.preferences.resetConfirmTitle'),
+      message: t('discovery.preferences.resetConfirmMessage'),
+      icon: 'refresh-outline',
+      iconColor: colors.danger,
+      buttons: [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.reset'),
+          style: 'destructive',
+          onPress: () => {
+            const defaults: DiscoveryPrefDraft = {
+              ...DEFAULT_PREFS,
+              interestedIn:
+                userGender === 'MALE' ? 'FEMALE' :
+                userGender === 'FEMALE' ? 'MALE' :
+                prefs.interestedIn,
+              discoveryMode: prefs.discoveryMode,
+              preferencesVersion: prefs.preferencesVersion,
+            };
+            setPrefs(defaults);
+            savePrefs(mapDiscoveryPrefDraftToUpdateRequest(defaults), {
+              onSuccess: () => {
+                themedAlert({
+                  message: t('discovery.preferences.resetDone'),
+                  icon: 'checkmark-circle',
+                  iconColor: colors.success,
+                  autoDismissMs: 3000,
+                });
+                setTimeout(() => router.back(), 3000);
+              },
+              onError: handleSaveError,
+            });
+          },
+        },
+      ],
+    });
+  }, [prefs, userGender, savePrefs, t, router, handleSaveError]);
 
   if (isLoadingPrefs) {
     return (
@@ -534,6 +580,18 @@ export default function DiscoveryPreferencesScreen() {
           )}
         </Pressable>
 
+        {/* ── Reset to defaults ── */}
+        <Pressable
+          style={[styles.resetBtn, { borderColor: colors.danger, backgroundColor: colors.danger + '12' }]}
+          onPress={handleReset}
+          disabled={isSaving}
+          accessibilityRole="button"
+          accessibilityLabel={t('discovery.preferences.resetToDefaults')}
+        >
+          <Ionicons name="refresh-outline" size={19} color={colors.danger} style={{ marginRight: 6 }} />
+          <Text style={[styles.resetBtnText, { color: colors.danger }]}>{t('discovery.preferences.resetToDefaults')}</Text>
+        </Pressable>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -743,4 +801,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveFullText: { fontSize: fontSize.md, fontWeight: '800', color: colors.surface, letterSpacing: 0.3 },
+  resetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    marginTop: 10,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+  },
+  resetBtnText: { fontSize: fontSize.md, fontWeight: '800', letterSpacing: 0.2 },
 });

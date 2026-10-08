@@ -95,10 +95,6 @@ export async function getNotificationPreferences(): Promise<NotificationPreferen
     '/api/v1/notifications/preferences',
   );
 
-  if (__DEV__) {
-    console.log('[API] getNotificationPreferences raw response:', JSON.stringify(data, null, 2));
-  }
-
   return toCamelCasePreferences(data);
 }
 
@@ -109,10 +105,6 @@ export async function updateNotificationPreferences(
     '/api/v1/notifications/preferences',
     toSnakeCasePatch(patch),
   );
-
-  if (__DEV__) {
-    console.log('[API] updateNotificationPreferences raw response:', JSON.stringify(data, null, 2));
-  }
 
   return toCamelCasePreferences(data);
 }

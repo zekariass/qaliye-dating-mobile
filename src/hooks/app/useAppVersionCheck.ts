@@ -72,17 +72,6 @@ export async function runAppVersionCheck(): Promise<void> {
       forceUpdate: data.force_update,
     });
 
-    if (__DEV__) {
-      console.log(
-        '[AppVersion] check result — ' +
-          `installed: ${currentVersion} | ` +
-          `latest: ${data.latest_version} | ` +
-          `minimum: ${data.minimum_version} | ` +
-          `forceUpdate: ${data.force_update} | ` +
-          `decision: ${decision}`,
-      );
-    }
-
     const { shouldShowPrompt } = store.applyCheckResult({
       decision,
       storeUrl: data.store_url,

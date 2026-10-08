@@ -71,6 +71,7 @@ export default function CallEndedScreen() {
   // The request row is authoritative; the nav param is the fast path.
   const isAudio = (request?.call_type ?? callType) === 'AUDIO';
   const isTimeLimit = endReason === 'time_limit';
+  const isNoShow = request?.status === 'NO_SHOW';
 
   const endedAt = fmtDateTime(request?.ended_at);
 
@@ -114,29 +115,31 @@ export default function CallEndedScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Icon */}
-        <View style={[styles.iconCircle, { backgroundColor: (isTimeLimit ? colors.warning : colors.success) + '20' }]}>
+        <View style={[styles.iconCircle, { backgroundColor: (isTimeLimit || isNoShow ? colors.warning : colors.success) + '20' }]}>
           <Ionicons
-            name={isTimeLimit ? 'hourglass-outline' : 'checkmark-circle'}
+            name={isNoShow ? 'person-remove-outline' : isTimeLimit ? 'hourglass-outline' : 'checkmark-circle'}
             size={48}
-            color={isTimeLimit ? colors.warning : colors.success}
+            color={isTimeLimit || isNoShow ? colors.warning : colors.success}
           />
         </View>
 
         <Text style={[styles.title, { color: th.text }]}>
-          {isTimeLimit ? "Time's Up" : 'Call Ended'}
+          {isNoShow ? 'Call Missed' : isTimeLimit ? "Time's Up" : 'Call Ended'}
         </Text>
         <Text style={[styles.sub, { color: th.textSecondary }]}>
-          {isTimeLimit
-            ? `Your ${isAudio ? 'audio' : 'video'} call reached the time limit.`
-            : `Your ${isAudio ? 'audio' : 'video'} call has ended.`}
+          {isNoShow
+            ? `Someone didn't join the ${isAudio ? 'audio' : 'video'} call in time.`
+            : isTimeLimit
+              ? `Your ${isAudio ? 'audio' : 'video'} call reached the time limit.`
+              : `Your ${isAudio ? 'audio' : 'video'} call has ended.`}
         </Text>
 
         {/* Status card */}
         <View style={[styles.card, { backgroundColor: isDark ? th.surface : '#FAF7FF', borderColor: th.border }]}>
           <View style={styles.cardRow}>
             <Text style={[styles.cardKey, { color: th.textMuted }]}>Status</Text>
-            <Text style={[styles.cardVal, { color: isTimeLimit ? colors.warning : colors.success }]}>
-              {isTimeLimit ? 'Time limit reached' : 'Completed'}
+            <Text style={[styles.cardVal, { color: isTimeLimit || isNoShow ? colors.warning : colors.success }]}>
+              {isNoShow ? 'No show' : isTimeLimit ? 'Time limit reached' : 'Completed'}
             </Text>
           </View>
           <View style={[styles.cardRow, { borderTopColor: th.border, borderTopWidth: StyleSheet.hairlineWidth }]}>

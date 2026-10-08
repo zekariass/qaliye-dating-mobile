@@ -353,6 +353,7 @@ export default function VideoCallRequestDetailScreen() {
     DECLINED: { icon: 'close-circle', color: colors.danger, title: 'Call Declined', body: `The ${isAudio ? 'audio' : 'video'} call request was declined.` },
     EXPIRED: { icon: 'time-outline', color: colors.warning, title: 'Request Expired', body: `The ${isAudio ? 'audio' : 'video'} call request expired.` },
     COMPLETED: { icon: 'checkmark-circle', color: colors.success, title: 'Call Completed', body: `The ${isAudio ? 'audio' : 'video'} call has ended.` },
+    NO_SHOW: { icon: 'person-remove-outline', color: colors.warning, title: 'Call Missed', body: `Someone didn't join the ${isAudio ? 'audio' : 'video'} call in time.` },
   };
   const terminalMeta = TERMINAL_META[request.status];
 

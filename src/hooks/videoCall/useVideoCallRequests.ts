@@ -13,6 +13,7 @@ import {
 } from '@/api/videoCall/videoCallApi';
 import { updateInboxVideoCallRequest } from '@/hooks/messages/useInbox';
 import type {
+    CallType,
     CreateVideoCallRequestPayload,
     JoinCallCredentials,
     VideoCallRequest,
@@ -152,8 +153,8 @@ export function useRemindCooldown(serverSeconds?: number | null) {
 }
 
 export function useJoinVideoCall() {
-  return useMutation<JoinCallCredentials, Error, string>({
-    mutationFn: joinVideoCall,
+  return useMutation<JoinCallCredentials, Error, { requestId: string; callType?: CallType }>({
+    mutationFn: ({ requestId, callType }) => joinVideoCall(requestId, callType),
   });
 }
 

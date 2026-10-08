@@ -634,7 +634,6 @@ export default function PremiumPaywallScreen() {
                   </View>
                 )}
 
-
                 {purchaseState === 'pending' && (
                   <View style={[styles.alreadyActiveBanner, { backgroundColor: colors.warning + '18' }]}>
                     <ActivityIndicator size="small" color={colors.warning} />

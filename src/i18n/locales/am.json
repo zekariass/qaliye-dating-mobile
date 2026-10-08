@@ -229,7 +229,11 @@
       "backgroundCulture": "ዳራ እና ባህል",
       "ethnicityHint": "ሁሉንም ዳራዎች ለማየት ባዶ ይተዉት።",
       "languagesSpoken": "የሚናገሯቸው ቋንቋዎች",
-      "languagesHint": "ሁሉንም ቋንቋዎች ለማየት ባዶ ይተዉት።"
+      "languagesHint": "ሁሉንም ቋንቋዎች ለማየት ባዶ ይተዉት።",
+      "resetToDefaults": "ወደ ነባሪ ቅንብሮች ተመለስ",
+      "resetConfirmTitle": "ምርጫዎችን ዳግም ማስጀመር?",
+      "resetConfirmMessage": "ይህ ሁሉንም ማጣሪያዎችዎን ያጸዳል — ሰፊ የፕሮፋይል ክልል ያያሉ።",
+      "resetDone": "ምርጫዎች ወደ ነባሪ ተመልሰዋል"
     },
     "details": {
       "gender": "ጾታ",
@@ -1297,6 +1301,8 @@
     "claimNow": "አሁን ይውሰዱ ",
     "notNow": "አሁን አይደለም ",
     "viewOffer": "ቅናሹን ይመልከቱ ",
+    "giftA11y": "የማስተዋወቂያዎችዎን ይመልከቱ ",
+    "listTitle": "የእርስዎ ማስተዋወቂያዎች ",
     "subscribe": "ይመዝገቡ ",
     "freeDays": "{{duration}} ነፃ (free)",
     "expiresOn": "ጊዜው የሚያልፍበት {{date}}",
@@ -3052,7 +3058,7 @@
       "title": "Blind Date ያስተዳድሩ"
     },
     "nav": {
-      "browse": "ያስሱ",
+      "browse": "ተቀላቀል",
       "create": "ፍጠር",
       "joined": "የተቀላቀሉት",
       "matches": "ማቾች",

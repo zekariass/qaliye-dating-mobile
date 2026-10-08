@@ -97,10 +97,6 @@ export default function OtherUserProfileScreen() {
   const profile = dto ? mapOtherUserProfileDtoToView(dto) : null;
   const resolvedMatchId = matchId ?? profile?.matchId ?? '';
 
-  if (__DEV__) {
-    console.log('[OtherUserProfile] status:', profile?.status, 'matchId:', resolvedMatchId);
-  }
-
   const { getStatus } = useActivityStatuses(userId ? [userId] : []);
   const activityStatus = userId ? getStatus(userId, dto?.activity_status) : undefined;
 

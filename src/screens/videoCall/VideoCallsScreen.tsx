@@ -71,6 +71,7 @@ const STATUS_META: Record<VideoCallRequestStatus, StatusMeta> = {
   DECLINED:  { icon: 'close-circle',         color: colors.danger,    label: 'Declined',  sub: (_, ir) => ir ? 'They declined your request' : 'You declined the request' },
   CANCELLED: { icon: 'ban',                  color: colors.textMuted,  label: 'Cancelled', sub: (_, ir) => ir ? 'You cancelled the request' : 'They cancelled the request' },
   EXPIRED:   { icon: 'time-outline',         color: colors.textMuted,  label: 'Expired',   sub: () => 'No response' },
+  NO_SHOW:   { icon: 'person-remove-outline', color: colors.textMuted, label: 'No show',   sub: () => 'Someone didn\'t join in time' },
 };
 
 // ── Component ──────────────────────────────────────────────────────────────────

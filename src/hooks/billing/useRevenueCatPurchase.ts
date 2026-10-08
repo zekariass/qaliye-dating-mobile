@@ -33,15 +33,6 @@ async function pollForEntitlementChange(
       return true;
     }
 
-    if (__DEV__) {
-      console.log(
-        `[RC Purchase] ${label} poll attempt ${attempt}/${POLL_ATTEMPTS}`,
-        '| plan:', entitlements.plan,
-        '| status:', entitlements.subscription?.status ?? 'null',
-        '| credits:', totalCredits(entitlements),
-      );
-    }
-
     if (attempt < POLL_ATTEMPTS) {
       await new Promise((resolve) => setTimeout(resolve, POLL_DELAY_MS));
     }

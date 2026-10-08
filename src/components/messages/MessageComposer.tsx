@@ -39,7 +39,6 @@ const sendBtnShadow = Platform.select({
   default: {},
 }) ?? {};
 
-
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -621,7 +620,6 @@ export function MessageComposer({
               </TouchableOpacity>
             )}
 
-
             {/* Input row container */}
             <View
               style={[
@@ -663,7 +661,6 @@ export function MessageComposer({
                 <Ionicons name="mic-outline" size={20} color={colors.primary} />
               </TouchableOpacity>
             )}
-
 
             {/* Send button */}
             <TouchableOpacity

@@ -136,6 +136,8 @@ export function useNotificationNavigation({ isAppReady, hasSession }: Navigation
         case 'AUDIO_CALL_EXPIRED':
         case 'VIDEO_CALL_ENDED_TIME_LIMIT':
         case 'AUDIO_CALL_ENDED_TIME_LIMIT':
+        case 'VIDEO_CALL_NO_SHOW':
+        case 'AUDIO_CALL_NO_SHOW':
           if (intent.match_id) {
             // Skip the push when already viewing this request — the screen
             // polls every 5s and reflects the new state itself; pushing

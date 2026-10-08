@@ -67,6 +67,8 @@ import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useEndVideoCall, useJoinVideoCall, useVideoCallRequests, vcRequestsKey } from '@/hooks/videoCall/useVideoCallRequests';
 import type { JoinCallCredentials } from '@/types/videoCall';
+import { TERMINAL_STATUSES } from '@/types/videoCall';
+import { isInsufficientCreditsError } from '@/utils/entitlements';
 import * as Sentry from '@sentry/react-native';
 
 const AGORA_APP_ID = process.env.EXPO_PUBLIC_AGORA_APP_ID ?? '';
@@ -303,6 +305,18 @@ export default function ActiveVideoCallScreen() {
     });
   }, [teardown, endMutation, requestId, matchId, displayName, avatarUrl, resolvedCallType, router]);
 
+  // Server-side terminal transitions (the no-show sweep, an end() from the
+  // other device) flip the request row — leave the channel instead of
+  // waiting out the duration cap in an empty room. The 5 s poll above is
+  // the delivery mechanism; finishAndExit's end POST 409s harmlessly on an
+  // already-terminal row.
+  useEffect(() => {
+    const st = liveRequest?.status;
+    if (st && TERMINAL_STATUSES.includes(st) && phase !== 'ended' && phase !== 'error') {
+      finishAndExit();
+    }
+  }, [liveRequest?.status, phase, finishAndExit]);
+
   // ── Android permission check ─────────────────────────────────────────────
   // Request camera + microphone on Android and block the call if the user
   // denies them — without permissions Agora silently produces no video/audio
@@ -344,7 +358,9 @@ export default function ActiveVideoCallScreen() {
   useEffect(() => {
     if (!permissionsGranted) return;
 
-    joinMutation.mutate(requestId ?? '', {
+    joinMutation.mutate(
+      { requestId: requestId ?? '', callType: resolvedCallType === 'AUDIO' ? 'AUDIO' : 'VIDEO' },
+      {
       onSuccess: (creds) => {
         // Screen unmounted or call already ended while the join request was
         // in flight — creating an engine now would leak it and bind video
@@ -362,10 +378,9 @@ export default function ActiveVideoCallScreen() {
       },
       onError: (err: any) => {
         if (!mountedRef.current) return;
-        const status = err?.response?.status;
-        const raw = err?.response?.data?.error;
-        const code = typeof raw === 'string' ? raw : raw?.code;
-        if (status === 402 || String(code).toUpperCase().includes('CREDIT')) {
+        // The interceptor replaces raw 402s with a tagged error (no .response)
+        // after showing the global credits modal — check the flag, not status.
+        if (isInsufficientCreditsError(err)) {
           setPhase('error');
           setErrorMsg('insufficient_credits');
         } else {
@@ -536,7 +551,8 @@ export default function ActiveVideoCallScreen() {
           // deadline passed and the backend refuses to mint further tokens.
           if (!requestId) return;
           try {
-            const newCreds = await joinVideoCall(requestId);
+            const newCreds = await joinVideoCall(
+              requestId, resolvedCallType === 'AUDIO' ? 'AUDIO' : 'VIDEO');
             // The call may have ended during the await — renewToken on a
             // released engine is a native call into dead memory.
             if (engineRef.current === engine && !hasEnded.current) {

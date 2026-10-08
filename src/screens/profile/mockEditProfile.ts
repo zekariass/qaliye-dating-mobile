@@ -207,7 +207,6 @@ export const INTEREST_OPTIONS = INTEREST_CATEGORIES.flatMap((c) => c.items);
 
 export type Interest = typeof INTEREST_OPTIONS[number];
 
-
 // ─── Initial mock data ──────────────────────────────────────────────────────────
 
 export const INITIAL_DRAFT: EditProfileDraft = {

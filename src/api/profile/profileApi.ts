@@ -25,7 +25,13 @@ export async function fetchProfileMe(): Promise<ProfileMeDto> {
 }
 
 export async function updateProfileMe(payload: ProfileUpdateRequest): Promise<ProfileMeDto> {
-  const res = await apiClient.put<ProfileMeDto>('/api/v1/profile/me', payload);
+  // The backend charges INCOGNITO_MODE on this endpoint only when the payload
+  // switches discovery_mode to INCOGNITO — tag the action so the
+  // insufficient-credits modal can name it correctly.
+  const res = await apiClient.put<ProfileMeDto>('/api/v1/profile/me', payload,
+    payload.discovery_mode === 'INCOGNITO'
+      ? ({ metadata: { actionCode: 'INCOGNITO_MODE' } } as any)
+      : undefined);
   return res.data;
 }
 

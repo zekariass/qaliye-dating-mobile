@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import PremiumBadgeModal from '@/components/billing/PremiumBadgeModal';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
@@ -38,7 +38,8 @@ export default function ProfileHeader({
   const { top: safeTop } = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
-  const { colors: th } = useTheme();
+  const { colors: th, mode } = useTheme();
+  const isDark = mode === 'dark';
   const [badgeModalVisible, setBadgeModalVisible] = useState(false);
 
   const showPremium = isPremiumPlan(plan);
@@ -53,6 +54,20 @@ export default function ProfileHeader({
       <View style={[styles.lavenderGlow, { height: safeTop + 160, backgroundColor: th.backgroundSelected }]} />
 
       <View style={[styles.topRow, { paddingTop: safeTop + 8 }]}>
+       <View
+         style={[
+           styles.topBarCard,
+           {
+             // Same treatment as the profile details cards below.
+             backgroundColor: th.surface,
+             borderColor: isDark ? 'rgba(46,31,80,0.22)' : 'rgba(233,221,248,0.5)',
+             ...Platform.select({
+               ios: { shadowColor: '#8A2CFF', shadowOpacity: isDark ? 0.15 : 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } },
+               android: { elevation: 3 },
+             }) as any,
+           },
+         ]}
+       >
         <View style={styles.topLeft}>
           {showPremium ? (
             <View style={styles.topLeftLinks}>
@@ -74,7 +89,7 @@ export default function ProfileHeader({
                   accessibilityLabel={t('common.buyCredits')}
                   accessibilityRole="button"
                 >
-                  <Ionicons name="sparkles" size={14} color="#5B4500" />
+                  <MaterialCommunityIcons name="hand-coin" size={15} color="#5B4500" />
                   <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>{t('common.buyCredits')}</Text>
                 </Pressable>
               )}
@@ -99,7 +114,7 @@ export default function ProfileHeader({
                   accessibilityLabel={t('common.buyCredits')}
                   accessibilityRole="button"
                 >
-                  <Ionicons name="sparkles" size={14} color="#5B4500" />
+                  <MaterialCommunityIcons name="hand-coin" size={15} color="#5B4500" />
                   <Text style={[styles.linkBtnText, { color: '#5B4500' }]}>{t('common.buyCredits')}</Text>
                 </Pressable>
               )}
@@ -116,6 +131,7 @@ export default function ProfileHeader({
           <Ionicons name="wallet-outline" size={15} color="#FFFFFF" />
           <Text style={[styles.balancesBtnText, { color: '#FFFFFF' }]}>{t('billing.balances.title')}</Text>
         </Pressable>
+       </View>
       </View>
 
       <View style={styles.infoRow}>
@@ -211,11 +227,16 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   topRow: {
+    marginBottom: 12,
+  },
+  topBarCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
   },
   topLeft: {
     flexDirection: 'row',
@@ -251,6 +272,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
+
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -415,6 +415,8 @@ export function getActionName(actionCode: string | null | undefined): string {
     SUPER_MESSAGE: i18n.t('billing.actions.superMessage', 'Before-Match Message'),
     INCOGNITO_MODE: i18n.t('billing.actions.incognitoMode', 'Incognito Mode'),
     CHANGE_ADDRESS: i18n.t('billing.actions.changeAddress', 'Change Address'),
+    VIDEO_CALL: i18n.t('billing.actions.videoCall', 'Video Call'),
+    AUDIO_CALL: i18n.t('billing.actions.audioCall', 'Audio Call'),
   };
   return map[actionCode] ?? actionCode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }

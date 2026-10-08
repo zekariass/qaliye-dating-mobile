@@ -202,26 +202,17 @@ export default function CreditsShopScreen() {
         const result = reconciledOffers.map(({ backendOffer, rcPackage }) =>
           buildPackViewModel(backendOffer, rcPackage),
         );
-        if (__DEV__) {
-          console.log('[CreditsShop] reconciled packs included_credits:',
-            result.map((p) => ({ code: p.offer.product_code, included_credits: p.offer.included_credits })));
-        }
+        
         return result;
       }
       const local = localOffers
         .filter((o) => o.country_code === 'GLOBAL')
         .map((offer) => buildPackViewModel(offer, undefined));
-      if (__DEV__) {
-        console.log('[CreditsShop] local-global packs included_credits:',
-          local.map((p) => ({ code: p.offer.product_code, included_credits: p.offer.included_credits })));
-      }
+      
       return local;
     }
     const localPacks = localOffers.map((offer) => buildPackViewModel(offer, undefined));
-    if (__DEV__) {
-      console.log('[CreditsShop] local packs included_credits:',
-        localPacks.map((p) => ({ code: p.offer.product_code, included_credits: p.offer.included_credits })));
-    }
+    
     return localPacks;
   }, [isGlobalMarket, reconciledOffers, localOffers]);
 

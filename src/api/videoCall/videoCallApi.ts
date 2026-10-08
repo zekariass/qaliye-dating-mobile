@@ -1,6 +1,7 @@
 import { apiClient } from '@/api/apiClient';
 import { useMeStore } from '@/stores/me-store';
 import type {
+    CallType,
     CreateVideoCallRequestPayload,
     JoinCallCredentials,
     VideoCallRequest,
@@ -140,9 +141,18 @@ export async function remindVideoCallRequest(requestId: string): Promise<VideoCa
  * POST /api/v1/video-call-requests/{id}/join
  * Mints Agora credentials. The requester is charged on their first successful join;
  * the responder never pays. Returns `{ channel_name, token, uid, expires_at }`.
+ * `callType` tags the charged action (AUDIO_CALL vs VIDEO_CALL) for the
+ * insufficient-credits modal — the URL alone can't distinguish them.
  */
-export async function joinVideoCall(requestId: string): Promise<JoinCallCredentials> {
-  const res = await apiClient.post<JoinCallCredentials>(`${BASE}/${requestId}/join`);
+export async function joinVideoCall(
+  requestId: string,
+  callType?: CallType,
+): Promise<JoinCallCredentials> {
+  const res = await apiClient.post<JoinCallCredentials>(
+    `${BASE}/${requestId}/join`,
+    undefined,
+    { metadata: { actionCode: callType === 'AUDIO' ? 'AUDIO_CALL' : 'VIDEO_CALL' } } as any,
+  );
   return res.data;
 }
 

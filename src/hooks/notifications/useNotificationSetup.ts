@@ -56,14 +56,6 @@ export function useNotificationSetup(userId: string | undefined) {
       const installationId = await getOrCreateInstallationId();
       if (!installationId) return;
 
-      if (__DEV__) {
-        console.log('[NotificationSetup] tryRegister:', {
-          token: token ? `${token.slice(0, 20)}...` : null,
-          installationId,
-          platform,
-        });
-      }
-
       registerDevice({ expoPushToken: token, platform, installationId });
     },
     [userId, systemPermissionGranted, registerDevice],
@@ -78,17 +70,9 @@ export function useNotificationSetup(userId: string | undefined) {
         Constants.expoConfig?.extra?.eas?.projectId ??
         Constants.easConfig?.projectId;
 
-      if (__DEV__) {
-        console.log('[NotificationSetup] projectId:', projectId);
-      }
-
       const { data: token } = await Expo.getExpoPushTokenAsync({
         projectId,
       });
-
-      if (__DEV__) {
-        console.log('[NotificationSetup] getExpoPushTokenAsync result:', token ? `${token.slice(0, 40)}...` : null);
-      }
 
       if (!token || !token.startsWith('ExponentPushToken[')) {
         if (__DEV__) {
@@ -100,9 +84,6 @@ export function useNotificationSetup(userId: string | undefined) {
       tokenRef.current = token;
       await tryRegister(token);
     } catch (error) {
-      if (__DEV__) {
-        console.log('[NotificationSetup] getExpoPushTokenAsync failed:', error);
-      }
     }
   }, [isGranted, userId, tryRegister]);
 

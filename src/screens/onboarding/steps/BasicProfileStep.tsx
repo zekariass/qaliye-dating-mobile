@@ -279,8 +279,6 @@ const MARRIAGE_PREF_SUBSTEPS: MarriagePrefSubStep[] = [
   },
 ];
 
-
-
 const TOTAL_STEPS = 13;
 
 // Sub-step index → form fields that must validate before advancing

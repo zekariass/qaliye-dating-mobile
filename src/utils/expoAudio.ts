@@ -9,7 +9,6 @@
  * All audio-related files should import from here instead of 'expo-audio'.
  */
 
- 
 import type * as ExpoAudio from 'expo-audio';
 
 export type { PermissionResponse } from 'expo-audio';

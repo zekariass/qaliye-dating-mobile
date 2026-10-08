@@ -18,7 +18,9 @@ export type NotificationType =
   | 'AUDIO_CALL_CANCELLED'
   | 'AUDIO_CALL_EXPIRED'
   | 'VIDEO_CALL_ENDED_TIME_LIMIT'
-  | 'AUDIO_CALL_ENDED_TIME_LIMIT';
+  | 'AUDIO_CALL_ENDED_TIME_LIMIT'
+  | 'VIDEO_CALL_NO_SHOW'
+  | 'AUDIO_CALL_NO_SHOW';
 
 export type DeviceRegistrationRequest = {
   expoPushToken: string;
@@ -122,6 +124,8 @@ export const CALL_ALERT_CODES: ReadonlySet<string> = new Set<string>([
   'AUDIO_CALL_EXPIRED',
   'VIDEO_CALL_ENDED_TIME_LIMIT',
   'AUDIO_CALL_ENDED_TIME_LIMIT',
+  'VIDEO_CALL_NO_SHOW',
+  'AUDIO_CALL_NO_SHOW',
 ]);
 
 export type NotificationPayloadData = {

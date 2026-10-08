@@ -17,7 +17,8 @@ export type VideoCallRequestStatus =
   | 'DECLINED'
   | 'CANCELLED'
   | 'EXPIRED'
-  | 'COMPLETED';
+  | 'COMPLETED'
+  | 'NO_SHOW';
 
 /** Terminal states — no further action possible, a new request can be created. */
 export const TERMINAL_STATUSES: VideoCallRequestStatus[] = [
@@ -25,6 +26,7 @@ export const TERMINAL_STATUSES: VideoCallRequestStatus[] = [
   'CANCELLED',
   'EXPIRED',
   'COMPLETED',
+  'NO_SHOW',
 ];
 
 export interface VideoCallRequest {

@@ -33,16 +33,6 @@ export function useRevenueCatReconcile(
 
   const shouldLoadRc = (hasRcPaymentMethod || hasRcOfferIds) && Platform.OS !== 'web';
 
-  if (__DEV__) {
-    console.log(
-      '[RC Reconcile] platform:', platform,
-      '| expectedChannel:', expectedRcChannel,
-      '| hasRcPaymentMethod:', hasRcPaymentMethod,
-      '| hasRcOfferIds:', hasRcOfferIds,
-      '| shouldLoadRc:', shouldLoadRc,
-    );
-  }
-
   const rcQuery = useQuery({
     queryKey: RC_OFFERINGS_KEY,
     queryFn: getRevenueCatOfferings,
@@ -67,26 +57,11 @@ export function useRevenueCatReconcile(
         offer.revenuecat_offering_id,
         offer.revenuecat_package_id,
       );
-      if (__DEV__) {
-        console.log(
-          '[RC Reconcile] offer:', offer.product_code,
-          '| offeringId:', offer.revenuecat_offering_id,
-          '| packageId:', offer.revenuecat_package_id,
-          '| pkg found:', !!pkg,
-        );
-      }
+      
       if (pkg) {
         reconciledOffers.push({ backendOffer: offer, rcPackage: pkg });
         continue;
       }
-    } else if (__DEV__) {
-      console.log(
-        '[RC Reconcile] offer:', offer.product_code,
-        '→ local (shouldLoadRc:', shouldLoadRc,
-        '| offeringId:', offer.revenuecat_offering_id ?? 'null',
-        '| packageId:', offer.revenuecat_package_id ?? 'null',
-        '| offeringsLoaded:', !!offerings, ')',
-      );
     }
     localOffers.push(offer);
   }

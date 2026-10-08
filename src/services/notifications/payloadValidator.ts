@@ -26,6 +26,8 @@ const SUPPORTED_TYPES: NotificationType[] = [
   'AUDIO_CALL_EXPIRED',
   'VIDEO_CALL_ENDED_TIME_LIMIT',
   'AUDIO_CALL_ENDED_TIME_LIMIT',
+  'VIDEO_CALL_NO_SHOW',
+  'AUDIO_CALL_NO_SHOW',
 ];
 
 const UUID_PATTERN =
@@ -183,6 +185,8 @@ export function buildNavIntent(
     case 'AUDIO_CALL_EXPIRED':
     case 'VIDEO_CALL_ENDED_TIME_LIMIT':
     case 'AUDIO_CALL_ENDED_TIME_LIMIT':
+    case 'VIDEO_CALL_NO_SHOW':
+    case 'AUDIO_CALL_NO_SHOW':
       return payload.match_id
         ? {
             type,

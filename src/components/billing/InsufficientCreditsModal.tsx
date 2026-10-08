@@ -91,22 +91,18 @@ export function InsufficientCreditsModal() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  // Debug: log what's in the costs map when the modal opens
-  useEffect(() => {
-    if (visible && __DEV__) {
-      console.log('[InsufficientCreditsModal] actionCode:', actionCode);
-      console.log('[InsufficientCreditsModal] limits_and_costs map:', entitlements?.limits_and_costs);
-      console.log('[InsufficientCreditsModal] action entry:', actionCode ? entitlements?.limits_and_costs?.[actionCode] : undefined);
-      console.log('[InsufficientCreditsModal] summary:', summary);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
-
   // Stale-entitlement retry: balance >= cost but server still returned 402.
   // Re-fetch entitlements and retry the original request once silently.
+  // When the server provides needed/balance in the error details, those are
+  // authoritative — the limits_and_costs action-level entry can't represent
+  // variant pricing (e.g. ROSE like), so it must not drive this check.
+  const isStale = serverNeeded !== null && serverBalance !== null
+    ? serverBalance >= serverNeeded
+    : summary.isStale;
+
   useEffect(() => {
     if (!visible || !actionCode || !retryConfig || isRetrying) return;
-    if (!summary.isStale || didRetryRef.current) return;
+    if (!isStale || didRetryRef.current) return;
 
     didRetryRef.current = true;
     setIsRetrying(true);
@@ -114,9 +110,10 @@ export function InsufficientCreditsModal() {
     refetch()
       .then((result) => {
         const fresh = result.data ?? entitlements;
-        const freshSummary = getActionCostSummary(actionCode, fresh);
-        if (!freshSummary.isStale) {
-           
+        const stillShort = serverNeeded !== null
+          ? (fresh?.credits?.credit_balance ?? 0) < serverNeeded
+          : !getActionCostSummary(actionCode, fresh).isStale;
+        if (!stillShort) {
           return apiClient.request({ ...(retryConfig as any), _insufficientCreditRetry: true });
         }
         throw new Error('still-insufficient');
@@ -124,7 +121,7 @@ export function InsufficientCreditsModal() {
       .then(() => { setIsRetrying(false); dismiss(); })
       .catch(() => { setIsRetrying(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, summary.isStale]);
+  }, [visible, isStale]);
 
   const handleGoPremium = useCallback(() => {
     dismiss();

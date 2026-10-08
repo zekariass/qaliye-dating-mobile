@@ -129,11 +129,7 @@ export async function navigateBlindDateAlert({
     pushRoute(router, resolveBlindDateSessionRoute(session, isCreator));
   } catch (err) {
     const { code, status } = extractApiError(err);
-    if (__DEV__) {
-      console.log(
-        `[BlindDateNav] Session fetch failed (code=${code}, status=${status ?? 'n/a'}) — falling back to hub`,
-      );
-    }
+    
     pushRoute(router, blindDateHubRoute());
   }
 }

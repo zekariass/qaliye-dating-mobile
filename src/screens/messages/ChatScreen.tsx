@@ -67,7 +67,6 @@ import {
 import { processChatImage } from '@/utils/imageProcessor';
 import { isBlindDateMatch } from '@/utils/matchSource';
 
-
 // ---------------------------------------------------------------------------
 // Screen params
 // ---------------------------------------------------------------------------
@@ -710,7 +709,6 @@ export default function ChatScreen() {
       },
     });
   }, [router, matchId, thread, displayName, avatarUrl]);
-
 
   const participant = thread?.participant;
 

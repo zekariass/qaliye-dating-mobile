@@ -110,7 +110,6 @@ export default function EditProfileScreen() {
 
   useEffect(() => {
     if (profileDto && !draft) {
-      if (__DEV__) console.log('[EditProfileScreen] user_id:', profileDto.user_id);
       const initial = mapProfileMeDtoToEditDraft(profileDto);
       setDraft(initial);
       savedDraftRef.current = initial;

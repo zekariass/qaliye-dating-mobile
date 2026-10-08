@@ -176,7 +176,6 @@ function CircleMergeAnimation() {
   );
 }
 
-
 // Minimum time the splash is visible regardless of how fast the session check resolves
 const MIN_SPLASH_MS = 5000;
 
