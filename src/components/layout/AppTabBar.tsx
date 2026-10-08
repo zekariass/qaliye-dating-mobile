@@ -14,6 +14,7 @@ import { useInbox } from '@/hooks/messages/useInbox';
 import { useInboxChannel } from '@/hooks/messages/useInboxChannel';
 import { useTheme } from '@/hooks/use-theme';
 import { useDiscoveryStore } from '@/stores/discovery-store';
+import { rs, useTabletScale } from '@/utils/responsive';
 
 // ---------------------------------------------------------------------------
 // Type mirrors of what Expo Router passes to tabBar
@@ -176,6 +177,8 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
   const receivedLikesCount = discoveryCounts?.received_likes_count ?? 0;
 
   const isDark = mode === 'dark';
+  const scale = useTabletScale();
+  const cS = rs(C, scale);
 
   // Bar bg matches the parent/screen background — full integration
   const barBg            = th.background;
@@ -212,7 +215,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
       {/* Hairline separator — replaces the pill contrast for full-width layout */}
       <View style={[styles.separator, { backgroundColor: separatorColor }]} />
 
-      <View style={[styles.bar, { backgroundColor: barBg }]}>
+      <View style={[styles.bar, { backgroundColor: barBg, height: rs(BAR_H, scale) }]}>
         {routes.map((route, index) => {
           const isFocused = focusedIndex === index;
           const isCenter  = route.name === CENTER;
@@ -245,7 +248,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
             return (
               <TouchableOpacity
                 key={route.key}
-                style={styles.centerWrap}
+                style={[styles.centerWrap, { width: cS + rs(24, scale), marginTop: -(cS * 0.72) }]}
                 onPress={onPress}
                 activeOpacity={0.85}
                 accessibilityRole="button"
@@ -255,11 +258,24 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
                 <View
                   style={[
                     styles.centerOuter,
-                    { backgroundColor: barBg, borderColor: centerOuterBorder },
+                    {
+                      backgroundColor: barBg,
+                      borderColor: centerOuterBorder,
+                      width: cS + rs(16, scale),
+                      height: cS + rs(16, scale),
+                      borderRadius: (cS + rs(16, scale)) / 2,
+                    },
                   ]}
                 >
-                  <View style={styles.centerCircle}>
-                    <ChatBubblesIcon />
+                  <View
+                    style={[
+                      styles.centerCircle,
+                      { width: cS, height: cS, borderRadius: cS / 2 },
+                    ]}
+                  >
+                    <View style={{ transform: [{ scale }] }}>
+                      <ChatBubblesIcon />
+                    </View>
                     <UnreadBadge count={unreadCount} />
                   </View>
                 </View>
@@ -273,7 +289,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
           return (
             <TouchableOpacity
               key={route.key}
-              style={styles.tab}
+              style={[styles.tab, { height: rs(BAR_H, scale) }]}
               onPress={onPress}
               activeOpacity={0.75}
               accessibilityRole="button"
@@ -281,38 +297,47 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
             >
               {/* Top pill indicator — modern alternative to underline for flat bars */}
               {isFocused && (
-                <View style={[styles.activeIndicator, { backgroundColor: activeColor }]} />
+                <View
+                  style={[
+                    styles.activeIndicator,
+                    { backgroundColor: activeColor, width: rs(24, scale), marginLeft: -rs(12, scale), height: rs(2.5, scale) },
+                  ]}
+                />
               )}
 
-              <View style={styles.iconWrap}>
+              <View style={[styles.iconWrap, { height: rs(26, scale) }]}>
                 {route.name === 'matches' ? (
                   <>
-                    <MatchesIcon
-                      active={isFocused}
-                      color={iconColor}
-                      inactiveFill={swipeInactiveFill}
-                    />
+                    <View style={{ transform: [{ scale }] }}>
+                      <MatchesIcon
+                        active={isFocused}
+                        color={iconColor}
+                        inactiveFill={swipeInactiveFill}
+                      />
+                    </View>
                     <CountLabel count={matchesCount} />
                   </>
                 ) : route.name === 'likes' ? (
                   <>
                     <Ionicons
                       name={tabIcon(route.name, isFocused)}
-                      size={23}
+                      size={rs(23, scale)}
                       color={iconColor}
                     />
                     <CountLabel count={receivedLikesCount} />
                   </>
                 ) : route.name === 'index' ? (
                   viewMode === 'browse' ? (
-                    <Ionicons name="grid-outline" size={23} color={iconColor} />
+                    <Ionicons name="grid-outline" size={rs(23, scale)} color={iconColor} />
                   ) : (
-                    <SwipeIcon color={iconColor} active={isFocused} inactiveFill={swipeInactiveFill} />
+                    <View style={{ transform: [{ scale }] }}>
+                      <SwipeIcon color={iconColor} active={isFocused} inactiveFill={swipeInactiveFill} />
+                    </View>
                   )
                 ) : (
                   <Ionicons
                     name={tabIcon(route.name, isFocused)}
-                    size={23}
+                    size={rs(23, scale)}
                     color={iconColor}
                   />
                 )}
@@ -321,7 +346,7 @@ export default function AppTabBar({ state, descriptors: _d, navigation, activeTa
               <Text
                 style={[
                   styles.label,
-                  { color: inactiveColor },
+                  { color: inactiveColor, fontSize: rs(11, scale) },
                   isFocused && { color: activeColor, fontWeight: '700' },
                 ]}
               >

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SwipeIcon } from '@/components/layout/AppTabBar';
 import { colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { rs, useTabletScale } from '@/utils/responsive';
 
 // ─── Theme helper (shared across all Blind Date screens) ─────────────────────
 
@@ -87,6 +88,8 @@ export default function BlindDateBottomNav({
   const { t } = useTranslation();
   const { bg, isDark } = useBlindDateTheme();
   const { bottom } = useSafeAreaInsets();
+  const scale = useTabletScale();
+  const cS = rs(C, scale);
 
   // Same palette as the discovery tab bar.
   const barBg             = bg;
@@ -114,7 +117,7 @@ export default function BlindDateBottomNav({
       {/* Hairline separator — same as the discovery tab bar */}
       <View style={[styles.separator, { backgroundColor: separatorColor }]} />
 
-      <View style={[styles.bar, { backgroundColor: barBg }]}>
+      <View style={[styles.bar, { backgroundColor: barBg, height: rs(BAR_H, scale) }]}>
         {NAV_ITEMS.map((item) => {
           const active = item.key === activeTab;
           const onPress = handlers[item.key];
@@ -124,7 +127,7 @@ export default function BlindDateBottomNav({
             return (
               <TouchableOpacity
                 key={item.key}
-                style={styles.centerWrap}
+                style={[styles.centerWrap, { width: cS + rs(24, scale), marginTop: -(cS * 0.72) }]}
                 onPress={onPress}
                 activeOpacity={0.85}
                 accessibilityRole="button"
@@ -134,11 +137,22 @@ export default function BlindDateBottomNav({
                 <View
                   style={[
                     styles.centerOuter,
-                    { backgroundColor: barBg, borderColor: centerOuterBorder },
+                    {
+                      backgroundColor: barBg,
+                      borderColor: centerOuterBorder,
+                      width: cS + rs(16, scale),
+                      height: cS + rs(16, scale),
+                      borderRadius: (cS + rs(16, scale)) / 2,
+                    },
                   ]}
                 >
-                  <View style={styles.centerCircle}>
-                    <Ionicons name="add" size={24} color="#fff" />
+                  <View
+                    style={[
+                      styles.centerCircle,
+                      { width: cS, height: cS, borderRadius: cS / 2 },
+                    ]}
+                  >
+                    <Ionicons name="add" size={rs(24, scale)} color="#fff" />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -151,7 +165,7 @@ export default function BlindDateBottomNav({
           return (
             <TouchableOpacity
               key={item.key}
-              style={styles.tab}
+              style={[styles.tab, { height: rs(BAR_H, scale) }]}
               onPress={onPress}
               activeOpacity={0.75}
               accessibilityRole="button"
@@ -160,33 +174,42 @@ export default function BlindDateBottomNav({
             >
               {/* Top pill indicator — same as the discovery tab bar */}
               {active && (
-                <View style={[styles.activeIndicator, { backgroundColor: activeColor }]} />
+                <View
+                  style={[
+                    styles.activeIndicator,
+                    { backgroundColor: activeColor, width: rs(24, scale), marginLeft: -rs(12, scale), height: rs(2.5, scale) },
+                  ]}
+                />
               )}
 
-              <View style={styles.iconWrap}>
+              <View style={[styles.iconWrap, { height: rs(26, scale) }]}>
                 {item.key === 'matches' ? (
-                  <MatchesNavIcon
-                    active={active}
-                    color={iconColor}
-                    inactiveFill={inactiveFill}
-                  />
+                  <View style={{ transform: [{ scale }] }}>
+                    <MatchesNavIcon
+                      active={active}
+                      color={iconColor}
+                      inactiveFill={inactiveFill}
+                    />
+                  </View>
                 ) : item.key === 'open' ? (
-                  <SwipeIcon
-                    color={iconColor}
-                    active={active}
-                    inactiveFill={inactiveFill}
-                  />
+                  <View style={{ transform: [{ scale }] }}>
+                    <SwipeIcon
+                      color={iconColor}
+                      active={active}
+                      inactiveFill={inactiveFill}
+                    />
+                  </View>
                 ) : item.key === 'participating' ? (
-                  <Ionicons name={active ? 'heart' : 'heart-outline'} size={23} color={iconColor} />
+                  <Ionicons name={active ? 'heart' : 'heart-outline'} size={rs(23, scale)} color={iconColor} />
                 ) : (
-                  <Ionicons name={item.icon} size={23} color={iconColor} />
+                  <Ionicons name={item.icon} size={rs(23, scale)} color={iconColor} />
                 )}
               </View>
 
               <Text
                 style={[
                   styles.label,
-                  { color: inactiveColor },
+                  { color: inactiveColor, fontSize: rs(11, scale) },
                   active && { color: activeColor, fontWeight: '700' },
                 ]}
                 numberOfLines={1}
