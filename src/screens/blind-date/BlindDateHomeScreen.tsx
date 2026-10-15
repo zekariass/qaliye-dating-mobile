@@ -5,31 +5,31 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BlindDateBottomNav, { useBlindDateTheme } from '@/components/blind-date/BlindDateBottomNav';
 import JoinedBlindDatesView from '@/components/blind-date/JoinedBlindDatesView';
 import SessionSwipeCard, {
-  type SessionSwipeCardHandle,
-  type SessionSwipeDirection,
+    type SessionSwipeCardHandle,
+    type SessionSwipeDirection,
 } from '@/components/blind-date/SessionSwipeCard';
 import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { bdColors, bdGradients } from '@/constants/blindDateTheme';
@@ -39,7 +39,7 @@ import { useBlindDateConfiguration } from '@/hooks/blindDate/useBlindDateConfigu
 import { useDiscoverSessions } from '@/hooks/blindDate/useDiscoverSessions';
 import { useJoinSession } from '@/hooks/blindDate/useJoinSession';
 import {
-  useMyBlindDateSessions
+    useMyBlindDateSessions
 } from '@/hooks/blindDate/useMyBlindDateSessions';
 import { useMyParticipations } from '@/hooks/blindDate/useMyParticipations';
 import { useWinnerPhotoUrl } from '@/hooks/blindDate/useSessionResults';
@@ -47,8 +47,8 @@ import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import i18n from '@/i18n';
 import type {
-  BlindDateMySessionDto,
-  BlindDateSessionSummaryDto
+    BlindDateMySessionDto,
+    BlindDateSessionSummaryDto
 } from '@/types/blindDate';
 import { extractApiError } from '@/utils/apiError';
 import { blindDateErrorMessage } from '@/utils/blindDateErrors';
@@ -1579,6 +1579,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headerLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -1631,7 +1632,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
   },
-  headerTitle: { fontSize: 18, fontWeight: '900', letterSpacing: -0.4 },
+  headerTitle: { flexShrink: 1, fontSize: 18, fontWeight: '900', letterSpacing: -0.4 },
   headerSub: { fontSize: 12.5, fontWeight: '500', letterSpacing: 0.1 },
 
   // Discover tab: card stack + external actions

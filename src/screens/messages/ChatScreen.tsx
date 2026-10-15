@@ -5,22 +5,22 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  FlatList,
-  InteractionManager,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    BackHandler,
+    FlatList,
+    InteractionManager,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -53,16 +53,16 @@ import { useTheme } from '@/hooks/use-theme';
 import i18n from '@/i18n';
 import { useChatStore } from '@/stores/chat-store';
 import type {
-  ChatFileAttachment,
-  ChatListItem,
-  ChatMessage,
-  ChatMessageViewModel,
-  ReceiptState,
-  ServerDeliveryStatus,
+    ChatFileAttachment,
+    ChatListItem,
+    ChatMessage,
+    ChatMessageViewModel,
+    ReceiptState,
+    ServerDeliveryStatus,
 } from '@/types/chat';
 import {
-  getImageChatMsgsStatus,
-  getVoiceChatMsgsStatus
+    getImageChatMsgsStatus,
+    getVoiceChatMsgsStatus
 } from '@/utils/entitlements';
 import { processChatImage } from '@/utils/imageProcessor';
 import { isBlindDateMatch } from '@/utils/matchSource';
@@ -378,19 +378,14 @@ export default function ChatScreen() {
   // Guard: if there's no matchId, the route is invalid (e.g. stale notification
   // or persisted navigation state). Redirect to the discovery tab instead of
   // rendering a blank "Unknown User" chat screen.
+  // NOTE: this effect must stay above all other hooks so the redirect fires
+  // early, but the guard return is deferred to after all hooks to satisfy the
+  // Rules of Hooks (no hook calls after a conditional return).
   useEffect(() => {
     if (!matchId) {
       router.replace('/(app)/(tabs)' as any);
     }
   }, [matchId, router]);
-
-  if (!matchId) {
-    return (
-      <View style={[styles.screen, { backgroundColor: th.background, justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
 
   // ── Store selectors ──────────────────────────────────────────────────────
   const messages = useChatStore((s) => s.messages);
@@ -896,6 +891,15 @@ export default function ChatScreen() {
   const headerActivityStatus = participantUserId
     ? (getStatus(participantUserId, polledActivityStatus ?? thread?.participant?.activityStatus ?? null) ?? null)
     : (polledActivityStatus ?? thread?.participant?.activityStatus ?? null);
+
+  // Guard return is here — after all hooks — to satisfy the Rules of Hooks.
+  if (!matchId) {
+    return (
+      <View style={[styles.screen, { backgroundColor: th.background, justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView

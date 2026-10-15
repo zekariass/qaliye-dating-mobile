@@ -97,15 +97,18 @@ describe('interests utility', () => {
   });
 
   describe('getDiscoveryInterests', () => {
-    it('returns first 3 interests and remaining count', () => {
-      const interests = INTEREST_OPTIONS.slice(0, 6);
+    it('returns up to DISCOVERY_CARD_INTEREST_PREVIEW visible interests', () => {
+      // DISCOVERY_CARD_INTEREST_PREVIEW === MAX_INTERESTS, so sanitizeInterests
+      // caps the input before getDiscoveryInterests slices — remaining is
+      // always 0 and visible contains all sanitized items (up to the limit).
+      const interests = INTEREST_OPTIONS.slice(0, DISCOVERY_CARD_INTEREST_PREVIEW);
       const { visible, remaining } = getDiscoveryInterests(interests);
       expect(visible).toHaveLength(DISCOVERY_CARD_INTEREST_PREVIEW);
-      expect(visible).toEqual(INTEREST_OPTIONS.slice(0, 3));
-      expect(remaining).toBe(3);
+      expect(visible).toEqual(INTEREST_OPTIONS.slice(0, DISCOVERY_CARD_INTEREST_PREVIEW));
+      expect(remaining).toBe(0);
     });
 
-    it('returns all if fewer than 3, remaining 0', () => {
+    it('returns all if fewer than preview limit, remaining 0', () => {
       const interests = [validInterest, anotherValid];
       const { visible, remaining } = getDiscoveryInterests(interests);
       expect(visible).toHaveLength(2);
@@ -118,16 +121,17 @@ describe('interests utility', () => {
       expect(remaining).toBe(0);
     });
 
-    it('sanitizes before slicing', () => {
+    it('sanitizes before slicing — removes invalid entries', () => {
+      // 3 valid + 2 invalid → 3 valid after sanitize, all visible, remaining 0.
       const { visible, remaining } = getDiscoveryInterests([
         validInterest,
         'Invalid',
         anotherValid,
         INTEREST_OPTIONS[2],
-        INTEREST_OPTIONS[3],
+        'AlsoInvalid',
       ]);
-      expect(visible).toHaveLength(3);
-      expect(remaining).toBe(1);
+      expect(visible).toEqual([validInterest, anotherValid, INTEREST_OPTIONS[2]]);
+      expect(remaining).toBe(0);
     });
   });
 
@@ -140,8 +144,8 @@ describe('interests utility', () => {
       expect(INTERESTS_INITIAL_PREVIEW_COUNT).toBe(20);
     });
 
-    it('DISCOVERY_CARD_INTEREST_PREVIEW is 3', () => {
-      expect(DISCOVERY_CARD_INTEREST_PREVIEW).toBe(3);
+    it('DISCOVERY_CARD_INTEREST_PREVIEW equals MAX_INTERESTS', () => {
+      expect(DISCOVERY_CARD_INTEREST_PREVIEW).toBe(MAX_INTERESTS);
     });
 
     it('INTEREST_OPTIONS has more than 12 options', () => {
