@@ -328,7 +328,7 @@ export default function IdentityVerificationStep({
         if (status.verification_status === 'VERIFIED') {
           setVerificationStatus('VERIFIED');
           setReviewerNote(status.reviewer_note ?? null);
-          setMessage(status.reviewer_note || t('onboarding.identity.reviewApproved', 'Your identity has been verified by manual review.'));
+          setMessage(status.reviewer_note || t('onboarding.identity.reviewApproved', 'Your photo has been verified by manual review.'));
           setSubmitState('success');
           // Auto-advance to the next step after manual review approval.
           try { await onComplete(); } catch { /* user can press Continue manually */ }
@@ -485,12 +485,12 @@ export default function IdentityVerificationStep({
             <Ionicons name="hourglass-outline" size={56} color={colors.primary} />
           </View>
           <Text style={[styles.title, { color: th.text, textAlign: 'center' }]}>
-            {t('onboarding.identity.reviewWaitTitle', 'Identity Under Review')}
+            {t('onboarding.identity.reviewWaitTitle', 'Photo Verification Under Review')}
           </Text>
           <Text style={[styles.subtitle, { color: th.textSecondary, textAlign: 'center' }]}>
             {t(
               'onboarding.identity.reviewWaitBody',
-              'Your identity is currently under manual review by our team. This process usually takes 24-48 hours. We will notify you as soon as the review is complete.',
+              'Your photo verification is currently under manual review by our team. This process usually takes 24-48 hours. We will notify you as soon as the review is complete.',
             )}
           </Text>
 
@@ -550,7 +550,7 @@ export default function IdentityVerificationStep({
                 if (status.verification_status === 'VERIFIED') {
                   setVerificationStatus('VERIFIED');
                   setReviewerNote(status.reviewer_note ?? null);
-                  setMessage(status.reviewer_note || t('onboarding.identity.reviewApproved', 'Your identity has been verified by manual review.'));
+                  setMessage(status.reviewer_note || t('onboarding.identity.reviewApproved', 'Your photo has been verified by manual review.'));
                   setSubmitState('success');
                   // Auto-advance to the next step after manual review approval.
                   try { await onComplete(); } catch { /* user can press Continue manually */ }
@@ -631,17 +631,17 @@ export default function IdentityVerificationStep({
       keyboardShouldPersistTaps="handled"
     >
       <Text style={[styles.title, { color: th.text }]}>
-        {t('onboarding.identity.title', 'Verify Your Identity')}
+        {t('onboarding.identity.title', 'Photo Verification')}
       </Text>
       <Text style={[styles.subtitle, { color: th.textSecondary }]}>
         {identity_verification_required
           ? t(
               'onboarding.identity.subtitleRequired',
-              'Identity verification is required in your region. Take a selfie so we can confirm you are real.',
+              'Photo verification is required in your region. Take a selfie so we can confirm your photos are really you.',
             )
           : t(
               'onboarding.identity.subtitleOptional',
-              'Take a selfie so we can confirm you are real. This helps keep Qal Dating safe. This step is optional.',
+              'Take a selfie so we can confirm your photos are really you. This helps keep Qal Dating safe. This step is optional.',
             )}
       </Text>
 
@@ -726,7 +726,7 @@ export default function IdentityVerificationStep({
         <View style={[styles.statusCard, { backgroundColor: `${colors.success}15` }]}>
           <Ionicons name="checkmark-circle" size={24} color={colors.success} />
           <Text style={[styles.statusText, { color: colors.success }]}>
-            {message || t('onboarding.identity.verified', 'Identity verified successfully!')}
+            {message || t('onboarding.identity.verified', 'Photo verified successfully!')}
           </Text>
         </View>
       )}
@@ -823,7 +823,7 @@ export default function IdentityVerificationStep({
         <Text style={[styles.noticeText, { color: th.textMuted }]}>
           {t(
             'onboarding.identity.requiredNotice',
-            'Identity verification is required in your region before you can continue.',
+            'Photo verification is required in your region before you can continue.',
           )}
         </Text>
       )}

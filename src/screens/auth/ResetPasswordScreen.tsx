@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useNavigation } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
@@ -20,6 +20,7 @@ import GradientButton from '@/components/ui/GradientButton';
 import { colors, fontSize, gradients, spacing } from '@/constants/theme';
 import { useForgotPassword } from '@/hooks/auth/useForgotPassword';
 import { useTheme } from '@/hooks/use-theme';
+import { clearPasswordRecoveryPending } from '@/lib/recoverySession';
 import { supabase } from '@/lib/supabase';
 
 type ScreenStatus = 'checking' | 'ready' | 'error';
@@ -51,6 +52,9 @@ export default function ResetPasswordScreen() {
       if (session) {
         setScreenStatus('ready');
       } else {
+        // No session means the link was dead/replayed — clear any stale
+        // recovery flag so the user isn't pinned to this screen.
+        void clearPasswordRecoveryPending();
         setSessionError(t('auth.resetPasswordInvalidLink'));
         setScreenStatus('error');
       }
@@ -67,6 +71,26 @@ export default function ResetPasswordScreen() {
 
   const [generalError, setGeneralError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  // A recovery link creates a real authenticated session. If the user leaves
+  // without changing the password (back button, gesture, etc.) that session
+  // would act as a silent login — so we sign it out before allowing the
+  // navigation to complete.
+  const navigation = useNavigation();
+  const completedResetRef = useRef(false);
+  const allowRemovalRef = useRef(false);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (completedResetRef.current || allowRemovalRef.current) return;
+      e.preventDefault();
+      void supabase.auth.signOut().finally(() => {
+        allowRemovalRef.current = true;
+        navigation.dispatch(e.data.action);
+      });
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   function validatePassword(): boolean {
     if (newPassword.length < 6) {
@@ -95,8 +119,17 @@ export default function ResetPasswordScreen() {
 
     try {
       await updatePassword.mutateAsync(newPassword);
+      await clearPasswordRecoveryPending();
+      completedResetRef.current = true;
       setSuccess(true);
-      setTimeout(() => { router.replace('/auth'); }, 1800);
+      // Kill the recovery session (and any other sessions holding the old
+      // credentials) — the user must log back in with the new password.
+      setTimeout(() => {
+        void supabase.auth
+          .signOut({ scope: 'global' })
+          .catch(() => supabase.auth.signOut())
+          .finally(() => router.replace('/auth'));
+      }, 1800);
     } catch (e) {
       const msg = (e as Error).message.toLowerCase();
       setGeneralError(

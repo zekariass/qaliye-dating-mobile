@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 
 import { queryClient } from '@/lib/queryClient';
+import {
+    clearPasswordRecoveryPending,
+    isPasswordRecoveryPending,
+    markPasswordRecoveryPending,
+} from '@/lib/recoverySession';
 import { supabase } from '@/lib/supabase';
 import { useChatStore } from '@/stores/chat-store';
 import { useMeStore } from '@/stores/me-store';
@@ -27,9 +32,18 @@ export function useBootstrapApp(): BootstrapResult {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const recoveryPending = await isPasswordRecoveryPending();
       if (!mounted) return;
-      setState((prev) => ({ ...prev, isBootstrapping: false, hasActiveSession: !!session }));
+      // A stale flag with no session means a previous recovery attempt ended
+      // without completing — clear it so the app isn't pinned to the reset screen.
+      if (!session && recoveryPending) void clearPasswordRecoveryPending();
+      setState((prev) => ({
+        ...prev,
+        isBootstrapping: false,
+        hasActiveSession: !!session,
+        isPasswordRecovery: !!session && recoveryPending,
+      }));
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -38,7 +52,9 @@ export function useBootstrapApp(): BootstrapResult {
         clearAllSessionState();
       }
       const isRecovery = event === 'PASSWORD_RECOVERY';
+      if (isRecovery) void markPasswordRecoveryPending();
       const wasRecovery = event === 'USER_UPDATED' || event === 'SIGNED_OUT';
+      if (wasRecovery) void clearPasswordRecoveryPending();
       setState((prev) => ({
         ...prev,
         isBootstrapping: false,

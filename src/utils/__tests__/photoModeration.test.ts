@@ -1,4 +1,12 @@
 import type { ApiErrorDetail } from '@/utils/apiError';
+
+// The i18n instance isn't initialized in Jest — stub it to return the
+// defaultValue (English fallback) so getModerationMessage is testable.
+jest.mock('@/i18n', () => ({
+  __esModule: true,
+  default: { t: (_key: string, defaultValue?: string) => defaultValue ?? _key },
+}));
+
 import { getModerationMessage, isModerationRejection } from '@/utils/photoModeration';
 
 describe('photoModeration', () => {

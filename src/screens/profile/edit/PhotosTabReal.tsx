@@ -2,25 +2,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { memo, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Dimensions,
     Modal,
     Pressable,
     Text,
+    TouchableOpacity,
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 import { ImageCropModal, type CropRegion } from '@/components/common/ImageCropModal';
 import PhotoSourceModal, { type PhotoSource } from '@/components/common/PhotoSourceModal';
+import { PhotoUploadErrorModal } from '@/components/common/PhotoUploadErrorModal';
 import { themedAlert, themedError } from '@/components/common/ThemedAlert';
 import { type SemanticTheme } from '@/constants/semantic-colors';
 import { supabase } from '@/lib/supabase';
 import type { ProfilePhotoDto } from '@/types/profile';
 import { extractApiError, getApiErrorMessage, getApiErrorTitle } from '@/utils/apiError';
 import { processWithCrop } from '@/utils/imageProcessor';
+import { getModerationMessage, isAiGeneratedRejection, isModerationRejection } from '@/utils/photoModeration';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { AccountStatusCard } from './AccountStatusCard';
 import { SectionCard, SectionTitle } from './FormComponents';
@@ -63,6 +66,17 @@ export const PhotosTabReal = memo(function PhotosTabReal({
   const [cropIsPrimary, setCropIsPrimary] = useState(false);
   const [cropProcessing, setCropProcessing] = useState(false);
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
+  // Track which photo IDs have had their AI advisory dismissed
+  const [dismissedAdvisories, setDismissedAdvisories] = useState<Set<string>>(new Set());
+
+  const dismissAdvisory = useCallback((photoId: string) => {
+    setDismissedAdvisories((prev) => new Set([...prev, photoId]));
+  }, []);
+
+  const [uploadErrorModal, setUploadErrorModal] = useState<{
+    variant: 'ai' | 'moderation' | 'error';
+    message: string;
+  } | null>(null);
 
   const isBusy = isUploading || localLoading;
   const primaryPhoto = photos.find((p) => p.is_primary) ?? photos[0];
@@ -133,7 +147,16 @@ export const PhotosTabReal = memo(function PhotosTabReal({
       await onRegisterPhoto(storageBucket, storagePath, nextOrder, isPrimary);
     } catch (err: unknown) {
       const detail = extractApiError(err);
-      themedError(getApiErrorTitle(detail.code), getApiErrorMessage(detail));
+      const aiRejection = isAiGeneratedRejection(detail);
+      const moderationRejection = aiRejection || isModerationRejection(detail);
+      if (moderationRejection) {
+        setUploadErrorModal({
+          variant: aiRejection ? 'ai' : 'moderation',
+          message: getModerationMessage(),
+        });
+      } else {
+        themedError(getApiErrorTitle(detail.code), getApiErrorMessage(detail));
+      }
     } finally {
       setLocalLoading(false);
       setCropProcessing(false);
@@ -295,11 +318,32 @@ export const PhotosTabReal = memo(function PhotosTabReal({
                         <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff' }}>{t('profile.photos.underReview')}</Text>
                       </View>
                     )}
+                    {primaryPhoto.moderation_status === 'APPROVED' && primaryPhoto.ai_detection_advisory && !dismissedAdvisories.has(primaryPhoto.id) && (
+                      <View
+                        className="absolute bottom-0 left-0 right-0 px-2 py-1.5"
+                        style={{ backgroundColor: 'rgba(180,120,0,0.88)' }}
+                      >
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: '#fff' }}>
+                          {t('profile.photos.aiBadge')}
+                          {' · '}
+                          {Math.round(primaryPhoto.ai_detection_advisory.confidence * 100)}%
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </Pressable>
                 <Text className="text-sm mt-2" style={{ color: sem.textMuted, width: PRIMARY_W }}>
                   {t('profile.photos.primaryFirst')}
                 </Text>
+                {primaryPhoto.moderation_status === 'APPROVED' && primaryPhoto.ai_detection_advisory && !dismissedAdvisories.has(primaryPhoto.id) && (
+                  <AiAdvisoryBanner
+                    advisory={primaryPhoto.ai_detection_advisory}
+                    photoId={primaryPhoto.id}
+                    sem={sem}
+                    onDismiss={dismissAdvisory}
+                    width={PRIMARY_W}
+                  />
+                )}
               </View>
             )}
 
@@ -390,6 +434,22 @@ export const PhotosTabReal = memo(function PhotosTabReal({
         onCancel={() => setSourceModalOpen(false)}
       />
 
+      {/* Upload Error Modal — shared with onboarding PhotoStep */}
+      <PhotoUploadErrorModal
+        visible={uploadErrorModal !== null}
+        variant={uploadErrorModal?.variant ?? 'error'}
+        message={uploadErrorModal?.message}
+        onChooseAnother={
+          uploadErrorModal
+            ? () => {
+                setUploadErrorModal(null);
+                setSourceModalOpen(true);
+              }
+            : undefined
+        }
+        onClose={() => setUploadErrorModal(null)}
+      />
+
       {/* Action Sheet Modal */}
       <ActionSheetModal
         visible={actionSheetTarget !== null}
@@ -405,6 +465,49 @@ export const PhotosTabReal = memo(function PhotosTabReal({
     </View>
   );
 });
+
+// ─── AI Advisory Banner ─────────────────────────────────────────────────────────
+
+type AiAdvisoryBannerProps = {
+  advisory: NonNullable<ProfilePhotoDto['ai_detection_advisory']>;
+  photoId: string;
+  sem: SemanticTheme;
+  onDismiss: (id: string) => void;
+  width?: number;
+};
+
+function AiAdvisoryBanner({ advisory, photoId, sem, onDismiss, width }: AiAdvisoryBannerProps) {
+  const { t } = useTranslation();
+  return (
+    <View
+      className="rounded-xl mt-2 px-3 py-2.5 flex-row items-start"
+      style={{ backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#F59E0B', width }}
+    >
+      <Ionicons name="information-circle" size={15} color="#D97706" style={{ marginTop: 1 }} />
+      <View className="flex-1 ml-2">
+        <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400E', marginBottom: 2 }}>
+          {t('profile.photos.aiAdvisoryTitle')}
+        </Text>
+        <Text style={{ fontSize: 11, color: '#92400E', lineHeight: 15 }}>
+          {t('profile.photos.aiAdvisoryBody')}
+        </Text>
+        {advisory.detected_generator && (
+          <Text style={{ fontSize: 10, color: '#B45309', marginTop: 2 }}>
+            {t('profile.photos.aiAdvisoryGenerator', { generator: advisory.detected_generator })}
+          </Text>
+        )}
+      </View>
+      <TouchableOpacity
+        onPress={() => onDismiss(photoId)}
+        hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        accessibilityLabel={t('profile.photos.aiAdvisoryDismiss')}
+        accessibilityRole="button"
+      >
+        <Ionicons name="close" size={14} color="#92400E" />
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 // ─── Secondary Photo Tile ───────────────────────────────────────────────────────
 
@@ -448,6 +551,17 @@ const SecondaryPhotoTile = memo(function SecondaryPhotoTile({
           style={{ backgroundColor: '#6366F1' }}
         >
           <Text style={{ fontSize: 9, fontWeight: '700', color: '#fff' }}>{t('profile.photos.underReview')}</Text>
+        </View>
+      )}
+      {photo.moderation_status === 'APPROVED' && photo.ai_detection_advisory && (
+        <View
+          className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full flex-row items-center"
+          style={{ backgroundColor: 'rgba(180,120,0,0.88)' }}
+        >
+          <Ionicons name="sparkles" size={8} color="#fff" />
+          <Text style={{ fontSize: 9, fontWeight: '700', color: '#fff', marginLeft: 2 }}>
+            {t('profile.photos.aiBadge')}
+          </Text>
         </View>
       )}
       <View

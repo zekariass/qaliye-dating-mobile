@@ -362,7 +362,7 @@
       "profile": "Profile",
       "location": "Location",
       "photos": "Photos",
-      "identity": "Identity",
+      "identity": "Verification",
       "preferences": "Preferences"
     },
     "basicProfile": {
@@ -397,7 +397,9 @@
       "continue": "Continue",
       "saveAndContinue": "Save and continue",
       "interests": "What Matters to You?",
-      "interestsSubtitle": "Pick up to 8 things you love.",
+      "interestsSubtitle": "Pick at least 3 things you love.",
+      "ethnicity": "What is your ethnic background?",
+      "ethnicitySubtitle": "Select all that apply.",
       "religion": "Your Religion",
       "religionSubtitle": "What's your religion?",
       "religionLabel": "Religion",
@@ -427,6 +429,10 @@
         "dobInvalidDate": "Invalid date.",
         "under18": "You must be at least 18 years old.",
         "intentionRequired": "Please select what you are looking for.",
+        "interestsMin": "Please pick at least 3 interests.",
+        "ethnicityRequired": "Please select your ethnic background.",
+        "religionImportanceRequired": "Please select how important religion is to you.",
+        "relocateRequired": "Please select whether you would relocate.",
         "religionRequired": "Please select your religion.",
         "smokingRequired": "Please select whether you smoke.",
         "drinkingRequired": "Please select whether you drink.",
@@ -515,26 +521,28 @@
       "primaryMeta": "4:5 · min 720×900 px · WebP 1080×1350",
       "uploadErrorsHint": "Some photos failed to upload. Tap the photo to retry, choose another, or remove it.",
       "notApproved": "Photo not approved",
+      "moderationRejected": "This photo could not be approved. It may contain nudity or sexual content — please choose a different photo that follows our community guidelines.",
       "uploadFailed": "Upload failed",
       "chooseAnother": "Choose Another Photo",
       "removePhoto": "Remove Photo",
       "notAuthenticated": "Not authenticated",
       "statusApproved": "Approved",
       "statusUnderReview": "Under review",
-      "statusRejected": "Rejected"
+      "statusRejected": "Rejected",
+      "aiRejectedTitle": "AI-generated photo"
     },
     "identity": {
-      "title": "Verify Your Identity",
-      "subtitleRequired": "Identity verification is required in your region. Take a selfie so we can confirm you are real.",
-      "subtitleOptional": "Take a selfie so we can confirm you are real. This helps keep Qal Dating safe. This step is optional.",
+      "title": "Photo Verification",
+      "subtitleRequired": "Photo verification is required in your region. Take a selfie so we can confirm your photos are really you.",
+      "subtitleOptional": "Take a selfie so we can confirm your photos are really you. This helps keep Qal Dating safe. This step is optional.",
       "noSelfie": "No selfie captured",
       "tapToCapture": "Tap below to take a selfie",
       "takeSelfie": "Take Selfie",
       "retake": "Retake Selfie",
       "verifyNow": "Verify Now",
-      "verified": "Identity verified successfully!",
+      "verified": "Photo verified successfully!",
       "failed": "Verification failed. Please try again.",
-      "requiredNotice": "Identity verification is required in your region before you can continue.",
+      "requiredNotice": "Photo verification is required in your region before you can continue.",
       "retrySelfie": "Try Different Selfie",
       "changePhoto": "Change Profile Photo",
       "faceGuide": "Align your face inside the oval",
@@ -543,15 +551,15 @@
       "skipCamera": "Cancel",
       "verifyLater": "Verify Later",
       "requestManualReview": "Request Manual Review",
-      "underReview": "Your identity is under manual review. This usually takes 24-48 hours. We will notify you when it is complete.",
-      "reviewWaitTitle": "Identity Under Review",
-      "reviewWaitBody": "Your identity is currently under manual review by our team. This process usually takes 24-48 hours. We will notify you as soon as the review is complete.",
+      "underReview": "Your photo verification is under manual review. This usually takes 24-48 hours. We will notify you when it is complete.",
+      "reviewWaitTitle": "Photo Verification Under Review",
+      "reviewWaitBody": "Your photo verification is currently under manual review by our team. This process usually takes 24-48 hours. We will notify you as soon as the review is complete.",
       "retryVerification": "Retry Automatic Verification",
       "turnOnNotifications": "Turn On Notifications",
       "notificationsOn": "Notifications are on. We will notify you when your review is complete.",
       "checkStatus": "Check Status",
       "submittedOn": "Submitted on {{date}}",
-      "reviewApproved": "Your identity has been verified by manual review.",
+      "reviewApproved": "Your photo has been verified by manual review.",
       "reviewRejected": "Your manual review was rejected. Please try again.",
       "stillUnderReview": "Your review is still pending. Please check again later.",
       "statusCheckError": "Could not check status. Please try again.",
@@ -568,7 +576,7 @@
         "verification_service_unavailable": "Verification service temporarily unavailable. Please try again.",
         "face_comparison_failed": "Face comparison could not be completed. Please try again with a clearer selfie.",
         "verification_in_progress": "Verification is already in progress.",
-        "manual_review_in_progress": "Your identity is under manual review. Please wait for the result.",
+        "manual_review_in_progress": "Your photo verification is under manual review. Please wait for the result.",
         "manual_review_already_requested": "Manual review has already been requested.",
         "user_not_found": "User not found."
       },
@@ -778,7 +786,8 @@
     "languageSubtitle": "Choose your preferred language.",
     "selectLanguage": "Select Language",
     "help": "Help",
-    "helpSub": "Get support and answers"
+    "helpSub": "Get support and answers",
+    "adminSection": "Moderation"
   },
   "common": {
     "cancel": "Cancel",
@@ -1752,7 +1761,13 @@
       "cameraPermissionDenied": "Camera access is required to take photos.",
       "editPrimary": "Primary photo, tap to edit",
       "photoOptions": "Photo, tap for options",
-      "notAuthenticated": "Not authenticated"
+      "notAuthenticated": "Not authenticated",
+      "aiAdvisoryTitle": "AI-generated photo",
+      "aiAdvisoryBody": "This photo may be AI-generated. Consider uploading a real photo for better matches.",
+      "aiAdvisoryConfidence": "{{confidence}}% confidence",
+      "aiAdvisoryGenerator": "Detected: {{generator}}",
+      "aiAdvisoryDismiss": "Dismiss",
+      "aiBadge": "AI"
     },
     "details": {
       "email": "Email",
@@ -2061,8 +2076,8 @@
       "skip": "Skip"
     },
     "verifyPrompt": {
-      "title": "Verify Your Identity",
-      "message": "Build trust and help keep {{appName}} safe by verifying your identity.",
+      "title": "Photo Verification",
+      "message": "Build trust and help keep {{appName}} safe by verifying your photos.",
       "verifyNow": "Verify Now",
       "maybeLater": "Maybe Later"
     }
@@ -3354,5 +3369,30 @@
     "nationalityLabel": "Nationality: {{label}}",
     "ethnicitiesLabel": "Ethnicities: {{label}}",
     "languagesLabel": "Languages: {{label}}"
+  },
+  "admin": {
+    "moderation": {
+      "title": "Moderation Queue",
+      "subtitle": "Photos pending manual review",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "empty": "No photos pending review",
+      "emptyHint": "All caught up! Check back later.",
+      "loadError": "Failed to load moderation queue.",
+      "actionError": "Failed to update photo status.",
+      "confirmApprove": "Approve this photo?",
+      "confirmReject": "Reject this photo?",
+      "confirmApproveBody": "The photo will be approved and become visible.",
+      "confirmRejectBody": "The photo will be rejected and hidden from the user's profile.",
+      "user": "User: {{name}}",
+      "submitted": "Submitted {{date}}",
+      "aiBadge": "AI",
+      "aiConfidence": "{{confidence}}% confidence",
+      "aiGenerator": "Generator: {{generator}}",
+      "aiAction": "Action: {{action}}",
+      "aiDetectionSection": "AI Detection"
+    }
   }
 }

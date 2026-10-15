@@ -656,7 +656,7 @@ function HostedEmptyState({ onPrimary }: { onPrimary: () => void }) {
   );
 }
 
-function EmptyState({ tab, onPrimary, onRefresh }: { tab: 'open' | 'mine'; onPrimary: () => void; onRefresh: () => void }) {
+function EmptyState({ tab, onPrimary, onRefresh, refreshing }: { tab: 'open' | 'mine'; onPrimary: () => void; onRefresh: () => void; refreshing?: boolean }) {
   const { t } = useTranslation();
   const { colors: th, mode } = useTheme();
   const isDark = mode === 'dark';
@@ -701,8 +701,13 @@ function EmptyState({ tab, onPrimary, onRefresh }: { tab: 'open' | 'mine'; onPri
               onPress={onRefresh}
               activeOpacity={0.85}
               accessibilityRole="button"
+              disabled={refreshing}
             >
-              <Ionicons name="refresh" size={15} color={th.text} />
+              {refreshing ? (
+                <ActivityIndicator size="small" color={th.text} style={{ width: 15, height: 15 }} />
+              ) : (
+                <Ionicons name="refresh" size={15} color={th.text} />
+              )}
               <Text style={[styles.emptyBtnSecondaryText, { color: th.text }]} numberOfLines={1}>{t('blindDate.common.refresh')}</Text>
             </TouchableOpacity>
           </View>
@@ -1181,7 +1186,8 @@ export default function BlindDateHomeScreen() {
   // Refreshing an exhausted stack restores passed cards and refetches.
   const handleRefreshStack = useCallback(() => {
     setDismissedIds(new Set());
-    void discover.refetch();
+    setRefreshing(true);
+    void discover.refetch().finally(() => setRefreshing(false));
   }, [discover]);
 
   const handleCreate = useCallback(() => {
@@ -1366,7 +1372,7 @@ export default function BlindDateHomeScreen() {
               // firing (or in flight); show the skeleton, not the empty state.
               <CardSkeleton />
             ) : visibleSessions.length === 0 ? (
-              <EmptyState tab="open" onPrimary={handleCreate} onRefresh={handleRefreshStack} />
+              <EmptyState tab="open" onPrimary={handleCreate} onRefresh={handleRefreshStack} refreshing={refreshing} />
             ) : (
               visibleSessions
                 .slice(0, 3)

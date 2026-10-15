@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { fetchProfileMe, updateBasicProfile } from '@/api/profileApi';
+import { EthnicityMultiSelectPicker } from '@/components/catalog/EthnicityMultiSelectPicker';
 import { InterestPicker } from '@/components/profile/InterestPicker';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useSemanticTheme } from '@/hooks/use-semantic-theme';
@@ -48,6 +49,7 @@ import {
     WILLING_TO_RELOCATE_OPTIONS,
 } from '@/screens/profile/mockEditProfile';
 import { Gender, RelationshipIntention } from '@/types/api';
+import type { EthnicityOption } from '@/types/catalog';
 import { sanitizeInterests } from '@/utils/interests';
 import {
     ACTIVITY_API_TO_LABEL,
@@ -171,12 +173,18 @@ const schema = z
       .min(1, { error: () => i18n.t('onboarding.basicProfile.errors.activityRequired', 'Please select your activity level.') }),
     education_level: z.string().optional(),
     occupation: z.string().max(100, { error: () => i18n.t('onboarding.basicProfile.errors.occupationTooLong', 'Must be 100 characters or less.') }).optional(),
-    // Marriage & Relationship Preferences — optional, no validation
+    // Marriage & Relationship Preferences — mostly optional; religion_importance
+    // and willing_to_relocate are required because they carry the actual
+    // matching signal behind the (also required) religion field.
     marriage_timeline: z.string().optional(),
     long_distance_relationship: z.string().optional(),
     family_involvement: z.string().optional(),
-    religion_importance: z.string().optional(),
-    willing_to_relocate: z.string().optional(),
+    religion_importance: z
+      .string({ error: () => i18n.t('onboarding.basicProfile.errors.religionImportanceRequired', 'Please select how important religion is to you.') })
+      .min(1, { error: () => i18n.t('onboarding.basicProfile.errors.religionImportanceRequired', 'Please select how important religion is to you.') }),
+    willing_to_relocate: z
+      .string({ error: () => i18n.t('onboarding.basicProfile.errors.relocateRequired', 'Please select whether you would relocate.') })
+      .min(1, { error: () => i18n.t('onboarding.basicProfile.errors.relocateRequired', 'Please select whether you would relocate.') }),
   })
 
 type FormValues = z.infer<typeof schema>;
@@ -229,6 +237,7 @@ type MarriagePrefSubStep = {
   options: readonly string[];
   apiToLabel: Record<string, string>;
   labelToApi: Record<string, string>;
+  required?: boolean;
 };
 
 const MARRIAGE_PREF_SUBSTEPS: MarriagePrefSubStep[] = [
@@ -267,6 +276,7 @@ const MARRIAGE_PREF_SUBSTEPS: MarriagePrefSubStep[] = [
     options: RELIGION_IMPORTANCE_OPTIONS,
     apiToLabel: RELIGION_IMPORTANCE_API_TO_LABEL,
     labelToApi: RELIGION_IMPORTANCE_LABEL_TO_API,
+    required: true,
   },
   {
     name: 'willing_to_relocate',
@@ -276,10 +286,11 @@ const MARRIAGE_PREF_SUBSTEPS: MarriagePrefSubStep[] = [
     options: WILLING_TO_RELOCATE_OPTIONS,
     apiToLabel: WILLING_TO_RELOCATE_API_TO_LABEL,
     labelToApi: WILLING_TO_RELOCATE_LABEL_TO_API,
+    required: true,
   },
 ];
 
-const TOTAL_STEPS = 13;
+const TOTAL_STEPS = 14;
 
 // Sub-step index → form fields that must validate before advancing
 const FIELDS_TO_VALIDATE: Partial<Record<number, (keyof FormValues)[]>> = {
@@ -287,9 +298,13 @@ const FIELDS_TO_VALIDATE: Partial<Record<number, (keyof FormValues)[]>> = {
   1: ['gender'],
   2: ['date_of_birth'],
   3: ['relationship_intention'],
-  // 4–8: marriage & relationship preferences — optional, no validation
-  10: ['religion'],
-  11: ['smoking_detail', 'drinking_detail', 'activity_level'],
+  // 4–6: marriage & relationship preferences — optional, no validation
+  7: ['religion_importance'],
+  8: ['willing_to_relocate'],
+  // 9: interests — validated via selectedInterests (min 3)
+  // 10: ethnicity — validated via selectedEthnicities (min 1)
+  11: ['religion'],
+  12: ['smoking_detail', 'drinking_detail', 'activity_level'],
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -323,6 +338,8 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
   const [isPrefilling, setIsPrefilling] = useState(isCompleted);
   const [subStep, setSubStep] = useState(0);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [selectedEthnicities, setSelectedEthnicities] = useState<EthnicityOption[]>([]);
+  const [stepError, setStepError] = useState<string | null>(null);
   const dobValue = watch('date_of_birth');
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -371,6 +388,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
           willing_to_relocate: readPref(profile, 'willing_to_relocate', 'willingToRelocate', WILLING_TO_RELOCATE_API_TO_LABEL),
         });
         setSelectedInterests(sanitizeInterests(profile.interests));
+        setSelectedEthnicities(profile.ethnicities ?? []);
       })
       .catch(() => { /* prefill failed — form stays empty and user fills manually */ })
       .finally(() => setIsPrefilling(false));
@@ -413,12 +431,23 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
   };
 
   const handleToggleInterest = (val: string) => {
+    setStepError(null);
     setSelectedInterests((prev) =>
       prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
     );
   };
 
   const handleNext = async () => {
+    setStepError(null);
+    // Steps backed by local state (not the form) validate here
+    if (subStep === 9 && selectedInterests.length < 3) {
+      setStepError(t('onboarding.basicProfile.errors.interestsMin', 'Please pick at least 3 interests.'));
+      return;
+    }
+    if (subStep === 10 && selectedEthnicities.length === 0) {
+      setStepError(t('onboarding.basicProfile.errors.ethnicityRequired', 'Please select your ethnic background.'));
+      return;
+    }
     const fields = FIELDS_TO_VALIDATE[subStep];
     if (fields) {
       const valid = await trigger(fields);
@@ -449,6 +478,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
         date_of_birth: `${String(year).padStart(4, '0')}-${String(monthIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
         relationship_intention: values.relationship_intention,
         interests: sanitizeInterests(selectedInterests),
+        ethnicity_ids: selectedEthnicities.map((e) => e.id),
         religion: values.religion ? (RELIGION_LABEL_TO_API[values.religion] ?? null) : null,
         education_level: values.education_level ? (EDUCATION_LABEL_TO_API[values.education_level] ?? null) : null,
         occupation: values.occupation?.trim() || null,
@@ -775,9 +805,12 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                     </View>
                   )}
                 />
-                <Text style={[styles.prefSkipHint, { color: th.textMuted }]}>
-                  {t('onboarding.marriagePrefs.skipHint', 'Optional — tap Next to skip')}
-                </Text>
+                {errors[step.name] && <FieldError message={errors[step.name]?.message} />}
+                {!step.required && (
+                  <Text style={[styles.prefSkipHint, { color: th.textMuted }]}>
+                    {t('onboarding.marriagePrefs.skipHint', 'Optional — tap Next to skip')}
+                  </Text>
+                )}
               </View>
             );
           })()}
@@ -801,11 +834,39 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
                   sem={sem}
                 />
               </View>
+              {stepError && <FieldError message={stepError} />}
             </View>
           )}
 
-          {/* Step 10: Religion */}
+          {/* Step 10: Ethnicity */}
           {subStep === 10 && (
+            <View style={styles.stepContainer}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="people-outline" size={40} color={colors.primary} />
+              </View>
+              <Text style={[styles.stepSubtitle, { color: th.textSecondary }]}>
+                {t('onboarding.basicProfile.ethnicitySubtitle', 'Select all that apply')}
+              </Text>
+              <Text style={[styles.stepTitle, { color: th.text }]}>
+                {t('onboarding.basicProfile.ethnicity', 'What is your ethnic background?')}
+              </Text>
+              <View style={{ width: '100%' }}>
+                <EthnicityMultiSelectPicker
+                  selected={selectedEthnicities}
+                  onChange={(items) => { setStepError(null); setSelectedEthnicities(items); }}
+                  accentColor={colors.primary}
+                  textColor={th.text}
+                  mutedColor={th.textMuted}
+                  borderColor={th.border}
+                  surfaceColor={th.surface}
+                />
+              </View>
+              {stepError && <FieldError message={stepError} />}
+            </View>
+          )}
+
+          {/* Step 11: Religion */}
+          {subStep === 11 && (
             <View style={styles.stepContainer}>
               <View style={styles.iconCircle}>
                 <MaterialCommunityIcons name="hands-pray" size={40} color={colors.primary} />
@@ -866,8 +927,8 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
             </View>
           )}
 
-          {/* Step 11: Lifestyle (Smoking, Drinking, Fitness) */}
-          {subStep === 11 && (
+          {/* Step 12: Lifestyle (Smoking, Drinking, Fitness) */}
+          {subStep === 12 && (
             <View style={styles.stepContainer}>
               <View style={styles.iconCircle}>
                 <Ionicons name="heart-circle-outline" size={40} color={colors.primary} />
@@ -1034,7 +1095,7 @@ export default function BasicProfileStep({ onComplete, isCompleted }: Props) {
           )}
 
           {/* Step 12: Education & Occupation */}
-          {subStep === 12 && (
+          {subStep === 13 && (
             <View style={styles.stepContainer}>
               <View style={styles.iconCircle}>
                 <Ionicons name="school-outline" size={40} color={colors.primary} />

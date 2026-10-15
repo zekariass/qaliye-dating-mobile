@@ -1,9 +1,11 @@
 import * as Linking from 'expo-linking';
-import { Redirect, useGlobalSearchParams } from 'expo-router';
+import { Redirect, router, useGlobalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 import i18n from '@/i18n';
+import { consumeAuthDeepLink } from '@/lib/deepLink';
+import { markPasswordRecoveryPending } from '@/lib/recoverySession';
 import { supabase } from '@/lib/supabase';
 
 export default function OAuthCallback() {
@@ -13,6 +15,17 @@ export default function OAuthCallback() {
 
   // Expo Router parses deep-link query params into search params
   const params = useGlobalSearchParams<{ code?: string; error?: string; error_description?: string; type?: string }>();
+
+  // Rebuild the deep link from router params — on warm starts these are
+  // always fresh, while getInitialURL() can return a stale link or null.
+  const paramsUrl = (() => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (typeof v === 'string' && v) qs.set(k, v);
+    }
+    const s = qs.toString();
+    return s ? `qaliyemobile://callback?${s}` : null;
+  })();
 
   // True if this is a password-recovery callback (set once we know the URL)
   const [isRecovery, setIsRecovery] = useState(false);
@@ -28,10 +41,18 @@ export default function OAuthCallback() {
       const recovery = incomingUrl.includes('type=recovery');
       setIsRecovery(recovery);
 
+      // Only mark recovery-pending once a session actually exists. Recovery
+      // links are single-use — a dead/replayed link must not pin the user on
+      // the reset screen with no session behind it.
+      const onExchangeSuccess = async () => {
+        if (recovery) await markPasswordRecoveryPending();
+        setStatus('success');
+      };
+
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          setStatus('success');
+          await onExchangeSuccess();
           return;
         }
 
@@ -58,7 +79,7 @@ export default function OAuthCallback() {
               refresh_token: refreshToken,
             });
             if (error) throw error;
-            setStatus('success');
+            await onExchangeSuccess();
             return;
           }
         }
@@ -66,40 +87,42 @@ export default function OAuthCallback() {
         // PKCE flow: ?code=...
         const { error } = await supabase.auth.exchangeCodeForSession(incomingUrl);
         if (error) throw error;
-        setStatus('success');
+        await onExchangeSuccess();
       } catch (e: any) {
         setStatus('error');
         setErrorMsg(e.message || i18n.t('auth.authenticationFailed', 'Authentication failed'));
       }
     };
 
-    // Try search params first (Expo Router deep link)
-    const code = params.code;
-    if (code) {
-      // Reconstruct the full URL with query params for exchangeCodeForSession
-      Linking.getInitialURL().then((url) => {
-        if (url) handleUrl(url);
-      });
-      return;
-    }
+    // Deep links can arrive as the initial URL (cold start) or as a url event
+    // while the app is already running — where the event can fire before this
+    // screen subscribes. Try all four sources; handledRef dedupes them.
+    // The stashed URL from the root layout's listener is the most reliable
+    // warm-start source and preserves the URL fragment (error details).
+    const stashed = consumeAuthDeepLink();
+    if (stashed) handleUrl(stashed);
+    if (paramsUrl) handleUrl(paramsUrl);
 
-    // Fallback: check initial URL and listen for events
-    let listener: ReturnType<typeof Linking.addEventListener> | null = null;
-
+    const listener = Linking.addEventListener('url', ({ url: eventUrl }) => {
+      if (eventUrl) handleUrl(eventUrl);
+    });
     Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleUrl(url);
-        return;
-      }
-
-      // If no initial URL, listen for upcoming events
-      listener = Linking.addEventListener('url', ({ url: eventUrl }) => {
-        if (eventUrl) handleUrl(eventUrl);
-      });
+      if (url) handleUrl(url);
     });
 
+    // Never spin forever — if no source delivered a usable link, surface an
+    // error instead of an endless spinner.
+    const timeout = setTimeout(() => {
+      if (!handledRef.current) {
+        handledRef.current = true;
+        setStatus('error');
+        setErrorMsg(i18n.t('auth.authenticationFailed', 'Authentication failed'));
+      }
+    }, 8000);
+
     return () => {
-      listener?.remove();
+      listener.remove();
+      clearTimeout(timeout);
     };
   }, [params.code, params.error]);
 
@@ -116,9 +139,25 @@ export default function OAuthCallback() {
       {status === 'loading' ? (
         <ActivityIndicator />
       ) : (
-        <Text style={{ color: 'red', padding: 20, textAlign: 'center' }}>
-          {errorMsg}
-        </Text>
+        <>
+          <Text style={{ color: 'red', padding: 20, textAlign: 'center' }}>
+            {errorMsg}
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.replace('/auth' as any)}
+            style={{
+              marginTop: 12,
+              paddingVertical: 12,
+              paddingHorizontal: 28,
+              borderRadius: 24,
+              backgroundColor: '#8A2CFF',
+            }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>
+              {i18n.t('auth.resetPasswordBackToLogin', 'Back to login')}
+            </Text>
+          </TouchableOpacity>
+        </>
       )}
     </View>
   );

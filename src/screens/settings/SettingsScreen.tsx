@@ -29,6 +29,7 @@ import { useRevenueCatRestore } from '@/hooks/billing/useRevenueCatRestore';
 import { useBlindDateConfiguration } from '@/hooks/blindDate/useBlindDateConfiguration';
 import { useQuestionSetMutations } from '@/hooks/blindDate/useQuestionSet';
 import { useSignOutWithDeactivation } from '@/hooks/notifications/useSignOutWithDeactivation';
+import { useCurrentProfile } from '@/hooks/profile/useCurrentProfile';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppLink } from '@/hooks/useAppLink';
 import { useRateUs } from '@/hooks/useRateUs';
@@ -65,6 +66,8 @@ export default function SettingsScreen() {
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
   const { entitlements } = useEntitlements();
+  const { data: profile } = useCurrentProfile();
+  const isAdminOrModerator = profile?.role === 'ADMIN' || profile?.role === 'MODERATOR';
   const { requiresActionCount, pendingCount, refetch: refetchPending } = usePendingOrders(Platform.OS === 'android');
   const { restore, restoreResult, isRestoring } = useRevenueCatRestore();
   const { rateUs } = useRateUs();
@@ -577,6 +580,34 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
+        {/* ── Admin / Moderation (role-gated) ── */}
+        {isAdminOrModerator && (
+          <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
+            <Text style={[styles.sectionTitle, { color: th.text }]}>
+              {t('settings.adminSection', 'Moderation')}
+            </Text>
+            <Pressable
+              style={styles.optionRow}
+              onPress={() => router.push('/(app)/moderation-queue' as any)}
+              accessibilityRole="button"
+              accessibilityLabel={t('admin.moderation.title', 'Moderation Queue')}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="shield-checkmark-outline" size={18} color="#D97706" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.optionLabel, { color: th.text }]}>
+                  {t('admin.moderation.title', 'Moderation Queue')}
+                </Text>
+                <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
+                  {t('admin.moderation.subtitle', 'Photos pending manual review')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+            </Pressable>
+          </View>
+        )}
+
         {/* ── Help ── */}
         <View style={[styles.card, { backgroundColor: th.surface, borderColor: th.border }]}>
           <Pressable
@@ -651,18 +682,18 @@ export default function SettingsScreen() {
               accessibilityRole="button"
               accessibilityLabel={t('settings.changePassword', 'Change Password')}
             >
-              <View style={[styles.iconCircle, { backgroundColor: colors.primary + '20' }]}>
-                <Ionicons name="lock-closed-outline" size={18} color={colors.primary} />
+              <View style={[styles.iconCircle, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="lock-closed-outline" size={18} color="#F59E0B" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.optionLabel, { color: th.text }]}>
+                <Text style={[styles.optionLabel, { color: '#D97706' }]}>
                   {t('settings.changePassword', 'Change Password')}
                 </Text>
                 <Text style={[styles.optionSublabel, { color: th.textSecondary }]}>
                   {t('settings.changePasswordSub', 'Update your account password')}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={th.textSecondary} />
+              <Ionicons name="chevron-forward" size={18} color="#D97706" />
             </Pressable>
           )}
           <Pressable

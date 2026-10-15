@@ -19,6 +19,7 @@ import {
 import { deleteProfilePhoto, fetchProfilePhotos, registerProfilePhoto } from '@/api/profile/profileApi';
 import { ImageCropModal, type CropRegion } from '@/components/common/ImageCropModal';
 import PhotoSourceModal, { type PhotoSource } from '@/components/common/PhotoSourceModal';
+import { PhotoUploadErrorModal } from '@/components/common/PhotoUploadErrorModal';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import i18n from '@/i18n';
@@ -27,7 +28,7 @@ import type { ProfilePhotoDto } from '@/types/profile';
 import { extractApiError, getApiErrorMessage } from '@/utils/apiError';
 import type { ProcessedImage } from '@/utils/imageProcessor';
 import { normalizeCameraCapture, processWithCrop } from '@/utils/imageProcessor';
-import { getModerationMessage, isModerationRejection } from '@/utils/photoModeration';
+import { getModerationMessage, isAiGeneratedRejection, isModerationRejection } from '@/utils/photoModeration';
 import type { ImagePickerAsset } from 'expo-image-picker';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -44,6 +45,10 @@ type PhotoSlot = {
   errorMessage: string | null;
   /** True when the error is a content-moderation rejection (not retryable). */
   isModerationRejection?: boolean;
+  /** True when the rejection is specifically due to AI-generated image detection. */
+  isAiRejection?: boolean;
+  /** Non-null when the photo was accepted but flagged as likely AI-generated (advisory mode). */
+  aiAdvisory?: import('@/types/profile').AiDetectionAdvisory | null;
 };
 
 type CardSlot = PhotoSlot | null;
@@ -392,6 +397,7 @@ export default function PhotoStep({ onComplete }: Props) {
     isPrimary: boolean;
     slotIdx: number;
     isModerationRejection: boolean;
+    isAiRejection: boolean;
   } | null>(null);
 
   // Crop modal state
@@ -449,6 +455,7 @@ export default function PhotoStep({ onComplete }: Props) {
                 status: 'idle',
                 processed: null,
                 errorMessage: null,
+                aiAdvisory: c.ai_detection_advisory ?? null,
               };
             });
             return next;
@@ -542,6 +549,7 @@ export default function PhotoStep({ onComplete }: Props) {
         uri: dto.signed_url,
         serverId: dto.id,
         status: 'success',
+        aiAdvisory: dto.ai_detection_advisory ?? null,
       }));
 
       if (isPrimary) setExistingPrimary(dto);
@@ -558,10 +566,11 @@ export default function PhotoStep({ onComplete }: Props) {
         return;
       }
       const detail = extractApiError(err);
-      const moderationRejection = isModerationRejection(detail);
+      const aiRejection = isAiGeneratedRejection(detail);
+      const moderationRejection = aiRejection || isModerationRejection(detail);
       const msg = moderationRejection ? getModerationMessage() : getApiErrorMessage(detail);
-      onSlotUpdate((prev) => ({ ...prev, status: 'error', errorMessage: msg, isModerationRejection: moderationRejection }));
-      setErrorModal({ slotKey, message: msg, isPrimary, slotIdx: isPrimary ? 0 : photoOrder - 1, isModerationRejection: moderationRejection });
+      onSlotUpdate((prev) => ({ ...prev, status: 'error', errorMessage: msg, isModerationRejection: moderationRejection, isAiRejection: aiRejection }));
+      setErrorModal({ slotKey, message: msg, isPrimary, slotIdx: isPrimary ? 0 : photoOrder - 1, isModerationRejection: moderationRejection, isAiRejection: aiRejection });
     }
   }, []);
 
@@ -921,7 +930,7 @@ export default function PhotoStep({ onComplete }: Props) {
         <TouchableOpacity
           onPress={() => {
             if (primarySlot.status === 'error') {
-              setErrorModal({ slotKey: 'primary', message: primarySlot.errorMessage ?? t('onboarding.photo.uploadFailed', 'Upload failed'), isPrimary: true, slotIdx: 0, isModerationRejection: !!primarySlot.isModerationRejection });
+              setErrorModal({ slotKey: 'primary', message: primarySlot.errorMessage ?? t('onboarding.photo.uploadFailed', 'Upload failed'), isPrimary: true, slotIdx: 0, isModerationRejection: !!primarySlot.isModerationRejection, isAiRejection: !!primarySlot.isAiRejection });
             } else {
               pickPrimary();
             }
@@ -998,6 +1007,13 @@ export default function PhotoStep({ onComplete }: Props) {
               {existingPrimary.rejection_reason}
             </Text>
           )}
+          {existingPrimary?.moderation_status === 'APPROVED' && existingPrimary.ai_detection_advisory && (
+            <View style={[styles.aiAdvisoryRow, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
+              <Text style={styles.aiAdvisoryText}>
+                {i18n.t('profile.photos.aiAdvisoryBody', 'This photo may be AI-generated. Consider uploading a real photo for better matches.')}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -1031,7 +1047,7 @@ export default function PhotoStep({ onComplete }: Props) {
               <TouchableOpacity
                 onPress={() => {
                   if (isError) {
-                    setErrorModal({ slotKey: `card_${i}`, message: slot?.errorMessage ?? t('onboarding.photo.uploadFailed', 'Upload failed'), isPrimary: false, slotIdx: i, isModerationRejection: !!slot?.isModerationRejection });
+                    setErrorModal({ slotKey: `card_${i}`, message: slot?.errorMessage ?? t('onboarding.photo.uploadFailed', 'Upload failed'), isPrimary: false, slotIdx: i, isModerationRejection: !!slot?.isModerationRejection, isAiRejection: !!slot?.isAiRejection });
                   } else if (!isBusy && !hasServer && !slotUri) {
                     pickCard(i);
                   }
@@ -1068,6 +1084,11 @@ export default function PhotoStep({ onComplete }: Props) {
                     {isError && (
                       <View style={styles.errorBadge}>
                         <Ionicons name="alert-circle" size={20} color="#EF4444" />
+                      </View>
+                    )}
+                    {!isError && !isBusy && slot?.aiAdvisory && (
+                      <View style={styles.aiCardBadge}>
+                        <Text style={styles.aiCardBadgeText}>{i18n.t('profile.photos.aiBadge', 'AI')}</Text>
                       </View>
                     )}
                     <TouchableOpacity
@@ -1154,95 +1175,49 @@ export default function PhotoStep({ onComplete }: Props) {
         onClose={() => setCameraModal(null)}
       />
 
-      {/* ── Upload Error Modal ──────────────────────────────────────────────── */}
-      <Modal
+      {/* Upload Error Modal (shared) */}
+      <PhotoUploadErrorModal
         visible={errorModal !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setErrorModal(null)}
-      >
-        <View style={styles.errorModalOverlay}>
-          <View style={[styles.errorModalCard, { backgroundColor: th.surface }]}>
-            <View style={styles.errorModalIcon}>
-              <Ionicons
-                name={errorModal?.isModerationRejection ? 'shield-outline' : 'alert-circle'}
-                size={40}
-                color="#EF4444"
-              />
-            </View>
-            <Text style={[styles.errorModalTitle, { color: th.text }]}>
-              {errorModal?.isModerationRejection
-                ? t('onboarding.photo.notApproved', 'Photo not approved')
-                : t('onboarding.photo.uploadFailed', 'Upload failed')}
-            </Text>
-            <Text style={[styles.errorModalMessage, { color: th.textSecondary }]}>
-              {errorModal?.message}
-            </Text>
-            <View style={styles.errorModalActions}>
-              {errorModal?.isModerationRejection ? (
-                /* Moderation rejection: Choose Another Photo (no Retry) */
-                <TouchableOpacity
-                  style={[styles.errorModalBtn, styles.errorModalBtnPrimary]}
-                  onPress={() => {
-                    if (errorModal?.isPrimary) {
-                      handleChooseAnotherPrimary();
-                    } else if (errorModal) {
-                      handleChooseAnotherCard(errorModal.slotIdx);
-                    }
-                    setErrorModal(null);
-                  }}
-                >
-                  <Text style={styles.errorModalBtnTextPrimary}>
-                    {t('onboarding.photo.chooseAnother', 'Choose Another Photo')}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                /* Technical error: Retry */
-                <TouchableOpacity
-                  style={[styles.errorModalBtn, styles.errorModalBtnPrimary]}
-                  onPress={() => {
-                    if (errorModal?.isPrimary) {
-                      handleRetryPrimary();
-                    } else if (errorModal) {
-                      handleRetry(errorModal.slotIdx);
-                    }
-                    setErrorModal(null);
-                  }}
-                >
-                  <Text style={styles.errorModalBtnTextPrimary}>
-                    {t('common.retry')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {/* Secondary action: Remove Photo */}
-              <TouchableOpacity
-                style={[styles.errorModalBtn, styles.errorModalBtnSecondary, { borderColor: th.border }]}
-                onPress={() => {
-                  if (errorModal?.isPrimary) {
-                    handleCancelPrimary();
-                  } else if (errorModal) {
-                    handleCancelCard(errorModal.slotIdx);
-                  }
-                  setErrorModal(null);
-                }}
-              >
-                <Text style={[styles.errorModalBtnText, { color: th.textSecondary }]}>
-                  {t('onboarding.photo.removePhoto', 'Remove Photo')}
-                </Text>
-              </TouchableOpacity>
-              {/* Tertiary action: Close */}
-              <TouchableOpacity
-                style={[styles.errorModalBtn, styles.errorModalBtnSecondary, { borderColor: th.border }]}
-                onPress={() => setErrorModal(null)}
-              >
-                <Text style={[styles.errorModalBtnText, { color: th.textSecondary }]}>
-                  {t('common.close')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        variant={errorModal?.isAiRejection ? 'ai' : errorModal?.isModerationRejection ? 'moderation' : 'error'}
+        message={errorModal?.message}
+        onChooseAnother={
+          errorModal && errorModal.isModerationRejection && !errorModal.isAiRejection
+            ? () => {
+                if (errorModal.isPrimary) {
+                  handleChooseAnotherPrimary();
+                } else {
+                  handleChooseAnotherCard(errorModal.slotIdx);
+                }
+                setErrorModal(null);
+              }
+            : undefined
+        }
+        onRetry={
+          errorModal && !errorModal.isModerationRejection
+            ? () => {
+                if (errorModal.isPrimary) {
+                  handleRetryPrimary();
+                } else {
+                  handleRetry(errorModal.slotIdx);
+                }
+                setErrorModal(null);
+              }
+            : undefined
+        }
+        onRemove={
+          errorModal
+            ? () => {
+                if (errorModal.isPrimary) {
+                  handleCancelPrimary();
+                } else {
+                  handleCancelCard(errorModal.slotIdx);
+                }
+                setErrorModal(null);
+              }
+            : undefined
+        }
+        onClose={() => setErrorModal(null)}
+      />
     </ScrollView>
   );
 }
@@ -1440,61 +1415,34 @@ const styles = StyleSheet.create({
   },
   reviewNoteText: { fontSize: 12, flex: 1, lineHeight: 18 },
 
-  // Error modal
-  errorModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  errorModalCard: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  errorModalIcon: {
-    marginBottom: spacing.sm,
-  },
-  errorModalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  errorModalMessage: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: spacing.md,
-  },
-  errorModalActions: {
-    flexDirection: 'column',
-    gap: 10,
-    width: '100%',
-    marginBottom: spacing.sm,
-  },
-  errorModalBtn: {
-    width: '100%',
-    paddingVertical: 14,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    alignItems: 'center',
-  },
-  errorModalBtnSecondary: {
+  // AI advisory (primary photo info panel)
+  aiAdvisoryRow: {
+    marginTop: 6,
+    borderRadius: 6,
     borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
-  errorModalBtnPrimary: {
-    backgroundColor: colors.primary,
+  aiAdvisoryText: {
+    fontSize: 11,
+    color: '#92400E',
+    lineHeight: 15,
   },
-  errorModalBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
+
+  // AI badge on card thumbnails
+  aiCardBadge: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(180,120,0,0.88)',
   },
-  errorModalBtnTextPrimary: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '700',
+  aiCardBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.5,
   },
 });

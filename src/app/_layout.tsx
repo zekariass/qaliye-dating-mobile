@@ -22,7 +22,9 @@ import '@/global.css';
 import { useTheme } from '@/hooks/use-theme';
 import '@/i18n';
 import i18n from '@/i18n';
+import { stashAuthDeepLink } from '@/lib/deepLink';
 import { queryClient } from '@/lib/queryClient';
+import { markPasswordRecoveryPending } from '@/lib/recoverySession';
 import { supabase } from '@/lib/supabase';
 import { useLanguageStore } from '@/stores/language-store';
 import { applyFontOverride } from '@/utils/fontOverride';
@@ -43,6 +45,11 @@ function RootLayout() {
     const subscription = Linking.addEventListener('url', ({ url }) => {
       if (!url || !url.startsWith(callbackBase)) return;
 
+      // Stash the raw URL for callback.tsx — on warm starts the /callback
+      // screen mounts after this event fires, and Supabase error redirects
+      // put params in the fragment which Expo Router doesn't expose.
+      stashAuthDeepLink(url);
+
       const exchange = async () => {
         try {
           if (url.includes('error=')) return;
@@ -62,9 +69,12 @@ function RootLayout() {
             await supabase.auth.exchangeCodeForSession(url);
           }
 
-          // For password-recovery links, navigate to the reset screen.
+          // For password-recovery links, mark the session as recovery-only and
+          // navigate to the reset screen. The flag must be set before the
+          // app shell sees the new session, otherwise it acts as a silent login.
           // Normal OAuth sign-ins are handled by onAuthStateChange → useBootstrapApp.
           if (url.includes('type=recovery')) {
+            await markPasswordRecoveryPending();
             router.replace('/reset-password' as any);
           }
         } catch {

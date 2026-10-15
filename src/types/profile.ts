@@ -14,6 +14,12 @@ export type ProfileAddressDto = {
   location_source: 'GPS' | 'MANUAL' | 'IP';
 };
 
+export type AiDetectionAdvisory = {
+  ai_generated: boolean;
+  confidence: number;
+  detected_generator: string | null;
+};
+
 export type ProfilePhotoDto = {
   id: string;
   photo_order: number;
@@ -22,6 +28,7 @@ export type ProfilePhotoDto = {
   expires_at: string;
   moderation_status: 'PENDING' | 'APPROVED' | 'MANUAL_REVIEW' | 'REJECTED';
   rejection_reason: string | null;
+  ai_detection_advisory: AiDetectionAdvisory | null;
 };
 
 export type ProfileDiscoveryPreferencesDto = {

@@ -28,7 +28,7 @@ import { useMeStore } from '@/stores/me-store';
 
 export default function AppLayout() {
   const { t } = useTranslation();
-  const { isBootstrapping, hasActiveSession } = useBootstrapApp();
+  const { isBootstrapping, hasActiveSession, isPasswordRecovery } = useBootstrapApp();
   const meData = useMeStore((s) => s.data);
   const meStatus = useMeStore((s) => s.status);
   const isOnboarded = useMeStore((s) => s.isOnboarded);
@@ -45,10 +45,10 @@ export default function AppLayout() {
   useLikeActions();
 
   useEffect(() => {
-    if (hasActiveSession && meStatus === 'idle') {
+    if (hasActiveSession && !isPasswordRecovery && meStatus === 'idle') {
       fetchMe();
     }
-  }, [hasActiveSession, meStatus, fetchMe]);
+  }, [hasActiveSession, isPasswordRecovery, meStatus, fetchMe]);
 
   const isAppReady = !isBootstrapping && hasActiveSession && meStatus === 'success';
 
@@ -64,6 +64,13 @@ export default function AppLayout() {
 
   if (!hasActiveSession) {
     return <Redirect href="/auth" />;
+  }
+
+  // A password-recovery link creates a real Supabase session — it must never
+  // reach the app shell, otherwise clicking a reset link silently logs in.
+  // Keep the user pinned to the reset screen until the password is changed.
+  if (isPasswordRecovery) {
+    return <Redirect href={'/reset-password' as any} />;
   }
 
   // If meStatus === 'error':
@@ -242,6 +249,10 @@ export default function AppLayout() {
         <Stack.Screen
           name="staff-support-chat"
           options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="moderation-queue"
+          options={{ animation: 'slide_from_right', headerShown: false }}
         />
         <Stack.Screen
           name="promotions"

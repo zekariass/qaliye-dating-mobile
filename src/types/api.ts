@@ -1,4 +1,5 @@
 import type { IdentityVerificationStatus } from './billing';
+import type { EthnicityOption } from './catalog';
 
 export type OnboardingStep =
   | 'BASIC_PROFILE'
@@ -64,6 +65,7 @@ export type BasicProfilePayload = {
   date_of_birth: string;
   relationship_intention: RelationshipIntention;
   interests?: string[];
+  ethnicity_ids?: string[];
   religion?: string | null;
   education_level?: string | null;
   occupation?: string | null;
@@ -131,6 +133,7 @@ export type ProfileMeResponse = {
   is_onboarded: boolean;
   profile_completion_score: number;
   interests?: string[];
+  ethnicities?: EthnicityOption[];
   religion?: string | null;
   education_level?: string | null;
   occupation?: string | null;
